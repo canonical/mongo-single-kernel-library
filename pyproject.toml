@@ -8,7 +8,9 @@ description = "Shared and reusable code for Mongo-related charms"
 authors = ["Neha Oudin <neha@oudin.red>"]
 readme = "README.md"
 package-mode = true
-packages = [{include = "single_kernel_mongo"}]
+packages = [
+    {include = "single_kernel_mongo"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -37,12 +39,16 @@ pyOpenSSL = "^24.2.1"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.0.1"
 ruff = "^0.7.2"
+pydantic = "~2.9.0"
+mypy = "*"
 
 [tool.poetry.group.format]
 optional = true
 
 [tool.poetry.group.format.dependencies]
 ruff = "^0.7.2"
+pydantic = "~2.9.0"
+mypy = "*"
 
 [tool.poetry.group.lint]
 optional = true
@@ -51,6 +57,8 @@ optional = true
 ruff = "^0.7.2"
 codespell = "^2.2.6"
 shellcheck-py = "^0.10.0.1"
+pydantic = "~2.9.0"
+mypy = "*"
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.5.0"}
@@ -95,13 +103,16 @@ line-ending = "auto"
 
 [tool.mypy]
 exclude = [
-    "/build/",
-    "/dist/",
-    "/site/",
-    "/__pypackages__/",
+    "./build/",
+    "./dist/",
+    "./site/",
+    "./venv",
+    "./__pypackages__/",
+    "^single_kernel_mongo/lib/.*"
 ]
 # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-ignore-missing-imports
 ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
 
 [tool.codespell]
 ignore-words=".codespellignore"

@@ -2,19 +2,30 @@
 # See LICENSE file for licensing details.
 """The charm state for mongo charms (databags + model information)."""
 
+
+from typing import Generic, TypeVar
+
 from ops.model import Application, Relation, Unit
+from pydantic import BaseModel
 
 from single_kernel_mongo.config.literals import Substrates
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import Data
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
+    Data,
+)
+
+PModel = TypeVar("PModel", bound=BaseModel, covariant=True)
+PData = TypeVar("PData", bound=Data, covariant=True)
 
 
-class RelationState:
+class AbstractRelationState(Generic[PModel, PData]):
     """Relation state object."""
+
+    atype: type[PModel]
 
     def __init__(
         self,
         relation: Relation | None,
-        data_interface: Data,
+        data_interface: PData,
         component: Unit | Application | None,
         substrate: Substrates | None = None,
     ):
@@ -22,9 +33,14 @@ class RelationState:
         self.data_interface = data_interface
         self.component = component
         self.substrate = substrate
-        self.relation_data = (
+        self._relation_data = (
             self.data_interface.as_dict(self.relation.id) if self.relation else {}
         )
+
+    @property
+    def relation_data(self) -> PModel:
+        """Relation data as a pydantic model."""
+        return self.atype.model_validate(self._relation_data)
 
     def __bool__(self) -> bool:
         """Boolean evaluation based on the existence of self.relation."""
@@ -38,7 +54,7 @@ class RelationState:
         delete_fields = [key for key in items if not items[key]]
         update_content = {k: items[k] for k in items if k not in delete_fields}
 
-        self.relation_data.update(update_content)
+        self._relation_data.update(update_content)
 
         for field in delete_fields:
-            del self.relation_data[field]
+            del self._relation_data[field]
