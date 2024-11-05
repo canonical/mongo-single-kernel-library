@@ -11,6 +11,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  pre-commit:
+    name: Run pre-commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'poetry'
+      - name: Install pre-commit
+        run: |
+          poetry install
+          poetry run pre-commit install
+      - name: Run pre-commit hooks
+        run: |
+          poetry run pre-commit run --all-files
+
   lint:
     name: Lint
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v21.0.0
