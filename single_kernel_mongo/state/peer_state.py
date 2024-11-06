@@ -72,7 +72,7 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
         return self.relation_data.role or self._role
 
     @role.setter
-    def role(self, value: str):
+    def role(self, value: str) -> None:
         self.update({"role": value})
 
     @property
@@ -100,7 +100,7 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
         return self.relation_data.replica_set_hosts
 
     @replica_set_hosts.setter
-    def replica_set_hosts(self, value: list[str]):
+    def replica_set_hosts(self, value: list[str]) -> None:
         self.update({"replica_set_hosts": json.dumps(value)})
 
     @property
