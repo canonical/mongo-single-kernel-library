@@ -1,30 +1,14 @@
-import factory
 import pytest
 from parameterized import parameterized
 
 from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts
 from single_kernel_mongo.core.exceptions import AmbiguousConfigError
-from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import (
     REGULAR_ROLES,
     RoleNames,
 )
 
-
-class MongoConfigurationFactory(factory.Factory):
-    class Meta:  # noqa
-        model = MongoConfiguration
-
-    hosts = {LOCALHOST}
-    database = "abadcafe"
-    username = "operator"
-    password = "deadbeef"
-    roles: set[str] = set()
-    tls_external = False
-    tls_internal = False
-    port = MongoPorts.MONGODB_PORT
-    replset = "cafebabe"
-    standalone = False
+from .helpers import MongoConfigurationFactory
 
 
 def test_configuration_ok():

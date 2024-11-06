@@ -95,7 +95,7 @@ class MongoConnection:
         """
         self.client.admin.command(
             "createUser",
-            config.username,
+            value=config.username,
             pwd=config.password,
             roles=config.supported_roles,
             mechanisms=["SCRAM-SHA-256"],
@@ -105,7 +105,7 @@ class MongoConnection:
         """Update grants on database."""
         self.client.admin.command(
             "updateUser",
-            config.username,
+            value=config.username,
             roles=config.supported_roles,
         )
 
@@ -113,7 +113,7 @@ class MongoConnection:
         """Update the password."""
         self.client.admin.command(
             "updateUser",
-            username,
+            value=username,
             pwd=password,
         )
 

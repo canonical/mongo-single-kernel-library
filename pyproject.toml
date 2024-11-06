@@ -7,10 +7,24 @@ version = "0.0.1"
 description = "Shared and reusable code for Mongo-related charms"
 authors = ["Neha Oudin <neha@oudin.red>"]
 readme = "README.md"
+license = "Apache-2.0"
 package-mode = true
 packages = [
     {include = "single_kernel_mongo"},
 ]
+homepage = "https://github.com/canonical/mongo-single-kernel-library"
+repository = "https://github.com/canonical/mongo-single-kernel-library"
+classifiers = [
+ "Development Status :: 2 - Pre-Alpha",
+ "Intended Audience :: Developers",
+ "Intended Audience :: System Administrators",
+ "Operating System :: POSIX :: Linux",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/canonical/mongo-single-kernel-library/issues"
+"Matrix" = "https://matrix.to/#/#charmhub-data-platform:ubuntu.com"
+"Contribute" = "https://github.com/canonical/mongo-single-kernel-library/blob/main/CONTRIBUTING.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -26,7 +40,7 @@ pymongo = "*"
 
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.charm-libs.dependencies]
@@ -43,7 +57,6 @@ pre-commit = "^4.0.1"
 ruff = "^0.7.2"
 pydantic = "~2.9.0"
 mypy = "*"
-pymongo = "*"
 
 [tool.poetry.group.format]
 optional = true
@@ -52,7 +65,6 @@ optional = true
 ruff = "^0.7.2"
 pydantic = "~2.9.0"
 mypy = "*"
-pymongo = "*"
 
 [tool.poetry.group.lint]
 optional = true
@@ -63,13 +75,13 @@ codespell = "^2.2.6"
 shellcheck-py = "^0.10.0.1"
 pydantic = "~2.9.0"
 mypy = "*"
-pymongo = "*"
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.5.0"}
 pytest = "^8.1.1"
 parameterized = "^0.9.0"
 factory_boy = "*"
+mongomock = "^4.2.0.post1"
 
 [tool.ruff]
 target-version = "py310"
@@ -106,6 +118,21 @@ line-ending = "auto"
 [tool.ruff.lint.per-file-ignores]
 # D100, D101, D102, D103: Ignore missing docstrings in tests
 "tests/*" = ["D100","D101","D102","D103","D104"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+markers = ["unstable"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "error:RuntimeWarning"
+]
 
 [tool.mypy]
 exclude = [
