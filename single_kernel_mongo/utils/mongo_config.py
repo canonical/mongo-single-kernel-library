@@ -33,7 +33,7 @@ class MongoConfiguration:
     roles: set[str]
     tls_external: bool
     tls_internal: bool
-    port: int | None = None
+    port: MongoPorts | None = None
     replset: str | None = None
     standalone: bool = False
 
@@ -63,6 +63,9 @@ class MongoConfiguration:
         """Return URI concatenated from fields."""
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
             raise AmbiguousConfigError("Mongos cannot support replica set")
+
+        if self.standalone and not self.port:
+            raise AmbiguousConfigError("Standalone connection needs a port")
 
         if self.standalone:
             return (

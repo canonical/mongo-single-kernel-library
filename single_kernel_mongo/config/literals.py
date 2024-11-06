@@ -8,6 +8,8 @@ from typing import Literal
 
 Substrates = Literal["vm", "k8s"]
 
+LOCALHOST = "127.0.0.1"
+
 
 class MongoPorts(int, Enum):
     """The default Mongo ports."""
@@ -36,9 +38,18 @@ class SnapPackage:
     revision: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Snap:
     """The Snap related information."""
 
     user: int = 584788
+    group: int = 0
     package: SnapPackage = SnapPackage("charmed-mongodb", "6/edge", 123)
+
+
+@dataclass(frozen=True)
+class KubernetesUser:
+    """The system user for kubernetes pods."""
+
+    user: str = "mongodb"
+    group: str = "mongodb"

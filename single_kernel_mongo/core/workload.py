@@ -41,7 +41,7 @@ class MongoPaths:
     @property
     def audit_file(self) -> Path:
         """The main mongod config file."""
-        return Path(f"{self.conf_path}/audit.log")
+        return Path(f"{self.logs_path}/audit.log")
 
     @property
     def ext_pem_file(self) -> Path:
@@ -63,6 +63,7 @@ class MongoPaths:
         """Internal connectivity CA file."""
         return Path(f"{self.conf_path}/internal-ca.pem")
 
+    @property
     def tls_files(self) -> tuple[Path, Path, Path, Path]:
         """Tuple of all TLS files."""
         return (
@@ -73,7 +74,7 @@ class MongoPaths:
         )
 
 
-class WorkloadBase(ABC):
+class WorkloadBase(ABC):  # pragma: nocover
     """Base interface for common workload operations."""
 
     def __init__(self, paths: MongoPaths):
@@ -130,22 +131,6 @@ class WorkloadBase(ABC):
     @abstractmethod
     def active(self) -> bool:
         """Checks that the workload is active."""
-
-    @abstractmethod
-    def run_bin_command(
-        self, bin_keyword: str, bin_args: list[str], opts: list[str] = []
-    ) -> str:
-        """Runs mongod bin command with desired args.
-
-        Args:
-            bin_keyword: the mongod shell script to run
-                e.g `configs`, `topics` etc
-            bin_args: the shell command args
-            opts: any additional opts args strings
-
-        Returns:
-            String of mongod bin command output
-        """
         ...
 
     def get_version(self) -> str:

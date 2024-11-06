@@ -3,11 +3,12 @@
 """Definition of MongoDB users and their configuration."""
 
 
+from enum import Enum
 from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel, Field, computed_field
 
-from single_kernel_mongo.config.literals import InternalUsers
+from single_kernel_mongo.config.literals import LOCALHOST, InternalUsers
 
 
 class DBPrivilege(TypedDict, total=False):
@@ -20,10 +21,26 @@ class DBPrivilege(TypedDict, total=False):
 
 UserRole = NewType("UserRole", list[DBPrivilege])
 
-SYSTEM_DBS = ["admin", "local", "config"]
+
+class SystemDBS(str, Enum):
+    """MongoDB System databases."""
+
+    ADMIN = "admin"
+    LOCAL = "local"
+    CONFIG = "config"
+
+
+class RoleNames(str, Enum):
+    """Charm defined roles."""
+
+    ADMIN = "admin"
+    MONITOR = "monitor"
+    BACKUP = "backup"
+    DEFAULT = "default"
+
 
 REGULAR_ROLES = {
-    "admin": UserRole(
+    RoleNames.ADMIN: UserRole(
         [
             DBPrivilege(role="userAdminAnyDatabase", db="admin"),
             DBPrivilege(role="readWriteAnyDatabase", db="admin"),
@@ -31,14 +48,14 @@ REGULAR_ROLES = {
             DBPrivilege(role="enableSharding", db="admin"),
         ]
     ),
-    "monitor": UserRole(
+    RoleNames.MONITOR: UserRole(
         [
             DBPrivilege(role="explainRole", db="admin"),
             DBPrivilege(role="clusterMonitor", db="admin"),
             DBPrivilege(role="read", db="local"),
         ]
     ),
-    "backup": UserRole(
+    RoleNames.BACKUP: UserRole(
         [
             DBPrivilege(db="admin", role="readWrite", collection=""),
             DBPrivilege(db="admin", role="backup"),
@@ -110,14 +127,14 @@ class MongoDBUser(BaseModel):
 
 OperatorUser = MongoDBUser(
     username=InternalUsers.OPERATOR,
-    database_name="admin",
-    roles={"default"},
+    database_name=SystemDBS.ADMIN,
+    roles={RoleNames.DEFAULT},
 )
 
 MonitorUser = MongoDBUser(
     username=InternalUsers.MONITOR,
-    database_name="admin",
-    roles={"monitor"},
+    database_name=SystemDBS.ADMIN,
+    roles={RoleNames.MONITOR},
     privileges={
         "resource": {"db": "", "collection": ""},
         "actions": [
@@ -130,17 +147,13 @@ MonitorUser = MongoDBUser(
         ],
     },
     mongodb_role="explainRole",
-    hosts=[
-        "127.0.0.1"
-    ],  # MongoDB Exporter can only connect to one replica - not the entire set.
+    hosts=[LOCALHOST],  # MongoDB Exporter can only connect to one replica.
 )
 
 BackupUser = MongoDBUser(
     username=InternalUsers.BACKUP,
-    roles={"backup"},
-    mongodb_role="pbmAnyAction",
+    roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
-    hosts=[
-        "127.0.0.1"
-    ],  # pbm cannot make a direct connection if multiple hosts are used
+    mongodb_role="pbmAnyAction",
+    hosts=[LOCALHOST],  # pbm cannot make a direct connection if multiple hosts are used
 )

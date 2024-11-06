@@ -10,7 +10,7 @@ from pymongo.errors import OperationFailure
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
-from single_kernel_mongo.utils.mongodb_users import SYSTEM_DBS
+from single_kernel_mongo.utils.mongodb_users import SystemDBS
 
 logger = logging.getLogger(__name__)
 
@@ -143,11 +143,11 @@ class MongoConnection:
     def get_databases(self) -> set[str]:
         """Return list of all non-default databases."""
         databases: list[str] = self.client.list_database_names()
-        return {db for db in databases if db not in SYSTEM_DBS}
+        return {db for db in databases if db not in SystemDBS}
 
     def drop_database(self, database: str):
         """Drop a non-default database."""
-        if database in SYSTEM_DBS:
+        if database in SystemDBS:
             logger.info(f"Not dropping system DB {database}.")
             return
         self.client.drop_database(database)
