@@ -11,7 +11,7 @@ from ops import Container
 from ops.pebble import ExecError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import KubernetesUser
+from single_kernel_mongo.config.literals import KubernetesUser, WorkloadUser
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 logger = getLogger(__name__)
@@ -23,6 +23,9 @@ class KubernetesWorkload(WorkloadBase):
     paths: MongoPaths
     service: str
     layer_name: str
+    users: WorkloadUser = KubernetesUser()
+    substrate: str = "k8s"
+    container: Container  # We always have a container in a Kubernetes Workload
 
     def __init__(self, container: Container | None) -> None:
         if not container:
@@ -62,8 +65,8 @@ class KubernetesWorkload(WorkloadBase):
             content,
             make_dirs=True,
             permissions=0o400,
-            user=KubernetesUser.user,
-            group=KubernetesUser.group,
+            user=self.users.user,
+            group=self.users.group,
         )
 
     @override
@@ -87,6 +90,13 @@ class KubernetesWorkload(WorkloadBase):
             raise e
 
     @override
+    def run_bin_command(
+        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+    ) -> str:
+        command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
+        return self.exec(command=command, env=environment or None)
+
+    @override
     def active(self) -> bool:
         if not self.container.can_connect():
             return False
@@ -95,3 +105,7 @@ class KubernetesWorkload(WorkloadBase):
             return False
 
         return self.container.get_service(self.service).is_running()
+
+    @override
+    def setup_cron(self, lines: list[str]) -> None:
+        raise NotImplementedError("VM Specific.")

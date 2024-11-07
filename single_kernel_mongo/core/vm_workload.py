@@ -4,16 +4,21 @@
 
 """Kubernetes workload definition."""
 
-import os
 import subprocess
 from collections.abc import Mapping
 from logging import getLogger
 from pathlib import Path
 
+from ops import Container
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import Snap
+from single_kernel_mongo.config.literals import (
+    CRON_FILE,
+    Snap,
+    VmUser,
+    WorkloadUser,
+)
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
 
@@ -25,10 +30,16 @@ class VMWorkload(WorkloadBase):
 
     paths: MongoPaths
     service: str
+    layer_name: str
+    substrate: str = "vm"
+    users: WorkloadUser = VmUser()
+    container: Container | None = None
+    env_variable: str
 
-    def __init__(self) -> None:
-        self.snap = Snap()
-        self.mongod = snap.SnapCache()[self.snap.package.name]
+    def __init__(self, container: Container | None) -> None:
+        self.snap = Snap
+        self.mongod = snap.SnapCache()[self.snap.name]
+        self.container = container
 
     @property
     @override
@@ -58,10 +69,9 @@ class VMWorkload(WorkloadBase):
 
     @override
     def read(self, path: Path) -> list[str]:
-        if not os.path.exists(path):
+        if not path.is_file():
             return []
-        with open(path) as f:
-            return f.read().split("\n")
+        return path.read_text().splitlines()
 
     @override
     def write(self, content: str, path: Path, mode: str = "w") -> None:
@@ -74,7 +84,7 @@ class VMWorkload(WorkloadBase):
         else:
             self.exec(["chmod", "0o440", f"{path}"])
 
-            self.exec(["chown", "-R", f"{self.snap.user}:{self.snap.group}", f"{path}"])
+        self.exec(["chown", "-R", f"{self.users.user}:{self.users.group}", f"{path}"])
 
     @override
     def exec(
@@ -101,6 +111,17 @@ class VMWorkload(WorkloadBase):
             raise e
 
     @override
+    def run_bin_command(
+        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+    ) -> str:
+        command = [
+            f"{self.paths.binaries_path}/charmed-mongodb.{self.bin_cmd}",
+            bin_keyword,
+            *bin_args,
+        ]
+        return self.exec(command=command, env=environment)
+
+    @override
     @retry(
         wait=wait_fixed(1),
         stop=stop_after_attempt(5),
@@ -122,12 +143,16 @@ class VMWorkload(WorkloadBase):
         try:
             self.mongod.ensure(
                 snap.SnapState.Latest,
-                channel=self.snap.package.track,
-                revision=self.snap.package.revision,
+                channel=self.snap.channel,
+                revision=self.snap.revision,
             )
             self.mongod.hold()
 
             return True
         except snap.SnapError as err:
-            logger.error(f"Failed to install {self.snap.package.name}. Reason: {err}.")
+            logger.error(f"Failed to install {self.snap.name}. Reason: {err}.")
             return False
+
+    @override
+    def setup_cron(self, lines: list[str]) -> None:
+        CRON_FILE.write_text("\n".join(lines))

@@ -51,19 +51,19 @@ class MongoConfigModel(BaseConfigModel):
 class MongoDBCharmConfig(MongoConfigModel):
     """The structured configuration of a MongoDB charm."""
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra="forbid")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.REPLICATION)
-    auto_delete: bool = Field(default=False)
+    auto_delete: bool = Field(default=False, alias="auto-delete")
 
 
 # The config for Mongos Charms (unused in case of mongos VM)
 class MongosCharmConfig(MongoConfigModel):
     """The structured configuration of a Mongos charm."""
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra="forbid")
 
     expose_external: SerializeLiteralAsStr[ExposeExternalEnum] = Field(
-        default=ExposeExternalEnum.NONE
+        default=ExposeExternalEnum.NONE, alias="expose-external"
     )
-    auto_delete: bool = Field(default=False)
+    auto_delete: bool = Field(default=False, alias="auto-delete")

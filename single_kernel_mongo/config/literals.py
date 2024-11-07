@@ -4,7 +4,8 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from pathlib import Path
+from typing import Generic, Literal, TypeVar
 
 Substrates = Literal["vm", "k8s"]
 
@@ -29,27 +30,41 @@ class InternalUsers(str, Enum):
 SECRETS_APP = [f"{user}-password" for user in InternalUsers] + ["keyfile"]
 
 
-@dataclass
-class SnapPackage:
-    """The definition of a snap."""
-
-    name: str
-    track: str
-    revision: int
-
-
 @dataclass(frozen=True)
 class Snap:
     """The Snap related information."""
 
-    user: int = 584788
-    group: int = 0
-    package: SnapPackage = SnapPackage("charmed-mongodb", "6/edge", 123)
+    name: str = "charmed-mongodb"
+    channel: str = "6/edge"
+    revision: int = 123
+
+
+T = TypeVar("T", bound=str | int)
 
 
 @dataclass(frozen=True)
-class KubernetesUser:
+class WorkloadUser(Generic[T]):
+    """The system users for a workload."""
+
+    user: T
+    group: T
+
+
+@dataclass(frozen=True)
+class KubernetesUser(WorkloadUser[str]):
     """The system user for kubernetes pods."""
 
     user: str = "mongodb"
     group: str = "mongodb"
+
+
+@dataclass(frozen=True)
+class VmUser(WorkloadUser[int]):
+    """The system users for vm workloads."""
+
+    user: int = 584788
+    group: int = 0
+
+
+CRON_FILE = Path("/etc/cron.d/mongodb")
+ENVIRONMENT_FILE = Path("/etc/environment")

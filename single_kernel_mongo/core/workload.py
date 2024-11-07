@@ -5,11 +5,14 @@
 """Abstract workload definition for Mongo charms."""
 import secrets
 import string
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from pathlib import Path
+from typing import Protocol
 
+from ops import Container
 from ops.pebble import Layer
 
+from single_kernel_mongo.config.literals import ENVIRONMENT_FILE, WorkloadUser
 from single_kernel_mongo.config.roles import Role
 
 
@@ -35,7 +38,7 @@ class MongoPaths:
 
     @property
     def log_file(self) -> Path:
-        """The main mongod config file."""
+        """The main mongodb log file."""
         return Path(f"{self.logs_path}/mongodb.log")
 
     @property
@@ -74,11 +77,14 @@ class MongoPaths:
         )
 
 
-class WorkloadBase(ABC):  # pragma: nocover
-    """Base interface for common workload operations."""
+class WorkloadProtocol(Protocol):  # pragma: nocover
+    """The protocol for workloads."""
 
-    def __init__(self, paths: MongoPaths):
-        self.paths = paths
+    paths: MongoPaths
+    container: Container | None
+    users: WorkloadUser
+    substrate: str
+    bin_cmd: str
 
     @abstractmethod
     def start(self) -> None:
@@ -129,9 +135,45 @@ class WorkloadBase(ABC):  # pragma: nocover
         ...
 
     @abstractmethod
+    def run_bin_command(
+        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+    ) -> str:
+        """Runs service bin command with desired args.
+
+        Args:
+            bin_keyword: the kafka shell script to run
+                e.g `configs`, `topics` etc
+            bin_args: the shell command args
+            environment: A dictionary of environment variables
+
+        Returns:
+            String of service bin command output
+        """
+        ...
+
+    @abstractmethod
     def active(self) -> bool:
         """Checks that the workload is active."""
         ...
+
+    def get_env(self) -> dict[str, str]:
+        """Returns the environment as defined by /etc/environment."""
+        raw_env = self.read(ENVIRONMENT_FILE)
+        return dict(
+            tuple(
+                line.split("=", maxsplit=1)
+                for line in raw_env
+                if not line.startswith("#")
+            )
+        )
+
+    def update_env(self, new_values: dict[str, str]):
+        """Updates the environment with the new values."""
+        current_env = self.get_env()
+
+        update_env = current_env | new_values
+        content = "\n".join(f"{key}={value}" for key, value in update_env.items())
+        self.write(content=content, path=ENVIRONMENT_FILE)
 
     def get_version(self) -> str:
         """Get the workload version.
@@ -160,6 +202,11 @@ class WorkloadBase(ABC):  # pragma: nocover
         """Flag to check if workload container can connect."""
         ...
 
+    @abstractmethod
+    def setup_cron(self, lines: list[str]) -> None:
+        """[VM Specific] Setup a cron."""
+        ...
+
     @staticmethod
     def generate_password() -> str:
         """Creates randomized string for use as app passwords.
@@ -180,3 +227,10 @@ class WorkloadBase(ABC):  # pragma: nocover
         """
         choices = string.ascii_letters + string.digits
         return "".join([secrets.choice(choices) for _ in range(1024)])
+
+
+class WorkloadBase(WorkloadProtocol):  # pragma: nocover
+    """Base interface for common workload operations."""
+
+    def __init__(self, container: Container | None):
+        self.container = container

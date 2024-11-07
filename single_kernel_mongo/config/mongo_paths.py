@@ -11,7 +11,7 @@ VM_PATH = {
         "CONF": f"/var/snap/{SNAP_NAME}/current/etc/mongod",
         "DATA": f"/var/snap/{SNAP_NAME}/common/var/lib/mongodb",
         "LOGS": f"/var/snap/{SNAP_NAME}/common/var/log/mongodb",
-        "BIN": f"/snap/{SNAP_NAME}/current/bin/mongod",
+        "BIN": "/snap/bin",
         "SHELL": "/snap/bin/charmed-mongodb.mongosh",
     }
 }
@@ -21,7 +21,7 @@ K8S_PATH = {
         "CONF": "/etc/mongod",
         "DATA": "/var/lib/mongodb",
         "LOGS": "var/log/mongodb",
-        "BIN": "/usr/bin/mongod",
+        "BIN": "/usr/bin/",
         "SHELL": "/usr/bin/mongosh",
     }
 }

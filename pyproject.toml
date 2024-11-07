@@ -12,6 +12,7 @@ package-mode = true
 packages = [
     {include = "single_kernel_mongo"},
 ]
+include = [".single_kernel_mongo/templates/"]
 homepage = "https://github.com/canonical/mongo-single-kernel-library"
 repository = "https://github.com/canonical/mongo-single-kernel-library"
 classifiers = [
@@ -37,6 +38,7 @@ pyOpenSSL = "^24.2.1"
 pyyaml = "^6.0.1"
 tenacity = "^8.2.3"
 pymongo = "*"
+jinja2 = "*"
 
 
 [build-system]
@@ -121,6 +123,12 @@ line-ending = "auto"
 
 [tool.coverage.run]
 branch = true
+omit = [
+    "single_kernel_mongo/lib/charms/data_platform_libs/*",
+    "single_kernel_mongo/lib/charms/coverage/*",
+    "single_kernel_mongo/state/abstract_state.py",
+    "*__init__*"
+]
 
 [tool.coverage.report]
 show_missing = true
@@ -129,7 +137,6 @@ show_missing = true
 minversion = "6.0"
 log_cli_level = "INFO"
 markers = ["unstable"]
-asyncio_mode = "auto"
 filterwarnings = [
     "error:RuntimeWarning"
 ]

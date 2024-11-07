@@ -3,16 +3,14 @@ from pathlib import Path
 from parameterized import parameterized
 
 from single_kernel_mongo.config.roles import (
-    K8S_MONGOD,
-    K8S_MONGOS,
-    VM_MONGOD,
-    VM_MONGOS,
+    K8S_MONGO,
+    VM_MONGO,
     Role,
 )
 from single_kernel_mongo.core.workload import MongoPaths
 
 
-@parameterized.expand([[K8S_MONGOD], [K8S_MONGOS], [VM_MONGOS], [VM_MONGOD]])
+@parameterized.expand([[K8S_MONGO], [VM_MONGO]])
 def test_mongo_paths(role: Role):
     paths = MongoPaths(role)
 
