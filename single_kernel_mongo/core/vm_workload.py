@@ -17,9 +17,8 @@ from single_kernel_mongo.config.literals import (
     CRON_FILE,
     Snap,
     VmUser,
-    WorkloadUser,
 )
-from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
 
 logger = getLogger(__name__)
@@ -28,18 +27,13 @@ logger = getLogger(__name__)
 class VMWorkload(WorkloadBase):
     """Wrapper for performing common operations specific to the Kafka Snap."""
 
-    paths: MongoPaths
-    service: str
-    layer_name: str
-    substrate: str = "vm"
-    users: WorkloadUser = VmUser()
-    container: Container | None = None
-    env_variable: str
+    substrate = "vm"
+    container = None
+    users = VmUser()
 
     def __init__(self, container: Container | None) -> None:
         self.snap = Snap
         self.mongod = snap.SnapCache()[self.snap.name]
-        self.container = container
 
     @property
     @override

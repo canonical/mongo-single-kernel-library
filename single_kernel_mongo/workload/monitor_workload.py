@@ -4,19 +4,15 @@
 
 """MongoDB exporter workloads definition."""
 
-from typing import Generic, TypeVar
-
 from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
 from single_kernel_mongo.config.roles import ROLES
-from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase, WorkloadProtocol
-
-T = TypeVar("T", bound=WorkloadProtocol)
+from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
-class MongoDBExporterWorkload(WorkloadBase, Generic[T]):
+class MongoDBExporterWorkload(WorkloadBase):
     """MongoDB Workload definition."""
 
     service = "mongodb_exporter"

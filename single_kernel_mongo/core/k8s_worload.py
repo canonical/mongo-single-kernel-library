@@ -11,8 +11,8 @@ from ops import Container
 from ops.pebble import ExecError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import KubernetesUser, WorkloadUser
-from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+from single_kernel_mongo.config.literals import KubernetesUser
+from single_kernel_mongo.core.workload import WorkloadBase
 
 logger = getLogger(__name__)
 
@@ -20,12 +20,9 @@ logger = getLogger(__name__)
 class KubernetesWorkload(WorkloadBase):
     """Wrapper for performing common operations specific to the Kafka container."""
 
-    paths: MongoPaths
-    service: str
-    layer_name: str
-    users: WorkloadUser = KubernetesUser()
-    substrate: str = "k8s"
+    substrate = "k8s"
     container: Container  # We always have a container in a Kubernetes Workload
+    users = KubernetesUser()
 
     def __init__(self, container: Container | None) -> None:
         if not container:

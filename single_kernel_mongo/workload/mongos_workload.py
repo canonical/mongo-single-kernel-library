@@ -3,19 +3,16 @@
 # See LICENSE file for licensing details.
 
 """MongoDB and Mongos workloads definition."""
-from typing import Generic, TypeVar
 
 from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
 from single_kernel_mongo.config.roles import ROLES
-from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase, WorkloadProtocol
-
-T = TypeVar("T", bound=WorkloadProtocol)
+from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
-class MongosWorkload(WorkloadBase, Generic[T]):
+class MongosWorkload(WorkloadBase):
     """MongoDB Workload definition."""
 
     service = "mongos"

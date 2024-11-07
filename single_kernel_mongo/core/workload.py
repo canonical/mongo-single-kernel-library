@@ -7,7 +7,7 @@ import secrets
 import string
 from abc import abstractmethod
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from ops import Container
 from ops.pebble import Layer
@@ -80,11 +80,13 @@ class MongoPaths:
 class WorkloadProtocol(Protocol):  # pragma: nocover
     """The protocol for workloads."""
 
+    substrate: ClassVar[str]
     paths: MongoPaths
+    service: ClassVar[str]
+    layer_name: ClassVar[str]
     container: Container | None
-    users: WorkloadUser
-    substrate: str
-    bin_cmd: str
+    users: ClassVar[WorkloadUser]
+    bin_cmd: ClassVar[str]
 
     @abstractmethod
     def start(self) -> None:
