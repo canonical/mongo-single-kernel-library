@@ -29,10 +29,13 @@ class AppPeerRelationModel(BaseModel):
     backup_password: str | None = Field(default=None, alias="backup-password")
     monitor_password: str | None = Field(default=None, alias="monitor-password")
     keyfile: str | None = Field(default=None)
+    external_connectivity: bool = Field(default=False, alias="external-connectivity")
 
 
 class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData]):
     """State collection for replicaset relation."""
+
+    component: Application
 
     def __init__(
         self,
@@ -135,3 +138,32 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
     def set_user_password(self, user: str, password: str):
         """Stores a user password in the app databag."""
         self.update({f"{user}-password": password})
+
+    @property
+    def replica_set(self) -> str:
+        """The replica set name."""
+        return self.component.name
+
+    @property
+    def tls_enabled(self) -> bool:
+        """Is TLS enabled?"""
+        return False
+
+    @property
+    def external_connectivity(self) -> bool:
+        """Is the external connectivity tag in the databag?"""
+        return self.relation_data.external_connectivity
+
+    @external_connectivity.setter
+    def external_connectivity(self, value: bool) -> None:
+        if isinstance(value, bool):
+            self.update({"external-connectivity": json.dumps(value)})
+        else:
+            raise ValueError(
+                f"'external-connectivity' must be a boolean value. Provided: {value} is of type {type(value)}"
+            )
+
+    @property
+    def config_server_url(self) -> str:
+        """The server config url."""
+        return ""

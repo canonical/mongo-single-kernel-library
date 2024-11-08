@@ -18,6 +18,7 @@ class PBMWorkload(WorkloadBase):
     service = "pbm-agent"
     layer_name = "pbm-agent"
     bin_cmd = "pbm"
+    env_var = "PBM_MONGODB_URI"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)
@@ -42,7 +43,7 @@ class PBMWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {"PBM_MONGODB_URI": environment.get("PBM_MONGODB_URI", "")},
+                        "environment": {self.env_var: environment.get(self.env_var, "")},
                     }
                 },
             }

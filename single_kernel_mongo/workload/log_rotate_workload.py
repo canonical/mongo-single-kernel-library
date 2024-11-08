@@ -20,6 +20,7 @@ class LogRotateWorkload(WorkloadBase):
     service = "logrotate"
     layer_name = "log_rotate"
     bin_cmd = "logrotate"
+    env_var = ""
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)

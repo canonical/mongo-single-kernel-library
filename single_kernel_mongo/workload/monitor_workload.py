@@ -18,6 +18,7 @@ class MongoDBExporterWorkload(WorkloadBase):
     service = "mongodb_exporter"
     layer_name = "mongodb_exporter"
     bin_cmd = "mongosh"
+    env_var = "MONGODB_URI"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)
@@ -42,7 +43,7 @@ class MongoDBExporterWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {"MONGODB_URI": environment.get("MONGODB_URI", "")},
+                        "environment": {self.env_var: environment.get(self.env_var, "")},
                     }
                 },
             }

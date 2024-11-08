@@ -18,6 +18,7 @@ class MongoDBWorkload(WorkloadBase):
     service = "mongod"
     layer_name = "mongod"
     bin_cmd = "mongosh"
+    env_var = "MONGOD_ARGS"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)
@@ -41,7 +42,7 @@ class MongoDBWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {"MONGOD_ARGS": environment.get("MONGOD_ARGS", "")},
+                        "environment": {self.env_var: environment.get(self.env_var, "")},
                     }
                 },
             }

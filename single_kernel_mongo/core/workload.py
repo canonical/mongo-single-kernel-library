@@ -24,6 +24,7 @@ class MongoPaths:
         self.conf_path = role.paths["CONF"]
         self.data_path = role.paths["DATA"]
         self.binaries_path = role.paths["BIN"]
+        self.var_path: str = role.paths["VAR"]
         self.logs_path = role.paths["LOGS"]
         self.shell_path = role.paths["SHELL"]
 
@@ -31,6 +32,11 @@ class MongoPaths:
     def config_file(self) -> Path:
         """The main mongod config file."""
         return Path(f"{self.conf_path}/mongod.conf")
+
+    @property
+    def socket_path(self) -> Path:
+        """The socket path for internal connectivity."""
+        return Path(f"{self.var_path}/mongodb-27018.sock")
 
     @property
     def keyfile(self) -> Path:
@@ -88,6 +94,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     container: Container | None
     users: ClassVar[WorkloadUser]
     bin_cmd: ClassVar[str]
+    env_var: ClassVar[str]
 
     @abstractmethod
     def start(self) -> None:
