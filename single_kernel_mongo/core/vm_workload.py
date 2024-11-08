@@ -68,7 +68,7 @@ class VMWorkload(WorkloadBase):
         return path.read_text().splitlines()
 
     @override
-    def write(self, content: str, path: Path, mode: str = "w") -> None:
+    def write(self, content: str, path: Path, mode: str = "w") -> None:  # pragma: nocover
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, mode) as f:
             f.write(content)
@@ -122,7 +122,7 @@ class VMWorkload(WorkloadBase):
     )
     def active(self) -> bool:
         try:
-            return bool(self.mongod.services[self.service]["active"])
+            return self.mongod.services[self.service]["active"]
         except KeyError:
             return False
 
@@ -146,5 +146,5 @@ class VMWorkload(WorkloadBase):
             return False
 
     @override
-    def setup_cron(self, lines: list[str]) -> None:
+    def setup_cron(self, lines: list[str]) -> None:  # pragma: nocover
         CRON_FILE.write_text("\n".join(lines))

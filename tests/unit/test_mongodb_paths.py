@@ -22,5 +22,6 @@ def test_mongo_paths(role: Role):
     assert paths.ext_ca_file.parent == Path(role.paths["CONF"])
     assert paths.int_pem_file.parent == Path(role.paths["CONF"])
     assert paths.int_ca_file.parent == Path(role.paths["CONF"])
+    assert paths.socket_path.parent == Path(role.paths["VAR"])
 
     assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_files)

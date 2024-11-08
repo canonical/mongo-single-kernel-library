@@ -28,6 +28,11 @@ class MongoPaths:
         self.logs_path = role.paths["LOGS"]
         self.shell_path = role.paths["SHELL"]
 
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        if not isinstance(other, MongoPaths):
+            return NotImplemented  # pragma: nocover
+        return self.conf_path == other.conf_path
+
     @property
     def config_file(self) -> Path:
         """The main mongod config file."""
