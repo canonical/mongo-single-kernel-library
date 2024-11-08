@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """Definition of MongoDB Connections."""
 
-
 import logging
 
 from pymongo import MongoClient
@@ -38,9 +37,7 @@ class MongoConnection:
             <error handling as needed>
     """
 
-    def __init__(
-        self, config: MongoConfiguration, uri: str | None = None, direct: bool = False
-    ):
+    def __init__(self, config: MongoConfiguration, uri: str | None = None, direct: bool = False):
         """A MongoDB client interface.
 
         Args:
@@ -130,9 +127,7 @@ class MongoConnection:
             roles: List of roles from which this role inherits privileges.
         """
         try:
-            self.client.admin.command(
-                "createRole", role_name, privileges=[privileges], roles=roles
-            )
+            self.client.admin.command("createRole", role_name, privileges=[privileges], roles=roles)
         except OperationFailure as e:
             if e.code == 51002:
                 logger.info("Role already exists")

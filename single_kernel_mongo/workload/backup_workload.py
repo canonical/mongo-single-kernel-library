@@ -42,9 +42,7 @@ class PBMWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {
-                            "PBM_MONGODB_URI": environment.get("PBM_MONGODB_URI", "")
-                        },
+                        "environment": {"PBM_MONGODB_URI": environment.get("PBM_MONGODB_URI", "")},
                     }
                 },
             }

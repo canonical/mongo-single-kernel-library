@@ -99,9 +99,7 @@ class VMWorkload(WorkloadBase):
             logger.debug(f"{output=}")
             return output
         except subprocess.CalledProcessError as e:
-            logger.error(
-                f"cmd failed - cmd={e.cmd}, stdout={e.stdout}, stderr={e.stderr}"
-            )
+            logger.error(f"cmd failed - cmd={e.cmd}, stdout={e.stdout}, stderr={e.stderr}")
             raise e
 
     @override

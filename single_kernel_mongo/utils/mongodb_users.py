@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """Definition of MongoDB users and their configuration."""
 
-
 from enum import Enum
 from typing import Any, NewType, TypedDict
 

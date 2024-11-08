@@ -42,9 +42,7 @@ class MongoDBExporterWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {
-                            "MONGODB_URI": environment.get("MONGODB_URI", "")
-                        },
+                        "environment": {"MONGODB_URI": environment.get("MONGODB_URI", "")},
                     }
                 },
             }

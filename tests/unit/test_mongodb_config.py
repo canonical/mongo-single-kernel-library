@@ -39,9 +39,7 @@ def test_configuration_with_roles(role: RoleNames):
 
 
 def test_invalid_configuration_port_replset():
-    config = MongoConfigurationFactory.build(
-        port=MongoPorts.MONGOS_PORT, replset="cafebabe"
-    )
+    config = MongoConfigurationFactory.build(port=MongoPorts.MONGOS_PORT, replset="cafebabe")
 
     with pytest.raises(AmbiguousConfigError):
         config.uri

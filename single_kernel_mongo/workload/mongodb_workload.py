@@ -41,9 +41,7 @@ class MongoDBWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {
-                            "MONGOD_ARGS": environment.get("MONGOD_ARGS", "")
-                        },
+                        "environment": {"MONGOD_ARGS": environment.get("MONGOD_ARGS", "")},
                     }
                 },
             }

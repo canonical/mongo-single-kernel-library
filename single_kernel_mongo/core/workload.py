@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Abstract workload definition for Mongo charms."""
+
 import secrets
 import string
 from abc import abstractmethod
@@ -162,11 +163,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         """Returns the environment as defined by /etc/environment."""
         raw_env = self.read(ENVIRONMENT_FILE)
         return dict(
-            tuple(
-                line.split("=", maxsplit=1)
-                for line in raw_env
-                if not line.startswith("#")
-            )
+            tuple(line.split("=", maxsplit=1) for line in raw_env if not line.startswith("#"))
         )
 
     def update_env(self, new_values: dict[str, str]):
@@ -216,9 +213,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         Returns:
             String of 32 randomized letter+digit characters
         """
-        return "".join(
-            [secrets.choice(string.ascii_letters + string.digits) for _ in range(32)]
-        )
+        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(32)])
 
     @staticmethod
     def generate_keyfile() -> str:

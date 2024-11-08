@@ -34,10 +34,6 @@ def test_valid_mongodb_config():
     MongoDBCharmConfig.model_validate({"role": "config-server", "auto-delete": False})
 
     MongosCharmConfig.model_validate({"expose-external": "none", "auto-delete": False})
-    MongosCharmConfig.model_validate(
-        {"expose-external": "nodeport", "auto-delete": False}
-    )
+    MongosCharmConfig.model_validate({"expose-external": "nodeport", "auto-delete": False})
     MongosCharmConfig.model_validate({"expose-external": "none", "auto-delete": True})
-    MongosCharmConfig.model_validate(
-        {"expose-external": "nodeport", "auto-delete": False}
-    )
+    MongosCharmConfig.model_validate({"expose-external": "nodeport", "auto-delete": False})

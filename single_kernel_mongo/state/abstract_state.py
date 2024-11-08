@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """The charm state for mongo charms (databags + model information)."""
 
-
 from typing import Generic, TypeVar
 
 from ops.model import Application, Relation, Unit
@@ -33,9 +32,7 @@ class AbstractRelationState(Generic[PModel, PData]):
         self.data_interface = data_interface
         self.component = component
         self.substrate = substrate
-        self._relation_data = (
-            self.data_interface.as_dict(self.relation.id) if self.relation else {}
-        )
+        self._relation_data = self.data_interface.as_dict(self.relation.id) if self.relation else {}
 
     @property
     def relation_data(self) -> PModel:

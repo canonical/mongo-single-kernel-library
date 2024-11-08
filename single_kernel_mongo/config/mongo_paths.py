@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Paths for Mongo charms."""
+
 SNAP_NAME = "charmed-mongodb"
 
 VM_PATH = {
