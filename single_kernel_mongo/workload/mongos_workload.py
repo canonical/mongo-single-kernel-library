@@ -29,7 +29,7 @@ class MongosWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns a Pebble configuration layer for Mongos."""
-        environment = self.get_env()
+        environment = self.get_env().get(self.env_var) or self._env
 
         layer_config = {
             "summary": "mongos layer",
@@ -42,7 +42,7 @@ class MongosWorkload(WorkloadBase):
                     "startup": "enabled",
                     "user": self.users.user,
                     "group": self.users.group,
-                    "environment": {self.env_var: environment.get(self.env_var, "")},
+                    "environment": {self.env_var: environment},
                 }
             },
         }

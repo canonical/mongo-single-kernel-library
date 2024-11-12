@@ -29,7 +29,7 @@ class MongoDBWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns the Pebble configuration layer for MongoDB."""
-        environment = self.get_env()
+        environment = self.get_env().get(self.env_var) or self._env
         return Layer(
             {
                 "summary": "mongod layer",
@@ -42,7 +42,7 @@ class MongoDBWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {self.env_var: environment.get(self.env_var, "")},
+                        "environment": {self.env_var: environment},
                     }
                 },
             }

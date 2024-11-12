@@ -6,6 +6,7 @@
 
 import subprocess
 from collections.abc import Mapping
+from itertools import chain
 from logging import getLogger
 from pathlib import Path
 
@@ -46,6 +47,17 @@ class VMWorkload(WorkloadBase):
             self.mongod.start(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
+
+    @override
+    def get_env(self) -> dict[str, str]:
+        key = self.env_var.replace("_", "-").lower()
+        return {self.env_var: self.mongod.get(key)}
+
+    @override
+    def update_env(self, parameters: chain[str]):
+        content = " ".join(parameters)
+        key = self.env_var.replace("_", "-").lower()
+        self.mongod.set({key: content})
 
     @override
     def stop(self) -> None:

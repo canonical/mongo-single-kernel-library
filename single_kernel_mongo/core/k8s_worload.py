@@ -4,6 +4,7 @@
 
 """Kubernetes workload definition."""
 
+from itertools import chain
 from logging import getLogger
 from pathlib import Path
 
@@ -65,6 +66,21 @@ class KubernetesWorkload(WorkloadBase):
             user=self.users.user,
             group=self.users.group,
         )
+
+    @override
+    def get_env(self) -> dict[str, str]:
+        return (
+            self.container.get_plan()
+            .to_dict()
+            .get("services", {})
+            .get(self.service, {})
+            .get("environment", {})
+        )
+
+    @override
+    def update_env(self, parameters: chain[str]):
+        content = " ".join(parameters)
+        self._env = content
 
     @override
     def exec(

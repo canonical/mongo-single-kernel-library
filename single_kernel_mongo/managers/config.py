@@ -4,7 +4,7 @@
 
 """Manager for handling Mongo configuration."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from itertools import chain
 
 from typing_extensions import override
@@ -13,24 +13,74 @@ from single_kernel_mongo.config.audit_config import AuditLog
 from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.state.peer_state import AppPeerReplicaSet
+from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.workload.backup_workload import PBMWorkload
+from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
 
 
-class CommonConfigManager:
-    """The common configuration manager for both MongoDB and Mongos."""
+class CommonConfigManager(ABC):
+    """A generic config manager for a workload."""
 
     config: MongoConfigModel
     workload: WorkloadBase
-    state: AppPeerReplicaSet
+    state: CharmState
 
     def set_environment(self):
         """Write all parameters in the environment variable."""
-        parameters = chain.from_iterable(self.build_parameters())
-        param_as_str = " ".join(parameters)
-        self.workload.update_env({self.workload.env_var: param_as_str})
+        if self.workload.env_var != "":
+            parameters = chain.from_iterable(self.build_parameters())
+            self.workload.update_env(parameters)
 
+    @abstractmethod
     def build_parameters(self) -> list[list[str]]:
         """Builds the parameters list."""
+        ...
+
+
+class BackupConfigManager(CommonConfigManager):
+    """Config manager for PBM."""
+
+    def __init__(self, config: MongoConfigModel, workload: PBMWorkload, state: CharmState):
+        self.config = config
+        self.workload = workload
+        self.state = state
+
+    @override
+    def build_parameters(self) -> list[list[str]]:
+        return [[self.state.backup.pbm_uri]]
+
+
+class LogRotateConfigManager(CommonConfigManager):
+    """Config manager for logrotate."""
+
+    def __init__(self, config: MongoConfigModel, workload: LogRotateWorkload, state: CharmState):
+        self.config = config
+        self.workload = workload
+        self.state = state
+
+    @override
+    def build_parameters(self) -> list[list[str]]:
+        return [[]]
+
+
+class MongoDBExporterConfigManager(CommonConfigManager):
+    """Config manager for mongodb-exporter."""
+
+    def __init__(self, config: MongoConfigModel, workload: LogRotateWorkload, state: CharmState):
+        self.config = config
+        self.workload = workload
+        self.state = state
+
+    @override
+    def build_parameters(self) -> list[list[str]]:
+        return [[]]  # TODO: When users config are integrated in the state.
+
+
+class MongoConfigManager(CommonConfigManager, ABC):
+    """The common configuration manager for both MongoDB and Mongos."""
+
+    @override
+    def build_parameters(self) -> list[list[str]]:
         return [
             self.binding_ips,
             self.port_parameter,
@@ -49,7 +99,7 @@ class CommonConfigManager:
     @property
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
-        if not self.state.external_connectivity:
+        if not self.state.app.external_connectivity:
             return [
                 f"--bind-ip {self.workload.paths.socket_path}",
                 "--filePermissions 0766",
@@ -78,7 +128,7 @@ class CommonConfigManager:
     @property
     def auth_parameter(self) -> list[str]:
         """The auth mode."""
-        if self.state.tls_enabled:
+        if self.state.tls.enabled:
             return [
                 "--auth",
                 "--clusterAuthMode=x509",
@@ -95,7 +145,7 @@ class CommonConfigManager:
     @property
     def tls_parameters(self) -> list[str]:
         """The TLS external parameters."""
-        if self.state.tls_enabled:
+        if self.state.tls.enabled:
             return [
                 f"--tlsCAFile={self.workload.paths.ext_ca_file}",
                 f"--tlsCertificateKeyFile={self.workload.paths.ext_pem_file}",
@@ -106,8 +156,13 @@ class CommonConfigManager:
         return []
 
 
-class MongoDBConfigManager(CommonConfigManager):
+class MongoDBConfigManager(MongoConfigManager):
     """MongoDB Specifics config manager."""
+
+    def __init__(self, state: CharmState, workload: WorkloadBase, config: MongoConfigModel):
+        self.state = state
+        self.workload = workload
+        self.config = config
 
     @property
     def db_path_argument(self) -> list[str]:
@@ -117,7 +172,7 @@ class MongoDBConfigManager(CommonConfigManager):
     @property
     def role_parameter(self) -> list[str]:
         """The role parameter."""
-        match self.state.role:
+        match self.state.app.role:
             case MongoDBRoles.CONFIG_SERVER:
                 return ["--configsvr"]
             case MongoDBRoles.SHARD:
@@ -128,7 +183,7 @@ class MongoDBConfigManager(CommonConfigManager):
     @property
     def replset_option(self) -> list[str]:
         """The replSet configuration option."""
-        return [f"--replSet={self.state.replica_set}"]
+        return [f"--replSet={self.state.app.replica_set}"]
 
     @property
     @override
@@ -145,15 +200,20 @@ class MongoDBConfigManager(CommonConfigManager):
         ]
 
 
-class MongosConfigManager(CommonConfigManager):
+class MongosConfigManager(MongoConfigManager):
     """Mongos Specifics config manager."""
 
+    def __init__(self, state: CharmState, workload: WorkloadBase, config: MongoConfigModel):
+        self.state = state
+        self.workload = workload
+        self.config = config
+
     @property
-    def config_server_db(self) -> list[str]:
+    def config_server_db_parameter(self) -> list[str]:
         """The config server DB parameter."""
-        if self.state.config_server_url:
-            return [f"--configdb {self.state.config_server_url}"]
-        return [f"--configdb {self.state.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"]
+        if self.state.cluster.config_server_url:
+            return [f"--configdb {self.state.cluster.config_server_url}"]
+        return [f"--configdb {self.state.app.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"]
 
     @property
     @override
@@ -164,5 +224,5 @@ class MongosConfigManager(CommonConfigManager):
     def build_parameters(self) -> list[list[str]]:
         base = super().build_parameters()
         return base + [
-            self.config_server_db,
+            self.config_server_db_parameter,
         ]

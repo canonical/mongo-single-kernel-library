@@ -7,13 +7,14 @@
 import secrets
 import string
 from abc import abstractmethod
+from itertools import chain
 from pathlib import Path
 from typing import ClassVar, Protocol
 
 from ops import Container
 from ops.pebble import Layer
 
-from single_kernel_mongo.config.literals import ENVIRONMENT_FILE, WorkloadUser
+from single_kernel_mongo.config.literals import WorkloadUser
 from single_kernel_mongo.config.roles import Role
 
 
@@ -66,7 +67,7 @@ class MongoPaths:
     @property
     def ext_ca_file(self) -> Path:
         """External connectivity CA file."""
-        return Path(f"{self.conf_path}/external-ca.pem")
+        return Path(f"{self.conf_path}/external-ca.crt")
 
     @property
     def int_pem_file(self) -> Path:
@@ -76,7 +77,7 @@ class MongoPaths:
     @property
     def int_ca_file(self) -> Path:
         """Internal connectivity CA file."""
-        return Path(f"{self.conf_path}/internal-ca.pem")
+        return Path(f"{self.conf_path}/internal-ca.crt")
 
     @property
     def tls_files(self) -> tuple[Path, Path, Path, Path]:
@@ -100,6 +101,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     users: ClassVar[WorkloadUser]
     bin_cmd: ClassVar[str]
     env_var: ClassVar[str]
+    _env: str = ""
 
     @abstractmethod
     def start(self) -> None:
@@ -171,20 +173,15 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         """Checks that the workload is active."""
         ...
 
+    @abstractmethod
     def get_env(self) -> dict[str, str]:
         """Returns the environment as defined by /etc/environment."""
-        raw_env = self.read(ENVIRONMENT_FILE)
-        return dict(
-            tuple(line.split("=", maxsplit=1) for line in raw_env if not line.startswith("#"))
-        )
+        ...
 
-    def update_env(self, new_values: dict[str, str]):
+    @abstractmethod
+    def update_env(self, parameters: chain[str]):
         """Updates the environment with the new values."""
-        current_env = self.get_env()
-
-        update_env = current_env | new_values
-        content = "\n".join(f"{key}={value}" for key, value in update_env.items())
-        self.write(content=content, path=ENVIRONMENT_FILE)
+        ...
 
     def get_version(self) -> str:
         """Get the workload version.

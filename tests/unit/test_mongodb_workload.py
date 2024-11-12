@@ -18,9 +18,13 @@ from single_kernel_mongo.workload import (
 )
 
 
-def test_mongodb_workload_init():
+def test_mongodb_workload_init(monkeypatch):
     workload = VMMongoDBWorkload(container=None)
 
+    def mock_snap(*arg, **kwargs):
+        return ""
+
+    monkeypatch.setattr(workload.mongod, "get", mock_snap)
     assert workload.paths == MongoPaths(ROLES["vm"])
     assert workload.env_var == "MONGOD_ARGS"
     assert workload.role == ROLES["vm"]
@@ -45,12 +49,17 @@ def test_mongodb_workload_init():
     )
 
 
-def test_mongos_workload_init():
+def test_mongos_workload_init(monkeypatch):
     workload = VMMongosWorkload(container=None)
 
     assert workload.paths == MongoPaths(ROLES["vm"])
     assert workload.env_var == "MONGOS_ARGS"
     assert workload.role == ROLES["vm"]
+
+    def mock_snap(*arg, **kwargs):
+        return ""
+
+    monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
     assert workload.layer == Layer(
         {
@@ -71,8 +80,13 @@ def test_mongos_workload_init():
     )
 
 
-def test_mongodb_exporter_workload_init():
+def test_mongodb_exporter_workload_init(monkeypatch):
     workload = VMMongoDBExporterWorkload(container=None)
+
+    def mock_snap(*arg, **kwargs):
+        return ""
+
+    monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
     assert workload.paths == MongoPaths(ROLES["vm"])
     assert workload.env_var == "MONGODB_URI"
@@ -97,8 +111,13 @@ def test_mongodb_exporter_workload_init():
     )
 
 
-def test_pbm_workload_init():
+def test_pbm_workload_init(monkeypatch):
     workload = VMPBMWorkload(container=None)
+
+    def mock_snap(*arg, **kwargs):
+        return ""
+
+    monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
     assert workload.paths == MongoPaths(ROLES["vm"])
     assert workload.env_var == "PBM_MONGODB_URI"

@@ -32,6 +32,26 @@ class AppPeerRelationModel(BaseModel):
     external_connectivity: bool = Field(default=False, alias="external-connectivity")
 
 
+class UnitPeerRelationModel(BaseModel):
+    """The peer relation model."""
+
+    ext_ca_secret: str | None = Field(default=None, alias="ext-ca-secret")
+    ext_cert_secret: str | None = Field(default=None, alias="ext-cert-secret")
+    ext_chain_secret: str | None = Field(default=None, alias="ext-chain-secret")
+    ext_csr_secret: str | None = Field(default=None, alias="ext-csr-secret")
+    ext_key_secret: str | None = Field(default=None, alias="ext-key-secret")
+    int_ca_secret: str | None = Field(default=None, alias="int-ca-secret")
+    int_cert_secret: str | None = Field(default=None, alias="int-cert-secret")
+    int_chain_secret: str | None = Field(default=None, alias="int-chain-secret")
+    int_csr_secret: str | None = Field(default=None, alias="int-csr-secret")
+    int_key_secret: str | None = Field(default=None, alias="int-key-secret")
+    ext_wait_cert_updated: bool | None = Field(default=None, alias="ext-wait-cert-updated")
+    int_wait_cert_updated: bool | None = Field(default=None, alias="int-wait-cert-updated")
+    int_certs_subject: str | None = Field(default=None)
+    ext_certs_subject: str | None = Field(default=None)
+    private_address: str = Field(alias="private-address")
+
+
 class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData]):
     """State collection for replicaset relation."""
 
@@ -77,6 +97,10 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
     @role.setter
     def role(self, value: str) -> None:
         self.update({"role": value})
+
+    def is_role(self, role_name: str) -> bool:
+        """Checks if the application is running in the provided role."""
+        return self.role == role_name
 
     @property
     def db_initialised(self) -> bool:
@@ -145,11 +169,6 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
         return self.component.name
 
     @property
-    def tls_enabled(self) -> bool:
-        """Is TLS enabled?"""
-        return False
-
-    @property
     def external_connectivity(self) -> bool:
         """Is the external connectivity tag in the databag?"""
         return self.relation_data.external_connectivity
@@ -162,8 +181,3 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
             raise ValueError(
                 f"'external-connectivity' must be a boolean value. Provided: {value} is of type {type(value)}"
             )
-
-    @property
-    def config_server_url(self) -> str:
-        """The server config url."""
-        return ""
