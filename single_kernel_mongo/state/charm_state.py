@@ -4,6 +4,7 @@
 
 """The general charm state."""
 
+from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
 
 from ops import CharmBase, Object, Relation, Unit
@@ -13,11 +14,12 @@ from single_kernel_mongo.config.relations import RelationNames, RequirerRelation
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DataPeerData,
+    DataPeerOtherUnitData,
     DataPeerUnitData,
 )
 from single_kernel_mongo.state.backup_state import BackupState
 from single_kernel_mongo.state.cluster_state import ClusterState
-from single_kernel_mongo.state.peer_state import AppPeerReplicaSet
+from single_kernel_mongo.state.peer_state import AppPeerReplicaSet, UnitPeerReplicaSet
 from single_kernel_mongo.state.tls_state import TLSState
 
 
@@ -30,6 +32,7 @@ class CharmState(Object):
         super().__init__(parent=charm, key="charm_state")
         self.roles = ROLES[substrate]
         self.config = charm.config
+        self.substrate: Substrates = substrate
 
         self.peer_app_interface = DataPeerData(
             self.model,
@@ -81,6 +84,16 @@ class CharmState(Object):
         )
 
     @property
+    def unit(self) -> UnitPeerReplicaSet:
+        """This unit peer relation data."""
+        return UnitPeerReplicaSet(
+            relation=self.peer_relation,
+            data_interface=self.peer_unit_interface,
+            component=self.model.unit,
+            substrate=self.substrate,
+        )
+
+    @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
         """The network binding address from the peer relation."""
         bind_address = None
@@ -94,3 +107,39 @@ class CharmState(Object):
     def planned_units(self) -> int:
         """Return the planned units for the charm."""
         return self.model.app.planned_units()
+
+    @cached_property
+    def peer_units_data_interfaces(self) -> dict[Unit, DataPeerOtherUnitData]:
+        """The cluster peer relation."""
+        return {
+            unit: DataPeerOtherUnitData(
+                model=self.model, unit=unit, relation_name=RelationNames.PEERS
+            )
+            for unit in self.peers_units
+        }
+
+    @property
+    def units(self) -> set[UnitPeerReplicaSet]:
+        """Grabs all units in the current peer relation, including this unit.
+
+        Returns:
+            Set of UnitPeerReplicaSet in the current peer relation, including this unit.
+        """
+        _units = set()
+        for unit, data_interface in self.peer_units_data_interfaces.items():
+            _units.add(
+                UnitPeerReplicaSet(
+                    relation=self.peer_relation,
+                    data_interface=data_interface,
+                    component=unit,
+                    substrate=self.substrate,
+                )
+            )
+        _units.add(self.unit)
+
+        return _units
+
+    @property
+    def app_hosts(self) -> set[str]:
+        """Retrieve the hosts associated with MongoDB application."""
+        return {unit.internal_address for unit in self.units}

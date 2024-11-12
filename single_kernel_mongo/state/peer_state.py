@@ -4,13 +4,14 @@
 
 import json
 
-from ops.model import Application, Relation
+from ops.model import Application, Relation, Unit
 from pydantic import BaseModel, Field
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import SECRETS_APP
+from single_kernel_mongo.config.literals import SECRETS_APP, Substrates
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
     DataPeerData,
+    DataPeerUnitData,
 )
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
@@ -49,7 +50,44 @@ class UnitPeerRelationModel(BaseModel):
     int_wait_cert_updated: bool | None = Field(default=None, alias="int-wait-cert-updated")
     int_certs_subject: str | None = Field(default=None)
     ext_certs_subject: str | None = Field(default=None)
-    private_address: str = Field(alias="private-address")
+    private_address: str = Field(default="", alias="private-address")
+
+
+class UnitPeerReplicaSet(AbstractRelationState[UnitPeerRelationModel, DataPeerUnitData]):
+    """State collection for unit data."""
+
+    component: Unit
+
+    def __init__(
+        self,
+        relation: Relation | None,
+        data_interface: DataPeerUnitData,
+        component: Unit,
+        substrate: Substrates,
+    ):
+        super().__init__(relation, data_interface, component, None)
+        self.data_interface = data_interface
+        self.substrate = substrate
+        self.unit = component
+
+    @property
+    def unit_id(self) -> int:
+        """The id of the unit from the unit name.
+
+        e.g mongodb/2 --> 2
+        """
+        return int(self.unit.name.split("/")[1])
+
+    @property
+    def internal_address(self) -> str:
+        """The address for internal communication between brokers."""
+        if self.substrate == "vm":
+            return self.relation_data.private_address
+
+        if self.substrate == "k8s":
+            return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
+
+        return ""
 
 
 class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData]):
