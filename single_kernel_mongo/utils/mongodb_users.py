@@ -69,12 +69,12 @@ REGULAR_ROLES = {
 class MongoDBUser(BaseModel):
     """Base model for MongoDB users."""
 
-    username: str = ""
-    database_name: str = ""
+    username: str = Field(default="")
+    database_name: str = Field(default="")
     roles: set[str] = Field(default=set())
     privileges: dict[str, Any] = Field(default={})
-    mongodb_role: str = ""
-    hosts: list = []
+    mongodb_role: str = Field(default="")
+    hosts: set[str] = Field(default=set())
 
     @computed_field  # type: ignore[misc]
     @property
@@ -108,7 +108,7 @@ class MongoDBUser(BaseModel):
         """Returns the privileges of the user."""
         return self.privileges
 
-    def get_hosts(self) -> list:
+    def get_hosts(self) -> set[str]:
         """Returns the hosts of the user."""
         return self.hosts
 
@@ -146,7 +146,7 @@ MonitorUser = MongoDBUser(
         ],
     },
     mongodb_role="explainRole",
-    hosts=[LOCALHOST],  # MongoDB Exporter can only connect to one replica.
+    hosts=set(LOCALHOST),  # MongoDB Exporter can only connect to one replica.
 )
 
 BackupUser = MongoDBUser(
@@ -154,5 +154,5 @@ BackupUser = MongoDBUser(
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
-    hosts=[LOCALHOST],  # pbm cannot make a direct connection if multiple hosts are used
+    hosts=set(LOCALHOST),  # pbm cannot make a direct connection if multiple hosts are used
 )

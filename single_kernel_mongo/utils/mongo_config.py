@@ -8,7 +8,11 @@ from urllib.parse import quote_plus, urlencode
 
 from single_kernel_mongo.config.literals import MongoPorts
 from single_kernel_mongo.core.exceptions import AmbiguousConfigError
-from single_kernel_mongo.utils.mongodb_users import REGULAR_ROLES, DBPrivilege, UserRole
+from single_kernel_mongo.utils.mongodb_users import (
+    REGULAR_ROLES,
+    DBPrivilege,
+    UserRole,
+)
 
 ADMIN_AUTH_SOURCE = {"authSource": "admin"}
 

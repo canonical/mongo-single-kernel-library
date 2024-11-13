@@ -9,7 +9,7 @@ from ipaddress import IPv4Address, IPv6Address
 
 from ops import CharmBase, Object, Relation, Unit
 
-from single_kernel_mongo.config.literals import SECRETS_UNIT, Substrates
+from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Substrates
 from single_kernel_mongo.config.relations import RelationNames, RequirerRelations
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -17,16 +17,20 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DataPeerOtherUnitData,
     DataPeerUnitData,
 )
-from single_kernel_mongo.state.backup_state import BackupState
 from single_kernel_mongo.state.cluster_state import ClusterState
 from single_kernel_mongo.state.peer_state import AppPeerReplicaSet, UnitPeerReplicaSet
 from single_kernel_mongo.state.tls_state import TLSState
+from single_kernel_mongo.utils.mongo_config import MongoConfiguration
+from single_kernel_mongo.utils.mongodb_users import (
+    BackupUser,
+    MongoDBUser,
+    MonitorUser,
+    OperatorUser,
+)
 
 
 class CharmState(Object):
     """All the charm states."""
-
-    backup: BackupState
 
     def __init__(self, charm: CharmBase, substrate: Substrates):
         super().__init__(parent=charm, key="charm_state")
@@ -66,6 +70,8 @@ class CharmState(Object):
         """The tls state of the current running app."""
         return TLSState(
             relation=self.tls_relation,
+            data_interface=self.peer_unit_interface,
+            component=self.model.unit,
         )
 
     @property
@@ -74,7 +80,7 @@ class CharmState(Object):
         return ClusterState()
 
     @property
-    def app(self) -> AppPeerReplicaSet:
+    def app_peer_data(self) -> AppPeerReplicaSet:
         """The app peer relation data."""
         return AppPeerReplicaSet(
             relation=self.peer_relation,
@@ -84,7 +90,7 @@ class CharmState(Object):
         )
 
     @property
-    def unit(self) -> UnitPeerReplicaSet:
+    def unit_peer_data(self) -> UnitPeerReplicaSet:
         """This unit peer relation data."""
         return UnitPeerReplicaSet(
             relation=self.peer_relation,
@@ -135,7 +141,7 @@ class CharmState(Object):
                     substrate=self.substrate,
                 )
             )
-        _units.add(self.unit)
+        _units.add(self.unit_peer_data)
 
         return _units
 
@@ -143,3 +149,77 @@ class CharmState(Object):
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
         return {unit.internal_address for unit in self.units}
+
+    def mongodb_config_for_user(
+        self,
+        user: MongoDBUser,
+        hosts: set[str] = set(),
+        replset: str | None = None,
+        standalone: bool = False,
+    ) -> MongoConfiguration:
+        """Returns a mongodb-specific MongoConfiguration object for the provided user.
+
+        Either user.hosts or hosts should be a non empty set.
+
+        Returns:
+            A MongoDB configuration object.
+
+        Raises:
+            Exception if neither user.hosts nor hosts is non empty.
+        """
+        if not user.hosts and not hosts:
+            raise Exception("Invalid call: no host in user nor as a parameter.")
+        return MongoConfiguration(
+            replset=replset or self.app_peer_data.replica_set,
+            database=user.database_name,
+            username=user.username,
+            password=self.app_peer_data.get_user_password(user.username),
+            hosts=hosts or user.hosts,
+            roles=user.roles,
+            tls_external=self.tls.external_enabled,
+            tls_internal=self.tls.internal_enabled,
+            standalone=standalone,
+        )
+
+    def mongos_config_for_user(
+        self,
+        user: MongoDBUser,
+        hosts: set[str] = set(),
+    ) -> MongoConfiguration:
+        """Returns a mongos-specific MongoConfiguration object for the provided user.
+
+        Either user.hosts or hosts should be a non empty set.
+
+        Returns:
+            A MongoDB configuration object.
+
+        Raises:
+            Exception if neither user.hosts nor hosts is non empty.
+        """
+        if not user.hosts and not hosts:
+            raise Exception("Invalid call: no host in user nor as a parameter.")
+        return MongoConfiguration(
+            database=user.database_name,
+            username=user.username,
+            password=self.app_peer_data.get_user_password(user.username),
+            hosts=hosts or user.hosts,
+            port=MongoPorts.MONGOS_PORT,
+            roles=user.roles,
+            tls_external=self.tls.external_enabled,
+            tls_internal=self.tls.internal_enabled,
+        )
+
+    @property
+    def backup_config(self) -> MongoConfiguration:
+        """Mongo Configuration for the backup user."""
+        return self.mongodb_config_for_user(BackupUser, standalone=True)
+
+    @property
+    def monitor_config(self) -> MongoConfiguration:
+        """Mongo Configuration for the monitoring user."""
+        return self.mongodb_config_for_user(MonitorUser)
+
+    @property
+    def operator_config(self) -> MongoConfiguration:
+        """Mongo Configuration for the operator user."""
+        return self.mongodb_config_for_user(OperatorUser, hosts=self.app_hosts)

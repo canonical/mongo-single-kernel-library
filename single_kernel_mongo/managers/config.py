@@ -47,7 +47,11 @@ class BackupConfigManager(CommonConfigManager):
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [[self.state.backup.pbm_uri]]
+        return [
+            [
+                self.state.backup_config.uri,
+            ]
+        ]
 
 
 class LogRotateConfigManager(CommonConfigManager):
@@ -73,7 +77,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [[]]  # TODO: When users config are integrated in the state.
+        return [[self.state.monitor_config.uri]]
 
 
 class MongoConfigManager(CommonConfigManager, ABC):
@@ -99,7 +103,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     @property
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
-        if not self.state.app.external_connectivity:
+        if not self.state.app_peer_data.external_connectivity:
             return [
                 f"--bind-ip {self.workload.paths.socket_path}",
                 "--filePermissions 0766",
@@ -128,7 +132,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     @property
     def auth_parameter(self) -> list[str]:
         """The auth mode."""
-        if self.state.tls.enabled:
+        if self.state.tls.internal_enabled and self.state.tls.external_enabled:
             return [
                 "--auth",
                 "--clusterAuthMode=x509",
@@ -145,7 +149,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     @property
     def tls_parameters(self) -> list[str]:
         """The TLS external parameters."""
-        if self.state.tls.enabled:
+        if self.state.tls.external_enabled:
             return [
                 f"--tlsCAFile={self.workload.paths.ext_ca_file}",
                 f"--tlsCertificateKeyFile={self.workload.paths.ext_pem_file}",
@@ -172,7 +176,7 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def role_parameter(self) -> list[str]:
         """The role parameter."""
-        match self.state.app.role:
+        match self.state.app_peer_data.role:
             case MongoDBRoles.CONFIG_SERVER:
                 return ["--configsvr"]
             case MongoDBRoles.SHARD:
@@ -183,7 +187,7 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def replset_option(self) -> list[str]:
         """The replSet configuration option."""
-        return [f"--replSet={self.state.app.replica_set}"]
+        return [f"--replSet={self.state.app_peer_data.replica_set}"]
 
     @property
     @override
@@ -211,9 +215,11 @@ class MongosConfigManager(MongoConfigManager):
     @property
     def config_server_db_parameter(self) -> list[str]:
         """The config server DB parameter."""
-        if self.state.cluster.config_server_url:
-            return [f"--configdb {self.state.cluster.config_server_url}"]
-        return [f"--configdb {self.state.app.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"]
+        if uri := self.state.cluster.config_server_uri:
+            return [f"--configdb {uri}"]
+        return [
+            f"--configdb {self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"
+        ]
 
     @property
     @override

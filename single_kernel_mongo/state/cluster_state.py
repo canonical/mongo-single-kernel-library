@@ -9,6 +9,6 @@ class ClusterState:
     """The stored state for the TLS relation."""
 
     @property
-    def config_server_url(self) -> str:
+    def config_server_uri(self) -> str:
         """Is TLS enabled."""
         return ""

@@ -32,11 +32,12 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
 
     mock_state = mocker.MagicMock(CharmState)
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app = mock_app_state
+    mock_state.app_peer_data = mock_app_state
     mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app.replica_set = "deadbeef"
-    mock_state.app.role = role
-    mock_state.tls.enabled = False
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.app_peer_data.role = role
+    mock_state.tls.internal_enabled = False
+    mock_state.tls.external_enabled = False
     workload = VMMongoDBWorkload(None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -102,12 +103,13 @@ def test_mongos_config_manager(mocker):
         "single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap.Snap.set",
     )
     mock_state = mocker.MagicMock(CharmState)
-    mock_state.app = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_url = "mongodb://config-server-url"
+    mock_state.cluster.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app.external_connectivity = False
-    mock_state.tls.enabled = False
+    mock_state.app_peer_data.external_connectivity = False
+    mock_state.tls.internal_enabled = False
+    mock_state.tls.external_enabled = False
     workload = VMMongosWorkload(None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
@@ -164,14 +166,15 @@ def test_mongos_config_manager(mocker):
     mock.assert_called_once_with({"mongos-args": expected_params})
 
 
-def test_mongodb_config_manager_tls_enabled(mocker, tmp_path):
+def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state = mocker.MagicMock(CharmState)
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app = mock_app_state
+    mock_state.app_peer_data = mock_app_state
     mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app.replica_set = "deadbeef"
-    mock_state.app.role = MongoDBRoles.REPLICATION
-    mock_state.tls.enabled = True
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.internal_enabled = True
+    mock_state.tls.external_enabled = True
     workload = VMMongoDBWorkload(None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -197,13 +200,14 @@ def test_mongodb_config_manager_tls_enabled(mocker, tmp_path):
 
 def test_mongos_default_config_server(mocker):
     mock_state = mocker.MagicMock(CharmState)
-    mock_state.app = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.app.replica_set = "deadbeef"
+    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_url = ""
+    mock_state.cluster.config_server_uri = ""
     mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.app.external_connectivity = False
-    mock_state.tls.enabled = False
+    mock_state.app_peer_data.external_connectivity = False
+    mock_state.tls.internal_enabled = False
+    mock_state.tls.externalenabled = False
     workload = VMMongoDBWorkload(None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(

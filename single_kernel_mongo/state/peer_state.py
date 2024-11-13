@@ -36,20 +36,6 @@ class AppPeerRelationModel(BaseModel):
 class UnitPeerRelationModel(BaseModel):
     """The peer relation model."""
 
-    ext_ca_secret: str | None = Field(default=None, alias="ext-ca-secret")
-    ext_cert_secret: str | None = Field(default=None, alias="ext-cert-secret")
-    ext_chain_secret: str | None = Field(default=None, alias="ext-chain-secret")
-    ext_csr_secret: str | None = Field(default=None, alias="ext-csr-secret")
-    ext_key_secret: str | None = Field(default=None, alias="ext-key-secret")
-    int_ca_secret: str | None = Field(default=None, alias="int-ca-secret")
-    int_cert_secret: str | None = Field(default=None, alias="int-cert-secret")
-    int_chain_secret: str | None = Field(default=None, alias="int-chain-secret")
-    int_csr_secret: str | None = Field(default=None, alias="int-csr-secret")
-    int_key_secret: str | None = Field(default=None, alias="int-key-secret")
-    ext_wait_cert_updated: bool | None = Field(default=None, alias="ext-wait-cert-updated")
-    int_wait_cert_updated: bool | None = Field(default=None, alias="int-wait-cert-updated")
-    int_certs_subject: str | None = Field(default=None)
-    ext_certs_subject: str | None = Field(default=None)
     private_address: str = Field(default="", alias="private-address")
 
 
@@ -200,6 +186,10 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
     def set_user_password(self, user: str, password: str):
         """Stores a user password in the app databag."""
         self.update({f"{user}-password": password})
+
+    def get_user_password(self, user: str) -> str:
+        """Returns the user password."""
+        return getattr(self.relation_data, f"{user}-password")
 
     @property
     def replica_set(self) -> str:
