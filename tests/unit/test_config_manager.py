@@ -10,9 +10,9 @@ from single_kernel_mongo.managers.config import (
     MongoDBConfigManager,
     MongosConfigManager,
 )
+from single_kernel_mongo.state.app_peer_state import AppPeerReplicaSet
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterState
-from single_kernel_mongo.state.peer_state import AppPeerReplicaSet
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 

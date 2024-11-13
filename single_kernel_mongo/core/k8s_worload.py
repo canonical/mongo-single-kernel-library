@@ -101,7 +101,12 @@ class KubernetesWorkload(WorkloadBase):
             return output
         except ExecError as e:
             logger.debug(e)
-            raise WorkloadExecError(str(e.stderr)) from e
+            raise WorkloadExecError(
+                e.command,
+                e.exit_code,
+                e.stdout,
+                e.stderr,
+            ) from e
 
     @override
     def run_bin_command(

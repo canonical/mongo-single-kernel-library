@@ -8,9 +8,18 @@
 class WorkloadExecError(Exception):
     """Raised when a workload fails to exec a command."""
 
-    def __init__(self, message: str):
+    def __init__(
+        self,
+        cmd: str | list[str],
+        return_code: int,
+        stdout: str | None,
+        stderr: str | None,
+    ):
         super().__init__(self)
-        self.message = message
+        self.cmd = cmd
+        self.return_code = return_code
+        self.stdout = stdout or ""
+        self.stderr = stderr or ""
 
 
 class ResyncError(Exception):

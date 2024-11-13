@@ -113,7 +113,12 @@ class VMWorkload(WorkloadBase):
             return output
         except subprocess.CalledProcessError as e:
             logger.error(f"cmd failed - cmd={e.cmd}, stdout={e.stdout}, stderr={e.stderr}")
-            raise WorkloadExecError(e.output.decode("utf-8")) from e
+            raise WorkloadExecError(
+                e.cmd,
+                e.returncode,
+                e.stdout,
+                e.stderr,
+            ) from e
 
     @override
     def run_bin_command(

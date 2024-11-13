@@ -1,5 +1,4 @@
 import getpass
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -8,6 +7,7 @@ from ops.pebble import Layer
 from single_kernel_mongo.config.literals import VmUser
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.core.workload import MongoPaths
+from single_kernel_mongo.exceptions import WorkloadExecError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap import SnapError
 from single_kernel_mongo.workload import (
     VMLogRotateDBWorkload,
@@ -253,10 +253,10 @@ def test_exec():
 def test_exec_fail(mocker, caplog):
     workload = VMMongoDBWorkload(container=None)
     caplog.clear()
-    with pytest.raises(subprocess.CalledProcessError) as err:
+    with pytest.raises(WorkloadExecError) as err:
         workload.exec("false")
 
-    assert err.value.returncode == 1
+    assert err.value.return_code == 1
     assert err.value.cmd == "false"
     assert any(
         record.levelname == "ERROR" and record.msg == "cmd failed - cmd=false, stdout=, stderr="

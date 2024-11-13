@@ -81,7 +81,7 @@ class BackupManager(Object):
                     )
                     return backup_id_match.group("backup_id") if backup_id_match else "N/A"
                 except WorkloadExecError as e:
-                    error_message = e.message
+                    error_message = e.stdout
                     if "Resync" in error_message:
                         raise ResyncError from e
 
