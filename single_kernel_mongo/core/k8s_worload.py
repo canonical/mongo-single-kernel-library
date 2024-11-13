@@ -14,6 +14,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import KubernetesUser
 from single_kernel_mongo.core.workload import WorkloadBase
+from single_kernel_mongo.exceptions import WorkloadExecError
 
 logger = getLogger(__name__)
 
@@ -100,11 +101,14 @@ class KubernetesWorkload(WorkloadBase):
             return output
         except ExecError as e:
             logger.debug(e)
-            raise e
+            raise WorkloadExecError(str(e.stderr)) from e
 
     @override
     def run_bin_command(
-        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+        self,
+        bin_keyword: str,
+        bin_args: list[str] = [],
+        environment: dict[str, str] = {},
     ) -> str:
         command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
         return self.exec(command=command, env=environment or None)

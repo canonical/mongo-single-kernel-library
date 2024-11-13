@@ -9,11 +9,14 @@ from enum import Enum
 class RelationNames(str, Enum):
     """The different relations."""
 
-    NAME = "database"
+    DATABASE = "database"
     PEERS = "database-peers"
-    SHARDING_RELATIONS_NAME = "sharding"
-    CONFIG_SERVER_RELATIONS_NAME = "config-server"
-    CLUSTER_RELATIONS_NAME = "cluster"
+    ROUTER_PEERS = "router-peers"
+    SHARDING = "sharding"
+    CONFIG_SERVER = "config-server"
+    CLUSTER = "cluster"
+    MONGOS_PROXY = "mongos_proxy"
+    UPGRADE_VERSION = "upgrade-version-a"
 
 
 class Scopes(str, Enum):
@@ -23,8 +26,14 @@ class Scopes(str, Enum):
     UNIT_SCOPE = "unit"
 
 
-class RequirerRelations(str, Enum):
+class ExternalRequirerRelations(str, Enum):
     """The relations we require externally."""
 
     TLS = "certificates"
     S3_CREDENTIALS = "s3-credentials"
+
+
+class ExternalProviderRelations(str, Enum):
+    """The relations we provide to non mongo related charms."""
+
+    COS_AGENT = "cos-agent"

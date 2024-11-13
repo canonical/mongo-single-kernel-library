@@ -4,7 +4,7 @@
 
 from typing import Generic, TypeVar
 
-from ops.model import Application, Model, Relation, Unit
+from ops.model import Application, Relation, Unit
 from pydantic import BaseModel
 
 from single_kernel_mongo.config.literals import Substrates
@@ -20,8 +20,6 @@ class AbstractRelationState(Generic[PModel, PData]):
     """Relation state object."""
 
     atype: type[PModel]
-
-    model: Model
 
     def __init__(
         self,

@@ -20,6 +20,7 @@ from single_kernel_mongo.config.literals import (
     VmUser,
 )
 from single_kernel_mongo.core.workload import WorkloadBase
+from single_kernel_mongo.exceptions import WorkloadExecError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
 
 logger = getLogger(__name__)
@@ -112,11 +113,14 @@ class VMWorkload(WorkloadBase):
             return output
         except subprocess.CalledProcessError as e:
             logger.error(f"cmd failed - cmd={e.cmd}, stdout={e.stdout}, stderr={e.stderr}")
-            raise e
+            raise WorkloadExecError(e.output.decode("utf-8")) from e
 
     @override
     def run_bin_command(
-        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+        self,
+        bin_keyword: str,
+        bin_args: list[str] = [],
+        environment: dict[str, str] = {},
     ) -> str:
         command = [
             f"{self.paths.binaries_path}/charmed-mongodb.{self.bin_cmd}",

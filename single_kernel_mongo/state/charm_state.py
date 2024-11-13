@@ -10,16 +10,24 @@ from ipaddress import IPv4Address, IPv6Address
 from ops import CharmBase, Object, Relation, Unit
 
 from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Substrates
-from single_kernel_mongo.config.relations import RelationNames, RequirerRelations
+from single_kernel_mongo.config.relations import (
+    RelationNames,
+)
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DataPeerData,
     DataPeerOtherUnitData,
     DataPeerUnitData,
 )
+from single_kernel_mongo.state.app_peer_state import (
+    AppPeerReplicaSet,
+)
 from single_kernel_mongo.state.cluster_state import ClusterState
-from single_kernel_mongo.state.peer_state import AppPeerReplicaSet, UnitPeerReplicaSet
+from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
+from single_kernel_mongo.state.unit_peer_state import (
+    UnitPeerReplicaSet,
+)
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -48,6 +56,8 @@ class CharmState(Object):
             additional_secret_fields=SECRETS_UNIT,
         )
 
+    # BEGIN: Relations
+
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
@@ -61,23 +71,28 @@ class CharmState(Object):
         return self.peer_relation.units
 
     @property
-    def tls_relation(self) -> Relation | None:
-        """The TLS relation."""
-        return self.model.get_relation(RequirerRelations.TLS)
+    def client_relations(self) -> set[Relation]:
+        """The set of client relations."""
+        return set(self.model.relations[RelationNames.DATABASE])
 
     @property
-    def tls(self) -> TLSState:
-        """The tls state of the current running app."""
-        return TLSState(
-            relation=self.tls_relation,
-            data_interface=self.peer_unit_interface,
-            component=self.model.unit,
-        )
+    def cluster_relation(self) -> Relation | None:
+        """The Cluster relation."""
+        return self.model.get_relation(RelationNames.CLUSTER)
 
     @property
-    def cluster(self) -> ClusterState:
-        """The cluster state of the current running App."""
-        return ClusterState()
+    def shard_relations(self) -> set[Relation]:
+        """The set of shard relations."""
+        return set(self.model.relations[RelationNames.SHARDING])
+
+    @property
+    def config_server_relation(self) -> Relation | None:
+        """The config-server relation if it exists."""
+        return self.model.get_relation(RelationNames.CONFIG_SERVER)
+
+    # END: Relations
+
+    # BEGIN: State Accessors
 
     @property
     def app_peer_data(self) -> AppPeerReplicaSet:
@@ -98,6 +113,49 @@ class CharmState(Object):
             component=self.model.unit,
             substrate=self.substrate,
         )
+
+    @property
+    def units(self) -> set[UnitPeerReplicaSet]:
+        """Grabs all units in the current peer relation, including this unit.
+
+        Returns:
+            Set of UnitPeerReplicaSet in the current peer relation, including this unit.
+        """
+        _units = set()
+        for unit, data_interface in self.peer_units_data_interfaces.items():
+            _units.add(
+                UnitPeerReplicaSet(
+                    relation=self.peer_relation,
+                    data_interface=data_interface,
+                    component=unit,
+                    substrate=self.substrate,
+                )
+            )
+        _units.add(self.unit_peer_data)
+
+        return _units
+
+    @property
+    def cluster(self) -> ClusterState:
+        """The cluster state of the current running App."""
+        return ClusterState(
+            relation=self.cluster_relation,
+            data_interface=ClusterData(self.model, RelationNames.CLUSTER),
+            component=self.model.app,
+        )
+
+    @property
+    def tls(self) -> TLSState:
+        """A view of the TLS status from the local unit databag."""
+        return TLSState(
+            relation=self.peer_relation,
+            data_interface=self.peer_unit_interface,
+            component=self.model.unit,
+        )
+
+    # END: State Accessors
+
+    # BEGIN: Helpers
 
     @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
@@ -125,30 +183,13 @@ class CharmState(Object):
         }
 
     @property
-    def units(self) -> set[UnitPeerReplicaSet]:
-        """Grabs all units in the current peer relation, including this unit.
-
-        Returns:
-            Set of UnitPeerReplicaSet in the current peer relation, including this unit.
-        """
-        _units = set()
-        for unit, data_interface in self.peer_units_data_interfaces.items():
-            _units.add(
-                UnitPeerReplicaSet(
-                    relation=self.peer_relation,
-                    data_interface=data_interface,
-                    component=unit,
-                    substrate=self.substrate,
-                )
-            )
-        _units.add(self.unit_peer_data)
-
-        return _units
-
-    @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
         return {unit.internal_address for unit in self.units}
+
+    # END: Helpers
+
+    # BEGIN: Configuration accessors
 
     def mongodb_config_for_user(
         self,
@@ -223,3 +264,5 @@ class CharmState(Object):
     def operator_config(self) -> MongoConfiguration:
         """Mongo Configuration for the operator user."""
         return self.mongodb_config_for_user(OperatorUser, hosts=self.app_hosts)
+
+    # END: Configuration accessors

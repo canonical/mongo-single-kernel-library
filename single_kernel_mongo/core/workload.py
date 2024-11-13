@@ -153,7 +153,10 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 
     @abstractmethod
     def run_bin_command(
-        self, bin_keyword: str, bin_args: list[str], environment: dict[str, str] = {}
+        self,
+        bin_keyword: str,
+        bin_args: list[str] = [],
+        environment: dict[str, str] = {},
     ) -> str:
         """Runs service bin command with desired args.
 

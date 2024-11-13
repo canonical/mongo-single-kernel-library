@@ -57,65 +57,12 @@ class K8sManager:
             namespace=self.namespace,
         )
 
-    # BEGIN: Private methods:
-    @cache
-    def _get_pod(self, pod_name: str = "", *_) -> Pod:
-        # Allows us to get pods from other peer units
-        pod_name = pod_name or self.pod_name
-
-        return self.client.get(
-            res=Pod,
-            name=pod_name,
-        )
-
-    @cache
-    def _get_node(self, pod_name: str, *_) -> Node:
-        pod = self.get_pod(pod_name)
-        if not pod.spec or not pod.spec.nodeName:
-            raise Exception("Could not find podSpec or nodeName")
-
-        return self.client.get(
-            Node,
-            name=pod.spec.nodeName,
-        )
-
-    @cache
-    def _get_node_ip(self, pod_name: str, *_) -> str:
-        # all these redundant checks are because Lightkube's typing is awful
-        node = self.get_node(pod_name)
-        if not node.status or not node.status.addresses:
-            raise Exception(f"No status found for {node}")
-
-        for addresses in node.status.addresses:
-            if addresses.type in ["ExternalIP", "InternalIP", "Hostname"]:
-                return addresses.address
-
-        return ""
-
-    @cache
-    def _get_service(self, service_name: str, *_) -> Service | None:
-        return self.client.get(
-            res=Service,
-            name=service_name,
-        )
-
-    @cache
-    def _get_partition(self, *_) -> int:
-        partition = self.client.get(res=StatefulSet, name=self.app_name)
-        if (
-            not partition.spec
-            or not partition.spec.updateStrategy
-            or not partition.spec.updateStrategy.rollingUpdate
-            or not partition.spec.updateStrategy.rollingUpdate.partition
-        ):
-            raise Exception("Incomplete stateful set.")
-        return partition.spec.updateStrategy.rollingUpdate.partition
-
     # BEGIN: getters
     def get_ttl_hash(self, seconds=120) -> int:
         """Gets a unique time hash for the cache, expiring after 2 minutes.
 
-        We enforce a cache miss by using a ghost argument to all getters.
+        We enforce a cache miss by using a ghost argument which changes every 2
+        minutes to all getters.
         """
         return math.floor(time.time() / seconds)
 
@@ -248,3 +195,59 @@ class K8sManager:
                 self.on_deployed_without_trust()
                 return
             raise
+
+    # END: helpers
+
+    # BEGIN: Private methods
+    @cache
+    def _get_pod(self, pod_name: str = "", *_) -> Pod:
+        # Allows us to get pods from other peer units
+        pod_name = pod_name or self.pod_name
+
+        return self.client.get(
+            res=Pod,
+            name=pod_name,
+        )
+
+    @cache
+    def _get_node(self, pod_name: str, *_) -> Node:
+        pod = self.get_pod(pod_name)
+        if not pod.spec or not pod.spec.nodeName:
+            raise Exception("Could not find podSpec or nodeName")
+
+        return self.client.get(
+            Node,
+            name=pod.spec.nodeName,
+        )
+
+    @cache
+    def _get_node_ip(self, pod_name: str, *_) -> str:
+        # all these redundant checks are because Lightkube's typing is awful
+        node = self.get_node(pod_name)
+        if not node.status or not node.status.addresses:
+            raise Exception(f"No status found for {node}")
+
+        for addresses in node.status.addresses:
+            if addresses.type in ["ExternalIP", "InternalIP", "Hostname"]:
+                return addresses.address
+
+        return ""
+
+    @cache
+    def _get_service(self, service_name: str, *_) -> Service | None:
+        return self.client.get(
+            res=Service,
+            name=service_name,
+        )
+
+    @cache
+    def _get_partition(self, *_) -> int:
+        partition = self.client.get(res=StatefulSet, name=self.app_name)
+        if (
+            not partition.spec
+            or not partition.spec.updateStrategy
+            or not partition.spec.updateStrategy.rollingUpdate
+            or not partition.spec.updateStrategy.rollingUpdate.partition
+        ):
+            raise Exception("Incomplete stateful set.")
+        return partition.spec.updateStrategy.rollingUpdate.partition
