@@ -14,20 +14,29 @@ This user is named "backup".
 import json
 import logging
 import re
+import time
 from typing import TYPE_CHECKING
 
 from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase, WaitingStatus
 from tenacity import (
     Retrying,
+    before_log,
+    retry,
+    retry_if_exception_type,
     retry_if_not_exception_type,
     stop_after_attempt,
     wait_fixed,
 )
 
+from single_kernel_mongo.config.literals import MongoPorts
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
     ListBackupError,
+    PBMBusyError,
     ResyncError,
+    SetPBMConfigError,
     WorkloadExecError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
@@ -40,6 +49,15 @@ BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
 REMAPPING_PATTERN = r"\ABackup doesn't match current cluster topology - it has different replica set names. Extra shards in the backup will cause this, for a simple example. The extra/unknown replica set names found in the backup are: ([\w\d\-,\s]+)([.] Backup has no data for the config server or sole replicaset)?\Z"
 
+S3_PBM_OPTION_MAP = {
+    "region": "storage.s3.region",
+    "bucket": "storage.s3.bucket",
+    "path": "storage.s3.prefix",
+    "access-key": "storage.s3.credentials.access-key-id",
+    "secret-key": "storage.s3.credentials.secret-access-key",
+    "endpoint": "storage.s3.endpointUrl",
+    "storage-class": "storage.s3.storageClass",
+}
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +71,14 @@ class BackupManager(Object):
         self.workload = workload
         self.state = state
 
-    def create_backup_action(self) -> str | None:
+    def is_valid_s3_integration(self) -> bool:
+        """Returns true if relation to s3-integrator is valid.
+
+        Only replica sets and config_servers can integrate to s3-integrator.
+        """
+        return (self.state.s3_relation is not None) and (not self.state.is_role(MongoDBRoles.SHARD))
+
+    def create_backup_action(self) -> str:  # type: ignore[return]
         """Try to create a backup and return the backup id.
 
         If PBM is resyncing, the function will retry to create backup
@@ -62,7 +87,7 @@ class BackupManager(Object):
 
         If PMB returen any other error, the function will raise BackupError.
         """
-        for attempt in Retrying(
+        for attempt in Retrying(  # noqa: RET503
             stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
             retry=retry_if_not_exception_type(BackupError),
             wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
@@ -88,17 +113,12 @@ class BackupManager(Object):
                     fail_message = f"Backup failed: {str(e)}"
 
                     raise BackupError(fail_message)
-        return None
 
     def list_backup_action(self) -> str:
         """List the backups entries."""
         backup_list: list[tuple[str, str, str]] = []
         try:
-            pbm_status_output = self.workload.run_bin_command(
-                "status",
-                ["--out=json"],
-                environment={self.workload.env_var: self.state.backup_config.uri},
-            )
+            pbm_status_output = self._get_pbm_status()
         except WorkloadExecError as e:
             raise ListBackupError from e
         pbm_status = json.loads(pbm_status_output)
@@ -135,6 +155,213 @@ class BackupManager(Object):
 
         return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
 
+    def get_status(self) -> StatusBase | None:
+        """Gets the PBM status."""
+        if not self.workload.active:  # type: ignore[truthy-function]
+            return WaitingStatus("waiting for pbm to start")
+        if not self.state.s3_relation:
+            logger.info("No configuration for backups, not relation to s3-charm")
+            return None
+        try:
+            previous_status = self.charm.unit.status
+            pbm_status = self._get_pbm_status()
+            pbm_error = self.process_pbm_error(pbm_status)
+            if pbm_error:
+                return BlockedStatus(pbm_error)
+
+            processed_status = self.process_pbm_status(pbm_status)
+            operation_result = self._get_backup_restore_operation_result(
+                processed_status, previous_status
+            )
+            logger.info(operation_result)
+            return processed_status
+        except Exception as e:
+            logger.error(f"Failed to get pbm status: {e}")
+            return BlockedStatus("PBM error")
+
+    def _get_backup_restore_operation_result(
+        self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
+    ) -> str:
+        """Returns a string with the result of the backup/restore operation.
+
+        The function call is expected to be only for not failed operations.
+        The operation is taken from previous status of the unit and expected
+        to contain the operation type (backup/restore) and the backup id.
+        """
+        if (
+            current_pbm_status.name == previous_pbm_status.name
+            and current_pbm_status.message == previous_pbm_status.message
+        ):
+            return f"Operation is still in progress: '{current_pbm_status.message}'"
+
+        if (
+            isinstance(previous_pbm_status, MaintenanceStatus)
+            and "backup id:" in previous_pbm_status.message
+        ):
+            backup_id = previous_pbm_status.message.split("backup id:")[-1].strip()
+            if "restore" in previous_pbm_status.message:
+                return f"Restore from backup {backup_id} completed successfully"
+            if "backup" in previous_pbm_status.message:
+                return f"Backup {backup_id} completed successfully"
+
+        return "Unknown operation result"
+
+    def resync_config_options(self):
+        """Attempts to resync config options and sets status in case of failure."""
+        self.workload.start()
+
+        # pbm has a flakely resync and it is necessary to wait for no actions to be running before
+        # resync-ing. See: https://jira.percona.com/browse/PBM-1038
+        for attempt in Retrying(
+            stop=stop_after_attempt(20),
+            wait=wait_fixed(5),
+            reraise=True,
+        ):
+            with attempt:
+                pbm_status = self.get_status()
+                # wait for backup/restore to finish
+                if isinstance(pbm_status, (MaintenanceStatus)):
+                    raise PBMBusyError
+
+                # if a resync is running restart the service
+                if isinstance(pbm_status, (WaitingStatus)):
+                    self.workload.restart()
+                    raise PBMBusyError
+
+        # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
+        # 2 seconds for pbm_agent to receive the resync command before verifying.
+        self.workload.run_bin_command("config", ["--force-resync"])
+        time.sleep(2)
+        self._wait_pbm_status()
+
+    @retry(
+        stop=stop_after_attempt(20),
+        reraise=True,
+        retry=retry_if_exception_type(ResyncError),
+        before=before_log(logger, logging.DEBUG),
+    )
+    def _wait_pbm_status(self) -> None:
+        """Wait for pbm_agent to resolve errors and return the status of pbm.
+
+        The pbm status is set by the pbm_agent daemon which needs time to both resync and resolve
+        errors in configurations. Resync-ing is a longer process and should take around 5 minutes.
+        Configuration errors generally occur when the configurations change and pbm_agent is
+        updating, this is generally quick and should take <15s. If errors are not resolved in 15s
+        it means there is an incorrect configuration which will require user intervention.
+
+        Retrying for resync is handled by decorator, retrying for configuration errors is handled
+        within this function.
+        """
+        # on occasion it takes the pbm_agent daemon time to update its configs, meaning that it
+        # will error for incorrect configurations for <15s before resolving itself.
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(5),
+            reraise=True,
+        ):
+            with attempt:
+                try:
+                    pbm_status = self._get_pbm_status()
+                    pbm_as_dict = json.loads(pbm_status)
+                    current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
+
+                    if current_pbm_op.get("type", "") == "resync":
+                        # since this process takes several minutes we should let the user know
+                        # immediately.
+                        self.charm.status_manager.set_and_share_status(
+                            WaitingStatus("waiting to sync s3 configurations.")
+                        )
+                        raise ResyncError
+                except WorkloadExecError as e:
+                    self.charm.status_manager.set_and_share_status(
+                        BlockedStatus(self.process_pbm_error(e.stdout))
+                    )
+
+    def set_config_options(self, credentials: dict[str, str]) -> None:
+        """Apply the configuration provided by S3 integrator.
+
+        Args:
+            credentials: A dictionary provided by backup event handler.
+        """
+        # Clear the current config file.
+        self.clear_pbm_config_file()
+
+        config = map_s3_config_to_pbm_config(credentials)
+
+        for pbm_key, pbm_value in config:
+            try:
+                self.workload.run_bin_command("config", ["--set", f"{pbm_key}={pbm_value}"])
+            except WorkloadExecError:
+                logger.error(f"Failed to configure PBM option: {pbm_key}")
+                raise SetPBMConfigError
+
+    def clear_pbm_config_file(self) -> None:
+        """Overwrites the PBM config file with the one provided by default."""
+        self.workload.write(
+            "# this file is to be left empty. Changes in this file will be ignored.\n",
+            self.workload.paths.pbm_config,
+        )
+        self.workload.run_bin_command("config", ["--file", str(self.workload.paths.pbm_config)])
+
+    def retrieve_error_message(self, pbm_status: dict) -> str:
+        """Parses pbm status for an error message from the current unit.
+
+        If pbm_agent is in the error state, the command `pbm status` does not raise an error.
+        Instead, it is in the log messages. pbm_agent also shows all the error messages for other
+        replicas in the set. This method tries to handle both cases at once.
+        """
+        try:
+            clusters = pbm_status["cluster"]
+            for cluster in clusters:
+                if cluster["rs"] == self.charm.app.name:
+                    break
+
+            for host_info in cluster["nodes"]:
+                replica_info = (
+                    f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+                )
+                if host_info["host"] == replica_info:
+                    break
+
+            return str(host_info["errors"])
+        except KeyError:
+            return ""
+
+    def process_pbm_error(self, pbm_status: str) -> str:
+        """Look up PBM status for errors."""
+        error_message: str
+        message: str
+        try:
+            pbm_as_dict = json.loads(pbm_status)
+            error_message = self.retrieve_error_message(pbm_as_dict)
+        except json.JSONDecodeError:
+            error_message = pbm_status
+
+        if "status code: 403" in error_message:
+            message = "s3 credentials are incorrect"
+        elif "status code: 404" in error_message:
+            message = "s3 configurations are incompatible."
+        elif "status code: 301" in error_message:
+            message = "s3 configurations are incompatible."
+        return message
+
+    def process_pbm_status(self, pbm_status: str) -> StatusBase:
+        """Processes the pbm status if there's no error."""
+        pbm_as_dict: dict[str, dict] = json.loads(pbm_status)
+        current_op = pbm_as_dict.get("running", {})
+        match current_op:
+            case {}:
+                return ActiveStatus("")
+            case {"type": "backup", "name": backup_id}:
+                return MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
+            case {"type": "restore", "name": backup_id}:
+                return MaintenanceStatus(f"restore started/running, backup id: '{backup_id}'")
+            case {"type": "resync"}:
+                return WaitingStatus("waiting to sync s3 configurations.")
+            case _:
+                return ActiveStatus()
+
     def _is_backup_from_different_cluster(self, backup_status: str) -> bool:
         """Returns if a given backup was made on a different cluster."""
         return re.search(REMAPPING_PATTERN, backup_status) is not None
@@ -149,8 +376,28 @@ class BackupManager(Object):
 
         return "\n".join(backups)
 
+    def _get_pbm_status(self) -> str:
+        """Runs the pbm status command."""
+        return self.workload.run_bin_command(
+            "status",
+            ["-o", "json"],
+            environment={self.workload.env_var: self.state.backup_config.uri},
+        )
+
+
+def map_s3_config_to_pbm_config(credentials: dict[str, str]):
+    """Simple mapping from s3 integration to current status."""
+    pbm_configs = {"storage.type": "s3"}
+    for s3_option, s3_value in credentials.items():
+        if s3_option not in S3_PBM_OPTION_MAP:
+            continue
+
+        pbm_configs[S3_PBM_OPTION_MAP[s3_option]] = s3_value
+    return pbm_configs
+
 
 def _backup_restore_retry_before_sleep(retry_state) -> None:
     logger.error(
-        f"Attempt {retry_state.attempt_number} failed. {BACKUP_RESTORE_MAX_ATTEMPTS - retry_state.attempt_number} attempts left. Retrying after {BACKUP_RESTORE_ATTEMPT_COOLDOWN} seconds."
+        f"Attempt {retry_state.attempt_number} failed. {BACKUP_RESTORE_MAX_ATTEMPTS - retry_state.attempt_number} attempts left."
+        f"Retrying after {BACKUP_RESTORE_ATTEMPT_COOLDOWN} seconds."
     )

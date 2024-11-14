@@ -26,6 +26,7 @@ class MongoPaths:
         self.data_path = role.paths["DATA"]
         self.binaries_path = role.paths["BIN"]
         self.var_path: str = role.paths["VAR"]
+        self.etc_path: str = role.paths["ETC"]
         self.logs_path = role.paths["LOGS"]
         self.shell_path = role.paths["SHELL"]
 

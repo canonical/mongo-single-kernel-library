@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import SECRETS_APP
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
     DataPeerData,
 )
@@ -19,7 +20,7 @@ class AppPeerRelationModel(BaseModel):
     """Description of the model used in the replica set."""
 
     db_initialised: bool = False
-    role: str = ""
+    role: MongoDBRoles = Field(default=MongoDBRoles.UNKNOWN)
     replica_set_hosts: list[str] = []
     operator_user_created: bool = Field(default=False, alias="operator-user-created")
     backup_user_created: bool = Field(default=False, alias="backup-user-created")
@@ -42,7 +43,7 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
         relation: Relation | None,
         data_interface: DataPeerData,
         component: Application,
-        role: str,
+        role: MongoDBRoles,
     ):
         super().__init__(relation, data_interface, component, None)
         self.data_interface = data_interface
@@ -65,13 +66,13 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
                 self.data_interface.update_relation_data(self.relation.id, {key: value})
 
     @property
-    def role(self) -> str:
+    def role(self) -> MongoDBRoles:
         """The role.
 
         Either from the app databag or from the default from config.
         """
         if not self.relation:
-            return ""
+            return MongoDBRoles.UNKNOWN
         return self.relation_data.role or self._role
 
     @role.setter

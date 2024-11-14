@@ -27,6 +27,7 @@ SerializeLiteralAsStr = Annotated[
 class MongoDBRoles(str, Enum):
     """The different accepted roles for a charm."""
 
+    UNKNOWN = ""
     REPLICATION = "replication"
     CONFIG_SERVER = "config-server"
     SHARD = "shard"

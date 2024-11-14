@@ -7,13 +7,16 @@
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
 
-from ops import CharmBase, Object, Relation, Unit
+from ops import Object, Relation, Unit
 
+from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Substrates
 from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
     RelationNames,
 )
 from single_kernel_mongo.config.roles import ROLES
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DataPeerData,
     DataPeerOtherUnitData,
@@ -40,7 +43,7 @@ from single_kernel_mongo.utils.mongodb_users import (
 class CharmState(Object):
     """All the charm states."""
 
-    def __init__(self, charm: CharmBase, substrate: Substrates):
+    def __init__(self, charm: AbstractMongoCharm, substrate: Substrates):
         super().__init__(parent=charm, key="charm_state")
         self.roles = ROLES[substrate]
         self.config = charm.config
@@ -90,6 +93,11 @@ class CharmState(Object):
         """The config-server relation if it exists."""
         return self.model.get_relation(RelationNames.CONFIG_SERVER)
 
+    @property
+    def s3_relation(self) -> Relation | None:
+        """The S3 relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS)
+
     # END: Relations
 
     # BEGIN: State Accessors
@@ -101,7 +109,7 @@ class CharmState(Object):
             relation=self.peer_relation,
             data_interface=self.peer_app_interface,
             component=self.model.app,
-            role=str(self.config["role"]),
+            role=self.config["role"],
         )
 
     @property
@@ -156,6 +164,9 @@ class CharmState(Object):
     # END: State Accessors
 
     # BEGIN: Helpers
+    def is_role(self, role: MongoDBRoles) -> bool:
+        """Is the charm in the correct role?"""
+        return self.app_peer_data.role == role
 
     @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:

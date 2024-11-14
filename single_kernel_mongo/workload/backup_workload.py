@@ -4,12 +4,23 @@
 
 """PBM service workloads definition."""
 
+from pathlib import Path
+
 from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+
+
+class PBMPaths(MongoPaths):
+    """PBM Specific paths."""
+
+    @property
+    def pbm_config(self) -> Path:
+        """PBM Configuration file path."""
+        return Path(f"{self.etc_path}/pbm/pbm_config.yaml")
 
 
 class PBMWorkload(WorkloadBase):
@@ -19,11 +30,12 @@ class PBMWorkload(WorkloadBase):
     layer_name = "pbm-agent"
     bin_cmd = "pbm"
     env_var = "PBM_MONGODB_URI"
+    paths: PBMPaths
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)
         self.role = ROLES[self.substrate]
-        self.paths = MongoPaths(self.role)
+        self.paths = PBMPaths(self.role)
 
     @property
     @override

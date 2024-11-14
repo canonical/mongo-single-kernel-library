@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ops import MaintenanceStatus
 from ops.charm import ActionEvent, RelationJoinedEvent
 from ops.framework import Object
 
@@ -16,6 +17,10 @@ from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.s3 import (
     CredentialsChangedEvent,
     S3Requirer,
+)
+from single_kernel_mongo.utils.event_helpers import (
+    fail_action_with_error_log,
+    success_action_with_info_log,
 )
 
 if TYPE_CHECKING:
@@ -55,7 +60,27 @@ class BackupHandler(Object):
         pass
 
     def _on_create_backup_action(self, event: ActionEvent):
-        pass
+        action = "backup"
+        # TODO: Sanity checks
+        # TODO: PBM Status check
+        try:
+            backup_id = self.dependent.create_backup_action()
+            self.charm.status_manager.set_and_share_status(
+                MaintenanceStatus(f"backup started/running, backup id:'{backup_id}'")
+            )
+            success_action_with_info_log(
+                logger,
+                event,
+                action,
+                {"backup-status": f"backup started. backup id: {backup_id}"},
+            )
+        except Exception as e:
+            fail_action_with_error_log(
+                logger,
+                event,
+                action,
+                str(e),
+            )
 
     def _on_list_backups_action(self, event: ActionEvent):
         pass
