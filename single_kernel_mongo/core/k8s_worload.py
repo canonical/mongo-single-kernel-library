@@ -9,12 +9,12 @@ from logging import getLogger
 from pathlib import Path
 
 from ops import Container
-from ops.pebble import ExecError
+from ops.pebble import ChangeError, ExecError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import KubernetesUser
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.exceptions import WorkloadExecError
+from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 
 logger = getLogger(__name__)
 
@@ -39,16 +39,28 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def start(self) -> None:
-        self.container.add_layer(self.layer_name, self.layer, combine=True)
-        self.container.restart(self.service)
+        try:
+            self.container.add_layer(self.layer_name, self.layer, combine=True)
+            self.container.restart(self.service)
+        except ChangeError as e:
+            logger.exception(str(e))
+            raise WorkloadServiceError(e.err) from e
 
     @override
     def stop(self) -> None:
-        self.container.stop(self.service)
+        try:
+            self.container.stop(self.service)
+        except ChangeError as e:
+            logger.exception(str(e))
+            raise WorkloadServiceError(e.err) from e
 
     @override
     def restart(self) -> None:
-        self.start()
+        try:
+            self.start()
+        except ChangeError as e:
+            logger.exception(str(e))
+            raise WorkloadServiceError(e.err) from e
 
     @override
     def read(self, path: Path) -> list[str]:

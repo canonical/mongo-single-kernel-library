@@ -169,6 +169,11 @@ class CharmState(Object):
         return self.app_peer_data.role == role
 
     @property
+    def upgrade_in_progress(self) -> bool:
+        """Is the charm in upgrade?"""
+        return False
+
+    @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
         """The network binding address from the peer relation."""
         bind_address = None

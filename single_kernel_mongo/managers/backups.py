@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import time
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from ops.framework import Object
@@ -35,6 +36,7 @@ from single_kernel_mongo.exceptions import (
     BackupError,
     ListBackupError,
     PBMBusyError,
+    RestoreError,
     ResyncError,
     SetPBMConfigError,
     WorkloadExecError,
@@ -71,6 +73,11 @@ class BackupManager(Object):
         self.workload = workload
         self.state = state
 
+    @cached_property
+    def environment(self) -> dict[str, str]:
+        """The environment used to run PBM commands."""
+        return {self.workload.env_var: self.state.backup_config.uri}
+
     def is_valid_s3_integration(self) -> bool:
         """Returns true if relation to s3-integrator is valid.
 
@@ -98,7 +105,7 @@ class BackupManager(Object):
                 try:
                     output = self.workload.run_bin_command(
                         "backup",
-                        environment={self.workload.env_var: self.state.backup_config.uri},
+                        environment=self.environment,
                     )
                     backup_id_match = re.search(
                         r"Starting backup '(?P<backup_id>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)'",
@@ -118,7 +125,7 @@ class BackupManager(Object):
         """List the backups entries."""
         backup_list: list[tuple[str, str, str]] = []
         try:
-            pbm_status_output = self._get_pbm_status()
+            pbm_status_output = self.pbm_status
         except WorkloadExecError as e:
             raise ListBackupError from e
         pbm_status = json.loads(pbm_status_output)
@@ -155,6 +162,44 @@ class BackupManager(Object):
 
         return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
 
+    def restore_backup(self, backup_id: str, remapping_pattern: str | None = None) -> None:
+        """Try to restore cluster a backup specified by backup id.
+
+        If PBM is resyncing, the function will retry to create backup
+        (up to  BACKUP_RESTORE_MAX_ATTEMPTS times) with BACKUP_RESTORE_ATTEMPT_COOLDOWN
+        time between attempts.
+
+        If PMB returen any other error, the function will raise RestoreError.
+        """
+        for attempt in Retrying(
+            stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
+            retry=retry_if_not_exception_type(RestoreError),
+            wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
+            reraise=True,
+            before_sleep=_backup_restore_retry_before_sleep,
+        ):
+            with attempt:
+                try:
+                    remapping_pattern = remapping_pattern or self._remap_replicaset(backup_id)
+                    remapping_args = (
+                        ["--replset-remapping", remapping_pattern] if remapping_pattern else []
+                    )
+                    self.workload.run_bin_command(
+                        "restore",
+                        [backup_id] + remapping_args,
+                        environment=self.environment,
+                    )
+                except WorkloadExecError as e:
+                    error_message = e.stdout
+                    if "Resync" in e.stdout:
+                        raise ResyncError
+
+                    fail_message = f"Restore failed: {str(e)}"
+                    if f"backup '{backup_id}' not found" in error_message:
+                        fail_message = f"Restore failed: Backup id '{backup_id}' does not exist in list of backups, please check list-backups for the available backup_ids."
+
+                    raise RestoreError(fail_message)
+
     def get_status(self) -> StatusBase | None:
         """Gets the PBM status."""
         if not self.workload.active:  # type: ignore[truthy-function]
@@ -164,7 +209,7 @@ class BackupManager(Object):
             return None
         try:
             previous_status = self.charm.unit.status
-            pbm_status = self._get_pbm_status()
+            pbm_status = self.pbm_status
             pbm_error = self.process_pbm_error(pbm_status)
             if pbm_error:
                 return BlockedStatus(pbm_error)
@@ -178,33 +223,6 @@ class BackupManager(Object):
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
             return BlockedStatus("PBM error")
-
-    def _get_backup_restore_operation_result(
-        self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
-    ) -> str:
-        """Returns a string with the result of the backup/restore operation.
-
-        The function call is expected to be only for not failed operations.
-        The operation is taken from previous status of the unit and expected
-        to contain the operation type (backup/restore) and the backup id.
-        """
-        if (
-            current_pbm_status.name == previous_pbm_status.name
-            and current_pbm_status.message == previous_pbm_status.message
-        ):
-            return f"Operation is still in progress: '{current_pbm_status.message}'"
-
-        if (
-            isinstance(previous_pbm_status, MaintenanceStatus)
-            and "backup id:" in previous_pbm_status.message
-        ):
-            backup_id = previous_pbm_status.message.split("backup id:")[-1].strip()
-            if "restore" in previous_pbm_status.message:
-                return f"Restore from backup {backup_id} completed successfully"
-            if "backup" in previous_pbm_status.message:
-                return f"Backup {backup_id} completed successfully"
-
-        return "Unknown operation result"
 
     def resync_config_options(self):
         """Attempts to resync config options and sets status in case of failure."""
@@ -233,50 +251,6 @@ class BackupManager(Object):
         self.workload.run_bin_command("config", ["--force-resync"])
         time.sleep(2)
         self._wait_pbm_status()
-
-    @retry(
-        stop=stop_after_attempt(20),
-        reraise=True,
-        retry=retry_if_exception_type(ResyncError),
-        before=before_log(logger, logging.DEBUG),
-    )
-    def _wait_pbm_status(self) -> None:
-        """Wait for pbm_agent to resolve errors and return the status of pbm.
-
-        The pbm status is set by the pbm_agent daemon which needs time to both resync and resolve
-        errors in configurations. Resync-ing is a longer process and should take around 5 minutes.
-        Configuration errors generally occur when the configurations change and pbm_agent is
-        updating, this is generally quick and should take <15s. If errors are not resolved in 15s
-        it means there is an incorrect configuration which will require user intervention.
-
-        Retrying for resync is handled by decorator, retrying for configuration errors is handled
-        within this function.
-        """
-        # on occasion it takes the pbm_agent daemon time to update its configs, meaning that it
-        # will error for incorrect configurations for <15s before resolving itself.
-
-        for attempt in Retrying(
-            stop=stop_after_attempt(3),
-            wait=wait_fixed(5),
-            reraise=True,
-        ):
-            with attempt:
-                try:
-                    pbm_status = self._get_pbm_status()
-                    pbm_as_dict = json.loads(pbm_status)
-                    current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
-
-                    if current_pbm_op.get("type", "") == "resync":
-                        # since this process takes several minutes we should let the user know
-                        # immediately.
-                        self.charm.status_manager.set_and_share_status(
-                            WaitingStatus("waiting to sync s3 configurations.")
-                        )
-                        raise ResyncError
-                except WorkloadExecError as e:
-                    self.charm.status_manager.set_and_share_status(
-                        BlockedStatus(self.process_pbm_error(e.stdout))
-                    )
 
     def set_config_options(self, credentials: dict[str, str]) -> None:
         """Apply the configuration provided by S3 integrator.
@@ -328,6 +302,17 @@ class BackupManager(Object):
         except KeyError:
             return ""
 
+    def get_backup_error_status(self, backup_id: str) -> str:
+        """Get the error status for a provided backup."""
+        pbm_status = self.pbm_status
+        pbm_as_dict: dict = json.loads(pbm_status)
+        backups = pbm_as_dict.get("backups", {}).get("snapshot", [])
+        for backup in backups:
+            if backup_id == backup["name"]:
+                return backup.get("error", "")
+
+        return ""
+
     def process_pbm_error(self, pbm_status: str) -> str:
         """Look up PBM status for errors."""
         error_message: str
@@ -362,6 +347,138 @@ class BackupManager(Object):
             case _:
                 return ActiveStatus()
 
+    def can_restore(self, backup_id: str, remapping_pattern: str) -> tuple[bool, str]:
+        """Does the status allow to restore.
+
+        Returns:
+            check: boolean telling if the status allows to restore.
+            reason: The reason if it is not possible to restore yet.
+        """
+        pbm_status = self.get_status()
+        match pbm_status:
+            case MaintenanceStatus():
+                return (False, "Please wait for current backup/restore to finish.")
+            case WaitingStatus():
+                return (
+                    False,
+                    "Sync-ing configurations needs more time, must wait before listing backups.",
+                )
+            case BlockedStatus():
+                return (False, pbm_status.message)
+            case _:
+                pass
+
+        if not backup_id:
+            return (False, "Missing backup-id to restore.")
+        if self._needs_provided_remap_arguments(backup_id) and remapping_pattern == "":
+            return (False, "Cannot restore backup, 'remap-pattern' must be set.")
+
+        return True, ""
+
+    def can_backup(self) -> tuple[bool, str]:
+        """Is PBM is a state where it can backup?"""
+        pbm_status = self.get_status()
+        match pbm_status:
+            case MaintenanceStatus():
+                return (
+                    False,
+                    "Can only create one backup at a time, please wait for current backup to finish.",
+                )
+            case WaitingStatus():
+                return (
+                    False,
+                    "Sync-ing configurations needs more time, must wait before creating backups.",
+                )
+            case BlockedStatus():
+                return False, pbm_status.message
+            case _:
+                return True, ""
+
+    def can_list_backup(self) -> tuple[bool, str]:
+        """Is PBM in a state to list backup?"""
+        pbm_status = self.get_status()
+        match pbm_status:
+            case WaitingStatus():
+                return (
+                    False,
+                    "Sync-ing configurations needs more time, must wait before listing backups.",
+                )
+            case BlockedStatus():
+                return False, pbm_status.message
+            case _:
+                return True, ""
+
+    @retry(
+        stop=stop_after_attempt(20),
+        reraise=True,
+        retry=retry_if_exception_type(ResyncError),
+        before=before_log(logger, logging.DEBUG),
+    )
+    def _wait_pbm_status(self) -> None:
+        """Wait for pbm_agent to resolve errors and return the status of pbm.
+
+        The pbm status is set by the pbm_agent daemon which needs time to both resync and resolve
+        errors in configurations. Resync-ing is a longer process and should take around 5 minutes.
+        Configuration errors generally occur when the configurations change and pbm_agent is
+        updating, this is generally quick and should take <15s. If errors are not resolved in 15s
+        it means there is an incorrect configuration which will require user intervention.
+
+        Retrying for resync is handled by decorator, retrying for configuration errors is handled
+        within this function.
+        """
+        # on occasion it takes the pbm_agent daemon time to update its configs, meaning that it
+        # will error for incorrect configurations for <15s before resolving itself.
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(5),
+            reraise=True,
+        ):
+            with attempt:
+                try:
+                    pbm_status = self.pbm_status
+                    pbm_as_dict = json.loads(pbm_status)
+                    current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
+
+                    if current_pbm_op.get("type", "") == "resync":
+                        # since this process takes several minutes we should let the user know
+                        # immediately.
+                        self.charm.status_manager.set_and_share_status(
+                            WaitingStatus("waiting to sync s3 configurations.")
+                        )
+                        raise ResyncError
+                except WorkloadExecError as e:
+                    self.charm.status_manager.set_and_share_status(
+                        BlockedStatus(self.process_pbm_error(e.stdout))
+                    )
+
+    def _get_backup_restore_operation_result(
+        self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
+    ) -> str:
+        """Returns a string with the result of the backup/restore operation.
+
+        The function call is expected to be only for not failed operations.
+        The operation is taken from previous status of the unit and expected
+        to contain the operation type (backup/restore) and the backup id.
+        """
+        if (
+            current_pbm_status.name == previous_pbm_status.name
+            and current_pbm_status.message == previous_pbm_status.message
+        ):
+            return f"Operation is still in progress: '{current_pbm_status.message}'"
+
+        if (
+            isinstance(previous_pbm_status, MaintenanceStatus)
+            and "backup id:" in previous_pbm_status.message
+        ):
+            backup_id = previous_pbm_status.message.split("backup id:")[-1].strip()
+            if "restore" in previous_pbm_status.message:
+                return f"Restore from backup {backup_id} completed successfully"
+            if "backup" in previous_pbm_status.message:
+                return f"Backup {backup_id} completed successfully"
+
+        return "Unknown operation result"
+
     def _is_backup_from_different_cluster(self, backup_status: str) -> bool:
         """Returns if a given backup was made on a different cluster."""
         return re.search(REMAPPING_PATTERN, backup_status) is not None
@@ -376,13 +493,54 @@ class BackupManager(Object):
 
         return "\n".join(backups)
 
-    def _get_pbm_status(self) -> str:
+    @cached_property
+    def pbm_status(self) -> str:
         """Runs the pbm status command."""
         return self.workload.run_bin_command(
             "status",
             ["-o", "json"],
-            environment={self.workload.env_var: self.state.backup_config.uri},
+            environment=self.environment,
         )
+
+    def _needs_provided_remap_arguments(self, backup_id: str) -> bool:
+        """Returns true if remap arguments are needed to perform a restore command."""
+        backup_error_status = self.get_backup_error_status(backup_id)
+
+        # When a charm is running as a Replica set it can generate its own remapping arguments
+        return self._is_backup_from_different_cluster(backup_error_status) and self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        )
+
+    def _remap_replicaset(self, backup_id: str) -> str | None:
+        """Returns options for remapping a replica set during a cluster migration restore.
+
+        Args:
+            backup_id: str of the backup to check for remapping
+
+        Raises: CalledProcessError
+        """
+        pbm_status = self.pbm_status
+        pbm_status = json.loads(pbm_status)
+
+        # grab the error status from the backup if present
+        backup_error_status = self.get_backup_error_status(backup_id)
+
+        if not self._is_backup_from_different_cluster(backup_error_status):
+            return None
+
+        # TODO in the future when we support conf servers and shards this will need to be more
+        # comprehensive.
+        old_cluster_name_match = re.search(REMAPPING_PATTERN, backup_error_status)
+        if not old_cluster_name_match:
+            return None
+        old_cluster_name = old_cluster_name_match.group(1)
+        current_cluster_name = self.charm.app.name
+        logger.debug(
+            "Replica set remapping is necessary for restore, old cluster name: %s ; new cluster name: %s",
+            old_cluster_name,
+            current_cluster_name,
+        )
+        return f"{current_cluster_name}={old_cluster_name}"
 
 
 def map_s3_config_to_pbm_config(credentials: dict[str, str]):

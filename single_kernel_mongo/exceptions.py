@@ -22,6 +22,10 @@ class WorkloadExecError(Exception):
         self.stderr = stderr or ""
 
 
+class WorkloadServiceError(Exception):
+    """Raised when a service fail to start/stop/restart."""
+
+
 class ResyncError(Exception):
     """Raised when pbm is resyncing configurations and is not ready to be used."""
 

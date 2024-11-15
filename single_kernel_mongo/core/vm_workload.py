@@ -20,7 +20,7 @@ from single_kernel_mongo.config.literals import (
     VmUser,
 )
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.exceptions import WorkloadExecError
+from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
 
 logger = getLogger(__name__)
@@ -48,6 +48,7 @@ class VMWorkload(WorkloadBase):
             self.mongod.start(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
+            raise WorkloadServiceError(str(e)) from e
 
     @override
     def get_env(self) -> dict[str, str]:
@@ -66,6 +67,7 @@ class VMWorkload(WorkloadBase):
             self.mongod.stop(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
+            raise WorkloadServiceError(str(e)) from e
 
     @override
     def restart(self) -> None:
@@ -73,6 +75,7 @@ class VMWorkload(WorkloadBase):
             self.mongod.restart(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
+            raise WorkloadServiceError(str(e)) from e
 
     @override
     def read(self, path: Path) -> list[str]:

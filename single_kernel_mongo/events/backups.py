@@ -14,11 +14,21 @@ from ops.charm import ActionEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.exceptions import (
+    ListBackupError,
+    PBMBusyError,
+    RestoreError,
+    ResyncError,
+    SetPBMConfigError,
+    WorkloadExecError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.s3 import (
     CredentialsChangedEvent,
     S3Requirer,
 )
 from single_kernel_mongo.utils.event_helpers import (
+    defer_event_with_info_log,
     fail_action_with_error_log,
     success_action_with_info_log,
 )
@@ -29,6 +39,10 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+INVALID_INTEGRATION_STATUS = (
+    "Relation to s3-integrator is not supported, config role must be config-server."
+)
 
 
 class BackupHandler(Object):
@@ -54,15 +68,88 @@ class BackupHandler(Object):
 
     def _on_s3_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Checks for valid integration for s3-integrations."""
-        pass
+        if self.dependent.state.upgrade_in_progress:
+            logger.warning(
+                "Adding s3-relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            event.defer()
+            return
+        if not self.dependent.is_valid_s3_integration():
+            logger.info(
+                "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
+            )
+            self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent):
-        pass
+        action = "configure-pbm"
+        if self.dependent.state.upgrade_in_progress:
+            logger.warning(
+                "Changing s3-credentials is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            event.defer()
+            return
+        if not self.dependent.is_valid_s3_integration():
+            logger.debug(
+                "Shard does not support s3 relations, please relate s3-integrator to config-server only."
+            )
+            self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
+            return
+        if not self.dependent.workload.active:  # type: ignore[truthy-function ]
+            defer_event_with_info_log(
+                logger, event, action, "Set PBM configurations, pbm-agent service not found."
+            )
+            return
+
+        # Get the credentials from S3 connection
+        credentials = self.s3_client.get_s3_connection_info()
+
+        try:
+            self.dependent.set_config_options(credentials=credentials)
+            self.dependent.resync_config_options()
+        except SetPBMConfigError:
+            self.charm.status_manager.to_blocked("couldn't configure s3 backup options.")
+            return
+        except WorkloadServiceError as e:
+            self.charm.status_manager.to_blocked("couldn't start pbm")
+            logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
+            return
+        except ResyncError:
+            self.charm.status_manager.to_waiting("waiting to sync s3 configurations.")
+            defer_event_with_info_log(
+                logger, event, action, "Sync-ing configurations needs more time."
+            )
+            return
+        except PBMBusyError:
+            self.charm.status_manager.to_waiting("waiting to sync s3 configurations.")
+            defer_event_with_info_log(
+                logger,
+                event,
+                action,
+                "Cannot update configs while PBM is running, must wait for PBM action to finish.",
+            )
+            return
+        except WorkloadExecError as e:
+            self.charm.status_manager.to_blocked(self.dependent.process_pbm_error(e.stdout))
+            return
+
+        self.charm.status_manager.set_and_share_status(self.dependent.get_status())
 
     def _on_create_backup_action(self, event: ActionEvent):
         action = "backup"
-        # TODO: Sanity checks
-        # TODO: PBM Status check
+        check, reason = self.pass_sanity_checks()
+        if not check:
+            fail_action_with_error_log(logger, event, action, reason)
+            return
+        if not self.charm.unit.is_leader():
+            fail_action_with_error_log(
+                logger, event, action, "The action can be run only on leader unit."
+            )
+
+        check, reason = self.dependent.can_backup()
+        if not check:
+            fail_action_with_error_log(logger, event, action, reason)
+            return
+
         try:
             backup_id = self.dependent.create_backup_action()
             self.charm.status_manager.set_and_share_status(
@@ -83,7 +170,77 @@ class BackupHandler(Object):
             )
 
     def _on_list_backups_action(self, event: ActionEvent):
-        pass
+        action = "list-backups"
+        check, reason = self.pass_sanity_checks()
+        if not check:
+            fail_action_with_error_log(logger, event, action, reason)
+            return
+
+        check, reason = self.dependent.can_list_backup()
+        if not check:
+            fail_action_with_error_log(logger, event, action, reason)
+            return
+
+        try:
+            formatted_list = self.dependent.list_backup_action()
+            success_action_with_info_log(logger, event, action, {"backups": formatted_list})
+        except ListBackupError as e:
+            fail_action_with_error_log(logger, event, action, str(e))
+            return
 
     def _on_restore_action(self, event: ActionEvent):
-        pass
+        action = "restore"
+
+        backup_id = str(event.params.get("backup-id", ""))
+        remapping_pattern = str(event.params.get("remap-pattern", ""))
+
+        if self.dependent.state.upgrade_in_progress:
+            fail_action_with_error_log(
+                logger, event, action, "Restoring a backup is not supported during an upgrade."
+            )
+            return
+        check, message = self.pass_sanity_checks()
+        if not check:
+            fail_action_with_error_log(logger, event, action, message)
+            return
+        if not self.charm.unit.is_leader():
+            fail_action_with_error_log(
+                logger, event, action, "The action can be run only on a leader unit."
+            )
+            return
+
+        check, reason = self.dependent.can_restore(
+            backup_id,
+            remapping_pattern,
+        )
+        if not check:
+            fail_action_with_error_log(logger, event, action, reason)
+            return
+
+        try:
+            self.dependent.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
+            self.charm.status_manager.set_and_share_status(
+                MaintenanceStatus(f"restore started/running, backup id:'{backup_id}'")
+            )
+            success_action_with_info_log(
+                logger, event, action, {"restore-status": "restore started"}
+            )
+        except ResyncError:
+            raise
+        except RestoreError as restore_error:
+            fail_action_with_error_log(logger, event, action, str(restore_error))
+
+    def pass_sanity_checks(self) -> tuple[bool, str]:
+        """Return True if basic pre-conditions for running backup actions are met.
+
+        No matter what backup-action is being run, these requirements must be met.
+        """
+        if self.dependent.state.s3_relation is None:
+            return False, "Relation with s3-integrator charm missing, cannot restore from a backup."
+        if not self.dependent.is_valid_s3_integration():
+            return (
+                False,
+                "Shards do not support backup operations, please run action on config-server.",
+            )
+
+        return True, ""

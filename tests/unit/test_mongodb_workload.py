@@ -7,7 +7,7 @@ from ops.pebble import Layer
 from single_kernel_mongo.config.literals import VmUser
 from single_kernel_mongo.config.roles import ROLES
 from single_kernel_mongo.core.workload import MongoPaths
-from single_kernel_mongo.exceptions import WorkloadExecError
+from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap import SnapError
 from single_kernel_mongo.workload import (
     VMLogRotateDBWorkload,
@@ -217,7 +217,8 @@ def test_command_success_failure(monkeypatch, caplog, command):
     monkeypatch.setattr(workload.mongod, command, mock_snap)
 
     caplog.clear()
-    assert getattr(workload, command)() is None
+    with pytest.raises(WorkloadServiceError):
+        getattr(workload, command)()
     # Check that we logged the SnapError
     assert any(
         record.levelname == "ERROR" and record.exc_info[0] == SnapError for record in caplog.records
