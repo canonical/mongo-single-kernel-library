@@ -25,7 +25,7 @@ class AppPeerRelationModel(BaseModel):
     operator_user_created: bool = Field(default=False, alias="operator-user-created")
     backup_user_created: bool = Field(default=False, alias="backup-user-created")
     monitor_user_created: bool = Field(default=False, alias="monitor-user-created")
-    managed_users_key: list[str] = Field(default=[], alias="managed-users-key")
+    managed_users_key: set[str] = Field(default=set(), alias="managed-users-key")
     operator_password: str | None = Field(default=None, alias="operator-password")
     backup_password: str | None = Field(default=None, alias="backup-password")
     monitor_password: str | None = Field(default=None, alias="monitor-password")
@@ -112,10 +112,10 @@ class AppPeerReplicaSet(AbstractRelationState[AppPeerRelationModel, DataPeerData
         self.update({"replica_set_hosts": json.dumps(value)})
 
     @property
-    def managed_users_key(self) -> list[str]:
-        """Returns the stored list of managed-users."""
+    def managed_users_key(self) -> set[str]:
+        """Returns the stored set of managed-users."""
         if not self.relation:
-            return []
+            return set()
 
         return self.relation_data.managed_users_key
 

@@ -48,3 +48,19 @@ class BackupError(Exception):
 
 class ListBackupError(Exception):
     """Raised when list backup operation is failed."""
+
+
+class FailedToFindNodePortError(Exception):
+    """Raised when NodePort cannot be found, but is excepted to be present."""
+
+
+class FailedToFindServiceError(Exception):
+    """Raised when service cannot be found, but is excepted to be present."""
+
+
+class FailedToGetHostsError(Exception):
+    """Raised when we fail to get the host."""
+
+
+class SecretAlreadyExistsError(Exception):
+    """Raised when we try to push a secret that already exists."""

@@ -12,6 +12,13 @@ Substrates = Literal["vm", "k8s"]
 LOCALHOST = "127.0.0.1"
 
 
+class Scope(str, Enum):
+    """Peer relations scope."""
+
+    APP = "app"
+    UNIT = "unit"
+
+
 class MongoPorts(int, Enum):
     """The default Mongo ports."""
 

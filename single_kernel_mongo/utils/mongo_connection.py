@@ -3,6 +3,7 @@
 """Definition of MongoDB Connections."""
 
 import logging
+import re
 
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
@@ -146,3 +147,12 @@ class MongoConnection:
             logger.info(f"Not dropping system DB {database}.")
             return
         self.client.drop_database(database)
+
+    def get_users(self) -> set[str]:
+        """Add a new member to replica set config inside MongoDB."""
+        users_info = self.client.admin.command("usersInfo")
+        return {
+            user_obj["user"]
+            for user_obj in users_info["users"]
+            if re.match(r"^relation-\d+$", user_obj["user"])
+        }

@@ -4,19 +4,22 @@
 
 """The general charm state."""
 
+import logging
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
+from typing import TypeVar
 
 from ops import Object, Relation, Unit
 
 from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Substrates
+from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Scope, Substrates
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
 )
-from single_kernel_mongo.config.roles import ROLES
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.config.roles import MongoDBRole, MongosRole, Role
+from single_kernel_mongo.core.secrets import SecretCache
+from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DataPeerData,
     DataPeerOtherUnitData,
@@ -37,17 +40,23 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     MonitorUser,
     OperatorUser,
+    RoleNames,
 )
+
+logger = logging.getLogger()
+
+T = TypeVar("T", bound=MongoConfigModel)
 
 
 class CharmState(Object):
     """All the charm states."""
 
-    def __init__(self, charm: AbstractMongoCharm, substrate: Substrates):
+    def __init__(self, charm: AbstractMongoCharm[T], role: Role):
         super().__init__(parent=charm, key="charm_state")
-        self.roles = ROLES[substrate]
+        self.role = role
         self.config = charm.config
-        self.substrate: Substrates = substrate
+        self.substrate: Substrates = self.role.substrate
+        self.secrets = SecretCache(charm)
 
         self.peer_app_interface = DataPeerData(
             self.model,
@@ -84,9 +93,9 @@ class CharmState(Object):
         return self.model.get_relation(RelationNames.CLUSTER)
 
     @property
-    def shard_relations(self) -> set[Relation]:
+    def shard_relations(self) -> list[Relation]:
         """The set of shard relations."""
-        return set(self.model.relations[RelationNames.SHARDING])
+        return self.model.relations[RelationNames.SHARDING]
 
     @property
     def config_server_relation(self) -> Relation | None:
@@ -109,7 +118,7 @@ class CharmState(Object):
             relation=self.peer_relation,
             data_interface=self.peer_app_interface,
             component=self.model.app,
-            role=self.config["role"],
+            role=self.config.role,
         )
 
     @property
@@ -201,7 +210,37 @@ class CharmState(Object):
     @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
+        return {unit.host for unit in self.units}
+
+    @property
+    def internal_hosts(self) -> set[str]:
+        """Internal hosts for internal access."""
         return {unit.internal_address for unit in self.units}
+
+    @property
+    def host_port(self) -> int:
+        """Retrieve the port associated with MongoDB application."""
+        if self.is_role(MongoDBRoles.MONGOS):
+            if self.config["expose_external"]:
+                return self.unit_peer_data.node_port
+            return MongoPorts.MONGOS_PORT
+        return MongoPorts.MONGODB_PORT
+
+    @property
+    def config_server_name(self) -> str | None:
+        """Gets the config server name."""
+        if isinstance(self.role, MongosRole):
+            if self.cluster_relation:
+                return self.cluster_relation.app.name
+            return None
+        if self.is_role(MongoDBRoles.SHARD):
+            if self.shard_relations:
+                return self.shard_relations[0].app.name
+            return None
+        logger.info(
+            "Component %s is not a shard, cannot be integrated to a config-server.", self.role
+        )
+        return None
 
     # END: Helpers
 
@@ -280,5 +319,32 @@ class CharmState(Object):
     def operator_config(self) -> MongoConfiguration:
         """Mongo Configuration for the operator user."""
         return self.mongodb_config_for_user(OperatorUser, hosts=self.app_hosts)
+
+    @property
+    def mongos_config(self) -> MongoConfiguration:
+        """Mongos Configuration for the mongos user."""
+        username = self.secrets.get_for_key(Scope.APP, key="username")
+        password = self.secrets.get_for_key(Scope.APP, key="password")
+        if not username or not password:
+            raise Exception("Missing credentials.")
+
+        return MongoConfiguration(
+            database=f"{self.model.app.name}_{self.model.name}",
+            username=username,
+            password=password,
+            hosts=self.internal_hosts,
+            # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
+            port=MongoPorts.MONGOS_PORT,
+            roles={RoleNames.ADMIN},
+            tls_external=self.tls.external_enabled,
+            tls_internal=self.tls.internal_enabled,
+        )
+
+    @property
+    def mongo_config(self) -> MongoConfiguration:
+        """The mongo configuration to use by default for charm interactions."""
+        if isinstance(self.role, MongoDBRole):
+            return self.operator_config
+        return self.mongos_config
 
     # END: Configuration accessors

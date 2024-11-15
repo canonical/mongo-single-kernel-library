@@ -5,6 +5,7 @@
 
 from dataclasses import dataclass
 
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.mongo_paths import K8S_PATH, VM_PATH
 
 
@@ -12,7 +13,7 @@ from single_kernel_mongo.config.mongo_paths import K8S_PATH, VM_PATH
 class Role:
     """Defines a role for the charm."""
 
-    substrate: str
+    substrate: Substrates
     paths: dict[str, str]
 
 

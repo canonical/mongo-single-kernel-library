@@ -12,26 +12,17 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
-class ClusterStateModel(BaseModel):
+class ConfigServerStateModel(BaseModel):
     """Cluster State Model."""
 
     database: str | None = Field(default=None)
-    extra_user_roles: str | None = Field(default=None, alias="extra-user-roles")
-    alias: str | None = Field(default=None)
-    external_node_connectivity: bool = Field(default=False, alias="external-node-connectivity")
-    config_server_db: str | None = Field(default=None, alias="config-server-db")
 
 
-class ClusterState(AbstractRelationState[ClusterStateModel, Data]):
-    """The stored state for the Cluster relation."""
+class ConfigServerState(AbstractRelationState[ConfigServerStateModel, Data]):
+    """The stored state for the ConfigServer Relation."""
 
     component: Application
 
     def __init__(self, relation: Relation | None, data_interface: Data, component: Application):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
-
-    @property
-    def config_server_uri(self) -> str:
-        """Is TLS enabled."""
-        return self.relation_data.config_server_db or ""

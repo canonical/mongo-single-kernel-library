@@ -17,6 +17,8 @@ from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Node, Pod, Service
 
+from single_kernel_mongo.exceptions import FailedToFindNodePortError, FailedToFindServiceError
+
 # default logging from lightkube httpx requests is very noisy
 logging.getLogger("lightkube").disabled = True
 logging.getLogger("lightkube.core.client").disabled = True
@@ -195,6 +197,22 @@ class K8sManager:
                 self.on_deployed_without_trust()
                 return
             raise
+
+    def get_node_port(self, port_to_match: int) -> int:
+        """Return node port for the provided port to match."""
+        service_name = self.get_unit_service_name(self.pod_name)
+        service = self.get_service(service_name=service_name)
+
+        if not service or not service.spec or not service.spec.type == "NodePort":
+            raise FailedToFindServiceError(f"No service found for port on {self.pod_name}")
+
+        for svc_port in service.spec.ports or []:
+            if svc_port.port == port_to_match:
+                return svc_port.nodePort  # type: ignore[return-value]
+
+        raise FailedToFindNodePortError(
+            f"Unable to find NodePort for {port_to_match} for the {service} service"
+        )
 
     # END: helpers
 

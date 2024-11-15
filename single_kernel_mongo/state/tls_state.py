@@ -13,6 +13,12 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 )
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
+SECRET_KEY_LABEL = "key-secret"
+SECRET_CA_LABEL = "ca-secret"
+SECRET_CERT_LABEL = "cert-secret"
+SECRET_CSR_LABEL = "csr-secret"
+SECRET_CHAIN_LABEL = "chain-secret"
+
 
 class TLSStateModel(BaseModel):
     """The pydantic model for TLS State."""
