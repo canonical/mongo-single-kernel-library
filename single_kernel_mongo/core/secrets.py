@@ -150,15 +150,15 @@ class SecretCache:
         self._secrets[label] = secret
         return self._secrets[label]
 
-    def set(self, key: str, content: str, scope: Scope) -> None:
+    def set(self, key: str, content: str, scope: Scope) -> CachedSecret:
         """Set or Add secret."""
         secret = self.get(scope)
         if not secret:
-            self.add({key: content}, scope)
-        else:
-            secret_content = secret.get_content()
-            secret_content.update({key: content})
-            secret.set_content(secret_content)
+            return self.add({key: content}, scope)
+        secret_content = secret.get_content()
+        secret_content.update({key: content})
+        secret.set_content(secret_content)
+        return secret
 
     def remove(self, scope: Scope, key: str) -> None:
         """Removing a secret."""

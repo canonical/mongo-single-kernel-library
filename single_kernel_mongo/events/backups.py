@@ -35,7 +35,7 @@ from single_kernel_mongo.utils.event_helpers import (
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-    from single_kernel_mongo.managers.backups import BackupManager
+    from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 
 
 logger = logging.getLogger(__name__)
@@ -48,9 +48,10 @@ INVALID_INTEGRATION_STATUS = (
 class BackupHandler(Object):
     """Event Handler for managing backups and S3 integration."""
 
-    def __init__(self, dependent: BackupManager):
+    def __init__(self, dependent: MongoDBOperator):
         super().__init__(dependent, key="client-relations")
         self.dependent = dependent
+        self.manager = self.dependent.backup
         self.charm: AbstractMongoCharm = dependent.charm
         self.relation_name = ExternalRequirerRelations.S3_CREDENTIALS
         self.s3_client = S3Requirer(self.charm, self.relation_name)
@@ -74,7 +75,7 @@ class BackupHandler(Object):
             )
             event.defer()
             return
-        if not self.dependent.is_valid_s3_integration():
+        if not self.manager.is_valid_s3_integration():
             logger.info(
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
@@ -88,13 +89,13 @@ class BackupHandler(Object):
             )
             event.defer()
             return
-        if not self.dependent.is_valid_s3_integration():
+        if not self.manager.is_valid_s3_integration():
             logger.debug(
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
             self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
             return
-        if not self.dependent.workload.active():
+        if not self.manager.workload.active():
             defer_event_with_info_log(
                 logger, event, action, "Set PBM configurations, pbm-agent service not found."
             )
@@ -104,8 +105,8 @@ class BackupHandler(Object):
         credentials = self.s3_client.get_s3_connection_info()
 
         try:
-            self.dependent.set_config_options(credentials=credentials)
-            self.dependent.resync_config_options()
+            self.manager.set_config_options(credentials=credentials)
+            self.manager.resync_config_options()
         except SetPBMConfigError:
             self.charm.status_manager.to_blocked("couldn't configure s3 backup options.")
             return
@@ -129,10 +130,10 @@ class BackupHandler(Object):
             )
             return
         except WorkloadExecError as e:
-            self.charm.status_manager.to_blocked(self.dependent.process_pbm_error(e.stdout))
+            self.charm.status_manager.to_blocked(self.manager.process_pbm_error(e.stdout))
             return
 
-        self.charm.status_manager.set_and_share_status(self.dependent.get_status())
+        self.charm.status_manager.set_and_share_status(self.manager.get_status())
 
     def _on_create_backup_action(self, event: ActionEvent):
         action = "backup"
@@ -145,13 +146,13 @@ class BackupHandler(Object):
                 logger, event, action, "The action can be run only on leader unit."
             )
 
-        check, reason = self.dependent.can_backup()
+        check, reason = self.manager.can_backup()
         if not check:
             fail_action_with_error_log(logger, event, action, reason)
             return
 
         try:
-            backup_id = self.dependent.create_backup_action()
+            backup_id = self.manager.create_backup_action()
             self.charm.status_manager.set_and_share_status(
                 MaintenanceStatus(f"backup started/running, backup id:'{backup_id}'")
             )
@@ -176,13 +177,13 @@ class BackupHandler(Object):
             fail_action_with_error_log(logger, event, action, reason)
             return
 
-        check, reason = self.dependent.can_list_backup()
+        check, reason = self.manager.can_list_backup()
         if not check:
             fail_action_with_error_log(logger, event, action, reason)
             return
 
         try:
-            formatted_list = self.dependent.list_backup_action()
+            formatted_list = self.manager.list_backup_action()
             success_action_with_info_log(logger, event, action, {"backups": formatted_list})
         except ListBackupError as e:
             fail_action_with_error_log(logger, event, action, str(e))
@@ -209,7 +210,7 @@ class BackupHandler(Object):
             )
             return
 
-        check, reason = self.dependent.can_restore(
+        check, reason = self.manager.can_restore(
             backup_id,
             remapping_pattern,
         )
@@ -218,7 +219,7 @@ class BackupHandler(Object):
             return
 
         try:
-            self.dependent.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
+            self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_manager.set_and_share_status(
                 MaintenanceStatus(f"restore started/running, backup id:'{backup_id}'")
             )
@@ -235,9 +236,9 @@ class BackupHandler(Object):
 
         No matter what backup-action is being run, these requirements must be met.
         """
-        if self.dependent.state.s3_relation is None:
+        if self.manager.state.s3_relation is None:
             return False, "Relation with s3-integrator charm missing, cannot restore from a backup."
-        if not self.dependent.is_valid_s3_integration():
+        if not self.manager.is_valid_s3_integration():
             return (
                 False,
                 "Shards do not support backup operations, please run action on config-server.",

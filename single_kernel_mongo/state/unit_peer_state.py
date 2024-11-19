@@ -2,10 +2,10 @@
 # See LICENSE file for licensing details.
 """The peer unit relation databag."""
 
+from enum import Enum
 from functools import cached_property
 
 from ops.model import Relation, Unit
-from pydantic import BaseModel, Field
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
@@ -15,15 +15,15 @@ from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
-class UnitPeerRelationModel(BaseModel):
+class UnitPeerRelationKeys(str, Enum):
     """The peer relation model."""
 
-    private_address: str = Field(default="", alias="private-address")
-    ingress_address: str = Field(default="", alias="ingress-address")
-    egress_subnets: str = Field(default="", alias="egress-subnets")
+    private_address = "private-address"
+    ingress_address = "ingress-address"
+    egress_subnets = "egress-subnets"
 
 
-class UnitPeerReplicaSet(AbstractRelationState[UnitPeerRelationModel, DataPeerUnitData]):
+class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     """State collection for unit data."""
 
     component: Unit
@@ -61,7 +61,7 @@ class UnitPeerReplicaSet(AbstractRelationState[UnitPeerRelationModel, DataPeerUn
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
         if self.substrate == "vm":
-            return self.relation_data.private_address
+            return str(self.relation_data.get(UnitPeerRelationKeys.private_address))
 
         if self.substrate == "k8s":
             return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"

@@ -112,17 +112,6 @@ class MongoDBUser(BaseModel):
         """Returns the hosts of the user."""
         return self.hosts
 
-    @staticmethod
-    def get_password_key_name_for_user(username: str) -> str:
-        """Returns the key name for the password of the user."""
-        if username == OperatorUser.get_username():
-            return OperatorUser.get_password_key_name()
-        if username == MonitorUser.get_username():
-            return MonitorUser.get_password_key_name()
-        if username == BackupUser.get_username():
-            return BackupUser.get_password_key_name()
-        raise ValueError(f"Unknown user: {username}")
-
 
 OperatorUser = MongoDBUser(
     username=InternalUsers.OPERATOR,
@@ -156,3 +145,17 @@ BackupUser = MongoDBUser(
     mongodb_role="pbmAnyAction",
     hosts=set(LOCALHOST),  # pbm cannot make a direct connection if multiple hosts are used
 )
+
+
+CharmUsers = (OperatorUser.username, BackupUser.username, MonitorUser.username)
+
+
+def get_user_from_username(username: str) -> MongoDBUser:
+    """Returns the key name for the password of the user."""
+    if username == OperatorUser.username:
+        return OperatorUser
+    if username == MonitorUser.username:
+        return MonitorUser
+    if username == BackupUser.username:
+        return BackupUser
+    raise ValueError(f"Unknown user: {username}")

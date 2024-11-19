@@ -4,25 +4,26 @@
 
 """The Cluster state."""
 
+from enum import Enum
+
 from ops import Application
 from ops.model import Relation
-from pydantic import BaseModel, Field
 
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import Data
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
-class ClusterStateModel(BaseModel):
+class ClusterStateKeys(str, Enum):
     """Cluster State Model."""
 
-    database: str | None = Field(default=None)
-    extra_user_roles: str | None = Field(default=None, alias="extra-user-roles")
-    alias: str | None = Field(default=None)
-    external_node_connectivity: bool = Field(default=False, alias="external-node-connectivity")
-    config_server_db: str | None = Field(default=None, alias="config-server-db")
+    database = "database"
+    extra_user_roles = "extra-user-roles"
+    alias = "alias"
+    external_node_connectivity = "external-node-connectivity"
+    config_server_db = "config-server-db"
 
 
-class ClusterState(AbstractRelationState[ClusterStateModel, Data]):
+class ClusterState(AbstractRelationState[Data]):
     """The stored state for the Cluster relation."""
 
     component: Application
@@ -34,4 +35,4 @@ class ClusterState(AbstractRelationState[ClusterStateModel, Data]):
     @property
     def config_server_uri(self) -> str:
         """Is TLS enabled."""
-        return self.relation_data.config_server_db or ""
+        return self.relation_data.get(ClusterStateKeys.config_server_db, "")

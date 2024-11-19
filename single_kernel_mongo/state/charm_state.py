@@ -164,11 +164,7 @@ class CharmState(Object):
     @property
     def tls(self) -> TLSState:
         """A view of the TLS status from the local unit databag."""
-        return TLSState(
-            relation=self.peer_relation,
-            data_interface=self.peer_unit_interface,
-            component=self.model.unit,
-        )
+        return TLSState(relation=self.peer_relation, secrets=self.secrets)
 
     # END: State Accessors
 

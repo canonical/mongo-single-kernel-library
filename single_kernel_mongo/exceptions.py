@@ -64,3 +64,7 @@ class FailedToGetHostsError(Exception):
 
 class SecretAlreadyExistsError(Exception):
     """Raised when we try to push a secret that already exists."""
+
+
+class SetPasswordError(Exception):
+    """Raised when setting the password failed for a reason."""

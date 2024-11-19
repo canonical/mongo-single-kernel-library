@@ -4,21 +4,22 @@
 
 """The Cluster state."""
 
+from enum import Enum
+
 from ops import Application
 from ops.model import Relation
-from pydantic import BaseModel, Field
 
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import Data
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
-class ConfigServerStateModel(BaseModel):
+class ConfigServerKeys(str, Enum):
     """Cluster State Model."""
 
-    database: str | None = Field(default=None)
+    database = "database"
 
 
-class ConfigServerState(AbstractRelationState[ConfigServerStateModel, Data]):
+class ConfigServerState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
 
     component: Application

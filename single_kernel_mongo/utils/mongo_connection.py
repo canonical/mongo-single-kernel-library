@@ -6,13 +6,19 @@ import logging
 import re
 
 from pymongo import MongoClient
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, PyMongoError
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import SystemDBS
 
 logger = logging.getLogger(__name__)
+
+
+class NotReadyError(PyMongoError):
+    """Raised when mongo is not ready."""
+
+    ...
 
 
 class MongoConnection:

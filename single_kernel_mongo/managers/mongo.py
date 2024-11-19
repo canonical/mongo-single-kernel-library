@@ -78,9 +78,7 @@ class MongoManager(Object):
         with MongoConnection(self.state.mongo_config) as mongo:
             database_users = mongo.get_users()
 
-        users_being_managed = database_users.intersection(
-            self.state.app_peer_data.managed_users_key
-        )
+        users_being_managed = database_users.intersection(self.state.app_peer_data.managed_users)
         relations = self.model.relations[self.get_relation_name()]
         expected_current_users = {
             f"relation-{relation.id}" for relation in relations if relation.id != relation_id
@@ -116,7 +114,7 @@ class MongoManager(Object):
         Raises:
             PyMongoError
         """
-        app_peer_data = self.state.app_peer_data.relation_data
+        managed_users = self.state.app_peer_data.managed_users
         with MongoConnection(self.state.mongo_config) as mongo:
             for username in expected_current_users - users_being_managed:
                 relation = self._get_relation_from_username(username)
@@ -137,10 +135,10 @@ class MongoManager(Object):
                 logger.info("Create relation user: %s on %s", config.username, config.database)
 
                 mongo.create_user(config)
-                app_peer_data.managed_users_key.add(username)
+                managed_users.add(username)
                 data_interface.set_database(relation.id, config.database)
 
-        self.state.app_peer_data.update(app_peer_data.model_dump(include={"managed-users-key"}))
+        self.state.app_peer_data.managed_users = managed_users
 
     def update_users(self, users_being_managed: set[str], expected_current_users: set[str]) -> None:
         """Updates existing users in Charmed MongoDB.
@@ -226,7 +224,7 @@ class MongoManager(Object):
             PyMongoError
         """
         mongo_config = self.state.mongo_config
-        app_peer_data = self.state.app_peer_data.relation_data
+        managed_users = self.state.app_peer_data.managed_users
         with MongoConnection(mongo_config) as mongo:
             for username in users_being_managed - expected_current_users:
                 logger.info("Remove relation user: %s", username)
@@ -237,12 +235,12 @@ class MongoManager(Object):
                 # for user removal of mongos-k8s router, we let the router remove itself
                 if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.substrate == "k8s":
                     logger.info("K8s routers will remove themselves.")
-                    app_peer_data.managed_users_key.remove(username)
-                    return
+                    managed_users.remove(username)
+                    continue
 
                 mongo.drop_user(username)
-                app_peer_data.managed_users_key.remove(username)
-        self.state.app_peer_data.update(app_peer_data.model_dump(include={"managed-users-key"}))
+                managed_users.remove(username)
+        self.state.app_peer_data.managed_users = managed_users
 
     def auto_delete_dbs(self, relation_id: int | None) -> None:
         """Delete unused DBs if configured to do so."""

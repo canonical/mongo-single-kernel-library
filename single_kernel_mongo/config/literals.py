@@ -77,3 +77,5 @@ CRON_FILE = Path("/etc/cron.d/mongodb")
 ENVIRONMENT_FILE = Path("/etc/environment")
 
 SECRETS_UNIT: list[str] = []
+
+MAX_PASSWORD_LENGTH = 4096
