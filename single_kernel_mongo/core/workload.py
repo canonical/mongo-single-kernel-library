@@ -143,6 +143,15 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         ...
 
     @abstractmethod
+    def delete(self, path: Path) -> None:
+        """Deletes the file from the unit.
+
+        Args:
+            path: the full filepath of the file to delete.
+        """
+        ...
+
+    @abstractmethod
     def exec(
         self,
         command: list[str] | str,
@@ -193,7 +202,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         Returns:
             String of mongo version
         """
-        if not self.active:  # type: ignore[truthy-function]
+        if not self.active():
             return ""
 
         try:

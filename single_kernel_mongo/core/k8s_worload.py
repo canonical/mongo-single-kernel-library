@@ -81,6 +81,10 @@ class KubernetesWorkload(WorkloadBase):
         )
 
     @override
+    def delete(self, path: Path):
+        self.container.remove_path(path)
+
+    @override
     def get_env(self) -> dict[str, str]:
         return (
             self.container.get_plan()

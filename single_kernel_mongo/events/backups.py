@@ -94,7 +94,7 @@ class BackupHandler(Object):
             )
             self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
             return
-        if not self.dependent.workload.active:  # type: ignore[truthy-function ]
+        if not self.dependent.workload.active():
             defer_event_with_info_log(
                 logger, event, action, "Set PBM configurations, pbm-agent service not found."
             )

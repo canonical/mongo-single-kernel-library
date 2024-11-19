@@ -55,3 +55,11 @@ class AbstractRelationState(Generic[PModel, PData]):
 
         for field in delete_fields:
             del self._relation_data[field]
+
+    def get(self, key: str) -> str:
+        """Gets a key."""
+        if not self.relation:
+            return ""
+        return (
+            self.data_interface.fetch_relation_field(relation_id=self.relation.id, field=key) or ""
+        )

@@ -13,6 +13,6 @@ class StatusManager:
     set_and_share_status: Callable[[StatusBase | None], None]
     to_blocked: Callable[[str], None]
     to_waiting: Callable[[str], None]
-    to_active: Callable[[str], None]
+    to_active: Callable[[str | None], None]
     to_maintenance: Callable[[str], None]
     to_error: Callable[[str], None]

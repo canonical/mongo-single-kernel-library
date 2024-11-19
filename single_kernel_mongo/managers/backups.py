@@ -202,7 +202,7 @@ class BackupManager(Object):
 
     def get_status(self) -> StatusBase | None:
         """Gets the PBM status."""
-        if not self.workload.active:  # type: ignore[truthy-function]
+        if not self.workload.active():
             return WaitingStatus("waiting for pbm to start")
         if not self.state.s3_relation:
             logger.info("No configuration for backups, not relation to s3-charm")

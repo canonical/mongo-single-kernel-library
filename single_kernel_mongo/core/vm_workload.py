@@ -90,11 +90,17 @@ class VMWorkload(WorkloadBase):
             f.write(content)
 
         if path == self.paths.keyfile:
-            self.exec(["chmod", "0o400", f"{path}"])
+            path.chmod(0o400)
         else:
-            self.exec(["chmod", "0o440", f"{path}"])
+            path.chmod(0o440)
 
         self.exec(["chown", "-R", f"{self.users.user}:{self.users.group}", f"{path}"])
+
+    @override
+    def delete(self, path: Path) -> None:
+        if not path.exists() or not path.is_file():
+            return
+        path.unlink()
 
     @override
     def exec(
