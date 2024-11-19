@@ -132,7 +132,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         ...
 
     @abstractmethod
-    def write(self, content: str, path: Path, mode: str = "w") -> None:
+    def write(self, path: Path, content: str, mode: str = "w") -> None:
         """Writes content to a workload file.
 
         Args:

@@ -16,6 +16,7 @@ from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
+from single_kernel_mongo.workload.monitor_workload import MongoDBExporterWorkload
 
 
 class CommonConfigManager(ABC):
@@ -30,6 +31,11 @@ class CommonConfigManager(ABC):
         if self.workload.env_var != "":
             parameters = chain.from_iterable(self.build_parameters())
             self.workload.update_env(parameters)
+
+    def get_environment(self) -> str:
+        """Gets the environment for the defined service."""
+        env = self.workload.get_env()
+        return env[self.workload.env_var]
 
     @abstractmethod
     def build_parameters(self) -> list[list[str]]:
@@ -70,7 +76,9 @@ class LogRotateConfigManager(CommonConfigManager):
 class MongoDBExporterConfigManager(CommonConfigManager):
     """Config manager for mongodb-exporter."""
 
-    def __init__(self, config: MongoConfigModel, workload: LogRotateWorkload, state: CharmState):
+    def __init__(
+        self, config: MongoConfigModel, workload: MongoDBExporterWorkload, state: CharmState
+    ):
         self.config = config
         self.workload = workload
         self.state = state
@@ -142,8 +150,8 @@ class MongoConfigManager(CommonConfigManager, ABC):
             ]
         return [
             "--auth",
-            "--clusterAuthMode=keyfile",
-            f"--keyfile={self.workload.paths.keyfile}",
+            "--clusterAuthMode=keyFile",
+            f"--keyFile={self.workload.paths.keyfile}",
         ]
 
     @property
@@ -163,7 +171,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
 class MongoDBConfigManager(MongoConfigManager):
     """MongoDB Specifics config manager."""
 
-    def __init__(self, state: CharmState, workload: WorkloadBase, config: MongoConfigModel):
+    def __init__(self, config: MongoConfigModel, state: CharmState, workload: WorkloadBase):
         self.state = state
         self.workload = workload
         self.config = config
@@ -207,7 +215,7 @@ class MongoDBConfigManager(MongoConfigManager):
 class MongosConfigManager(MongoConfigManager):
     """Mongos Specifics config manager."""
 
-    def __init__(self, state: CharmState, workload: WorkloadBase, config: MongoConfigModel):
+    def __init__(self, config: MongoConfigModel, workload: WorkloadBase, state: CharmState):
         self.state = state
         self.workload = workload
         self.config = config

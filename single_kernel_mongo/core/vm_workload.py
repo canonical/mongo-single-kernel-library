@@ -84,7 +84,7 @@ class VMWorkload(WorkloadBase):
         return path.read_text().splitlines()
 
     @override
-    def write(self, content: str, path: Path, mode: str = "w") -> None:  # pragma: nocover
+    def write(self, path: Path, content: str, mode: str = "w") -> None:  # pragma: nocover
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, mode) as f:
             f.write(content)

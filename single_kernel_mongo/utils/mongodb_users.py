@@ -36,7 +36,16 @@ class RoleNames(str, Enum):
     MONITOR = "monitor"
     BACKUP = "backup"
     DEFAULT = "default"
+    OPERATOR = "operator"
 
+
+OPERATOR_ROLE = UserRole(
+    [
+        DBPrivilege(role="userAdminAnyDatabase", db="admin"),
+        DBPrivilege(role="readWriteAnyDatabase", db="admin"),
+        DBPrivilege(role="clusterAdmin", db="admin"),
+    ]
+)
 
 REGULAR_ROLES = {
     RoleNames.ADMIN: UserRole(

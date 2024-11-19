@@ -70,7 +70,7 @@ class KubernetesWorkload(WorkloadBase):
             return f.read().split("\n")
 
     @override
-    def write(self, content: str, path: Path, mode: str = "w") -> None:
+    def write(self, path: Path, content: str, mode: str = "w") -> None:
         self.container.push(
             path,
             content,

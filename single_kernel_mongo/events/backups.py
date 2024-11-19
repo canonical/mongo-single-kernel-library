@@ -51,7 +51,7 @@ class BackupHandler(Object):
     def __init__(self, dependent: MongoDBOperator):
         super().__init__(dependent, key="client-relations")
         self.dependent = dependent
-        self.manager = self.dependent.backup
+        self.manager = self.dependent.backup_manager
         self.charm: AbstractMongoCharm = dependent.charm
         self.relation_name = ExternalRequirerRelations.S3_CREDENTIALS
         self.s3_client = S3Requirer(self.charm, self.relation_name)

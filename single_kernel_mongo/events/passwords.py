@@ -74,7 +74,7 @@ class PasswordActionEvents(Object):
                 "Cannot set password on shard, please set password on config-server.",
             )
             return
-        if isinstance(self.dependent.backup.get_status(), MaintenanceStatus):
+        if isinstance(self.dependent.backup_manager.get_status(), MaintenanceStatus):
             fail_action_with_error_log(
                 logger,
                 event,

@@ -29,8 +29,17 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 )
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongo_config import MongoConfiguration
+from single_kernel_mongo.utils.mongo_config import (
+    EMPTY_CONFIGURATION,
+    MongoConfiguration,
+)
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
+from single_kernel_mongo.utils.mongodb_users import (
+    OPERATOR_ROLE,
+    BackupUser,
+    MonitorUser,
+    OperatorUser,
+)
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
@@ -55,6 +64,71 @@ class MongoManager(Object):
         self.substrate = substrate
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
+
+    @property
+    def mongod_ready(self) -> bool:
+        """Is MongoDB ready and running?"""
+        empty_config = EMPTY_CONFIGURATION
+        with MongoConnection(empty_config, "localhost", direct=True) as direct_mongo:
+            return direct_mongo.is_ready
+
+    def initialise_replica_set(self) -> None:
+        """Initialises the replica set."""
+        with MongoConnection(self.state.mongo_config, "localhost", direct=True) as direct_mongo:
+            direct_mongo.init_replset()
+            self.state.app_peer_data.replica_set_hosts = [self.state.unit_peer_data.host]
+
+    def initialise_users(self) -> None:
+        """First initialisation of each user."""
+        self.initialise_operator_user()
+        self.initialise_monitor_user()
+        self.initialise_backup_user()
+
+    def initialise_operator_user(self):
+        """Creates initial admin user for MongoDB.
+
+        Initial admin user can be created only through localhost connection.
+        see https://www.mongodb.com/docs/manual/core/localhost-exception/
+        unfortunately, pymongo unable to create connection that considered
+        as local connection by MongoDB, even if socket connection used.
+        As a result, where are only hackish ways to create initial user.
+        It is needed to install mongodb-clients inside charm container to make
+        this function work correctly.
+        """
+        if self.state.app_peer_data.is_user_created(OperatorUser.username):
+            return
+        config = self.state.mongo_config
+        with MongoConnection(config, "localhost", direct=True) as direct_mongo:
+            direct_mongo.create_user(config=config, roles=OPERATOR_ROLE)
+        self.state.app_peer_data.set_user_created(OperatorUser.username)
+
+    def initialise_monitor_user(self):
+        """Creates the monitor user on the MongoDB database."""
+        if self.state.app_peer_data.is_user_created(MonitorUser.username):
+            return
+        with MongoConnection(self.state.mongo_config) as mongo:
+            logger.debug("Creating the monitor user roles…")
+            mongo.create_role(
+                role_name=MonitorUser.mongodb_role,
+                privileges=MonitorUser.privileges,
+            )
+            logger.debug("creating the monitor user...")
+            mongo.create_user(self.state.monitor_config)
+        self.state.app_peer_data.set_user_created(MonitorUser.username)
+
+    def initialise_backup_user(self):
+        """Creates the monitor user on the MongoDB database."""
+        if self.state.app_peer_data.is_user_created(BackupUser.username):
+            return
+        with MongoConnection(self.state.mongo_config) as mongo:
+            logger.debug("Creating the backup user roles…")
+            mongo.create_role(
+                role_name=BackupUser.mongodb_role,
+                privileges=BackupUser.privileges,
+            )
+            logger.debug("creating the backup user...")
+            mongo.create_user(self.state.backup_config)
+        self.state.app_peer_data.set_user_created(BackupUser.username)
 
     def oversee_users(self, relation_id: int | None = None, event: EventBase | None = None):
         """Oversees the users of the application.

@@ -7,10 +7,18 @@ import re
 
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    before_log,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
-from single_kernel_mongo.utils.mongodb_users import SystemDBS
+from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +100,35 @@ class MongoConnection:
 
         return True
 
-    def create_user(self, config: MongoConfiguration):
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_fixed(5),
+        reraise=True,
+        before=before_log(logger, logging.DEBUG),
+    )
+    def init_replset(self) -> None:
+        """Create replica set config the first time.
+
+        Raises:
+            ConfigurationError, ConfigurationError, OperationFailure
+        """
+        config = {
+            "_id": self.config.replset,
+            "members": [{"_id": i, "host": h} for i, h in enumerate(self.config.hosts)],
+        }
+        try:
+            self.client.admin.command("replSetInitiate", config)
+        except OperationFailure as e:
+            if e.code not in (13, 23):  # Unauthorized, AlreadyInitialized
+                # Unauthorized error can be raised only if initial user were
+                #     created the step after this.
+                # AlreadyInitialized error can be raised only if this step
+                #     finished.
+                logger.error("Cannot initialize replica set. error=%r", e)
+                raise e
+        pass
+
+    def create_user(self, config: MongoConfiguration, roles: list[DBPrivilege] | None = None):
         """Create user.
 
         Grant read and write privileges for specified database.
@@ -101,7 +137,7 @@ class MongoConnection:
             "createUser",
             value=config.username,
             pwd=config.password,
-            roles=config.supported_roles,
+            roles=roles or config.supported_roles,
             mechanisms=["SCRAM-SHA-256"],
         )
 

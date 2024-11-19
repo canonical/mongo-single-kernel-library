@@ -273,8 +273,8 @@ class BackupManager(Object):
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
         self.workload.write(
-            "# this file is to be left empty. Changes in this file will be ignored.\n",
             self.workload.paths.pbm_config,
+            "# this file is to be left empty. Changes in this file will be ignored.\n",
         )
         self.workload.run_bin_command("config", ["--file", str(self.workload.paths.pbm_config)])
 

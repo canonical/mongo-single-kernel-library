@@ -41,9 +41,9 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     workload = VMMongoDBWorkload(None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
+        config,
         mock_state,
         workload,
-        config,
     )
 
     port_parameter = manager.port_parameter
@@ -76,8 +76,8 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     ]
     assert auth_parameter == [
         "--auth",
-        "--clusterAuthMode=keyfile",
-        f"--keyfile={VM_PATH['mongod']['CONF']}/keyFile",
+        "--clusterAuthMode=keyFile",
+        f"--keyFile={VM_PATH['mongod']['CONF']}/keyFile",
     ]
     assert tls_parameters == []
 
@@ -113,9 +113,9 @@ def test_mongos_config_manager(mocker):
     workload = VMMongosWorkload(None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
-        mock_state,
-        workload,
         config,
+        workload,
+        mock_state,
     )
 
     port_parameter = manager.port_parameter
@@ -146,8 +146,8 @@ def test_mongos_config_manager(mocker):
     ]
     assert auth_parameter == [
         "--auth",
-        "--clusterAuthMode=keyfile",
-        f"--keyfile={VM_PATH['mongod']['CONF']}/keyFile",
+        "--clusterAuthMode=keyFile",
+        f"--keyFile={VM_PATH['mongod']['CONF']}/keyFile",
     ]
     assert tls_parameters == []
     assert config_server_db_parameter == ["--configdb mongodb://config-server-url"]
@@ -178,9 +178,9 @@ def test_mongodb_config_manager_tls_enabled(mocker):
     workload = VMMongoDBWorkload(None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
+        config,
         mock_state,
         workload,
-        config,
     )
 
     assert manager.auth_parameter == [
@@ -211,8 +211,8 @@ def test_mongos_default_config_server(mocker):
     workload = VMMongoDBWorkload(None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
-        mock_state,
-        workload,
         config,
+        workload,
+        mock_state,
     )
     assert manager.config_server_db_parameter == ["--configdb deadbeef/127.0.0.1:27017"]

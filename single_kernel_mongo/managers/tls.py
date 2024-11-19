@@ -212,6 +212,19 @@ class TLSManager:
         for file in self.workload.paths.tls_files:
             self.workload.delete(file)
 
+    def push_tls_files_to_workload(self) -> None:
+        """Pushes the TLS files on the workload."""
+        external_ca, external_pem = self.get_tls_files(internal=False)
+        internal_ca, internal_pem = self.get_tls_files(internal=True)
+        if external_ca is not None:
+            self.workload.write(self.workload.paths.ext_ca_file, external_ca)
+        if external_pem is not None:
+            self.workload.write(self.workload.paths.ext_pem_file, external_pem)
+        if internal_ca is not None:
+            self.workload.write(self.workload.paths.int_ca_file, internal_ca)
+        if internal_pem is not None:
+            self.workload.write(self.workload.paths.int_pem_file, internal_pem)
+
     def set_certificates(
         self,
         certificate_signing_request: str,

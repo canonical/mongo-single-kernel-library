@@ -4,6 +4,7 @@
 
 from typing import TypeVar
 
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_models import (
     TypedCharmBase,
@@ -17,6 +18,7 @@ class AbstractMongoCharm(TypedCharmBase[T]):
     """An abstract mongo charm."""
 
     status_manager: StatusManager
+    substrate: Substrates
     config: T
 
     pass

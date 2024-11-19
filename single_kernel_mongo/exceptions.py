@@ -26,6 +26,10 @@ class WorkloadServiceError(Exception):
     """Raised when a service fail to start/stop/restart."""
 
 
+class WorkloadNotReadyError(Exception):
+    """Raised when a service is not ready yet."""
+
+
 class ResyncError(Exception):
     """Raised when pbm is resyncing configurations and is not ready to be used."""
 
@@ -68,3 +72,7 @@ class SecretAlreadyExistsError(Exception):
 
 class SetPasswordError(Exception):
     """Raised when setting the password failed for a reason."""
+
+
+class ContainerNotReadyError(Exception):
+    """Raised when the container is not ready."""

@@ -11,6 +11,8 @@ Substrates = Literal["vm", "k8s"]
 
 LOCALHOST = "127.0.0.1"
 
+CONTAINER = "mongod"
+
 
 class Scope(str, Enum):
     """Peer relations scope."""

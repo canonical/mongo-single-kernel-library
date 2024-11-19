@@ -103,3 +103,14 @@ class MongoConfiguration:
         )
         all_roles = REGULAR_ROLES | {"default": default_role}
         return list(chain.from_iterable(all_roles[role] for role in self.roles))
+
+
+EMPTY_CONFIGURATION = MongoConfiguration(
+    "",
+    "",
+    "",
+    set(),
+    set(),
+    False,
+    False,
+)
