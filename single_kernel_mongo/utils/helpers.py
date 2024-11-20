@@ -21,3 +21,8 @@ def parse_tls_file(raw_content: str) -> bytes:
             .encode("utf-8")
         )
     return base64.b64decode(raw_content)
+
+
+def hostname_from_hostport(host: str) -> str:
+    """Takes hostname:port and returns hostname."""
+    return host.split(":")[0]

@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-import time
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
@@ -21,8 +20,11 @@ from single_kernel_mongo.config.literals import (
     Scope,
     Substrates,
 )
+from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.roles import K8S_MONGO, VM_MONGO
+from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     SetPasswordError,
@@ -42,20 +44,16 @@ from single_kernel_mongo.managers.config import (
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
+from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
-    MongoDBUser,
     MonitorUser,
     OperatorUser,
     get_user_from_username,
 )
 from single_kernel_mongo.workload import (
-    get_logrotate_workload_for_substrate,
-    get_mongodb_exporter_workload_for_substrate,
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
-    get_pbm_workload_for_substrate,
 )
 
 if TYPE_CHECKING:
@@ -66,10 +64,8 @@ from ops.framework import Object
 logger = logging.getLogger(__name__)
 
 
-class MongoDBOperator(Object):
+class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
-
-    tls: TLSManager
 
     def __init__(self, charm: AbstractMongoCharm):
         super().__init__(charm, "mongodb")
@@ -82,7 +78,7 @@ class MongoDBOperator(Object):
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
-        self.backup_manager = BackupManager(self.charm, self.pbm_workload, self.state)
+        self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
         self.tls_manager = TLSManager(self.charm, self.workload, self.state, self.substrate)
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
 
@@ -90,17 +86,9 @@ class MongoDBOperator(Object):
         """Export all workload and config definition for readability."""
         # BEGIN: Define workloads.
         self.workload = get_mongodb_workload_for_substrate(self.substrate)(container=container)
-        self.pbm_workload = get_pbm_workload_for_substrate(self.substrate)(container=container)
-        self.log_rotate_workload = get_logrotate_workload_for_substrate(self.substrate)(
-            container=container
-        )
-        self.mongodb_exporter_workload = get_mongodb_exporter_workload_for_substrate(
-            self.substrate
-        )(container=container)
         self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
             container=container
         )
-        self.pbm_workload = get_pbm_workload_for_substrate(self.substrate)(container=container)
         # END: Define workloads
 
         # BEGIN Define config managers
@@ -109,17 +97,28 @@ class MongoDBOperator(Object):
             self.state,
             self.workload,
         )
+        self.mongos_config_manager = MongosConfigManager(
+            self.charm.config,
+            self.mongos_workload,
+            self.state,
+        )
         self.backup_config_manager = BackupConfigManager(
-            self.charm.config, self.pbm_workload, self.state
+            self.substrate,
+            self.charm.config,
+            self.state,
+            container,
         )
         self.logrotate_config_manager = LogRotateConfigManager(
-            self.charm.config, self.log_rotate_workload, self.state
+            self.substrate,
+            self.charm.config,
+            self.state,
+            container,
         )
         self.mongodb_exporter_config_manager = MongoDBExporterConfigManager(
-            self.charm.config, self.mongodb_exporter_workload, self.state
-        )
-        self.mongos_config_manager = MongosConfigManager(
-            self.charm.config, self.mongos_workload, self.state
+            self.substrate,
+            self.charm.config,
+            self.state,
+            container,
         )
         # END: Define config managers
 
@@ -134,59 +133,21 @@ class MongoDBOperator(Object):
             self.mongodb_exporter_config_manager,
         )
 
-    def handle_set_password_action(
-        self, username: str, password: str | None = None
-    ) -> tuple[str, str]:
-        """Sets the password."""
-        user = get_user_from_username(username)
-        new_password = password or self.workload.generate_password()
-        if len(new_password) > MAX_PASSWORD_LENGTH:
-            raise SetPasswordError(
-                f"Password cannot be longer than {MAX_PASSWORD_LENGTH} characters."
-            )
+    # BEGIN: Handlers.
 
-        secret_id = self.set_password(user, new_password)
-        # Rotate password.
-        if username in (OperatorUser.username, BackupUser.username):
-            pass
-
-        return new_password, secret_id
-
-    def set_password(self, user: MongoDBUser, password: str) -> str:
-        """Sets the password for a given username and return the secret id.
-
-        Raises:
-            SetPasswordError
-        """
-        with MongoConnection(self.state.mongo_config) as mongo:
-            try:
-                mongo.set_user_password(user.username, password)
-            except NotReadyError:
-                raise SetPasswordError(
-                    "Failed changing the password: Not all members healthy or finished initial sync."
-                )
-            except PyMongoError as e:
-                raise SetPasswordError(f"Failed changing the password: {e}")
-
-        return self.state.secrets.set(
-            user.password_key_name,
-            password,
-            Scope.UNIT,
-        ).label
-
-    def get_password(self, username: str) -> str:
-        """Gets the password for the relevant username."""
-        user = get_user_from_username(username)
-        return self.state.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
-
-    def on_install(self):
+    def on_install(self) -> None:
         """Handler on install."""
         if not self.workload.container_can_connect:
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
 
-        for config_manager in self.config_manager:
+        # Truncate the file.
+        self.workload.write(self.workload.paths.config_file, "")
+
+        for config_manager in self.config_managers:
             config_manager.set_environment()
+
+        self.logrotate_config_manager.connect()
 
     def on_start(self) -> None:
         """Handler on start."""
@@ -207,28 +168,154 @@ class MongoDBOperator(Object):
             return
 
         # Open ports:
-        if self.substrate == "vm":
-            self.open_ports()
+        self.open_ports()
 
-        if not self.mongo_manager.mongod_ready:
+        if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("waiting for MongoDB to start")
             raise WorkloadNotReadyError
 
         self.charm.status_manager.to_active(None)
 
         try:
-            self._connect_mongodb_exporter()
+            self.mongodb_exporter_config_manager.connect()
         except WorkloadServiceError:
             self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
             return
 
         self._initialise_replica_set()
 
+    def on_leader_elected(self) -> None:
+        """Handles the leader elected event.
+
+        Generates the keyfile and users credentials.
+        """
+        if not self.state.app_peer_data.keyfile:
+            self.state.app_peer_data.keyfile = self.workload.generate_keyfile()
+
+        # Set the password for the Operator User.
+        if not self.state.app_peer_data.get_user_password(OperatorUser.username):
+            self.state.app_peer_data.set_user_password(
+                OperatorUser.username, self.workload.generate_password()
+            )
+
+        # Set the password for the Monitor User.
+        if not self.state.app_peer_data.get_user_password(MonitorUser.username):
+            self.state.app_peer_data.set_user_password(
+                MonitorUser.username, self.workload.generate_password()
+            )
+
+        # Set the password for the Backup User.
+        if not self.state.app_peer_data.get_user_password(BackupUser.username):
+            self.state.app_peer_data.set_user_password(
+                BackupUser.username, self.workload.generate_password()
+            )
+
+    def on_relation_handler(self) -> None:
+        """Handle relation changed events."""
+        self.mongodb_exporter_config_manager.connect()
+        self.backup_config_manager.connect()
+
+        if not self.charm.unit.is_leader() or not self.state.app_peer_data.db_initialised:
+            return
+
+        try:
+            self.mongo_manager.process_added_units()
+        except (NotReadyError, PyMongoError) as e:
+            logger.error(f"Not reconfiguring: error={e}")
+            self.charm.status_manager.to_waiting("waiting to reconfigure replica set")
+            raise
+        self.charm.status_manager.to_active(None)
+
+    def on_status_update(self) -> None:
+        """Status update Handler."""
+        if not self.backup_manager.is_valid_s3_integration():
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            return
+        # TODO: Cluster integration status + Cluster Mismatch revision.
+        if not self.state.app_peer_data.db_initialised:
+            return
+
+        # TODO: TLS + Shard check.
+
+        if not self.mongo_manager.mongod_ready():
+            self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
+
+        self.perform_self_healing()
+
+        # TODO: Process statuses.
+
+    def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
+        """Handler for the set password action."""
+        user = get_user_from_username(username)
+        new_password = password or self.workload.generate_password()
+        if len(new_password) > MAX_PASSWORD_LENGTH:
+            raise SetPasswordError(
+                f"Password cannot be longer than {MAX_PASSWORD_LENGTH} characters."
+            )
+
+        secret_id = self.mongo_manager.set_user_password(user, new_password)
+        if user == BackupUser:
+            # Update and restart PBM Agent.
+            self.backup_config_manager.connect()
+        if user == MonitorUser:
+            # Update and restart mongodb exporter.
+            self.mongodb_exporter_config_manager.connect()
+        # Rotate password.
+        if user in (OperatorUser, BackupUser):
+            pass
+
+        return new_password, secret_id
+
+    def on_get_password_action(self, username: str) -> str:
+        """Handler for the get password action."""
+        return self.get_password(username)
+
+    # END: Handlers.
+
+    def get_password(self, username: str) -> str:
+        """Gets the password for the relevant username."""
+        user = get_user_from_username(username)
+        return self.state.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
+
+    def perform_self_healing(self) -> None:
+        """Reconfigures the replica set if necessary.
+
+        Incidents such as network cuts can lead to new IP addresses and therefore will require a
+        reconfigure. Especially in the case that the leader's IP address changed, it will not
+        receive a relation event.
+        """
+        if not self.charm.unit.is_leader():
+            logger.debug("Only the leader can perform reconfigurations to the replica set.")
+            return
+
+        self.update_hosts()
+        self.on_relation_handler()
+        # make sure all nodes in the replica set have the same priority for re-election. This is
+        # necessary in the case that pre-upgrade hook fails to reset the priority of election for
+        # cluster nodes.
+        self.mongo_manager.set_election_priority(priority=1)
+
+    def update_hosts(self):
+        """Update the replica set hosts and remove any unremoved replica from the config."""
+        if not self.state.app_peer_data.db_initialised:
+            return
+        self.mongo_manager.process_unremoved_units()
+        self.state.app_peer_data.replica_set_hosts = list(self.state.app_hosts)
+        self.update_related_hosts()
+
+    def update_related_hosts(self):
+        """Update the app relations that need to be made aware of the new set of hosts."""
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            self.mongo_manager.update_app_relation_data(RelationNames.DATABASE)
+        # TODO: Update related hosts for config server , cluster.
+
     def open_ports(self) -> None:
         """Open ports on the workload.
 
         VM-only.
         """
+        if self.substrate != "vm":
+            return
         ports = [MongoPorts.MONGODB_PORT]
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             ports.append(MongoPorts.MONGOS_PORT)
@@ -258,52 +345,6 @@ class MongoDBOperator(Object):
             raise Exception("Waiting for leader unit to generate keyfile contents")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
-
-    def _connect_mongodb_exporter(self) -> None:
-        """Exposes the endpoint to mongodb_exporter."""
-        if not self.state.app_peer_data.db_initialised:
-            return
-
-        if not self.state.app_peer_data.get_user_password(MonitorUser.username):
-            return
-
-        current_parameters = [[self.mongodb_exporter_config_manager.get_environment()]]
-        if (
-            current_parameters != self.mongodb_exporter_config_manager.build_parameters()
-            or not self.mongodb_exporter_workload.active()
-        ):
-            try:
-                self.mongodb_exporter_config_manager.set_environment()
-                self.mongodb_exporter_workload.restart()
-            except WorkloadServiceError as e:
-                logger.error(f"Failed to restart {self.mongodb_exporter_workload.service}: {e}")
-                raise
-
-    def _connect_pbm_agent(self) -> None:
-        """Exposes the endpoint to pbm agent."""
-        if not self.pbm_workload.container_can_connect:
-            return
-        if not self.state.app_peer_data.db_initialised:
-            return
-
-        if not self.state.app_peer_data.get_user_password(BackupUser.username):
-            return
-
-        current_parameters = [[self.backup_config_manager.get_environment()]]
-
-        if (
-            current_parameters != self.backup_config_manager.build_parameters()
-            or not self.pbm_workload.active()
-        ):
-            try:
-                self.pbm_workload.stop()
-                self.backup_config_manager.set_environment()
-                # Avoid restart errors on PBM.
-                time.sleep(2)
-                self.pbm_workload.start()
-            except WorkloadServiceError as e:
-                logger.error(f"Failed to restart {self.pbm_workload.service}: {e}")
-                raise
 
     def _initialise_replica_set(self):
         if not self.model.unit.is_leader():

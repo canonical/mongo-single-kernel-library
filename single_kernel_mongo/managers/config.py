@@ -4,19 +4,29 @@
 
 """Manager for handling Mongo configuration."""
 
+import logging
+import time
 from abc import ABC, abstractmethod
 from itertools import chain
 
+from ops import Container
 from typing_extensions import override
 
 from single_kernel_mongo.config.audit_config import AuditLog
-from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts
+from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts, Substrates
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
+from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.workload.backup_workload import PBMWorkload
-from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
-from single_kernel_mongo.workload.monitor_workload import MongoDBExporterWorkload
+from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser
+from single_kernel_mongo.workload import (
+    get_logrotate_workload_for_substrate,
+    get_mongodb_exporter_workload_for_substrate,
+    get_pbm_workload_for_substrate,
+)
+from single_kernel_mongo.workload.log_rotate import LogRotateWorkload
+
+logger = logging.getLogger(__name__)
 
 
 class CommonConfigManager(ABC):
@@ -46,9 +56,15 @@ class CommonConfigManager(ABC):
 class BackupConfigManager(CommonConfigManager):
     """Config manager for PBM."""
 
-    def __init__(self, config: MongoConfigModel, workload: PBMWorkload, state: CharmState):
+    def __init__(
+        self,
+        substrate: Substrates,
+        config: MongoConfigModel,
+        state: CharmState,
+        container: Container | None,
+    ):
         self.config = config
-        self.workload = workload
+        self.workload = get_pbm_workload_for_substrate(substrate)(container=container)
         self.state = state
 
     @override
@@ -59,33 +75,97 @@ class BackupConfigManager(CommonConfigManager):
             ]
         ]
 
+    def connect(self):
+        """Exposes the endpoint to PBM Agent."""
+        if not self.workload.container_can_connect:
+            return
+        if not self.state.app_peer_data.db_initialised:
+            return
+
+        if not self.state.app_peer_data.get_user_password(BackupUser.username):
+            return
+
+        current_parameters = self.get_environment()
+
+        if current_parameters != self.state.backup_config.uri or not self.workload.active():
+            try:
+                self.workload.stop()
+                self.set_environment()
+                # Avoid restart errors on PBM.
+                time.sleep(2)
+                self.workload.start()
+            except WorkloadServiceError as e:
+                logger.error(f"Failed to restart {self.workload.service}: {e}")
+                raise
+
 
 class LogRotateConfigManager(CommonConfigManager):
     """Config manager for logrotate."""
 
-    def __init__(self, config: MongoConfigModel, workload: LogRotateWorkload, state: CharmState):
+    def __init__(
+        self,
+        substrate: Substrates,
+        config: MongoConfigModel,
+        state: CharmState,
+        container: Container | None,
+    ):
         self.config = config
-        self.workload = workload
+        self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
+            container=container
+        )
         self.state = state
+        self.substrate = substrate
 
     @override
     def build_parameters(self) -> list[list[str]]:
         return [[]]
+
+    def connect(self) -> None:
+        """Setup logrotate and cron."""
+        self.workload.build_template()
+        if self.substrate == "vm":
+            self.workload.setup_cron(
+                [
+                    "* 1-23 * * * root logrotate /etc/logrotate.d/mongodb\n",
+                    "1-59 0 * * * root logrotate /etc/logrotate.d/mongodb\n",
+                ]
+            )
 
 
 class MongoDBExporterConfigManager(CommonConfigManager):
     """Config manager for mongodb-exporter."""
 
     def __init__(
-        self, config: MongoConfigModel, workload: MongoDBExporterWorkload, state: CharmState
+        self,
+        substrate: Substrates,
+        config: MongoConfigModel,
+        state: CharmState,
+        container: Container | None,
     ):
         self.config = config
-        self.workload = workload
+        self.workload = get_mongodb_exporter_workload_for_substrate(substrate)(container=container)
         self.state = state
 
     @override
     def build_parameters(self) -> list[list[str]]:
         return [[self.state.monitor_config.uri]]
+
+    def connect(self):
+        """Exposes the endpoint to mongodb_exporter."""
+        if not self.state.app_peer_data.db_initialised:
+            return
+
+        if not self.state.app_peer_data.get_user_password(MonitorUser.username):
+            return
+
+        current_parameters = self.get_environment()
+        if current_parameters != self.state.monitor_config.uri or not self.workload.active():
+            try:
+                self.set_environment()
+                self.workload.restart()
+            except WorkloadServiceError as e:
+                logger.error(f"Failed to restart {self.workload.service}: {e}")
+                raise
 
 
 class MongoConfigManager(CommonConfigManager, ABC):

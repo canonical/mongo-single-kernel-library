@@ -4,7 +4,9 @@
 
 import logging
 import re
+from typing import Any
 
+from bson import json_util
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
 from tenacity import (
@@ -17,6 +19,7 @@ from tenacity import (
     wait_fixed,
 )
 
+from single_kernel_mongo.utils.helpers import hostname_from_hostport
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
@@ -178,6 +181,107 @@ class MongoConnection:
             logger.error("Cannot add role. error=%r", e)
             raise
 
+    def set_replicaset_election_priority(
+        self, priority: int, ignore_member: str | None = None
+    ) -> None:
+        """Set the election priority for the entire replica set."""
+        rs_config = self.client.admin.command("replSetGetConfig")
+        rs_config = rs_config["config"]
+        rs_config["version"] += 1
+
+        # keep track of the original configuration before setting the priority, reconfiguring the
+        # replica set can result in primary re-election, which would would like to avoid when
+        # possible.
+        original_rs_config = rs_config
+
+        for member in rs_config["members"]:
+            if member["host"] == ignore_member:
+                continue
+
+            member["priority"] = priority
+
+        if original_rs_config == rs_config:
+            return
+
+        logger.debug("rs_config: %r", rs_config)
+        self.client.admin.command("replSetReconfig", rs_config)
+
+    def get_replset_members(self) -> set[str]:
+        """Get a replica set members.
+
+        Returns:
+            A set of the replica set members as reported by mongod.
+
+        Raises:
+            ConfigurationError, ConfigurationError, OperationFailure
+        """
+        rs_status = self.client.admin.command("replSetGetStatus")
+        curr_members = [hostname_from_hostport(member["name"]) for member in rs_status["members"]]
+        return set(curr_members)
+
+    @retry(
+        stop=stop_after_attempt(20),
+        wait=wait_fixed(3),
+        reraise=True,
+        before=before_log(logger, logging.DEBUG),
+    )
+    def remove_replset_member(self, hostname: str) -> None:
+        """Remove member from replica set config inside MongoDB.
+
+        Raises:
+            ConfigurationError, ConfigurationError, OperationFailure, NotReadyError
+        """
+        rs_config = self.client.admin.command("replSetGetConfig")
+        rs_status = self.client.admin.command("replSetGetStatus")
+
+        # When we remove member, to avoid issues when majority members is removed, we need to
+        # remove next member only when MongoDB forget the previous removed member.
+        if any(member.get("stateStr", "") == "REMOVED" for member in rs_status.get("members", [])):
+            # removing from replicaset is fast operation, lets @retry(3 times with a 5sec timeout)
+            # before giving up.
+            raise NotReadyError
+
+        # avoid downtime we need to reelect new primary if removable member is the primary.
+        if self.primary(rs_status) == hostname:
+            logger.debug("Stepping down from primary.")
+            self.client.admin.command("replSetStepDown", {"stepDownSecs": "60"})
+
+        rs_config["config"]["version"] += 1
+        rs_config["config"]["members"] = [
+            member
+            for member in rs_config["config"]["members"]
+            if hostname != hostname_from_hostport(member["host"])
+        ]
+        logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
+        self.client.admin.command("replSetReconfig", rs_config["config"])
+
+    def add_replset_member(self, hostname: str) -> None:
+        """Adds a member to replicaset config inside MongoDB.
+
+        Raises:
+            ConfigurationError, ConfigurationError, OperationFailure, NotReadyError
+        """
+        rs_config = self.client.admin.command("replSetGetConfig")
+        rs_status = self.client.admin.command("replSetGetStatus")
+
+        # When we add a new member, MongoDB transfer data from existing member to new.
+        # Such operation reduce performance of the cluster. To avoid huge performance
+        # degradation, before adding new members, it is needed to check that all other
+        # members finished init sync.
+        if self.is_any_sync(rs_status):
+            raise NotReadyError
+
+        # Avoid reusing IDs, according to the doc
+        # https://www.mongodb.com/docs/manual/reference/replica-configuration/
+        max_id = max([int(member["_id"]) for member in rs_config["config"]["members"]])
+
+        new_member = {"_id": max_id + 1, "host": hostname}
+
+        rs_config["config"]["version"] += 1
+        rs_config["config"]["members"].append(new_member)
+        logger.debug("rs_config: %r", rs_config["config"])
+        self.client.admin.command("replSetReconfig", rs_config["config"])
+
     def get_databases(self) -> set[str]:
         """Return list of all non-default databases."""
         databases: list[str] = self.client.list_database_names()
@@ -198,3 +302,29 @@ class MongoConnection:
             for user_obj in users_info["users"]
             if re.match(r"^relation-\d+$", user_obj["user"])
         }
+
+    def primary(self, status: dict[str, Any] | None = None) -> str:
+        """Returns the primary replica host."""
+        status = status or self.client.admin.command("replSetGetStatus")
+
+        for member in status["members"]:
+            # check replica's current state
+            if member["stateStr"] == "PRIMARY":
+                return hostname_from_hostport(member["name"])
+
+        raise Exception("No primary found.")
+
+    @staticmethod
+    def is_any_sync(rs_status: dict[str, Any]) -> bool:
+        """Returns true if any replica set members are syncing data.
+
+        Checks if any members in replica set are syncing data. Note it is recommended to run only
+        one sync in the cluster to not have huge performance degradation.
+
+        Args:
+            rs_status: current state of replica set as reported by mongod.
+        """
+        return any(
+            member["stateStr"] in ["STARTUP", "STARTUP2", "ROLLBACK", "RECOVERING"]
+            for member in rs_status["members"]
+        )

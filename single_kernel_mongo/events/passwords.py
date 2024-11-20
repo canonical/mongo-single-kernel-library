@@ -93,7 +93,7 @@ class PasswordActionEvents(Object):
             )
             return
         try:
-            passwd, secret_id = self.dependent.handle_set_password_action(username, password)
+            passwd, secret_id = self.dependent.on_set_password_action(username, password)
         except SetPasswordError as e:
             fail_action_with_error_log(logger, event, action, str(e))
 
@@ -114,5 +114,5 @@ class PasswordActionEvents(Object):
 
         if not username:
             return
-        password = self.dependent.get_password(username)
+        password = self.dependent.on_get_password_action(username)
         event.set_results({PasswordActionParameter.PASSWORD: password})

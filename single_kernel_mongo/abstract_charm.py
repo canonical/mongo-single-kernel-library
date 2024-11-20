@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 """Skeleton for the abstract charm."""
 
+from collections.abc import Callable
 from typing import TypeVar
 
 from single_kernel_mongo.config.literals import Substrates
@@ -20,5 +21,6 @@ class AbstractMongoCharm(TypedCharmBase[T]):
     status_manager: StatusManager
     substrate: Substrates
     config: T
+    copy_licenses_to_unit: Callable
 
     pass

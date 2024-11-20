@@ -18,6 +18,7 @@ import time
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+from ops import Container
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase, WaitingStatus
 from tenacity import (
@@ -30,7 +31,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from single_kernel_mongo.config.literals import MongoPorts
+from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
@@ -42,6 +43,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadExecError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
 if TYPE_CHECKING:
@@ -67,10 +69,14 @@ class BackupManager(Object):
     """Manager for the S3 integrator and backups."""
 
     def __init__(
-        self, charm: "AbstractMongoCharm", workload: PBMWorkload, state: CharmState
+        self,
+        charm: "AbstractMongoCharm",
+        substrate: Substrates,
+        state: CharmState,
+        container: Container | None,
     ) -> None:
         self.charm = charm
-        self.workload = workload
+        self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(container=container)
         self.state = state
 
     @cached_property

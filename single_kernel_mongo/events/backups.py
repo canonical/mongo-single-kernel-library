@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-INVALID_INTEGRATION_STATUS = (
+INVALID_S3_INTEGRATION_STATUS = (
     "Relation to s3-integrator is not supported, config role must be config-server."
 )
 
@@ -79,7 +79,7 @@ class BackupHandler(Object):
             logger.info(
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
-            self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent):
         action = "configure-pbm"
@@ -93,7 +93,7 @@ class BackupHandler(Object):
             logger.debug(
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
-            self.charm.status_manager.to_blocked(INVALID_INTEGRATION_STATUS)
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return
         if not self.manager.workload.active():
             defer_event_with_info_log(
