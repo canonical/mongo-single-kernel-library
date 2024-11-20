@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
+from shutil import copyfile
 
 from ops import Container
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_fixed
@@ -78,6 +79,10 @@ class VMWorkload(WorkloadBase):
             raise WorkloadServiceError(str(e)) from e
 
     @override
+    def mkdir(self, path: Path, make_parents: bool = False) -> None:
+        path.mkdir(exist_ok=True, parents=make_parents)
+
+    @override
     def read(self, path: Path) -> list[str]:
         if not path.is_file():
             return []
@@ -101,6 +106,10 @@ class VMWorkload(WorkloadBase):
         if not path.exists() or not path.is_file():
             return
         path.unlink()
+
+    @override
+    def copy_to_unit(self, src: Path, destination: Path) -> None:
+        copyfile(src, destination)
 
     @override
     def exec(

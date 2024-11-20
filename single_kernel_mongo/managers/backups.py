@@ -42,6 +42,7 @@ from single_kernel_mongo.exceptions import (
     SetPBMConfigError,
     WorkloadExecError,
 )
+from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
@@ -65,7 +66,7 @@ S3_PBM_OPTION_MAP = {
 logger = logging.getLogger(__name__)
 
 
-class BackupManager(Object):
+class BackupManager(Object, BackupConfigManager):
     """Manager for the S3 integrator and backups."""
 
     def __init__(
@@ -75,6 +76,10 @@ class BackupManager(Object):
         state: CharmState,
         container: Container | None,
     ) -> None:
+        super().__init__(parent=charm, key="backup")
+        super(Object, self).__init__(
+            substrate=substrate, config=charm.config, state=state, container=container
+        )
         self.charm = charm
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(container=container)
         self.state = state

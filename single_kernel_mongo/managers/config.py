@@ -14,6 +14,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.audit_config import AuditLog
 from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts, Substrates
+from single_kernel_mongo.config.logrotate_config import LogRotateConfig
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -126,10 +127,12 @@ class LogRotateConfigManager(CommonConfigManager):
         if self.substrate == "vm":
             self.workload.setup_cron(
                 [
-                    "* 1-23 * * * root logrotate /etc/logrotate.d/mongodb\n",
-                    "1-59 0 * * * root logrotate /etc/logrotate.d/mongodb\n",
+                    f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                    f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
                 ]
             )
+        else:
+            self.workload.start()
 
 
 class MongoDBExporterConfigManager(CommonConfigManager):

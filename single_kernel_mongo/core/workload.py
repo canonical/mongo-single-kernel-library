@@ -29,11 +29,17 @@ class MongoPaths:
         self.etc_path: str = role.paths["ETC"]
         self.logs_path = role.paths["LOGS"]
         self.shell_path = role.paths["SHELL"]
+        self.licenses_path = role.paths["LICENSES"]
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         if not isinstance(other, MongoPaths):
             return NotImplemented  # pragma: nocover
         return self.conf_path == other.conf_path
+
+    @property
+    def common_path(self) -> Path:
+        """The common path."""
+        return Path(self.etc_path).parent
 
     @property
     def config_file(self) -> Path:
@@ -120,6 +126,11 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         ...
 
     @abstractmethod
+    def mkdir(self, path: Path, make_parents: bool = False) -> None:
+        """Creates a directory on the filesystem."""
+        ...
+
+    @abstractmethod
     def read(self, path: Path) -> list[str]:
         """Reads a file from the workload.
 
@@ -148,6 +159,19 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 
         Args:
             path: the full filepath of the file to delete.
+        """
+        ...
+
+    @abstractmethod
+    def copy_to_unit(self, src: Path, destination: Path) -> None:
+        """Copy a file from the workload to the unit running the charm.
+
+        In case of VM, copies from the filesystem to itself.
+        In case of Substrate, pulls the file and writes it locally.
+
+        Args:
+            src: The source path on the workload.
+            destination: The destination path on the local filesystem.
         """
         ...
 

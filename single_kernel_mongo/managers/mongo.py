@@ -417,6 +417,11 @@ class MongoManager(Object):
                 logger.error("Deferring process_unremoved_units: error=%r", e)
                 raise
 
+    def remove_replset_member(self) -> None:
+        """Remove a unit from the replicaset."""
+        with MongoConnection(self.state.mongo_config) as mongo:
+            mongo.remove_replset_member(self.state.unit_peer_data.host)
+
     def process_added_units(self) -> None:
         """Adds units to replica set."""
         with MongoConnection(self.state.mongo_config) as mongo:

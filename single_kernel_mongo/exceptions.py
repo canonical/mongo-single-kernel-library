@@ -74,5 +74,13 @@ class SetPasswordError(Exception):
     """Raised when setting the password failed for a reason."""
 
 
+class ShardingMigrationError(Exception):
+    """Raised when there is an attempt to change the role of a sharding component."""
+
+
 class ContainerNotReadyError(Exception):
     """Raised when the container is not ready."""
+
+
+class UpgradeInProgressError(Exception):
+    """Raised when an upgrade is in progress."""

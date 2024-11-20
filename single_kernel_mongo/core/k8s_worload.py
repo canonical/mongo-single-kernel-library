@@ -63,6 +63,10 @@ class KubernetesWorkload(WorkloadBase):
             raise WorkloadServiceError(e.err) from e
 
     @override
+    def mkdir(self, path: Path, make_parents: bool = False) -> None:
+        self.container.make_dir(path, make_parents=make_parents)
+
+    @override
     def read(self, path: Path) -> list[str]:
         if not self.container.exists(path):
             return []
@@ -83,6 +87,11 @@ class KubernetesWorkload(WorkloadBase):
     @override
     def delete(self, path: Path):
         self.container.remove_path(path)
+
+    @override
+    def copy_to_unit(self, src: Path, destination: Path):
+        license_file = self.container.pull(path=src)
+        destination.write_text(license_file.read())
 
     @override
     def get_env(self) -> dict[str, str]:

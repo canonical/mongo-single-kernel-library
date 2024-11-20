@@ -40,6 +40,7 @@ class LogRotateWorkload(WorkloadBase):
         )
 
         self.write(path=LogRotateConfig.rendered_template, content=rendered_template)
+        self.exec(["chmod", "644", f"{LogRotateConfig.rendered_template}"])
 
     @property
     @override

@@ -49,7 +49,7 @@ class BackupHandler(Object):
     """Event Handler for managing backups and S3 integration."""
 
     def __init__(self, dependent: MongoDBOperator):
-        super().__init__(dependent, key="client-relations")
+        super().__init__(parent=dependent, key="backup")
         self.dependent = dependent
         self.manager = self.dependent.backup_manager
         self.charm: AbstractMongoCharm = dependent.charm
