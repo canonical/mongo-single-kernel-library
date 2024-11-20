@@ -174,6 +174,11 @@ class CharmState(Object):
         return self.app_peer_data.role == role
 
     @property
+    def db_initialised(self) -> bool:
+        """Is the DB initialised?"""
+        return self.app_peer_data.db_initialised
+
+    @property
     def upgrade_in_progress(self) -> bool:
         """Is the charm in upgrade?"""
         return False

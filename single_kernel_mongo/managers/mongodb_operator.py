@@ -215,7 +215,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongodb_exporter_config_manager.connect()
         self.backup_config_manager.connect()
 
-        if not self.charm.unit.is_leader() or not self.state.app_peer_data.db_initialised:
+        if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
         try:
@@ -232,7 +232,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return
         # TODO: Cluster integration status + Cluster Mismatch revision.
-        if not self.state.app_peer_data.db_initialised:
+        if not self.state.db_initialised:
             return
 
         # TODO: TLS + Shard check.
@@ -297,7 +297,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def update_hosts(self):
         """Update the replica set hosts and remove any unremoved replica from the config."""
-        if not self.state.app_peer_data.db_initialised:
+        if not self.state.db_initialised:
             return
         self.mongo_manager.process_unremoved_units()
         self.state.app_peer_data.replica_set_hosts = list(self.state.app_hosts)
@@ -349,7 +349,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def _initialise_replica_set(self):
         if not self.model.unit.is_leader():
             return
-        if not self.state.app_peer_data.db_initialised:
+        if not self.state.db_initialised:
             return
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_users()

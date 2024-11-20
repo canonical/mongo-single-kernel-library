@@ -79,7 +79,7 @@ class BackupConfigManager(CommonConfigManager):
         """Exposes the endpoint to PBM Agent."""
         if not self.workload.container_can_connect:
             return
-        if not self.state.app_peer_data.db_initialised:
+        if not self.state.db_initialised:
             return
 
         if not self.state.app_peer_data.get_user_password(BackupUser.username):
@@ -152,7 +152,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     def connect(self):
         """Exposes the endpoint to mongodb_exporter."""
-        if not self.state.app_peer_data.db_initialised:
+        if not self.state.db_initialised:
             return
 
         if not self.state.app_peer_data.get_user_password(MonitorUser.username):
