@@ -77,6 +77,7 @@ class MongoDBOperator(OperatorProtocol):
     def __init__(self, charm: AbstractMongoCharm):
         super().__init__(charm, self.name)
         self.charm = charm
+        self.config = charm.parsed_config
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
         self.state = CharmState(self.charm, self.role)
@@ -100,24 +101,24 @@ class MongoDBOperator(OperatorProtocol):
 
         # BEGIN Define config managers
         self.config_manager = MongoDBConfigManager(
-            self.charm.config,
+            self.config,
             self.state,
             self.workload,
         )
         self.mongos_config_manager = MongosConfigManager(
-            self.charm.config,
+            self.config,
             self.mongos_workload,
             self.state,
         )
         self.logrotate_config_manager = LogRotateConfigManager(
             self.substrate,
-            self.charm.config,
+            self.config,
             self.state,
             container,
         )
         self.mongodb_exporter_config_manager = MongoDBExporterConfigManager(
             self.substrate,
-            self.charm.config,
+            self.config,
             self.state,
             container,
         )
@@ -208,7 +209,7 @@ class MongoDBOperator(OperatorProtocol):
         unresponsive therefore causing a cluster failure, error the component. This prevents it
         from executing other hooks with a new role.
         """
-        if self.state.is_role(self.charm.config.role):
+        if self.state.is_role(self.config.role):
             return
         if self.state.upgrade_in_progress:
             logger.warning(
@@ -217,7 +218,7 @@ class MongoDBOperator(OperatorProtocol):
             raise UpgradeInProgressError
 
         logger.error(
-            f"cluster migration currently not supported, cannot change from {self.charm.config.role} to {self.state.role}"
+            f"cluster migration currently not supported, cannot change from {self.config.role} to {self.state.role}"
         )
         raise ShardingMigrationError(
             f"Migration of sharding components not permitted, revert config role to {self.role}"

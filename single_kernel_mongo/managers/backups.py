@@ -80,7 +80,7 @@ class BackupManager(Object, BackupConfigManager):
     ) -> None:
         super().__init__(parent=charm, key="backup")
         super(Object, self).__init__(
-            substrate=substrate, config=charm.config, state=state, container=container
+            substrate=substrate, config=charm.parsed_config, state=state, container=container
         )
         self.charm = charm
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(container=container)

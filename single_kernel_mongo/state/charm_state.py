@@ -58,7 +58,7 @@ class CharmState(Object):
     def __init__(self, charm: AbstractMongoCharm[T], role: Role):
         super().__init__(parent=charm, key="charm_state")
         self.role = role
-        self.config = charm.config
+        self.config = charm.parsed_config
         self.substrate: Substrates = self.role.substrate
         self.secrets = SecretCache(charm)
 

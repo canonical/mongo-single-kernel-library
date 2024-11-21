@@ -7,11 +7,7 @@
 from enum import Enum
 from typing import Annotated, TypeVar
 
-from pydantic import ConfigDict, Field, PlainSerializer
-
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_models import (
-    BaseConfigModel,
-)
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
 # Generic TypeVar for serializers
 T = TypeVar("T")
@@ -21,6 +17,14 @@ SerializeLiteralAsStr = Annotated[
     T,
     PlainSerializer(func=lambda v: str(v), return_type=str, when_used="always"),
 ]
+
+
+class BaseConfigModel(BaseModel):
+    """Class to be used for defining the structured configuration options."""
+
+    def __getitem__(self, x):
+        """Return the item using the notation instance[key]."""
+        return getattr(self, x.replace("-", "_"))
 
 
 # Useful enums
@@ -45,7 +49,7 @@ class ExposeExternalEnum(str, Enum):
 class MongoConfigModel(BaseConfigModel):
     """Default class for typing."""
 
-    expose_external: ExposeExternalEnum
+    expose_external: ExposeExternalEnum = ExposeExternalEnum.NONE
     role: SerializeLiteralAsStr[MongoDBRoles]
     auto_delete: bool = Field(default=False, alias="auto-delete")
 

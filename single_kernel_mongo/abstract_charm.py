@@ -7,10 +7,8 @@ from typing import ClassVar, TypeVar
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoConfigModel
+from single_kernel_mongo.core.typed_charm import TypedCharmBase
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_models import (
-    TypedCharmBase,
-)
 from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 from single_kernel_mongo.status import StatusManager
 
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 class AbstractMongoCharm(TypedCharmBase[T]):
     """An abstract mongo charm."""
 
-    config: T
+    config_type: type[T]
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[str]
     name: ClassVar[str]
