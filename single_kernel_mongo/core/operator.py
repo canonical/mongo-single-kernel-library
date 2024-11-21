@@ -4,13 +4,16 @@
 
 """Abstract Operator for Mongo Related Charms."""
 
+from __future__ import annotations
+
 from abc import ABC
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from ops.framework import Object
 from ops.model import Unit
 
-from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 
 
 class OperatorProtocol(ABC, Object):
@@ -64,3 +67,4 @@ class OperatorProtocol(ABC, Object):
 
     def on_stop(self) -> None:
         """Handles the stop event."""
+        ...

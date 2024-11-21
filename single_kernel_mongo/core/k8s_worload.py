@@ -38,6 +38,10 @@ class KubernetesWorkload(WorkloadBase):
         return self.container.can_connect()
 
     @override
+    def install(self) -> bool:
+        return True
+
+    @override
     def start(self) -> None:
         try:
             self.container.add_layer(self.layer_name, self.layer, combine=True)

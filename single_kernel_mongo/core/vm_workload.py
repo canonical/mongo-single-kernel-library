@@ -165,6 +165,7 @@ class VMWorkload(WorkloadBase):
         except KeyError:
             return False
 
+    @override
     def install(self) -> bool:
         """Loads the MongoDB snap from LP.
 

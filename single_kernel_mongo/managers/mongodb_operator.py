@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from ops.model import Container, Unit
 from pymongo.errors import PyMongoError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
+from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     CONTAINER,
@@ -135,6 +136,7 @@ class MongoDBOperator(OperatorProtocol):
 
     # BEGIN: Handlers.
 
+    @override
     def on_install(self) -> None:
         """Handler on install."""
         if not self.workload.container_can_connect:
@@ -149,6 +151,7 @@ class MongoDBOperator(OperatorProtocol):
 
         self.logrotate_config_manager.connect()
 
+    @override
     def on_start(self) -> None:
         """Handler on start."""
         if not self.workload.container_can_connect:
@@ -193,6 +196,11 @@ class MongoDBOperator(OperatorProtocol):
 
         self._initialise_replica_set()
 
+    @override
+    def on_stop(self) -> None:
+        """Handler for the stop event."""
+        ...
+
     def on_config_changed(self) -> None:
         """Listen to changes in application configuration.
 
@@ -215,6 +223,7 @@ class MongoDBOperator(OperatorProtocol):
             f"Migration of sharding components not permitted, revert config role to {self.role}"
         )
 
+    @override
     def on_leader_elected(self) -> None:
         """Handles the leader elected event.
 
@@ -241,6 +250,7 @@ class MongoDBOperator(OperatorProtocol):
                 BackupUser.username, self.workload.generate_password()
             )
 
+    @override
     def on_relation_joined(self) -> None:
         """Handle relation joined events."""
         if not self.charm.unit.is_leader():
@@ -270,6 +280,7 @@ class MongoDBOperator(OperatorProtocol):
             raise
         self.charm.status_manager.to_active(None)
 
+    @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
 
@@ -291,6 +302,7 @@ class MongoDBOperator(OperatorProtocol):
         self.mongodb_exporter_config_manager.connect()
         self.backup_manager.connect()
 
+    @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""
         if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
@@ -304,7 +316,8 @@ class MongoDBOperator(OperatorProtocol):
             )
         self.update_hosts()
 
-    def on_storaged_attached(self) -> None:
+    @override
+    def on_storage_attached(self) -> None:
         """Handler for `storage_attached` event.
 
         This should handle fixing the permissions for the data dir.
@@ -320,6 +333,7 @@ class MongoDBOperator(OperatorProtocol):
                 ]
             )
 
+    @override
     def on_update_status(self) -> None:
         """Status update Handler."""
         if not self.backup_manager.is_valid_s3_integration():
@@ -336,8 +350,10 @@ class MongoDBOperator(OperatorProtocol):
 
         self.perform_self_healing()
 
+        self.charm.status_manager.to_active(None)
         # TODO: Process statuses.
 
+    @override
     def on_storage_detaching(self) -> None:
         """Before storage detaches, allow removing unit to remove itself from the set.
 

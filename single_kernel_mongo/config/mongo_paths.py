@@ -12,7 +12,7 @@ VM_PATH = {
         "CONF": f"/var/snap/{SNAP_NAME}/current/etc/mongod",
         "DATA": f"/var/snap/{SNAP_NAME}/common/var/lib/mongodb",
         "LOGS": f"/var/snap/{SNAP_NAME}/common/var/log/mongodb",
-        "ETC": f"/var/snap/{SNAP_NAME}/common/etc",
+        "ETC": f"/var/snap/{SNAP_NAME}/current/etc",
         "VAR": f"/var/snap/{SNAP_NAME}/common/var",
         "BIN": "/snap/bin",
         "SHELL": "/snap/bin/charmed-mongodb.mongosh",

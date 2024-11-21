@@ -120,6 +120,9 @@ def test_pbm_workload_init(monkeypatch):
     monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
     assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths.pbm_config == Path(
+        "/var/snap/charmed-mongodb/current/etc/pbm/pbm_config.yaml"
+    )
     assert workload.env_var == "PBM_MONGODB_URI"
     assert workload.role == ROLES["vm"]
 
@@ -279,7 +282,11 @@ def test_logrotate_build_template(monkeypatch, tmp_path):
     def mock_write(path, content):
         tmp_file.write_text(content)
 
+    def mock_exec(*args):
+        return
+
     workload = VMLogRotateDBWorkload(container=None)
     monkeypatch.setattr(workload, "write", mock_write)
+    monkeypatch.setattr(workload, "exec", mock_exec)
     workload.build_template()
     assert "mongodb/*.log" in tmp_file.read_text()

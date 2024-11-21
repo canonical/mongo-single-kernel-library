@@ -25,7 +25,7 @@ from single_kernel_mongo.workload import (
     get_mongodb_exporter_workload_for_substrate,
     get_pbm_workload_for_substrate,
 )
-from single_kernel_mongo.workload.log_rotate import LogRotateWorkload
+from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
 
 logger = logging.getLogger(__name__)
 

@@ -111,6 +111,13 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     _env: str = ""
 
     @abstractmethod
+    def install(self) -> bool:
+        """Installs the workload snap.
+
+        VM-only: on k8s, just returns.
+        """
+
+    @abstractmethod
     def start(self) -> None:
         """Starts the workload service."""
         ...

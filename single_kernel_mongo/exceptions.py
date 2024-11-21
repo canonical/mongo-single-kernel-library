@@ -21,6 +21,10 @@ class WorkloadExecError(Exception):
         self.stdout = stdout or ""
         self.stderr = stderr or ""
 
+    def __repr__(self) -> str:
+        """Repr of error."""
+        return f"cmd failed ({self.return_code}) - cmd={self.cmd}, stdout={self.stdout}, stderr={self.stderr}"
+
 
 class WorkloadServiceError(Exception):
     """Raised when a service fail to start/stop/restart."""

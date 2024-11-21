@@ -2,25 +2,46 @@
 # See LICENSE file for licensing details.
 """Skeleton for the abstract charm."""
 
-from collections.abc import Callable
-from typing import TypeVar
+import logging
+from typing import ClassVar, TypeVar
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoConfigModel
+from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_models import (
     TypedCharmBase,
 )
+from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 from single_kernel_mongo.status import StatusManager
 
 T = TypeVar("T", bound=MongoConfigModel)
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractMongoCharm(TypedCharmBase[T]):
     """An abstract mongo charm."""
 
-    status_manager: StatusManager
-    substrate: Substrates
     config: T
-    copy_licenses_to_unit: Callable
+    substrate: ClassVar[Substrates]
+    peer_rel_name: ClassVar[str]
+    name: ClassVar[str]
 
-    pass
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.status_manager = StatusManager(self)
+        self.operator = MongoDBOperator(self)
+        self.workload = self.operator.workload
+
+        self.framework.observe(getattr(self.on, "install"), self.on_install)
+
+        # Register the role events handler after the global ones so that they get the priority.
+        self.lifecycle = LifecycleEventsHandler(self.operator, self.peer_rel_name)
+
+    def on_install(self, _):
+        """First install event handler."""
+        if self.substrate == "vm":
+            self.status_manager.to_maintenance("installing MongoDB")
+            if not self.workload.install():
+                self.status_manager.to_blocked("couldn't install MongoDB")
+                return

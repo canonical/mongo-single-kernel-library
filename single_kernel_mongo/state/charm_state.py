@@ -4,14 +4,15 @@
 
 """The general charm state."""
 
+from __future__ import annotations
+
 import logging
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from ops import Object, Relation, Unit
 
-from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Scope, Substrates
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
@@ -42,6 +43,9 @@ from single_kernel_mongo.utils.mongodb_users import (
     OperatorUser,
     RoleNames,
 )
+
+if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 
 logger = logging.getLogger()
 

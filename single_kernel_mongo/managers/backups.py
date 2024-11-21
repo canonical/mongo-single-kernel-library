@@ -11,6 +11,8 @@ A user for PBM is created when MongoDB is first started during the start phase.
 This user is named "backup".
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -71,7 +73,7 @@ class BackupManager(Object, BackupConfigManager):
 
     def __init__(
         self,
-        charm: "AbstractMongoCharm",
+        charm: AbstractMongoCharm,
         substrate: Substrates,
         state: CharmState,
         container: Container | None,

@@ -2,16 +2,20 @@
 # See LICENSE file for licensing details.
 """Secrets related helper classes/functions."""
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from ops import Secret, SecretInfo
 from ops.charm import CharmBase
 from ops.model import ModelError, SecretNotFoundError
 
-from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.exceptions import SecretAlreadyExistsError
 
+if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 SECRET_DELETED_LABEL = "None"
 
 logger = logging.getLogger(__name__)
