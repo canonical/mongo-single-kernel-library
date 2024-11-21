@@ -39,7 +39,7 @@ class MongoPaths:
     @property
     def common_path(self) -> Path:
         """The common path."""
-        return Path(self.etc_path).parent
+        return Path(self.var_path).parent
 
     @property
     def config_file(self) -> Path:

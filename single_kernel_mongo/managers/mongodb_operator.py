@@ -326,13 +326,13 @@ class MongoDBOperator(OperatorProtocol):
         This should handle fixing the permissions for the data dir.
         """
         if self.substrate == "vm":
-            self.workload.exec(["chmod", "-R", "770", str(self.workload.paths.common_path)])
+            self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
             self.workload.exec(
                 [
                     "chown",
                     "-R",
                     f"{self.workload.users.user}:{self.workload.users.group}",
-                    str(self.workload.paths.common_path),
+                    f"{self.workload.paths.common_path}",
                 ]
             )
 
