@@ -32,6 +32,7 @@ class AbstractMongoCharm(TypedCharmBase[T]):
         self.workload = self.operator.workload
 
         self.framework.observe(getattr(self.on, "install"), self.on_install)
+        self.framework.observe(getattr(self.on, "leader_elected"), self.on_leader_elected)
 
         # Register the role events handler after the global ones so that they get the priority.
         self.lifecycle = LifecycleEventsHandler(self.operator, self.peer_rel_name)
@@ -43,3 +44,7 @@ class AbstractMongoCharm(TypedCharmBase[T]):
             if not self.workload.install():
                 self.status_manager.to_blocked("couldn't install MongoDB")
                 return
+
+    def on_leader_elected(self, _):
+        """Set the role in the databag."""
+        self.operator.state.app_peer_data.role = self.parsed_config.role

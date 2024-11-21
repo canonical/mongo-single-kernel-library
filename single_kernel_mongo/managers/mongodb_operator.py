@@ -163,6 +163,7 @@ class MongoDBOperator(OperatorProtocol):
 
         if any(not storage for storage in self.model.storages.values()):
             logger.debug("Storages not attached yet.")
+            raise ContainerNotReadyError
 
         self.instantiate_keyfile()
         self.tls_manager.push_tls_files_to_workload()

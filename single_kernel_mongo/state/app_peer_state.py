@@ -65,9 +65,10 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
         Either from the app databag or from the default from config.
         """
-        if not self.relation:
-            return MongoDBRoles.UNKNOWN
-        return MongoDBRoles[str(self.relation_data.get(AppPeerDataKeys.role))]
+        databag_role: str = str(self.relation_data.get(AppPeerDataKeys.role))
+        if not self.relation or not databag_role:
+            return self._role
+        return MongoDBRoles[databag_role]
 
     @role.setter
     def role(self, value: str) -> None:
@@ -137,7 +138,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     def is_user_created(self, user: str) -> bool:
         """Has the user already been created?"""
-        return getattr(self.relation_data, f"{user}-user-created")
+        return json.loads(self.relation_data.get(f"{user}-user-created", "false"))
 
     def set_user_password(self, user: str, password: str):
         """Stores a user password in the app databag."""
@@ -145,7 +146,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     def get_user_password(self, user: str) -> str:
         """Returns the user password."""
-        return getattr(self.relation_data, f"{user}-password")
+        return self.relation_data.get(f"{user}-password", "")
 
     @property
     def replica_set(self) -> str:

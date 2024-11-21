@@ -276,6 +276,7 @@ class CharmState(Object):
             username=user.username,
             password=self.app_peer_data.get_user_password(user.username),
             hosts=hosts or user.hosts,
+            port=MongoPorts.MONGODB_PORT,
             roles=user.roles,
             tls_external=self.tls.external_enabled,
             tls_internal=self.tls.internal_enabled,

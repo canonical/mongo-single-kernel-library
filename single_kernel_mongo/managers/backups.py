@@ -96,7 +96,7 @@ class BackupManager(Object, BackupConfigManager):
 
         Only replica sets and config_servers can integrate to s3-integrator.
         """
-        return (self.state.s3_relation is not None) and (not self.state.is_role(MongoDBRoles.SHARD))
+        return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
 
     def create_backup_action(self) -> str:  # type: ignore[return]
         """Try to create a backup and return the backup id.

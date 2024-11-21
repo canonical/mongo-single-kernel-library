@@ -6,6 +6,8 @@
 In charge of handling the lifecycle events such as install, start, pebble ready, etc.
 """
 
+import logging
+
 from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
@@ -28,6 +30,8 @@ from single_kernel_mongo.exceptions import (
     UpgradeInProgressError,
     WorkloadServiceError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LifecycleEventsHandler(Object):
@@ -69,7 +73,8 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.on_start()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Deferring because of {e}")
             event.defer()
             return
 
