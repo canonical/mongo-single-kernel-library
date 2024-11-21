@@ -29,7 +29,7 @@ from single_kernel_mongo.config.roles import K8S_MONGO, VM_MONGO
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS
+from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     SetPasswordError,
@@ -89,6 +89,8 @@ class MongoDBOperator(OperatorProtocol):
         self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
         self.tls_manager = TLSManager(self.charm, self.workload, self.state, self.substrate)
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
+
+        self.backup_events = BackupEventsHandler(self)
 
     def define_workloads_and_config_managers(self, container: Container | None) -> None:
         """Export all workload and config definition for readability."""
@@ -324,10 +326,10 @@ class MongoDBOperator(OperatorProtocol):
         This should handle fixing the permissions for the data dir.
         """
         if self.substrate == "vm":
-            self.workload.exec(["chown", "-R", "770", str(self.workload.paths.common_path)])
+            self.workload.exec(["chmod", "-R", "770", str(self.workload.paths.common_path)])
             self.workload.exec(
                 [
-                    "chmod",
+                    "chown",
                     "-R",
                     f"{self.workload.users.user}:{self.workload.users.group}",
                     str(self.workload.paths.common_path),

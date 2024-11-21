@@ -45,7 +45,7 @@ INVALID_S3_INTEGRATION_STATUS = (
 )
 
 
-class BackupHandler(Object):
+class BackupEventsHandler(Object):
     """Event Handler for managing backups and S3 integration."""
 
     def __init__(self, dependent: MongoDBOperator):
