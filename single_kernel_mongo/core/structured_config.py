@@ -58,7 +58,7 @@ class MongoConfigModel(BaseConfigModel):
 class MongoDBCharmConfig(MongoConfigModel):
     """The structured configuration of a MongoDB charm."""
 
-    model_config = ConfigDict(use_enum_values=True, extra="forbid")
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.REPLICATION)
 
@@ -69,7 +69,7 @@ class MongoDBCharmConfig(MongoConfigModel):
 class MongosCharmConfig(MongoConfigModel):
     """The structured configuration of a Mongos charm."""
 
-    model_config = ConfigDict(use_enum_values=True, extra="forbid")
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = MongoDBRoles.MONGOS
     expose_external: SerializeLiteralAsStr[ExposeExternalEnum] = Field(
