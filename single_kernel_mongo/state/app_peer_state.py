@@ -68,7 +68,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         databag_role: str = str(self.relation_data.get(AppPeerDataKeys.role))
         if not self.relation or not databag_role:
             return self._role
-        return MongoDBRoles[databag_role]
+        return MongoDBRoles(databag_role)
 
     @role.setter
     def role(self, value: str) -> None:
