@@ -60,6 +60,7 @@ class MongoManager(Object):
         state: CharmState,
         substrate: Substrates,
     ) -> None:
+        super().__init__(parent=charm, key="managers")
         self.charm = charm
         self.workload = workload
         self.state = state
