@@ -5,14 +5,12 @@
 """Some useful relational models."""
 
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProviderData,
-    DatabaseRequirerData,
     ProviderData,
     RequirerData,
 )
 
 
-class ClusterData(DatabaseProviderData, DatabaseRequirerData):  # type: ignore[misc]
+class ClusterData(ProviderData, RequirerData):  # type: ignore[misc]
     """Broker provider data model."""
 
     SECRET_FIELDS = [
