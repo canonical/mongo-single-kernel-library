@@ -37,6 +37,11 @@ class KubernetesWorkload(WorkloadBase):
     def container_can_connect(self) -> bool:
         return self.container.can_connect()
 
+    @property
+    @override
+    def snap_present(self) -> bool:
+        return True
+
     @override
     def install(self) -> bool:
         return True

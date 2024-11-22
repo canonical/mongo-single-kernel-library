@@ -21,7 +21,7 @@ class WorkloadExecError(Exception):
         self.stdout = stdout or ""
         self.stderr = stderr or ""
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         """Repr of error."""
         return f"cmd failed ({self.return_code}) - cmd={self.cmd}, stdout={self.stdout}, stderr={self.stderr}"
 
@@ -88,3 +88,7 @@ class ContainerNotReadyError(Exception):
 
 class UpgradeInProgressError(Exception):
     """Raised when an upgrade is in progress."""
+
+
+class OpenPortFailedError(Exception):
+    """Raised when we fail to open ports."""

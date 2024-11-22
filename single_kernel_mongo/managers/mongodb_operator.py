@@ -143,6 +143,8 @@ class MongoDBOperator(OperatorProtocol):
     @override
     def on_install(self) -> None:
         """Handler on install."""
+        if not self.workload.snap_present:
+            return
         if not self.workload.container_can_connect:
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
@@ -182,7 +184,11 @@ class MongoDBOperator(OperatorProtocol):
             return
 
         # Open ports:
-        self.open_ports()
+        try:
+            self.open_ports()
+        except WorkloadExecError:
+            self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
+            raise
 
         # FIXME: Do we need to check for socket path here?
 

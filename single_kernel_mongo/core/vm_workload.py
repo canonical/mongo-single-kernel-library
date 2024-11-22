@@ -43,6 +43,11 @@ class VMWorkload(WorkloadBase):
     def container_can_connect(self) -> bool:
         return True  # Always True on VM
 
+    @property
+    @override
+    def snap_present(self) -> bool:
+        return self.mongod.present
+
     @override
     def start(self) -> None:
         try:
@@ -134,7 +139,7 @@ class VMWorkload(WorkloadBase):
                 e.returncode,
                 e.stdout,
                 e.stderr,
-            ) from e
+            )
 
     @override
     def run_bin_command(

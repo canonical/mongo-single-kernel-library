@@ -115,7 +115,15 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     def install(self) -> bool:
         """Installs the workload snap.
 
-        VM-only: on k8s, just returns.
+        VM-only: on k8s, just returns True.
+        """
+
+    @property
+    @abstractmethod
+    def snap_present(self) -> bool:
+        """Checks if the snap is present or not.
+
+        VM-only: on k8s, just returns True.
         """
 
     @abstractmethod
