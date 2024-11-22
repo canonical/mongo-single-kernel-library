@@ -89,9 +89,7 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("No password found.")
             return
 
-        current_parameters = self.get_environment()
-
-        if current_parameters != self.state.backup_config.uri or not self.workload.active():
+        if not self.workload.active() or self.get_environment() != self.state.backup_config.uri:
             logger.info("Restarting the PBM agent.")
             try:
                 self.workload.stop()
@@ -165,8 +163,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
         if not self.state.app_peer_data.get_user_password(MonitorUser.username):
             return
 
-        current_parameters = self.get_environment()
-        if current_parameters != self.state.monitor_config.uri or not self.workload.active():
+        if not self.workload.active() or self.get_environment() != self.state.monitor_config.uri:
             try:
                 self.set_environment()
                 self.workload.restart()

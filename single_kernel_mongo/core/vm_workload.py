@@ -53,8 +53,7 @@ class VMWorkload(WorkloadBase):
 
     @override
     def get_env(self) -> dict[str, str]:
-        key = self.env_var.replace("_", "-").lower()
-        return {self.env_var: self.mongod.get(key)}
+        return {self.env_var: self.mongod.get(self.snap_param)}
 
     @override
     def update_env(self, parameters: chain[str]):
