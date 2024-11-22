@@ -261,7 +261,7 @@ class BackupManager(Object, BackupConfigManager):
 
         # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
         # 2 seconds for pbm_agent to receive the resync command before verifying.
-        self.workload.run_bin_command("config", ["--force-resync"])
+        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
         time.sleep(2)
         self._wait_pbm_status()
 
@@ -278,7 +278,9 @@ class BackupManager(Object, BackupConfigManager):
 
         for pbm_key, pbm_value in config.items():
             try:
-                self.workload.run_bin_command("config", ["--set", f"{pbm_key}={pbm_value}"])
+                self.workload.run_bin_command(
+                    "config", ["--set", f"{pbm_key}={pbm_value}"], environment=self.environment
+                )
             except WorkloadExecError:
                 logger.error(f"Failed to configure PBM option: {pbm_key}")
                 raise SetPBMConfigError
@@ -289,7 +291,9 @@ class BackupManager(Object, BackupConfigManager):
             self.workload.paths.pbm_config,
             "# this file is to be left empty. Changes in this file will be ignored.\n",
         )
-        self.workload.run_bin_command("config", ["--file", str(self.workload.paths.pbm_config)])
+        self.workload.run_bin_command(
+            "config", ["--file", str(self.workload.paths.pbm_config)], environment=self.environment
+        )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
         """Parses pbm status for an error message from the current unit.
