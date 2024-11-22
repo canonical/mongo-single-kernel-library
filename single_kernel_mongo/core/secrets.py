@@ -43,7 +43,7 @@ class CachedSecret:
     """
 
     def __init__(self, charm: CharmBase, label: str, secret_uri: str | None = None):
-        self.secret_meta: Secret | None = None
+        self._secret_meta: Secret | None = None
         self._secret_content: dict = {}
         self._secret_uri = secret_uri
         self.label = label
