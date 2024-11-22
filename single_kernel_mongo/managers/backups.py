@@ -481,6 +481,7 @@ class BackupManager(Object, BackupConfigManager):
         if (
             current_pbm_status.name == previous_pbm_status.name
             and current_pbm_status.message == previous_pbm_status.message
+            and not isinstance(current_pbm_status, ActiveStatus)
         ):
             return f"Operation is still in progress: '{current_pbm_status.message}'"
 
