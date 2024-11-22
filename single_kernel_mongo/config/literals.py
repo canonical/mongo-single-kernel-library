@@ -55,7 +55,7 @@ class Snap:
     revision: int = 123
 
 
-SNAP = Snap()
+SNAP = Snap(channel="6/edge/use-snap-config-for-services", revision=124)
 
 T = TypeVar("T", bound=str | int)
 
