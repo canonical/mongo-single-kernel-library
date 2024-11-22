@@ -502,7 +502,7 @@ class BackupManager(Object, BackupConfigManager):
 
         backups.append("-" * len(backups[0]))
         for backup_id, backup_type, backup_status in backup_list:
-            backups.append(f"{backup_id:<21!s} | {backup_type:<12!s} | {backup_status}!s")
+            backups.append(f"{backup_id:<21s} | {backup_type:<12s} | {backup_status:s}")
 
         return "\n".join(backups)
 
