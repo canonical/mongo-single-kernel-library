@@ -64,11 +64,11 @@ class CharmState(Object):
 
         self.peer_app_interface = DataPeerData(
             self.model,
-            relation_name=RelationNames.PEERS,
+            relation_name=RelationNames.PEERS.value,
         )
         self.peer_unit_interface = DataPeerUnitData(
             self.model,
-            relation_name=RelationNames.PEERS,
+            relation_name=RelationNames.PEERS.value,
             additional_secret_fields=SECRETS_UNIT,
         )
 
@@ -77,7 +77,7 @@ class CharmState(Object):
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
-        return self.model.get_relation(RelationNames.PEERS)
+        return self.model.get_relation(RelationNames.PEERS.value)
 
     @property
     def peers_units(self) -> set[Unit]:
@@ -207,7 +207,7 @@ class CharmState(Object):
         """The cluster peer relation."""
         return {
             unit: DataPeerOtherUnitData(
-                model=self.model, unit=unit, relation_name=RelationNames.PEERS
+                model=self.model, unit=unit, relation_name=RelationNames.PEERS.value
             )
             for unit in self.peers_units
         }
