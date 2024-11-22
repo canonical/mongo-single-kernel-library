@@ -19,6 +19,7 @@ class MongosWorkload(WorkloadBase):
     layer_name = "mongos"
     bin_cmd = "mongosh"
     env_var = "MONGOS_ARGS"
+    snap_param = "mongos-args"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)

@@ -19,6 +19,7 @@ class MongoDBExporterWorkload(WorkloadBase):
     layer_name = "mongodb_exporter"
     bin_cmd = "mongosh"
     env_var = "MONGODB_URI"
+    snap_param = "monitor-uri"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)

@@ -79,16 +79,20 @@ class BackupConfigManager(CommonConfigManager):
     def connect(self):
         """Exposes the endpoint to PBM Agent."""
         if not self.workload.container_can_connect:
+            logger.info("Container cannot connect.")
             return
         if not self.state.db_initialised:
+            logger.info("DB is not initialised.")
             return
 
         if not self.state.app_peer_data.get_user_password(BackupUser.username):
+            logger.info("No password found.")
             return
 
         current_parameters = self.get_environment()
 
         if current_parameters != self.state.backup_config.uri or not self.workload.active():
+            logger.info("Restarting the PBM agent.")
             try:
                 self.workload.stop()
                 self.set_environment()

@@ -30,6 +30,7 @@ class PBMWorkload(WorkloadBase):
     layer_name = "pbm-agent"
     bin_cmd = "pbm"
     env_var = "PBM_MONGODB_URI"
+    snap_param = "pbm-uri"
     paths: PBMPaths
 
     def __init__(self, container: Container | None) -> None:

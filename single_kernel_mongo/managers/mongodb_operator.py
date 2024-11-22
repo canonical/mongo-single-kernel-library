@@ -194,9 +194,14 @@ class MongoDBOperator(OperatorProtocol):
 
         try:
             self.mongodb_exporter_config_manager.connect()
-            self.backup_manager.connect()
         except WorkloadServiceError:
             self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
+            return
+
+        try:
+            self.backup_manager.connect()
+        except WorkloadServiceError:
+            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
             return
 
         self._initialise_replica_set()

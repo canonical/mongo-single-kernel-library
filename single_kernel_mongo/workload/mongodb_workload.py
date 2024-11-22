@@ -19,6 +19,7 @@ class MongoDBWorkload(WorkloadBase):
     layer_name = "mongod"
     bin_cmd = "mongosh"
     env_var = "MONGOD_ARGS"
+    snap_param = "mongod-args"
 
     def __init__(self, container: Container | None) -> None:
         super().__init__(container)

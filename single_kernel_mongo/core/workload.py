@@ -108,6 +108,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     users: ClassVar[WorkloadUser]
     bin_cmd: ClassVar[str]
     env_var: ClassVar[str]
+    snap_param: ClassVar[str]
     _env: str = ""
 
     @abstractmethod

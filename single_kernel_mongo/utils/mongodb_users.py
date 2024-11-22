@@ -144,7 +144,7 @@ MonitorUser = MongoDBUser(
         ],
     },
     mongodb_role="explainRole",
-    hosts=set(LOCALHOST),  # MongoDB Exporter can only connect to one replica.
+    hosts={LOCALHOST},  # MongoDB Exporter can only connect to one replica.
 )
 
 BackupUser = MongoDBUser(
@@ -152,7 +152,7 @@ BackupUser = MongoDBUser(
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
-    hosts=set(LOCALHOST),  # pbm cannot make a direct connection if multiple hosts are used
+    hosts={LOCALHOST},  # pbm cannot make a direct connection if multiple hosts are used
 )
 
 
