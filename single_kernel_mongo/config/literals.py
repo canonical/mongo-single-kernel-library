@@ -55,6 +55,8 @@ class Snap:
     revision: int = 123
 
 
+SNAP = Snap()
+
 T = TypeVar("T", bound=str | int)
 
 

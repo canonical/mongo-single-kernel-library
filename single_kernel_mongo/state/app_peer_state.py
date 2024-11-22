@@ -65,7 +65,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
         Either from the app databag or from the default from config.
         """
-        databag_role: str = str(self.relation_data.get(AppPeerDataKeys.role))
+        databag_role: str = str(self.relation_data.get(AppPeerDataKeys.role.value))
         if not self.relation or not databag_role:
             return self._role
         return MongoDBRoles(databag_role)
@@ -83,12 +83,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         """Whether the db is initialised or not yet."""
         if not self.relation:
             return False
-        return json.loads(self.relation_data.get(AppPeerDataKeys.db_initialised, "false"))
+        return json.loads(self.relation_data.get(AppPeerDataKeys.db_initialised.value, "false"))
 
     @db_initialised.setter
     def db_initialised(self, value: bool):
         if isinstance(value, bool):
-            self.update({AppPeerDataKeys.db_initialised: json.dumps(value)})
+            self.update({AppPeerDataKeys.db_initialised.value: json.dumps(value)})
         else:
             raise ValueError(
                 f"'db_initialised' must be a boolean value. Provided: {value} is of type {type(value)}"
@@ -100,11 +100,11 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         if not self.relation:
             return []
 
-        return json.loads(self.relation_data.get(AppPeerDataKeys.replica_set_hosts, "[]"))
+        return json.loads(self.relation_data.get(AppPeerDataKeys.replica_set_hosts.value, "[]"))
 
     @replica_set_hosts.setter
     def replica_set_hosts(self, value: list[str]) -> None:
-        self.update({AppPeerDataKeys.replica_set_hosts: json.dumps(value)})
+        self.update({AppPeerDataKeys.replica_set_hosts.value: json.dumps(value)})
 
     @property
     def managed_users(self) -> set[str]:
@@ -112,12 +112,14 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         if not self.relation:
             return set()
 
-        return set(json.loads(self.relation_data.get(AppPeerDataKeys.managed_users_key, "[]")))
+        return set(
+            json.loads(self.relation_data.get(AppPeerDataKeys.managed_users_key.value, "[]"))
+        )
 
     @managed_users.setter
     def managed_users(self, value: set[str]) -> None:
         """Stores the managed users set."""
-        self.update({AppPeerDataKeys.managed_users_key: json.dumps(value)})
+        self.update({AppPeerDataKeys.managed_users_key.value: json.dumps(value)})
 
     @property
     def keyfile(self) -> str | None:
@@ -125,12 +127,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         if not self.relation:
             return None
 
-        return self.relation_data.get(AppPeerDataKeys.keyfile, "")
+        return self.relation_data.get(AppPeerDataKeys.keyfile.value, "")
 
     @keyfile.setter
     def keyfile(self, keyfile: str):
         """Stores the keyfile in the app databag."""
-        self.update({AppPeerDataKeys.keyfile: keyfile})
+        self.update({AppPeerDataKeys.keyfile.value: keyfile})
 
     def set_user_created(self, user: str):
         """Stores the flag stating if user was created."""
@@ -156,12 +158,14 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @property
     def external_connectivity(self) -> bool:
         """Is the external connectivity tag in the databag?"""
-        return json.loads(self.relation_data.get(AppPeerDataKeys.external_connectivity, "false"))
+        return json.loads(
+            self.relation_data.get(AppPeerDataKeys.external_connectivity.value, "false")
+        )
 
     @external_connectivity.setter
     def external_connectivity(self, value: bool) -> None:
         if isinstance(value, bool):
-            self.update({AppPeerDataKeys.external_connectivity: json.dumps(value)})
+            self.update({AppPeerDataKeys.external_connectivity.value: json.dumps(value)})
         else:
             raise ValueError(
                 f"'external-connectivity' must be a boolean value. Provided: {value} is of type {type(value)}"

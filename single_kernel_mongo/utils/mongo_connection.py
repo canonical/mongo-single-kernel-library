@@ -164,7 +164,7 @@ class MongoConnection:
         """Drop user."""
         self.client.admin.command("dropUser", username)
 
-    def create_role(self, role_name: str, privileges: dict, roles: dict = {}):
+    def create_role(self, role_name: str, privileges: dict, roles: list = []):
         """Creates a new role.
 
         Args:

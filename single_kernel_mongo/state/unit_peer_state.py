@@ -61,7 +61,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
         if self.substrate == "vm":
-            return str(self.relation_data.get(UnitPeerRelationKeys.private_address))
+            return str(self.relation_data.get(UnitPeerRelationKeys.private_address.value))
 
         if self.substrate == "k8s":
             return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"

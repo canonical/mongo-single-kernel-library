@@ -15,7 +15,7 @@ from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 class MongoDBExporterWorkload(WorkloadBase):
     """MongoDB Workload definition."""
 
-    service = "mongodb_exporter"
+    service = "mongodb-exporter"
     layer_name = "mongodb_exporter"
     bin_cmd = "mongosh"
     env_var = "MONGODB_URI"
@@ -36,7 +36,7 @@ class MongoDBExporterWorkload(WorkloadBase):
                 "summary": "mongodb_exporter layer",
                 "description": "Pebble config layer for mongodb_exporter",
                 "services": {
-                    self.service: {
+                    self.layer_name: {
                         "override": "replace",
                         "summary": "mongodb_exporter",
                         "command": "mongodb_exporter --collector.diagnosticdata --compatible-mode",

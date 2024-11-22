@@ -1,5 +1,6 @@
 import pytest
 
+from single_kernel_mongo.config.literals import CharmRole
 from single_kernel_mongo.config.mongo_paths import VM_PATH
 from single_kernel_mongo.core.structured_config import (
     MongoDBCharmConfig,
@@ -34,6 +35,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
     mock_state.tls = mocker.MagicMock(TLSState)
+    mock_state.charm_role = CharmRole.MONGODB
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = role
     mock_state.tls.internal_enabled = False
@@ -104,6 +106,7 @@ def test_mongos_config_manager(mocker):
     )
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.charm_role = CharmRole.MONGOS
     mock_state.cluster = mocker.MagicMock(ClusterState)
     mock_state.cluster.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)

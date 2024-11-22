@@ -17,7 +17,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     CRON_FILE,
-    Snap,
+    SNAP,
     VmUser,
 )
 from single_kernel_mongo.core.workload import WorkloadBase
@@ -35,7 +35,7 @@ class VMWorkload(WorkloadBase):
     users = VmUser()
 
     def __init__(self, container: Container | None) -> None:
-        self.snap = Snap
+        self.snap = SNAP
         self.mongod = snap.SnapCache()[self.snap.name]
 
     @property
