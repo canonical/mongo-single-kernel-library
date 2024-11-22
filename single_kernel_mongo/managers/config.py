@@ -13,7 +13,7 @@ from ops import Container
 from typing_extensions import override
 
 from single_kernel_mongo.config.audit_config import AuditLog
-from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts, Substrates
+from single_kernel_mongo.config.literals import LOCALHOST, CharmRole, MongoPorts, Substrates
 from single_kernel_mongo.config.logrotate_config import LogRotateConfig
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
@@ -194,7 +194,10 @@ class MongoConfigManager(CommonConfigManager, ABC):
     @property
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
-        if not self.state.app_peer_data.external_connectivity:
+        if (
+            self.state.charm_role == CharmRole.MONGOS
+            and not self.state.app_peer_data.external_connectivity
+        ):
             return [
                 f"--bind-ip {self.workload.paths.socket_path}",
                 "--filePermissions 0766",

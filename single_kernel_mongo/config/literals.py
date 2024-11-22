@@ -14,6 +14,13 @@ LOCALHOST = "127.0.0.1"
 CONTAINER = "mongod"
 
 
+class CharmRole(str, Enum):
+    """Charm Role Name."""
+
+    MONGODB = "mongodb"
+    MONGOS = "mongos"
+
+
 class Scope(str, Enum):
     """Peer relations scope."""
 

@@ -13,12 +13,18 @@ from typing import TYPE_CHECKING, TypeVar
 
 from ops import Object, Relation, Unit
 
-from single_kernel_mongo.config.literals import SECRETS_UNIT, MongoPorts, Scope, Substrates
+from single_kernel_mongo.config.literals import (
+    SECRETS_UNIT,
+    CharmRole,
+    MongoPorts,
+    Scope,
+    Substrates,
+)
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
 )
-from single_kernel_mongo.config.roles import MongoDBRole, MongosRole, Role
+from single_kernel_mongo.config.roles import Role
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -55,9 +61,10 @@ T = TypeVar("T", bound=MongoConfigModel)
 class CharmState(Object):
     """All the charm states."""
 
-    def __init__(self, charm: AbstractMongoCharm[T], role: Role):
+    def __init__(self, charm: AbstractMongoCharm[T], role: Role, charm_role: CharmRole):
         super().__init__(parent=charm, key="charm_state")
         self.role = role
+        self.charm_role = charm_role
         self.config = charm.parsed_config
         self.substrate: Substrates = self.role.substrate
         self.secrets = SecretCache(charm)
@@ -234,7 +241,7 @@ class CharmState(Object):
     @property
     def config_server_name(self) -> str | None:
         """Gets the config server name."""
-        if isinstance(self.role, MongosRole):
+        if self.charm_role == CharmRole.MONGOS:
             if self.cluster_relation:
                 return self.cluster_relation.app.name
             return None
@@ -349,7 +356,7 @@ class CharmState(Object):
     @property
     def mongo_config(self) -> MongoConfiguration:
         """The mongo configuration to use by default for charm interactions."""
-        if isinstance(self.role, MongoDBRole):
+        if self.charm_role == CharmRole.MONGODB:
             return self.operator_config
         return self.mongos_config
 

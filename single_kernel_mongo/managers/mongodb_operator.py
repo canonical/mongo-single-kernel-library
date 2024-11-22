@@ -19,6 +19,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import (
     CONTAINER,
     MAX_PASSWORD_LENGTH,
+    CharmRole,
     MongoPorts,
     Scope,
     Substrates,
@@ -72,15 +73,15 @@ logger = logging.getLogger(__name__)
 class MongoDBOperator(OperatorProtocol):
     """Operator for MongoDB Related Charms."""
 
-    name = "mongodb"
+    name = CharmRole.MONGODB
 
     def __init__(self, charm: AbstractMongoCharm):
-        super().__init__(charm, self.name)
+        super().__init__(charm, self.name.value)
         self.charm = charm
         self.config = charm.parsed_config
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
-        self.state = CharmState(self.charm, self.role)
+        self.state = CharmState(self.charm, self.role, self.name)
         container = self.charm.unit.get_container(CONTAINER) if self.substrate == "k8s" else None
 
         # Defined workloads and configs
@@ -501,7 +502,6 @@ class MongoDBOperator(OperatorProtocol):
         """Pull / Push licenses."""
         licenses = [
             "snap",
-            "rock",
             "mongodb-exporter",
             "percona-backup-mongodb",
             "percona-server",
@@ -513,6 +513,12 @@ class MongoDBOperator(OperatorProtocol):
             file = Path("./LICENSE")
             dst = prefix / "LICENSE-charm"
             self.workload.copy_to_unit(file, dst)
+        else:
+            name = "LICENSE-rock"
+            file = Path(f"{self.workload.paths.licenses_path}/{name}")
+            dst = prefix / name
+            if not dst.is_file():
+                self.workload.copy_to_unit(file, dst)
 
         for license in licenses:
             name = f"LICENSE-{license}"

@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, ClassVar
 from ops.framework import Object
 from ops.model import Unit
 
+from single_kernel_mongo.config.literals import CharmRole
+
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 
@@ -20,7 +22,7 @@ class OperatorProtocol(ABC, Object):
     """Protocol for a charm operator."""
 
     charm: AbstractMongoCharm
-    name: ClassVar[str]
+    name: ClassVar[CharmRole]
 
     def on_install(self) -> None:
         """Handles the install event."""
