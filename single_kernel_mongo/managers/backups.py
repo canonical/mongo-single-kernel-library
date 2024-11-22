@@ -276,7 +276,7 @@ class BackupManager(Object, BackupConfigManager):
 
         config = map_s3_config_to_pbm_config(credentials)
 
-        for pbm_key, pbm_value in config:
+        for pbm_key, pbm_value in config.items():
             try:
                 self.workload.run_bin_command("config", ["--set", f"{pbm_key}={pbm_value}"])
             except WorkloadExecError:
@@ -329,7 +329,7 @@ class BackupManager(Object, BackupConfigManager):
     def process_pbm_error(self, pbm_status: str) -> str:
         """Look up PBM status for errors."""
         error_message: str
-        message: str
+        message = ""
         try:
             pbm_as_dict = json.loads(pbm_status)
             error_message = self.retrieve_error_message(pbm_as_dict)
@@ -513,7 +513,7 @@ class BackupManager(Object, BackupConfigManager):
             "status",
             ["-o", "json"],
             environment=self.environment,
-        )
+        ).rstrip()
 
     def _needs_provided_remap_arguments(self, backup_id: str) -> bool:
         """Returns true if remap arguments are needed to perform a restore command."""
