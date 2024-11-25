@@ -34,11 +34,13 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         data_interface: DataPeerUnitData,
         component: Unit,
         substrate: Substrates,
+        bind_address: str | None = None,
     ):
         super().__init__(relation, data_interface, component, None)
         self.data_interface = data_interface
         self.substrate = substrate
         self.unit = component
+        self.bind_address = bind_address
         self.k8s = K8sManager(
             pod_name=self.pod_name,
             namespace=self.unit._backend.model_name,
@@ -61,7 +63,9 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
         if self.substrate == "vm":
-            return str(self.relation_data.get(UnitPeerRelationKeys.private_address.value))
+            return self.bind_address or str(
+                self.relation_data.get(UnitPeerRelationKeys.private_address.value)
+            )
 
         if self.substrate == "k8s":
             return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"

@@ -96,27 +96,27 @@ class CharmState(Object):
     @property
     def client_relations(self) -> set[Relation]:
         """The set of client relations."""
-        return set(self.model.relations[RelationNames.DATABASE])
+        return set(self.model.relations[RelationNames.DATABASE.value])
 
     @property
     def cluster_relation(self) -> Relation | None:
         """The Cluster relation."""
-        return self.model.get_relation(RelationNames.CLUSTER)
+        return self.model.get_relation(RelationNames.CLUSTER.value)
 
     @property
     def shard_relations(self) -> list[Relation]:
         """The set of shard relations."""
-        return self.model.relations[RelationNames.SHARDING]
+        return self.model.relations[RelationNames.SHARDING.value]
 
     @property
     def config_server_relation(self) -> Relation | None:
         """The config-server relation if it exists."""
-        return self.model.get_relation(RelationNames.CONFIG_SERVER)
+        return self.model.get_relation(RelationNames.CONFIG_SERVER.value)
 
     @property
     def s3_relation(self) -> Relation | None:
         """The S3 relation if it exists."""
-        return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS)
+        return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS.value)
 
     # END: Relations
 
@@ -140,6 +140,7 @@ class CharmState(Object):
             data_interface=self.peer_unit_interface,
             component=self.model.unit,
             substrate=self.substrate,
+            bind_address=str(self.bind_address),
         )
 
     @property
