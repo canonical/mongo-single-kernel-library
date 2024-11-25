@@ -122,10 +122,10 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         self.update({AppPeerDataKeys.managed_users_key.value: json.dumps(value)})
 
     @property
-    def keyfile(self) -> str | None:
+    def keyfile(self) -> str:
         """Gets the keyfile from the app databag."""
         if not self.relation:
-            return None
+            return ""
 
         return self.relation_data.get(AppPeerDataKeys.keyfile.value, "")
 
