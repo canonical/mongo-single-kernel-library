@@ -205,6 +205,14 @@ class CharmState(Object):
 
         return bind_address or ""
 
+    def get_user_password(self, user: MongoDBUser) -> str:
+        """Returns the user password for a system user."""
+        return self.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
+
+    def set_user_password(self, user: MongoDBUser, content: str):
+        """Sets the user password for a system user."""
+        self.secrets.set(user.password_key_name, content, Scope.APP)
+
     @property
     def planned_units(self) -> int:
         """Return the planned units for the charm."""
@@ -282,7 +290,7 @@ class CharmState(Object):
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
             username=user.username,
-            password=self.app_peer_data.get_user_password(user.username),
+            password=self.get_user_password(user),
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT,
             roles=user.roles,
@@ -311,7 +319,7 @@ class CharmState(Object):
         return MongoConfiguration(
             database=user.database_name,
             username=user.username,
-            password=self.app_peer_data.get_user_password(user.username),
+            password=self.get_user_password(user),
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT,
             roles=user.roles,

@@ -142,14 +142,6 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         """Has the user already been created?"""
         return json.loads(self.relation_data.get(f"{user}-user-created", "false"))
 
-    def set_user_password(self, user: str, password: str):
-        """Stores a user password in the app databag."""
-        self.update({f"{user}-password": password})
-
-    def get_user_password(self, user: str) -> str:
-        """Returns the user password."""
-        return self.relation_data.get(f"{user}-password", "")
-
     @property
     def replica_set(self) -> str:
         """The replica set name."""

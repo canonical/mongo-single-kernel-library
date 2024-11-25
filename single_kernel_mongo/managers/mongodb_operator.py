@@ -249,22 +249,16 @@ class MongoDBOperator(OperatorProtocol):
             self.state.app_peer_data.keyfile = self.workload.generate_keyfile()
 
         # Set the password for the Operator User.
-        if not self.state.app_peer_data.get_user_password(OperatorUser.username):
-            self.state.app_peer_data.set_user_password(
-                OperatorUser.username, self.workload.generate_password()
-            )
+        if not self.state.get_user_password(OperatorUser):
+            self.state.set_user_password(OperatorUser, self.workload.generate_password())
 
         # Set the password for the Monitor User.
-        if not self.state.app_peer_data.get_user_password(MonitorUser.username):
-            self.state.app_peer_data.set_user_password(
-                MonitorUser.username, self.workload.generate_password()
-            )
+        if not self.state.get_user_password(MonitorUser):
+            self.state.set_user_password(MonitorUser, self.workload.generate_password())
 
         # Set the password for the Backup User.
-        if not self.state.app_peer_data.get_user_password(BackupUser.username):
-            self.state.app_peer_data.set_user_password(
-                BackupUser.username, self.workload.generate_password()
-            )
+        if not self.state.get_user_password(BackupUser):
+            self.state.set_user_password(BackupUser, self.workload.generate_password())
 
     @override
     def on_relation_joined(self) -> None:

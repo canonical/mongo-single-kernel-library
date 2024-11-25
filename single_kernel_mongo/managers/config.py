@@ -85,7 +85,7 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("DB is not initialised.")
             return
 
-        if not self.state.app_peer_data.get_user_password(BackupUser.username):
+        if not self.state.get_user_password(BackupUser):
             logger.info("No password found.")
             return
 
@@ -160,7 +160,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
         if not self.state.db_initialised:
             return
 
-        if not self.state.app_peer_data.get_user_password(MonitorUser.username):
+        if not self.state.get_user_password(MonitorUser):
             return
 
         if not self.workload.active() or self.get_environment() != self.state.monitor_config.uri:

@@ -1,7 +1,7 @@
 from ops.testing import Harness
 
+from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.utils.mongodb_users import OperatorUser
 
 from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
@@ -32,14 +32,16 @@ def test_peer_units(harness: Harness[MongoTestCharm]):
     assert {unit.name for unit in harness.charm.operator.state.peers_units} == {"test-mongodb/1"}
 
 
-def test_users(harness: Harness[MongoTestCharm]):
+def test_users_secrets(harness: Harness[MongoTestCharm]):
     rel = harness.charm.model.get_relation(RelationNames.PEERS.value)
     harness.add_relation_unit(rel.id, "test-mongodb/1")  # type: ignore
 
-    state = harness.charm.operator.state
     harness.set_leader(True)
-    harness.charm.on.leader_elected.emit()
+    harness.charm.operator.on_leader_elected()
 
-    assert state.operator_config.password == state.app_peer_data.get_user_password(
-        OperatorUser.username
+    state = harness.charm.operator.state
+    assert state.operator_config.password == state.secrets.get_for_key(
+        Scope.APP, "operator-password"
     )
+    assert state.monitor_config.password == state.secrets.get_for_key(Scope.APP, "monitor-password")
+    assert state.backup_config.password == state.secrets.get_for_key(Scope.APP, "backup-password")
