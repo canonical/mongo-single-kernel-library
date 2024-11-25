@@ -111,7 +111,7 @@ class VMWorkload(WorkloadBase):
         path.unlink()
 
     @override
-    def copy_to_unit(self, src: Path, destination: Path) -> None:
+    def copy_to_unit(self, src: Path, destination: Path) -> None:  # pragma: nocover
         copyfile(src, destination)
 
     @override

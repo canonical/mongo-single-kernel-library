@@ -195,9 +195,32 @@ def test_install_success(monkeypatch):
     assert workload.install()
 
 
-def test_read_file():
+def test_read_file_fail():
     workload = VMMongoDBWorkload(container=None)
     assert workload.read(Path("/nonexistent")) == []
+
+
+def test_read_file_succeed(tmp_path):
+    tmp_file = tmp_path / "test_file.txt"
+    tmp_file.write_text("need\ndead\ncafe\n")
+
+    workload = VMMongoDBWorkload(container=None)
+    assert workload.read(tmp_file) == ["need", "dead", "cafe"]
+
+
+def test_delete_fail():
+    workload = VMMongoDBWorkload(container=None)
+    assert workload.delete(Path("/nonexistent")) is None
+
+
+def test_delete_success(tmp_path):
+    tmp_file = tmp_path / "test_file.txt"
+    tmp_file.write_text("need\ndead\ncafe\n")
+
+    workload = VMMongoDBWorkload(container=None)
+    workload.delete(tmp_file)
+
+    assert not tmp_file.is_file()
 
 
 @pytest.mark.parametrize("command", [("start"), ("stop"), ("restart")])

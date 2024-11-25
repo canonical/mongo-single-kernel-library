@@ -239,7 +239,7 @@ class BackupManager(Object, BackupConfigManager):
             logger.error(f"Failed to get pbm status: {e}")
             return BlockedStatus("PBM error")
 
-    def resync_config_options(self):
+    def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
         self.workload.start()
 
@@ -382,7 +382,7 @@ class BackupManager(Object, BackupConfigManager):
             case BlockedStatus():
                 raise InvalidPBMStatusError(pbm_status.message)
             case _:
-                return
+                pass
 
         if not backup_id:
             raise InvalidArgumentForActionError("Missing backup-id to restore.")
