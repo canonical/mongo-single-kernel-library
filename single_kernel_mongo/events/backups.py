@@ -15,6 +15,8 @@ from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.exceptions import (
+    InvalidArgumentForActionError,
+    InvalidPBMStatusError,
     ListBackupError,
     PBMBusyError,
     RestoreError,
@@ -146,9 +148,10 @@ class BackupEventsHandler(Object):
                 logger, event, action, "The action can be run only on leader unit."
             )
 
-        check, reason = self.manager.can_backup()
-        if not check:
-            fail_action_with_error_log(logger, event, action, reason)
+        try:
+            self.manager.can_backup()
+        except InvalidPBMStatusError as e:
+            fail_action_with_error_log(logger, event, action, str(e))
             return
 
         try:
@@ -177,9 +180,10 @@ class BackupEventsHandler(Object):
             fail_action_with_error_log(logger, event, action, reason)
             return
 
-        check, reason = self.manager.can_list_backup()
-        if not check:
-            fail_action_with_error_log(logger, event, action, reason)
+        try:
+            self.manager.can_list_backup()
+        except InvalidPBMStatusError as e:
+            fail_action_with_error_log(logger, event, action, str(e))
             return
 
         try:
@@ -210,12 +214,13 @@ class BackupEventsHandler(Object):
             )
             return
 
-        check, reason = self.manager.can_restore(
-            backup_id,
-            remapping_pattern,
-        )
-        if not check:
-            fail_action_with_error_log(logger, event, action, reason)
+        try:
+            self.manager.can_restore(
+                backup_id,
+                remapping_pattern,
+            )
+        except (InvalidPBMStatusError, InvalidArgumentForActionError) as e:
+            fail_action_with_error_log(logger, event, action, str(e))
             return
 
         try:

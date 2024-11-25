@@ -92,3 +92,11 @@ class UpgradeInProgressError(Exception):
 
 class OpenPortFailedError(Exception):
     """Raised when we fail to open ports."""
+
+
+class InvalidPBMStatusError(Exception):
+    """Raised when pbm status does not allow the action to be executed."""
+
+
+class InvalidArgumentForActionError(Exception):
+    """Raised when arguments for an action are invalid."""

@@ -1,6 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+from ops import MaintenanceStatus
 from ops.model import BlockedStatus, WaitingStatus
 
 from single_kernel_mongo.exceptions import WorkloadExecError
@@ -10,6 +11,12 @@ def test_install_blocks_snap_install_failure(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=False)
     harness.charm.on.install.emit()
     assert harness.charm.unit.status == BlockedStatus("couldn't install MongoDB")
+
+
+def test_install_blocks_snap_install_success(harness, mocker):
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
+    harness.charm.on.install.emit()
+    assert harness.charm.unit.status == MaintenanceStatus("installing MongoDB")
 
 
 def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_interactions):

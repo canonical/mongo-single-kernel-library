@@ -37,6 +37,8 @@ from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
+    InvalidArgumentForActionError,
+    InvalidPBMStatusError,
     ListBackupError,
     PBMBusyError,
     RestoreError,
@@ -50,7 +52,7 @@ from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
 BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
@@ -341,7 +343,7 @@ class BackupManager(Object, BackupConfigManager):
             error_message = pbm_status
 
         if "status code: 403" in error_message:
-            message = "s3 credentials are incorrect"
+            message = "s3 credentials are incorrect."
         elif "status code: 404" in error_message:
             message = "s3 configurations are incompatible."
         elif "status code: 301" in error_message:
@@ -353,8 +355,6 @@ class BackupManager(Object, BackupConfigManager):
         pbm_as_dict: dict[str, dict] = json.loads(pbm_status)
         current_op = pbm_as_dict.get("running", {})
         match current_op:
-            case {}:
-                return ActiveStatus("")
             case {"type": "backup", "name": backup_id}:
                 return MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
             case {"type": "restore", "name": backup_id}:
@@ -362,9 +362,9 @@ class BackupManager(Object, BackupConfigManager):
             case {"type": "resync"}:
                 return WaitingStatus("waiting to sync s3 configurations.")
             case _:
-                return ActiveStatus()
+                return ActiveStatus("")
 
-    def can_restore(self, backup_id: str, remapping_pattern: str) -> tuple[bool, str]:
+    def can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
 
         Returns:
@@ -374,56 +374,52 @@ class BackupManager(Object, BackupConfigManager):
         pbm_status = self.get_status()
         match pbm_status:
             case MaintenanceStatus():
-                return (False, "Please wait for current backup/restore to finish.")
+                raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
             case WaitingStatus():
-                return (
-                    False,
-                    "Sync-ing configurations needs more time, must wait before listing backups.",
+                raise InvalidPBMStatusError(
+                    "Sync-ing configurations needs more time, must wait before listing backups."
                 )
             case BlockedStatus():
-                return (False, pbm_status.message)
+                raise InvalidPBMStatusError(pbm_status.message)
             case _:
-                pass
+                return
 
         if not backup_id:
-            return (False, "Missing backup-id to restore.")
+            raise InvalidArgumentForActionError("Missing backup-id to restore.")
         if self._needs_provided_remap_arguments(backup_id) and remapping_pattern == "":
-            return (False, "Cannot restore backup, 'remap-pattern' must be set.")
+            raise InvalidArgumentForActionError(
+                "Cannot restore backup, 'remap-pattern' must be set."
+            )
 
-        return True, ""
-
-    def can_backup(self) -> tuple[bool, str]:
+    def can_backup(self) -> None:
         """Is PBM is a state where it can backup?"""
         pbm_status = self.get_status()
         match pbm_status:
             case MaintenanceStatus():
-                return (
-                    False,
-                    "Can only create one backup at a time, please wait for current backup to finish.",
+                raise InvalidPBMStatusError(
+                    "Can only create one backup at a time, please wait for current backup to finish."
                 )
             case WaitingStatus():
-                return (
-                    False,
-                    "Sync-ing configurations needs more time, must wait before creating backups.",
+                raise InvalidPBMStatusError(
+                    "Sync-ing configurations needs more time, must wait before creating backups."
                 )
             case BlockedStatus():
-                return False, pbm_status.message
+                raise InvalidPBMStatusError(pbm_status.message)
             case _:
-                return True, ""
+                return
 
-    def can_list_backup(self) -> tuple[bool, str]:
+    def can_list_backup(self) -> None:
         """Is PBM in a state to list backup?"""
         pbm_status = self.get_status()
         match pbm_status:
             case WaitingStatus():
-                return (
-                    False,
-                    "Sync-ing configurations needs more time, must wait before listing backups.",
+                raise InvalidPBMStatusError(
+                    "Sync-ing configurations needs more time, must wait before listing backups."
                 )
             case BlockedStatus():
-                return False, pbm_status.message
+                raise InvalidPBMStatusError(pbm_status.message)
             case _:
-                return True, ""
+                return
 
     @retry(
         stop=stop_after_attempt(20),
