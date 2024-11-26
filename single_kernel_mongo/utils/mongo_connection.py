@@ -129,7 +129,6 @@ class MongoConnection:
                 #     finished.
                 logger.error("Cannot initialize replica set. error=%r", e)
                 raise e
-        pass
 
     def create_user(self, config: MongoConfiguration, roles: list[DBPrivilege] | None = None):
         """Create user.

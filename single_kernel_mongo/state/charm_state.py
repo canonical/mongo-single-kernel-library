@@ -213,9 +213,9 @@ class CharmState(Object):
         """Returns the user password for a system user."""
         return self.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
 
-    def set_user_password(self, user: MongoDBUser, content: str):
+    def set_user_password(self, user: MongoDBUser, content: str) -> str:
         """Sets the user password for a system user."""
-        self.secrets.set(user.password_key_name, content, Scope.APP)
+        return self.secrets.set(user.password_key_name, content, Scope.APP).label
 
     @property
     def planned_units(self) -> int:
@@ -263,7 +263,8 @@ class CharmState(Object):
                 return self.shard_relations[0].app.name
             return None
         logger.info(
-            "Component %s is not a shard, cannot be integrated to a config-server.", self.role
+            "Component %s is not a shard, cannot be integrated to a config-server.",
+            self.app_peer_data.role,
         )
         return None
 

@@ -104,3 +104,7 @@ class InvalidArgumentForActionError(Exception):
 
 class UnknownCertificateExpiringError(Exception):
     """Raised when an unknown certificate is expiring."""
+
+
+class UnknownCertificateAvailableError(Exception):
+    """Raised when an unknown certificate is available."""

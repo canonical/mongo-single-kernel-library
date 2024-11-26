@@ -22,7 +22,7 @@ from ops.charm import RelationChangedEvent
 from ops.model import Relation
 from pymongo.errors import PyMongoError
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import SetPasswordError
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -91,11 +91,7 @@ class MongoManager(Object):
             except PyMongoError as e:
                 raise SetPasswordError(f"Failed changing the password: {e}")
 
-        return self.state.secrets.set(
-            user.password_key_name,
-            password,
-            Scope.UNIT,
-        ).label
+        return self.state.set_user_password(user, password)
 
     def initialise_replica_set(self) -> None:
         """Initialises the replica set."""
@@ -418,7 +414,7 @@ class MongoManager(Object):
                 logger.error("Deferring process_unremoved_units: error=%r", e)
                 raise
 
-    def remove_replset_member(self) -> None:
+    def remove_replset_member(self) -> None:  # pragma: nocover
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.remove_replset_member(self.state.unit_peer_data.host)
@@ -440,10 +436,12 @@ class MongoManager(Object):
                     raise NotReadyError
                 mongo.add_replset_member(member)
 
-    def _get_relation_from_username(self, username: str, relation_name: str) -> Relation:
+    def _get_relation_from_username(
+        self, username: str, relation_name: str
+    ) -> Relation:  # pragma: nocover
         """Parse relation ID from a username and return Relation object."""
         match = re.match(r"^relation-(\d+)$", username)
-        # We generated username in `_get_users_from_relations`
+        # We generated username in `oversee_users`
         # func and passed it into this function later.
         # It means the username here MUST match regex.
         if not match:

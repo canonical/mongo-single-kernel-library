@@ -15,7 +15,10 @@ from ops.framework import Object
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import UnknownCertificateExpiringError
+from single_kernel_mongo.exceptions import (
+    UnknownCertificateAvailableError,
+    UnknownCertificateExpiringError,
+)
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -66,7 +69,7 @@ class TLSEventsHandler(Object):
         logger.debug("Request to set TLS private key received.")
         if (
             self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and not self.manager.state.config_server_name is not None
+            and self.manager.state.config_server_name is None
         ):
             logger.info(
                 "mongos is not running (not integrated to config-server) deferring renewal of certificates."
@@ -145,13 +148,17 @@ class TLSEventsHandler(Object):
             )
             event.defer()
             return
-        self.manager.set_certificates(
-            event.certificate_signing_request, event.chain, event.certificate, event.ca
-        )
-        self.manager.enable_certificates_for_unit()
+        try:
+            self.manager.set_certificates(
+                event.certificate_signing_request, event.chain, event.certificate, event.ca
+            )
+            self.manager.enable_certificates_for_unit()
+        except UnknownCertificateAvailableError:
+            logger.error("An unknown certificate is available -- ignoring.")
+            return
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
-        """...."""
+        """Handle certificate expiring events."""
         if (
             self.manager.state.is_role(MongoDBRoles.MONGOS)
             and not self.manager.state.config_server_name is not None

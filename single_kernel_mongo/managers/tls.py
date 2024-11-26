@@ -21,6 +21,7 @@ from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
+    UnknownCertificateAvailableError,
     UnknownCertificateExpiringError,
     WorkloadServiceError,
 )
@@ -209,7 +210,7 @@ class TLSManager:
 
         self.charm.status_manager.to_maintenance("Disabling TLS")
         self.delete_certificates_from_workload()
-        self.workload.restart()
+        self.dependent.restart_charm_services()
         self.charm.status_manager.to_active(None)
 
     def enable_certificates_for_unit(self):
@@ -265,8 +266,7 @@ class TLSManager:
             logger.debug("The internal TLS certificate available.")
             internal = True
         else:
-            logger.error("An unknown certificate is available -- ignoring.")
-            return
+            raise UnknownCertificateAvailableError
 
         self.set_tls_secret(
             internal,

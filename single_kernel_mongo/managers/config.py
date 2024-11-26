@@ -49,7 +49,7 @@ class CommonConfigManager(ABC):
         return env[self.workload.env_var]
 
     @abstractmethod
-    def build_parameters(self) -> list[list[str]]:
+    def build_parameters(self) -> list[list[str]]:  # pragma: nocover
         """Builds the parameters list."""
         ...
 

@@ -32,6 +32,7 @@ from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.passwords import PasswordActionEvents
+from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     SetPasswordError,
@@ -93,6 +94,7 @@ class MongoDBOperator(OperatorProtocol):
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
 
         self.backup_events = BackupEventsHandler(self)
+        self.tls_events = TLSEventsHandler(self)
 
     @property
     def config(self):
@@ -439,7 +441,7 @@ class MongoDBOperator(OperatorProtocol):
     def get_password(self, username: str) -> str:
         """Gets the password for the relevant username."""
         user = get_user_from_username(username)
-        return self.state.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
+        return self.state.get_user_password(user)
 
     def perform_self_healing(self) -> None:
         """Reconfigures the replica set if necessary.

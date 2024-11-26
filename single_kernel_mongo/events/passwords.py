@@ -104,6 +104,7 @@ class PasswordActionEvents(Object):
     def _get_password_action(self, event: ActionEvent) -> None:
         action = "get-password"
         username = event.params.get(PasswordActionParameter.USERNAME, OperatorUser.username)
+        # breakpoint()
         if username not in CharmUsers:
             fail_action_with_error_log(
                 logger,

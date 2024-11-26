@@ -52,5 +52,6 @@ class AbstractRelationState(Generic[PData]):
         if not self.relation:
             return ""
         return (
-            self.data_interface.fetch_relation_field(relation_id=self.relation.id, field=key) or ""
+            self.data_interface.fetch_my_relation_field(relation_id=self.relation.id, field=key)
+            or ""
         )

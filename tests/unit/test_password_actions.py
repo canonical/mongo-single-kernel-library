@@ -58,8 +58,8 @@ def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, u
     mock_pbm_connect = mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.connect"
     )
-    mock_mongo_manager = mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.set_user_password"
+    mock_mongo_connection = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
 
     output = harness.run_action(
@@ -75,7 +75,7 @@ def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, u
         mock_pbm_connect.assert_called()
     if user == MonitorUser:
         mock_exporter_connect.assert_called()
-    mock_mongo_manager.assert_called_with(user, output_password)
+    mock_mongo_connection.assert_called_with(user.username, output_password)
 
 
 def test_set_password_action_fail_too_long(harness: Harness[MongoTestCharm], mocker):
@@ -87,3 +87,26 @@ def test_set_password_action_fail_too_long(harness: Harness[MongoTestCharm], moc
     )
     with pytest.raises(ActionFailed):
         harness.run_action("set-password", {"password": 40 * "a"})
+
+
+def test_get_password_action_success(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.get_status",
+        return_value=ActiveStatus(""),
+    )
+    mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
+
+    output = harness.run_action(
+        "set-password", params={"username": "monitor", "password": "deadbeef"}
+    )
+
+    output_get_password = harness.run_action("get-password", {"username": "monitor"})
+
+    assert output.results["password"] == output_get_password.results["password"]
+
+
+def test_get_password_action_failed(harness: Harness[MongoTestCharm]):
+    with pytest.raises(ActionFailed):
+        harness.run_action("get-password", {"username": "unknown"})

@@ -135,3 +135,75 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     assert (
         password in harness.charm.operator.mongodb_exporter_config_manager.build_parameters()[0][0]
     )
+
+
+def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
+    mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.backup_manager.connect()
+
+    mock_active.assert_not_called()
+
+
+def test_pbm_connect_no_db_initialised(harness: Harness[MongoTestCharm], mocker):
+    mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
+    harness.charm.operator.state.db_initialised = False
+    harness.charm.operator.backup_manager.connect()
+
+    mock_active.assert_not_called()
+
+
+def test_pbm_connect_same_env(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=True
+    )
+    mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
+
+    uri = harness.charm.operator.state.backup_config.uri
+    mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.get_environment", return_value=uri
+    )
+    harness.charm.operator.backup_manager.connect()
+    mock_start.assert_not_called()
+
+
+def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=False
+    )
+    mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
+    mock_stop = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.stop")
+    mock_set_env = mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
+    )
+
+    harness.charm.operator.backup_manager.connect()
+    mock_start.assert_called()
+    mock_stop.assert_called()
+    mock_set_env.assert_called()
+
+
+def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=True
+    )
+    mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
+    mock_stop = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.stop")
+    mock_set_env = mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.get_environment",
+        return_value="deadbeef",
+    )
+
+    harness.charm.operator.backup_manager.connect()
+    mock_start.assert_called()
+    mock_stop.assert_called()
+    mock_set_env.assert_called()
