@@ -31,6 +31,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
+from single_kernel_mongo.events.passwords import PasswordActionEvents
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     SetPasswordError,
@@ -78,7 +79,6 @@ class MongoDBOperator(OperatorProtocol):
     def __init__(self, charm: AbstractMongoCharm):
         super().__init__(charm, self.name.value)
         self.charm = charm
-        self.config = charm.parsed_config
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
         self.state = CharmState(self.charm, self.role, self.name)
@@ -87,11 +87,17 @@ class MongoDBOperator(OperatorProtocol):
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
+        self.password_actions = PasswordActionEvents(self)
         self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
         self.tls_manager = TLSManager(self, self.workload, self.state, self.substrate)
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
 
         self.backup_events = BackupEventsHandler(self)
+
+    @property
+    def config(self):
+        """Returns the actual config."""
+        return self.charm.parsed_config
 
     def define_workloads_and_config_managers(self, container: Container | None) -> None:
         """Export all workload and config definition for readability."""
@@ -217,6 +223,7 @@ class MongoDBOperator(OperatorProtocol):
         """Handler for the stop event."""
         ...
 
+    @override
     def on_config_changed(self) -> None:
         """Listen to changes in application configuration.
 
@@ -236,7 +243,7 @@ class MongoDBOperator(OperatorProtocol):
             f"cluster migration currently not supported, cannot change from {self.config.role} to {self.state.role}"
         )
         raise ShardingMigrationError(
-            f"Migration of sharding components not permitted, revert config role to {self.role}"
+            f"Migration of sharding components not permitted, revert config role to {self.config.role}"
         )
 
     @override

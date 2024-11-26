@@ -190,6 +190,10 @@ class CharmState(Object):
         """Is the DB initialised?"""
         return self.app_peer_data.db_initialised
 
+    @db_initialised.setter
+    def db_initialised(self, other: bool):
+        self.app_peer_data.db_initialised = other
+
     @property
     def upgrade_in_progress(self) -> bool:
         """Is the charm in upgrade?"""

@@ -96,6 +96,7 @@ class PasswordActionEvents(Object):
             passwd, secret_id = self.dependent.on_set_password_action(username, password)
         except SetPasswordError as e:
             fail_action_with_error_log(logger, event, action, str(e))
+            return
 
         event.set_results({PasswordActionParameter.PASSWORD: passwd, "secret-id": secret_id})
         return

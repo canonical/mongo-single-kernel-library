@@ -87,6 +87,7 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_install()
         except (ContainerNotReadyError, WorkloadServiceError):
+            logger.info("Not ready to start.")
             event.defer()
             return
 
