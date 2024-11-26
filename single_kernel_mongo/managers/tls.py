@@ -18,7 +18,12 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.exceptions import (
+    UnknownCertificateExpiringError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
@@ -36,7 +41,7 @@ from single_kernel_mongo.utils.helpers import parse_tls_file
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    pass
 
 
 class Sans(TypedDict):
@@ -54,17 +59,18 @@ class TLSManager:
 
     def __init__(
         self,
-        charm: AbstractMongoCharm,
+        dependent: OperatorProtocol,
         workload: MongoDBWorkload,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
-        self.charm = charm
+        self.dependent = dependent
+        self.charm = dependent.charm
         self.workload = workload
         self.state = state
         self.substrate = substrate
 
-    def generate_certificate_request(self, param: str | None, internal: bool):
+    def generate_certificate_request(self, param: str | None, internal: bool) -> bytes:
         """Generate a TLS Certificate request."""
         key: bytes
         if param is None:
@@ -87,6 +93,7 @@ class TLSManager:
         label = "int" if internal else "ext"
 
         self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
+        return csr
 
     def generate_new_csr(self, internal: bool) -> tuple[bytes, bytes]:
         """Requests the renewal of a certificate.
@@ -205,6 +212,22 @@ class TLSManager:
         self.workload.restart()
         self.charm.status_manager.to_active(None)
 
+    def enable_certificates_for_unit(self):
+        """Enables the new certificates for this unit."""
+        self.delete_certificates_from_workload()
+        self.push_tls_files_to_workload()
+        self.charm.status_manager.to_maintenance("enabling TLS")
+        try:
+            self.dependent.restart_charm_services()
+        except WorkloadServiceError as e:
+            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            self.charm.status_manager.to_blocked("couldn't start MongoDB")
+            return
+        if not self.dependent.mongo_manager.mongod_ready():
+            self.charm.status_manager.to_waiting("waiting for MongoDB to start")
+        else:
+            self.charm.status_manager.to_active(None)
+
     def delete_certificates_from_workload(self):
         """Deletes the certificates from the workload."""
         logger.info("Deleting TLS certificate from VM")
@@ -253,6 +276,18 @@ class TLSManager:
         self.set_tls_secret(internal, SECRET_CERT_LABEL, certificate)
         self.set_tls_secret(internal, SECRET_CA_LABEL, ca)
         self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
+
+    def renew_expiring_certificate(self, certificate: str) -> tuple[bytes, bytes]:
+        """Renew the expiring certificate."""
+        for internal in (False, True):
+            charm_cert = self.get_tls_secret(internal=internal, label_name=SECRET_CERT_LABEL) or ""
+            if certificate.rstrip() == charm_cert.rstrip():
+                logger.debug(
+                    f"The {'internal' if internal else 'external'} TLS certificate is expiring."
+                )
+                logger.debug("Generating a new Certificate Signing Request.")
+                return self.generate_new_csr(internal)
+        raise UnknownCertificateExpiringError
 
     def set_waiting_for_cert_to_update(self, internal: bool, waiting: bool) -> None:
         """Sets the databag."""

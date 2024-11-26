@@ -13,9 +13,12 @@ from ops.framework import Object
 from ops.model import Unit
 
 from single_kernel_mongo.config.literals import CharmRole
+from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.state.charm_state import CharmState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.managers.tls import TLSManager
 
 
 class OperatorProtocol(ABC, Object):
@@ -23,6 +26,9 @@ class OperatorProtocol(ABC, Object):
 
     charm: AbstractMongoCharm
     name: ClassVar[CharmRole]
+    tls_manager: TLSManager
+    state: CharmState
+    mongo_manager: MongoManager
 
     def on_install(self) -> None:
         """Handles the install event."""
@@ -70,3 +76,14 @@ class OperatorProtocol(ABC, Object):
     def on_stop(self) -> None:
         """Handles the stop event."""
         ...
+
+    def start_charm_services(self) -> None:
+        """Starts the relevant services."""
+        ...
+
+    def stop_charm_services(self) -> None:
+        """Stop the relevant services."""
+        ...
+
+    def restart_charm_services(self) -> None:
+        """Restart the relevant services with updated config."""

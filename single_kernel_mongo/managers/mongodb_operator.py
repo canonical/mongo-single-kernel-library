@@ -88,7 +88,7 @@ class MongoDBOperator(OperatorProtocol):
         self.define_workloads_and_config_managers(container)
 
         self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
-        self.tls_manager = TLSManager(self.charm, self.workload, self.state, self.substrate)
+        self.tls_manager = TLSManager(self, self.workload, self.state, self.substrate)
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
 
         self.backup_events = BackupEventsHandler(self)
@@ -484,17 +484,27 @@ class MongoDBOperator(OperatorProtocol):
             logger.exception(f"Failed to open port: {e}")
             raise
 
+    @override
     def start_charm_services(self):
         """Start the relevant services."""
         self.workload.start()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_workload.start()
 
+    @override
     def stop_charm_services(self):
-        """Start the relevant services."""
+        """Stop the relevant services."""
         self.workload.stop()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_workload.stop()
+
+    @override
+    def restart_charm_services(self):
+        """Restarts the charm services with updated config."""
+        self.stop_charm_services()
+        self.config_manager.set_environment()
+        self.mongos_config_manager.set_environment()
+        self.start_charm_services()
 
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""

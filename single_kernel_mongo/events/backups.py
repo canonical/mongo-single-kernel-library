@@ -56,10 +56,10 @@ class BackupEventsHandler(Object):
         self.manager = self.dependent.backup_manager
         self.charm: AbstractMongoCharm = dependent.charm
         self.relation_name = ExternalRequirerRelations.S3_CREDENTIALS
-        self.s3_client = S3Requirer(self.charm, self.relation_name)
+        self.s3_client = S3Requirer(self.charm, self.relation_name.value)
 
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_joined,
+            self.charm.on[self.relation_name.value].relation_joined,
             self._on_s3_relation_joined,
         )
         self.framework.observe(
