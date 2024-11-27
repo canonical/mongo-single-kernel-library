@@ -66,7 +66,7 @@ from single_kernel_mongo.workload import (
 )
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class MongoDBOperator(OperatorProtocol):
         # END: Define config managers
 
     @property
-    def config_managers(self) -> Iterable[CommonConfigManager]:
+    def config_managers(self) -> Iterable[CommonConfigManager]:  # pragma: nocover
         """All config managers for iteration."""
         return (
             self.config_manager,
@@ -221,7 +221,7 @@ class MongoDBOperator(OperatorProtocol):
         self._initialise_replica_set()
 
     @override
-    def on_stop(self) -> None:
+    def on_stop(self) -> None:  # pragma: nocover
         """Handler for the stop event."""
         ...
 
@@ -336,7 +336,7 @@ class MongoDBOperator(OperatorProtocol):
         self.update_hosts()
 
     @override
-    def on_storage_attached(self) -> None:
+    def on_storage_attached(self) -> None:  # pragma: nocover
         """Handler for `storage_attached` event.
 
         This should handle fixing the permissions for the data dir.

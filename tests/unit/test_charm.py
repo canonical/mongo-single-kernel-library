@@ -8,10 +8,17 @@ from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import ShardingMigrationError, WorkloadExecError
+from single_kernel_mongo.exceptions import (
+    ShardingMigrationError,
+    WorkloadExecError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
 
+from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
+
+PEER_ADDR = {"private-address": "127.4.5.6"}
 
 
 def test_install_blocks_snap_install_failure(harness, mocker):
@@ -24,6 +31,24 @@ def test_install_snap_install_success(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
     harness.charm.on.install.emit()
     assert harness.charm.unit.status == MaintenanceStatus("installing MongoDB")
+
+
+def test_charm_install_success_calls_set_env(harness, mocker):
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.snap_present", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write", return_value=True)
+    mock_connect = mocker.patch(
+        "single_kernel_mongo.managers.config.LogRotateConfigManager.connect"
+    )
+
+    mock_set_env = mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
+
+    harness.charm.on.install.emit()
+
+    mock_connect.assert_called()
+    assert mock_set_env.call_count == 5
 
 
 def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_interactions):
@@ -88,11 +113,61 @@ def test_start_success(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
+def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock(return_value=True),
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect",
+        side_effect=WorkloadServiceError,
+    )
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = False
+
+    harness.charm.on.start.emit()
+
+    assert harness.charm.unit.status == BlockedStatus("couldn't start mongodb exporter")
+
+
+def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock(return_value=True),
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.connect",
+        side_effect=WorkloadServiceError,
+    )
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = False
+
+    harness.charm.on.start.emit()
+
+    assert harness.charm.unit.status == BlockedStatus("couldn't start pbm-agent")
+
+
 def test_on_config_changed(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_upgrade_in_progress(harness, mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    mocked_defer = mocker.patch("ops.framework.EventBase.defer")
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
+    )
+    harness.update_config({"role": "shard"})
+
+    mocked_defer.assert_called()
 
 
 def test_on_leader_elected(harness):
@@ -135,6 +210,14 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     assert (
         password in harness.charm.operator.mongodb_exporter_config_manager.build_parameters()[0][0]
     )
+
+
+def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    mock_get = mocker.patch("single_kernel_mongo.core.secrets.SecretCache.get")
+
+    harness.charm.operator.on_secret_changed("unknown", "kdfjqlmdfjldq")
+    mock_get.assert_not_called()
 
 
 def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
@@ -207,3 +290,115 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
+
+
+def test_relation_joined_non_leader_does_nothing(harness: Harness[MongoTestCharm], mocker):
+    rel = harness.charm.operator.state.peer_relation
+    mock_on_relation_changed = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.on_relation_changed"
+    )
+    spied = mocker.spy(harness.charm.operator, "on_relation_joined")
+
+    harness.set_leader(False)
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+
+    spied.assert_called()
+    mock_on_relation_changed.assert_not_called()
+
+
+def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCharm], mocker):
+    rel = harness.charm.operator.state.peer_relation
+    mock_on_relation_changed = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.on_relation_changed"
+    )
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
+    )
+    spied = mocker.spy(harness.charm.operator, "on_relation_joined")
+    harness.set_leader(True)
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+
+    spied.assert_called()
+    mock_on_relation_changed.assert_not_called()
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mock_conn = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock,
+    )
+    mock_conn.return_value = False
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members",
+        return_value={"1.1.1.1"},
+    )
+    mocked_add_replset_member = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+
+    rel = harness.charm.operator.state.peer_relation
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.update_relation_data(rel.id, "test-mongodb/1", PEER_ADDR)
+
+    assert isinstance(harness.charm.unit.status, WaitingStatus)
+    mocked_add_replset_member.assert_not_called()
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_on_relation_departed_not_leader(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    spied = mocker.spy(harness.charm.operator, "on_relation_departed")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
+    update_host_mock = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
+    )
+    rel = harness.charm.operator.state.peer_relation
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+
+    harness.set_leader(False)
+    harness.remove_relation_unit(rel.id, "test-mongodb/1")
+
+    spied.assert_called()
+    update_host_mock.assert_not_called()
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    spied = mocker.spy(harness.charm.operator, "on_relation_departed")
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
+    update_host_mock = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
+    )
+    rel = harness.charm.operator.state.peer_relation
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+
+    harness.remove_relation_unit(rel.id, "test-mongodb/1")
+
+    spied.assert_called()
+    update_host_mock.assert_called()

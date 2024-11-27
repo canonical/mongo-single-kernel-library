@@ -30,6 +30,7 @@ from single_kernel_mongo.exceptions import (
     UpgradeInProgressError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.utils.mongo_connection import NotReadyError
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +125,18 @@ class LifecycleEventsHandler(Object):
         except UpgradeInProgressError:
             event.defer()
             return
+        except NotReadyError:
+            event.defer()
+            return
 
     def on_relation_changed(self, event: RelationChangedEvent):
         """Relation changed event."""
         try:
             self.dependent.on_relation_changed()
         except UpgradeInProgressError:
+            event.defer()
+            return
+        except NotReadyError:
             event.defer()
             return
 
