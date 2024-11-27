@@ -3,24 +3,26 @@
 """Skeleton for the abstract charm."""
 
 import logging
-from typing import ClassVar, TypeVar
+from typing import ClassVar, Generic, TypeVar
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.core.typed_charm import TypedCharmBase
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
-from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 from single_kernel_mongo.status import StatusManager
 
 T = TypeVar("T", bound=MongoConfigModel)
+U = TypeVar("U", bound=OperatorProtocol)
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractMongoCharm(TypedCharmBase[T]):
+class AbstractMongoCharm(Generic[T, U], TypedCharmBase[T]):
     """An abstract mongo charm."""
 
     config_type: type[T]
+    operator_type: type[U]
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[str]
     name: ClassVar[str]
@@ -28,7 +30,7 @@ class AbstractMongoCharm(TypedCharmBase[T]):
     def __init__(self, *args):
         super().__init__(*args)
         self.status_manager = StatusManager(self)
-        self.operator = MongoDBOperator(self)
+        self.operator = self.operator_type(self)
         self.workload = self.operator.workload
 
         self.framework.observe(getattr(self.on, "install"), self.on_install)

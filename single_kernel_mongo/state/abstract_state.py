@@ -47,11 +47,11 @@ class AbstractRelationState(Generic[PData]):
         for field in delete_fields:
             del self.relation_data[field]
 
-    def get(self, key: str) -> str:
+    def get(self, key: str, default: str = "") -> str:
         """Gets a key."""
         if not self.relation:
-            return ""
+            return default
         return (
             self.data_interface.fetch_my_relation_field(relation_id=self.relation.id, field=key)
-            or ""
+            or default
         )

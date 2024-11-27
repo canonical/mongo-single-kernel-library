@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
@@ -41,6 +42,7 @@ from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
 )
+from single_kernel_mongo.utils.helpers import generate_relation_departed_key
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -52,16 +54,18 @@ from single_kernel_mongo.utils.mongodb_users import (
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.core.operator import OperatorProtocol
+
+    T = TypeVar("T", bound=MongoConfigModel)
+    U = TypeVar("U", bound=OperatorProtocol)
 
 logger = logging.getLogger()
-
-T = TypeVar("T", bound=MongoConfigModel)
 
 
 class CharmState(Object):
     """All the charm states."""
 
-    def __init__(self, charm: AbstractMongoCharm[T], role: Role, charm_role: CharmRole):
+    def __init__(self, charm: AbstractMongoCharm[T, U], role: Role, charm_role: CharmRole):
         super().__init__(parent=charm, key="charm_state")
         self.role = role
         self.charm_role = charm_role
@@ -186,6 +190,11 @@ class CharmState(Object):
         return self.app_peer_data.role == role
 
     @property
+    def is_sharding_component(self) -> bool:
+        """Is the shard a sharding component?"""
+        return self.is_role(MongoDBRoles.SHARD) or self.is_role(MongoDBRoles.CONFIG_SERVER)
+
+    @property
     def db_initialised(self) -> bool:
         """Is the DB initialised?"""
         return self.app_peer_data.db_initialised
@@ -269,6 +278,24 @@ class CharmState(Object):
         return None
 
     # END: Helpers
+    def is_scaling_down(self, rel_id: int) -> bool:
+        """Returns True if the application is scaling down."""
+        rel_departed_key = generate_relation_departed_key(rel_id)
+        return json.loads(self.unit_peer_data.get(rel_departed_key, "false"))
+
+    def has_departed_run(self, rel_id: int) -> bool:
+        """Returns True if the relation departed event has run."""
+        rel_departed_key = generate_relation_departed_key(rel_id)
+        return self.unit_peer_data.get(rel_departed_key) != ""
+
+    def set_scaling_down(self, rel_id: int, departing_unit_name: str) -> bool:
+        """Sets whether or not the current unit is scaling down."""
+        # check if relation departed is due to current unit being removed. (i.e. scaling down the
+        # application.)
+        rel_departed_key = generate_relation_departed_key(rel_id)
+        scaling_down = departing_unit_name == self.unit_peer_data.name
+        self.unit_peer_data.update({rel_departed_key: json.dumps(scaling_down)})
+        return scaling_down
 
     # BEGIN: Configuration accessors
 

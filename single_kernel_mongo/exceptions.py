@@ -108,3 +108,7 @@ class UnknownCertificateExpiringError(Exception):
 
 class UnknownCertificateAvailableError(Exception):
     """Raised when an unknown certificate is available."""
+
+
+class DatabaseRequestedHasNotRunYetError(Exception):
+    """Raised when the database event has not run yet."""

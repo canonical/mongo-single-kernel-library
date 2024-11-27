@@ -13,18 +13,16 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import TYPE_CHECKING
 
 from dacite import from_dict
-from ops import EventBase, Object
-from ops.charm import RelationChangedEvent
+from ops import Object
 from ops.model import Relation
 from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import SetPasswordError
+from single_kernel_mongo.exceptions import DatabaseRequestedHasNotRunYetError, SetPasswordError
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
@@ -151,147 +149,89 @@ class MongoManager(Object):
             mongo.create_user(self.state.backup_config)
         self.state.app_peer_data.set_user_created(BackupUser.username)
 
-    def oversee_users(
-        self, relation_name: str, relation_id: int | None = None, event: EventBase | None = None
+    def oversee_relation(
+        self, relation: Relation, relation_departing: bool = False, relation_changed: bool = False
     ):
-        """Oversees the users of the application.
+        """Oversees the users of the relation.
 
-        Function manages user relations by removing, updated, and creating
+        Function manages user by removing, updated, and creating
         users; and dropping databases when necessary.
 
         Args:
-            relation_name: The relation name are working with.
-            relation_id: When specified execution of functions
-                makes sure to exclude the users and databases and remove
-                them if necessary.
-            event: relation event.
-
-        When the function is executed in relation departed event, the departed
-        relation is still on the list of all relations. Therefore, for proper
-        work of the function, we need to exclude departed relation from the list.
+            relation: The relation are working with.
+            departing: If this is a relation broken event.
+            event: relation event or None.
 
         Raises:
             PyMongoError
         """
-        with MongoConnection(self.state.mongo_config) as mongo:
-            database_users = mongo.get_users()
+        self.add_user(relation)
+        self.update_user(relation)
+        if relation_departing:
+            self.remove_user(relation)
+            self.auto_delete_db(relation)
+        if relation_changed:
+            self.update_diff(relation)
 
-        users_being_managed = database_users.intersection(self.state.app_peer_data.managed_users)
-        relations = self.model.relations[relation_name]
-        expected_current_users = {
-            f"relation-{relation.id}" for relation in relations if relation.id != relation_id
-        }
-        self.remove_users(users_being_managed, expected_current_users)
-        self.add_users(relation_name, users_being_managed, expected_current_users)
-        self.update_users(relation_name, users_being_managed, expected_current_users)
-        self.update_diff(event)
-        self.auto_delete_dbs(relation_name, relation_id)
-
-    def update_diff(self, event: EventBase | None = None) -> None:
+    def update_diff(self, relation: Relation):
         """Update the relation databag with the diff of data.
 
         Args:
-            event: An event. Does nothing if this event is not a RelationChangedEvent.
+            relation: The relation to update the databag from.
         """
-        if not isinstance(event, RelationChangedEvent):
-            logger.info("Cannot compute diff of event type: %s", type(event))
-            return
+        data_interface = DatabaseProviderData(
+            self.model,
+            relation.name,
+        )
+        actual_data = data_interface.fetch_relation_data([relation.id]).get(relation.id, {})
+        new_data = {key: value for key, value in actual_data.items() if key != "data"}
+        data_interface.update_relation_data(relation.id, {"data": json.dumps(new_data)})
 
-        new_data = {
-            key: value for key, value in event.relation.data[event.app].items() if key != "data"
-        }
-        event.relation.data[self.charm.model.app].update({"data": json.dumps(new_data)})
-
-    def add_users(
-        self, relation_name: str, users_being_managed: set[str], expected_current_users: set[str]
-    ) -> None:
-        """Adds users to Charmed MongoDB.
-
-        Args:
-            users_being_managed: The users managed by the Charm.
-            expected_current_users: The expected users after this call.
-
-        Raises:
-            PyMongoError
-        """
+    def add_user(self, relation: Relation):
+        """Add a user for this relation."""
         managed_users = self.state.app_peer_data.managed_users
+        data_interface = DatabaseProviderData(
+            self.model,
+            relation.name,
+        )
+        username = f"relation-{relation.id}"
         with MongoConnection(self.state.mongo_config) as mongo:
-            for username in expected_current_users - users_being_managed:
-                relation = self._get_relation_from_username(username, relation_name)
-                data_interface = DatabaseProviderData(
-                    self.model,
-                    relation.name,
-                )
-                config = self.get_config(
-                    username,
-                    None,
-                    data_interface,
-                    relation.id,
-                )
-                if config.database is None:
-                    # We need to wait for the moment when the provider library
-                    # set the database name into the relation.
-                    continue
-                logger.info("Create relation user: %s on %s", config.username, config.database)
+            has_user = mongo.user_exists(username)
+        if has_user:
+            return
+        if not data_interface.fetch_relation_field(relation.id, "database"):
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+        with MongoConnection(self.state.mongo_config) as mongo:
+            config = self.get_config(
+                username,
+                None,
+                data_interface,
+                relation.id,
+            )
+            logger.info("Create relation user: %s on %s", config.username, config.database)
 
-                mongo.create_user(config)
-                managed_users.add(username)
-                data_interface.set_database(relation.id, config.database)
+            mongo.create_user(config)
+            managed_users.add(username)
+            data_interface.set_database(relation.id, config.database)
+            data_interface.set_credentials(relation.id, config.username, config.password)
 
         self.state.app_peer_data.managed_users = managed_users
 
-    def update_users(
-        self, relation_name: str, users_being_managed: set[str], expected_current_users: set[str]
-    ) -> None:
-        """Updates existing users in Charmed MongoDB.
+    def update_user(self, relation: Relation) -> None:
+        """Add the user for this relation."""
+        data_interface = DatabaseProviderData(
+            self.model,
+            relation.name,
+        )
 
-        Raises:
-            PyMongoError
-        """
+        username = f"relation-{relation.id}"
+        password = data_interface.fetch_my_relation_field(relation.id, "password")
         with MongoConnection(self.state.mongo_config) as mongo:
-            for username in expected_current_users.intersection(users_being_managed):
-                relation = self._get_relation_from_username(username, relation_name)
-                data_interface = DatabaseProviderData(
-                    self.model,
-                    relation.name,
-                )
-                config = self.get_config(
-                    username,
-                    None,
-                    data_interface,
-                    relation.id,
-                )
-                logger.info("Update relation user: %s on %s", config.username, config.database)
-                mongo.update_user(config)
-                logger.info("Updating relation data according to diff")
-
-    def update_app_relation_data(self, relation_name: str) -> None:
-        """Helper function to update application relation data."""
-        # TODO: Add sanity checks.
-        # if not self.pass_sanity_hook_checks():
-        #    return
-
-        # relations with the mongos server should not connect through the config-server directly
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            has_user = mongo.user_exists(username)
+        if has_user:
             return
-        database_users = set()
-
         with MongoConnection(self.state.mongo_config) as mongo:
-            database_users = mongo.get_users()
-
-        relations = self.model.relations[relation_name]
-
-        for relation in relations:
-            data_interface = DatabaseProviderData(self.model, relation.name)
-            if not data_interface.fetch_relation_field(relation.id, "database"):
-                continue
-            username = data_interface.fetch_relation_field(relation.id, "username")
-            password = data_interface.fetch_relation_field(relation.id, "password")
-
-            if not username or not password:
-                username = f"relation-{relation.id}"
-                password = self.workload.generate_password()
-
             config = self.get_config(
                 username,
                 password,
@@ -299,23 +239,12 @@ class MongoManager(Object):
                 relation.id,
             )
 
-            data_interface.set_credentials(
-                relation.id,
-                username,
-                password,
-            )
-            if username in database_users:
-                data_interface.set_endpoints(
-                    relation.id,
-                    ",".join(config.hosts),
-                )
-                data_interface.set_uris(
-                    relation.id,
-                    config.uri,
-                )
+            logger.info("Update relation user: %s on %s", config.username, config.database)
+            mongo.update_user(config)
+            logger.info("Updating relation data according to diff")
 
-    def remove_users(self, users_being_managed: set[str], expected_current_users: set[str]) -> None:
-        """Removes users from Charmed MongoDB.
+    def remove_user(self, relation: Relation):
+        """Removes a user from Charmed MongoDB.
 
         Note this only removes users that this application of Charmed MongoDB is responsible for
         managing. It won't remove:
@@ -325,44 +254,71 @@ class MongoManager(Object):
         Raises:
             PyMongoError
         """
-        mongo_config = self.state.mongo_config
+        username = f"relation-{relation.id}"
         managed_users = self.state.app_peer_data.managed_users
+        mongo_config = self.state.mongo_config
         with MongoConnection(mongo_config) as mongo:
-            for username in users_being_managed - expected_current_users:
-                logger.info("Remove relation user: %s", username)
-                # Skip our user.
-                if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
-                    continue
-
-                # for user removal of mongos-k8s router, we let the router remove itself
-                if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.substrate == "k8s":
-                    logger.info("K8s routers will remove themselves.")
-                    managed_users.remove(username)
-                    continue
-
-                mongo.drop_user(username)
+            logger.info("Remove relation user: %s", username)
+            # Skip our user.
+            if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
+                return
+            # for user removal of mongos-k8s router, we let the router remove itself
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.substrate == "k8s":
+                logger.info("K8s routers will remove themselves.")
                 managed_users.remove(username)
+                self.state.app_peer_data.managed_users = managed_users
+                return
+            mongo.drop_user(username)
+            managed_users.remove(username)
         self.state.app_peer_data.managed_users = managed_users
 
-    def auto_delete_dbs(self, relation_name: str, relation_id: int | None) -> None:
-        """Delete unused DBs if configured to do so."""
+    def update_app_relation_data(self, relation: Relation) -> None:
+        """Helper function to update this application relation data."""
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        if not data_interface.fetch_relation_field(relation.id, "database"):
+            return
+        username = data_interface.fetch_relation_field(relation.id, "username")
+        password = data_interface.fetch_relation_field(relation.id, "password")
+        if not username or not password:
+            username = username or f"relation-{relation.id}"
+            password = password or self.workload.generate_password()
+            # Only set some of it was missing.
+            data_interface.set_credentials(
+                relation.id,
+                username,
+                password,
+            )
+        config = self.get_config(
+            username,
+            password,
+            data_interface,
+            relation.id,
+        )
+        with MongoConnection(self.state.mongo_config) as mongo:
+            user_exists = mongo.user_exists(username)
+        if user_exists:
+            data_interface.set_endpoints(
+                relation.id,
+                ",".join(config.hosts),
+            )
+            data_interface.set_uris(
+                relation.id,
+                config.uri,
+            )
+
+    def auto_delete_db(self, relation: Relation) -> None:
+        """Delete a DB if necessary."""
         with MongoConnection(self.state.mongo_config) as mongo:
             if not self.state.config.auto_delete:
                 return
-
-            relations = self.model.relations[relation_name]
-            database_dbs = mongo.get_databases()
-            relation_dbs = set()
-            for relation in relations:
-                if relation.id == relation_id:
-                    continue
-                data_interface = DatabaseProviderData(self.model, relation.name)
-                database = data_interface.fetch_relation_field(relation.id, "database")
-                if database is not None:
-                    relation_dbs.add(database)
-            for database in database_dbs - relation_dbs:
-                logger.info("Drop database: %s", database)
-                mongo.drop_database(database)
+            data_interface = DatabaseProviderData(self.model, relation.name)
+            database = data_interface.fetch_relation_field(relation.id, "database")
+            if not database:  # Early return, no database to delete.
+                return
+            if database not in mongo.get_databases():  # Early return, database not in mongodb
+                return
+            logger.info(f"Drop database: {database}")
+            mongo.drop_database(database)
 
     def get_config(
         self,
@@ -372,10 +328,8 @@ class MongoManager(Object):
         relation_id: int,
     ) -> MongoConfiguration:
         """."""
-        password = password or data_inteface.fetch_my_relation_field(relation_id, "password")
         if not password:
             password = self.workload.generate_password()
-            data_inteface.set_credentials(relation_id, username, password)
         database_name = data_inteface.fetch_relation_field(relation_id, "database")
         roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles")
         if not database_name or not roles:
@@ -435,23 +389,6 @@ class MongoManager(Object):
                     logger.debug("not reconfiguring: %s is not ready yet.", member)
                     raise NotReadyError
                 mongo.add_replset_member(member)
-
-    def _get_relation_from_username(
-        self, username: str, relation_name: str
-    ) -> Relation:  # pragma: nocover
-        """Parse relation ID from a username and return Relation object."""
-        match = re.match(r"^relation-(\d+)$", username)
-        # We generated username in `oversee_users`
-        # func and passed it into this function later.
-        # It means the username here MUST match regex.
-        if not match:
-            raise Exception("No relation match")
-        relation_id = int(match.group(1))
-        logger.debug("Relation ID: %s", relation_id)
-        relation = self.model.get_relation(relation_name, relation_id)
-        if not relation:
-            raise Exception("No relation match")
-        return relation
 
     # Keep for memory for now.
     # def get_relation_name(self):

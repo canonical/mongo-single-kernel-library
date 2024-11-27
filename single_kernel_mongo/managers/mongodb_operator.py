@@ -9,8 +9,10 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
+from ops.charm import RelationDepartedEvent
+from ops.framework import Object
 from ops.model import Container, Unit
 from pymongo.errors import PyMongoError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
@@ -65,6 +67,7 @@ from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
 )
+from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
@@ -73,13 +76,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MongoDBOperator(OperatorProtocol):
+@final
+class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
 
     name = CharmRole.MONGODB
+    workload: MongoDBWorkload
 
     def __init__(self, charm: AbstractMongoCharm):
-        super().__init__(charm, self.name.value)
+        super(OperatorProtocol, self).__init__(charm, self.name.value)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
@@ -476,7 +481,8 @@ class MongoDBOperator(OperatorProtocol):
     def update_related_hosts(self):
         """Update the app relations that need to be made aware of the new set of hosts."""
         if self.state.is_role(MongoDBRoles.REPLICATION):
-            self.mongo_manager.update_app_relation_data(RelationNames.DATABASE)
+            for relation in self.state.client_relations:
+                self.mongo_manager.update_app_relation_data(relation)
         # TODO: Update related hosts for config server , cluster.
 
     def open_ports(self) -> None:
@@ -533,6 +539,40 @@ class MongoDBOperator(OperatorProtocol):
         self.config_manager.set_environment()
         self.mongos_config_manager.set_environment()
         self.start_charm_services()
+
+    @override
+    def is_relation_feasible(self, rel_name: str) -> bool:
+        """Checks if the relation is feasible in this context."""
+        if self.state.is_sharding_component and rel_name == RelationNames.DATABASE:
+            logger.error(
+                "Charm is in sharding role: %s. Does not support %s interface.",
+                self.state.app_peer_data.role,
+                rel_name,
+            )
+        if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
+            logger.error(
+                "Charm is in replication role: %s. Does not support %s interface.",
+                self.state.app_peer_data.role,
+                rel_name,
+            )
+        return True
+
+    @override
+    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent):
+        """Checks relation departed event is the result of removed relation or scale down.
+
+        Relation departed and relation broken events occur during scaling down or during relation
+        removal, only relation departed events have access to metadata to determine which case.
+        """
+        departing_name = event.departing_unit.name if event.departing_unit else ""
+        scaling_down = self.state.set_scaling_down(
+            event.relation.id, departing_unit_name=departing_name
+        )
+
+        if scaling_down:
+            logger.info(
+                "Scaling down the application, no need to process removed relation in broken hook."
+            )
 
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""

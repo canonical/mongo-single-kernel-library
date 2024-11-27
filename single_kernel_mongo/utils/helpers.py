@@ -23,6 +23,10 @@ def parse_tls_file(raw_content: str) -> bytes:
     return base64.b64decode(raw_content)
 
 
+def generate_relation_departed_key(rel_id: int) -> str:  # noqa
+    return f"relation_{rel_id}_departed"
+
+
 def hostname_from_hostport(host: str) -> str:
     """Takes hostname:port and returns hostname."""
     return host.split(":")[0]

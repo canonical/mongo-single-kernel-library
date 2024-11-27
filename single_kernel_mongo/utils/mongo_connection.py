@@ -302,6 +302,12 @@ class MongoConnection:
             if re.match(r"^relation-\d+$", user_obj["user"])
         }
 
+    def user_exists(self, username: str) -> bool:
+        """Checks if a specific user exists."""
+        assert re.match(r"^relation-\d+$", username)  # Ensure we get only relation users.
+        users_info = self.client.admin.command({"usersInfo": username})
+        return users_info["users"] != []
+
     def primary(self, status: dict[str, Any] | None = None) -> str:
         """Returns the primary replica host."""
         status = status or self.client.admin.command("replSetGetStatus")
