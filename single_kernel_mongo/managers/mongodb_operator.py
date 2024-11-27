@@ -31,7 +31,8 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
-from single_kernel_mongo.events.passwords import PasswordActionEvents
+from single_kernel_mongo.events.password_actions import PasswordActionEvents
+from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -53,7 +54,7 @@ from single_kernel_mongo.managers.config import (
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongo_connection import NotReadyError
+from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
     MonitorUser,
@@ -88,13 +89,16 @@ class MongoDBOperator(OperatorProtocol):
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
-        self.password_actions = PasswordActionEvents(self)
+        # Managers
         self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
         self.tls_manager = TLSManager(self, self.workload, self.state, self.substrate)
         self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
 
+        # Event Handlers
+        self.password_actions = PasswordActionEvents(self)
         self.backup_events = BackupEventsHandler(self)
         self.tls_events = TLSEventsHandler(self)
+        self.primary_events = PrimaryActionHandler(self)
 
     @property
     def config(self):
@@ -492,6 +496,21 @@ class MongoDBOperator(OperatorProtocol):
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise
+
+    @property
+    def primary(self) -> str | None:
+        """Retrieves the primary unit with the primary replica."""
+        with MongoConnection(self.state.mongo_config) as connection:
+            try:
+                primary_ip = connection.primary
+            except Exception as e:
+                logger.error(f"Unabled to get primary: {e}")
+                return None
+
+        for unit in self.state.units:
+            if primary_ip == unit.host:
+                return unit.name
+        return None
 
     @override
     def start_charm_services(self):

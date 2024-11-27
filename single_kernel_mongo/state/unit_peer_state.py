@@ -79,6 +79,11 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
             return self.internal_address
         return self.node_ip or self.internal_address
 
+    @property
+    def name(self) -> str:
+        """The unit name."""
+        return self.unit.name
+
     @cached_property
     def node_ip(self) -> str:
         """The IPV4/IPV6 IP address the Node the unit is on.

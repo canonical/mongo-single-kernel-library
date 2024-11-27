@@ -4,7 +4,7 @@
 import pytest
 from ops import MaintenanceStatus
 from ops.model import BlockedStatus, WaitingStatus
-from ops.testing import Harness
+from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -402,3 +402,50 @@ def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mo
 
     spied.assert_called()
     update_host_mock.assert_called()
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = False
+
+    with pytest.raises(ActionFailed):
+        harness.run_action("get-primary")
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_primary(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
+        new_callable=mocker.PropertyMock,
+        return_value="1.1.1.1",
+    )
+    output = harness.run_action("get-primary")
+    assert output.results["replica-set-primary"] == "test-mongodb/0"
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
+        new_callable=mocker.PropertyMock,
+        return_value=PEER_ADDR["private-address"],
+    )
+    rel = harness.charm.operator.state.peer_relation
+    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.update_relation_data(rel.id, "test-mongodb/1", PEER_ADDR)
+    output = harness.run_action("get-primary")
+    assert output.results["replica-set-primary"] == "test-mongodb/1"
