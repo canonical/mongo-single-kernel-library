@@ -5,10 +5,11 @@
 import logging
 from typing import ClassVar, Generic, TypeVar
 
+from ops.charm import CharmBase
+
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel
-from single_kernel_mongo.core.typed_charm import TypedCharmBase
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
 from single_kernel_mongo.status import StatusManager
 
@@ -18,7 +19,7 @@ U = TypeVar("U", bound=OperatorProtocol)
 logger = logging.getLogger(__name__)
 
 
-class AbstractMongoCharm(Generic[T, U], TypedCharmBase[T]):
+class AbstractMongoCharm(Generic[T, U], CharmBase):
     """An abstract mongo charm.
 
     This class is meant to be inherited from to define an actual charm.
@@ -57,6 +58,11 @@ class AbstractMongoCharm(Generic[T, U], TypedCharmBase[T]):
         # Those lifecycle events are bound to the operator we defined, which
         # implements the handlers for all lifecycle and peer relation events.
         self.lifecycle = LifecycleEventsHandler(self.operator, self.peer_rel_name)
+
+    @property
+    def parsed_config(self) -> T:
+        """Return the config parsed as a pydantic model."""
+        return self.config_type.model_validate(self.model.config)
 
     def on_install(self, _):
         """First install event handler."""
