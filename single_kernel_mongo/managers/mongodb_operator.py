@@ -510,7 +510,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             try:
                 primary_ip = connection.primary
             except Exception as e:
-                logger.error(f"Unabled to get primary: {e}")
+                logger.error(f"Unable to get primary: {e}")
                 return None
 
         for unit in self.state.units:
