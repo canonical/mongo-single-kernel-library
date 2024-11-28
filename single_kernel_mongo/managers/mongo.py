@@ -43,7 +43,7 @@ from single_kernel_mongo.utils.mongodb_users import (
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.core.operator import OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +53,13 @@ class MongoManager(Object):
 
     def __init__(
         self,
-        charm: AbstractMongoCharm,
+        dependent: OperatorProtocol,
         workload: MongoDBWorkload,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
-        super().__init__(parent=charm, key="managers")
-        self.charm = charm
+        super().__init__(parent=dependent, key="managers")
+        self.charm = dependent.charm
         self.workload = workload
         self.state = state
         self.substrate = substrate
@@ -179,6 +179,8 @@ class MongoManager(Object):
         Args:
             relation: The relation to update the databag from.
         """
+        if not self.charm.unit.is_leader():
+            return
         data_interface = DatabaseProviderData(
             self.model,
             relation.name,
@@ -274,6 +276,10 @@ class MongoManager(Object):
 
     def update_app_relation_data(self, relation: Relation) -> None:
         """Helper function to update this application relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.db_initialised:
+            return
         data_interface = DatabaseProviderData(self.model, relation.name)
         if not data_interface.fetch_relation_field(relation.id, "database"):
             return

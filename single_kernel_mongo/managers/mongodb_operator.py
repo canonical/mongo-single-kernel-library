@@ -97,7 +97,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Managers
         self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
         self.tls_manager = TLSManager(self, self.workload, self.state, self.substrate)
-        self.mongo_manager = MongoManager(self.charm, self.workload, self.state, self.substrate)
+        self.mongo_manager = MongoManager(self, self.workload, self.state, self.substrate)
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)

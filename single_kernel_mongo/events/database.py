@@ -22,6 +22,7 @@ from single_kernel_mongo.exceptions import (
     UpgradeInProgressError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import DatabaseProvides
+from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import OperatorProtocol
@@ -64,6 +65,9 @@ class DatabaseEventsHandler(Object):
         """
         relation_departing = False
         relation_changed = False
+        # TODO : Handle the Mongos VM case
+        # (https://github.com/canonical/mongos-operator/blob/6/edge/lib/charms/mongos/v0/mongos_client_interface.py)
+        # for interface unification.
         try:
             if not self.pass_hook_checks(event):
                 logger.info(f"Skipping {type(event)}: Hook checks did not pass")
@@ -79,7 +83,19 @@ class DatabaseEventsHandler(Object):
         if isinstance(event, RelationBrokenEvent):
             relation_departing = True
             # TODO: Checks
-
+            if not self.dependent.state.has_departed_run(event.relation.id):
+                defer_event_with_info_log(
+                    logger,
+                    event,
+                    "relation broken",
+                    "must wait for relation departed hook to decide if relation should be removed.",
+                )
+                return
+            if self.dependent.state.is_scaling_down(event.relation.id):
+                logger.info(
+                    "Relation broken event due to scale down, do not proceed to remove users."
+                )
+                return
             logger.info("Relation broken event due to relation removal, proceed to remove user.")
         if isinstance(event, RelationChangedEvent):
             relation_changed = True
