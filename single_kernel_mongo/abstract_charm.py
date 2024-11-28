@@ -19,7 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractMongoCharm(Generic[T, U], TypedCharmBase[T]):
-    """An abstract mongo charm."""
+    """An abstract mongo charm.
+
+    This class is meant to be inherited from to define an actual charm.
+    Any charm inheriting from this class should specify:
+     * config_type: A Pydantic Model defining the configuration options,
+         inheriting from `MongoConfigModel`.
+     * operator_type: An operator class which implements the OperatorProtocol protocol.
+     * A substrate: One of "vm" or "k8s"
+     * A peer-relation name: A RelationName element, usually `database-peers` or `router-peers`
+     * A name: The name of the charm which will be used in multiple places.
+    """
 
     config_type: type[T]
     operator_type: type[U]
@@ -28,15 +38,24 @@ class AbstractMongoCharm(Generic[T, U], TypedCharmBase[T]):
     name: ClassVar[str]
 
     def __init__(self, *args):
+        # Init the Juju object Object
         super().__init__(*args)
         self.status_manager = StatusManager(self)
+
+        # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)
+
+        # We will use the main workload of the Charm to install the snap.
+        # A workload represents a service, and the main workload represents the
+        # mongod or mongos service.
         self.workload = self.operator.workload
 
         self.framework.observe(getattr(self.on, "install"), self.on_install)
         self.framework.observe(getattr(self.on, "leader_elected"), self.on_leader_elected)
 
         # Register the role events handler after the global ones so that they get the priority.
+        # Those lifecycle events are bound to the operator we defined, which
+        # implements the handlers for all lifecycle and peer relation events.
         self.lifecycle = LifecycleEventsHandler(self.operator, self.peer_rel_name)
 
     def on_install(self, _):

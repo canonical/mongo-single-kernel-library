@@ -88,7 +88,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
-        self.state = CharmState(self.charm, self.role, self.name)
+        self.state = CharmState(self.charm, self.substrate, self.name)
         container = self.charm.unit.get_container(CONTAINER) if self.substrate == "k8s" else None
 
         # Defined workloads and configs
@@ -251,10 +251,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise UpgradeInProgressError
 
         logger.error(
-            f"cluster migration currently not supported, cannot change from {self.config.role} to {self.state.role}"
+            f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
         )
         raise ShardingMigrationError(
-            f"Migration of sharding components not permitted, revert config role to {self.config.role}"
+            f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
         )
 
     @override

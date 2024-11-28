@@ -55,5 +55,5 @@ Please install it with `pre-commit install` as this will be checked in the CI an
 
 ## Canonical Contributor Agreement
 
-Canonical welcomes contributions to the Charmed MySQL-Router Operator. Please
+Canonical welcomes contributions to the Mongo Charms Single Kernel Library.
 check out our [contributor agreement](https://ubuntu.com/legal/contributors) if you're interested in contributing to the solution.

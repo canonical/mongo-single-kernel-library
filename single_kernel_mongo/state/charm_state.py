@@ -25,7 +25,6 @@ from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
 )
-from single_kernel_mongo.config.roles import Role
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -63,14 +62,26 @@ logger = logging.getLogger()
 
 
 class CharmState(Object):
-    """All the charm states."""
+    """The Charm State object.
 
-    def __init__(self, charm: AbstractMongoCharm[T, U], role: Role, charm_role: CharmRole):
+    This object represents the charm state, including the different relations
+    the charm is bound to, and the model information.
+    It is parametrized by  the substrate and the CharmRole.
+
+    The substrate will allow to compute the right hosts.
+    The CharmRole allows selection of the right peer relation name and also the
+    generation of the correct mongo uri.
+    The charm is passed as an argument to build the secret storage, and provide
+    an access to the charm configuration.
+    """
+
+    def __init__(
+        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmRole
+    ):
         super().__init__(parent=charm, key="charm_state")
-        self.role = role
         self.charm_role = charm_role
         self.config = charm.parsed_config
-        self.substrate: Substrates = self.role.substrate
+        self.substrate: Substrates = substrate
         self.secrets = SecretCache(charm)
 
         self.peer_app_interface = DataPeerData(

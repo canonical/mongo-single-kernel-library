@@ -1,4 +1,4 @@
-# Mongo Operators Single Kernel library
+# Mongo Charms Single Kernel library
 
 Library containing shared code for MongoDB operators (mongodb, mongos, VM and k8s).
 
@@ -23,6 +23,29 @@ The layout is organised as so:
 * [charm workloads](./single_kernel_mongo/workload/)
 * [utils and helpers](./single_kernel_mongo/utils/)
 * [abstract charm skeleton](./single_kernel_mongo/abstract_charm.py)
+* [exceptions](./single_kernel_mongo/exceptions.py)
+
+## Contributing
+
+You can have longer explanations in [./CONTRIBUTING.md](./CONTRIBUTING.md) but for a quick start:
+
+```shell
+# Install poetry and tox
+pipx install tox
+pipx install poetry
+
+poetry install
+```
+
+Code quality is enforced using [pre-commit](https://github.com/pre-commit/pre-commit) hooks. They will run before each commit and also at other stages.
+
+```shell
+# Install the first time
+pre-commit install
+
+# Run it manually with
+pre-commit run --all-files
+```
 
 ## Project and community
 

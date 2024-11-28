@@ -98,7 +98,14 @@ class MongoPaths:
 
 
 class WorkloadProtocol(Protocol):  # pragma: nocover
-    """The protocol for workloads."""
+    """The protocol for workloads.
+
+    A workload represents a service. This is a bit more generic than the usual spec,
+    because we are running multiple services side by side and each one requires some configuration.
+
+    This protocol provides the interface to define all methods used by a
+    service and the possible configurations.
+    """
 
     substrate: ClassVar[str]
     paths: MongoPaths

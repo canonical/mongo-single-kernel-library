@@ -24,7 +24,17 @@ if TYPE_CHECKING:
 
 
 class OperatorProtocol(ABC, Object):
-    """Protocol for a charm operator."""
+    """Protocol for a charm operator.
+
+    A Charm Operator must define the following elements:
+     * charm: The Charm it is bound to.
+     * name: The charm operator name, which is one value of the `CharmRole`
+        enum. This is a class var defined in the operator.
+     * tls_manager: The TLS manager for the mandatory tls events and handlers
+     * state : The CharmState, object handling peer databag interactions, and model interactions.
+     * mongo_manager: The manager for MongoD related interactions.
+     * workload: The main workload of this Charm.
+    """
 
     charm: AbstractMongoCharm
     name: ClassVar[CharmRole]
