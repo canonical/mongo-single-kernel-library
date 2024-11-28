@@ -26,6 +26,10 @@ class WorkloadExecError(Exception):
         return f"cmd failed ({self.return_code}) - cmd={self.cmd}, stdout={self.stdout}, stderr={self.stderr}"
 
 
+class AmbiguousConfigError(Exception):
+    """Raised when the config could correspond to a mongod config or mongos config."""
+
+
 class WorkloadServiceError(Exception):
     """Raised when a service fail to start/stop/restart."""
 
