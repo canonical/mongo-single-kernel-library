@@ -172,7 +172,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
 
 def test_on_leader_elected(harness):
     state = harness.charm.operator.state
-    assert state.get_keyfile() == ""
+    assert state.get_keyfile() is None
     assert state.get_user_password(MonitorUser) == ""
     assert state.get_user_password(OperatorUser) == ""
     assert state.get_user_password(BackupUser) == ""
