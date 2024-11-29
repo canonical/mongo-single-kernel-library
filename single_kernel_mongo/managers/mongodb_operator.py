@@ -33,6 +33,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
+from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
@@ -126,6 +127,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.backup_events = BackupEventsHandler(self)
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
+        self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
 
     @property
     def config(self):
