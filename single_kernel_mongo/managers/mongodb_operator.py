@@ -293,8 +293,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Generates the keyfile and users credentials.
         """
-        if not self.state.app_peer_data.keyfile:
-            self.state.app_peer_data.keyfile = self.workload.generate_keyfile()
+        if not self.state.get_keyfile():
+            self.state.set_keyfile(self.workload.generate_keyfile())
 
         # Set the password for the Operator User.
         if not self.state.get_user_password(OperatorUser):
@@ -362,9 +362,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         for backup tool on non-leader units to keep them working with MongoDB. The same workflow
         occurs on TLS certs change.
         """
-        if generate_secret_label(self.charm.app.name, Scope.APP) == secret_label:
+        if (
+            generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, Scope.APP)
+            == secret_label
+        ):
             scope = Scope.APP
-        elif generate_secret_label(self.charm.app.name, Scope.UNIT) == secret_label:
+        elif (
+            generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, Scope.UNIT)
+            == secret_label
+        ):
             scope = Scope.UNIT
         else:
             logging.debug("Secret %s changed, but it's unknown", secret_id)
@@ -640,7 +646,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
-        if not (keyfile := self.state.app_peer_data.keyfile):
+        if not (keyfile := self.state.get_keyfile()):
             raise Exception("Waiting for leader unit to generate keyfile contents")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)

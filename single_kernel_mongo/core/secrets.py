@@ -21,14 +21,14 @@ SECRET_DELETED_LABEL = "None"
 logger = logging.getLogger(__name__)
 
 
-def generate_secret_label(app_name: str, scope: Scope) -> str:
+def generate_secret_label(app_name: str, rel_name: str, scope: Scope) -> str:
     """Generate unique group_mappings for secrets within a relation context.
 
     Defined as a standalone function, as the choice on secret labels definition belongs to the
     Application Logic. To be kept separate from classes below, which are simply to provide a
     (smart) abstraction layer above Juju Secrets.
     """
-    members = [app_name, scope.value]
+    members = [rel_name, app_name, scope.value]
     return f"{'.'.join(members)}"
 
 
@@ -125,7 +125,7 @@ class SecretCache:
 
     def get(self, scope: Scope, uri: str | None = None) -> CachedSecret | None:
         """Getting a secret from Juju Secret store or cache."""
-        label = generate_secret_label(self.charm.app.name, scope)
+        label = generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, scope)
         if not self._secrets.get(label):
             secret = CachedSecret(self.charm, label, uri)
             if secret.meta:
@@ -144,7 +144,7 @@ class SecretCache:
 
     def add(self, content: dict[str, str], scope: Scope) -> CachedSecret:
         """Adding a secret to Juju Secret."""
-        label = generate_secret_label(self.charm.app.name, scope)
+        label = generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, scope)
         if self._secrets.get(label):
             raise SecretAlreadyExistsError(f"Secret {label} already exists")
 

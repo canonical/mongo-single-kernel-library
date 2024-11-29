@@ -71,6 +71,7 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
             if not self.workload.install():
                 self.status_manager.to_blocked("couldn't install MongoDB")
                 return
+            self.status_manager.to_maintenance("Installed MongoDB")
 
     def on_leader_elected(self, _):
         """Set the role in the databag."""

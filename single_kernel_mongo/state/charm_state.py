@@ -33,6 +33,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DataPeerUnitData,
 )
 from single_kernel_mongo.state.app_peer_state import (
+    AppPeerDataKeys,
     AppPeerReplicaSet,
 )
 from single_kernel_mongo.state.cluster_state import ClusterState
@@ -241,6 +242,14 @@ class CharmState(Object):
     def set_user_password(self, user: MongoDBUser, content: str) -> str:
         """Sets the user password for a system user."""
         return self.secrets.set(user.password_key_name, content, Scope.APP).label
+
+    def set_keyfile(self, keyfile_content: str) -> str:
+        """Sets the keyfile content in the secret."""
+        return self.secrets.set(AppPeerDataKeys.keyfile.value, keyfile_content, Scope.APP).label
+
+    def get_keyfile(self) -> str | None:
+        """Gets the keyfile content from the secret."""
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.keyfile.value)
 
     @property
     def planned_units(self) -> int:

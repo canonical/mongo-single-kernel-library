@@ -30,7 +30,7 @@ def test_install_blocks_snap_install_failure(harness, mocker):
 def test_install_snap_install_success(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
     harness.charm.on.install.emit()
-    assert harness.charm.unit.status == MaintenanceStatus("installing MongoDB")
+    assert harness.charm.unit.status == MaintenanceStatus("Installed MongoDB")
 
 
 def test_charm_install_success_calls_set_env(harness, mocker):
@@ -197,7 +197,7 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     )
     harness.set_leader(True)
     password = "deadbeef"
-    secret_label = "test-mongodb.app"
+    secret_label = "database-peers.test-mongodb.app"
     secret = harness.charm.operator.state.secrets.get(scope=Scope.APP)
     # breakpoint()
     content = secret.get_content()
