@@ -75,4 +75,5 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
 
     def on_leader_elected(self, _):
         """Set the role in the databag."""
+        # FIXME: Check role status in databag first.
         self.operator.state.app_peer_data.role = self.parsed_config.role

@@ -13,13 +13,16 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Unit
 
-from single_kernel_mongo.config.literals import CharmRole
+from single_kernel_mongo.config.literals import CharmRole, Substrates
+from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.core.workload import WorkloadBase
+    from single_kernel_mongo.events.database import DatabaseEventsHandler
+    from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.managers.tls import TLSManager
 
 
@@ -38,10 +41,14 @@ class OperatorProtocol(ABC, Object):
 
     charm: AbstractMongoCharm
     name: ClassVar[CharmRole]
+    substrate: Substrates
+    config_manager: CommonConfigManager
     tls_manager: TLSManager
     state: CharmState
     mongo_manager: MongoManager
     workload: WorkloadBase
+    client_events: DatabaseEventsHandler
+    tls_events: TLSEventsHandler
 
     if TYPE_CHECKING:
 

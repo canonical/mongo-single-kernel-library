@@ -82,7 +82,7 @@ class LifecycleEventsHandler(Object):
 
     def on_stop(self, event: StopEvent):
         """Stop event."""
-        ...
+        self.dependent.on_stop()
 
     def on_install(self, event: InstallEvent):
         """Install event."""
