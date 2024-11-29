@@ -104,7 +104,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @replica_set_hosts.setter
     def replica_set_hosts(self, value: list[str]) -> None:
-        self.update({AppPeerDataKeys.replica_set_hosts.value: json.dumps(value)})
+        self.update({AppPeerDataKeys.replica_set_hosts.value: json.dumps(sorted(value))})
 
     @property
     def managed_users(self) -> set[str]:
@@ -119,7 +119,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @managed_users.setter
     def managed_users(self, value: set[str]) -> None:
         """Stores the managed users set."""
-        self.update({AppPeerDataKeys.managed_users_key.value: json.dumps(list(value))})
+        self.update({AppPeerDataKeys.managed_users_key.value: json.dumps(sorted(value))})
 
     @property
     def keyfile(self) -> str:

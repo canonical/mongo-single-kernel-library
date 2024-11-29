@@ -543,7 +543,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             return
         self.mongo_manager.process_unremoved_units()
-        self.state.app_peer_data.replica_set_hosts = list(self.state.app_hosts)
+        if set(self.state.app_peer_data.replica_set_hosts) != self.state.app_hosts:
+            self.state.app_peer_data.replica_set_hosts = list(self.state.app_hosts)
         self.update_related_hosts()
 
     def update_related_hosts(self):
