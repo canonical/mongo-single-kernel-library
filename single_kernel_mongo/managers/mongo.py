@@ -196,18 +196,23 @@ class MongoManager(Object):
             self.model,
             relation.name,
         )
-        username = f"relation-{relation.id}"
-        with MongoConnection(self.state.mongo_config) as mongo:
-            has_user = mongo.user_exists(username)
-        if has_user:
-            return
+        # We do nothing if the Database Requested event has not run yet.
         if not data_interface.fetch_relation_field(relation.id, "database"):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
+
+        username = f"relation-{relation.id}"
+        with MongoConnection(self.state.mongo_config) as mongo:
+            has_user = mongo.user_exists(username)
+
+        # We do nothing if the user already exists in DB.
+        if has_user:
+            return
+
         with MongoConnection(self.state.mongo_config) as mongo:
             config = self.get_config(
                 username,
-                None,
+                None,  # We are creating the user, which means we don't have password for it yet
                 data_interface,
                 relation.id,
             )
@@ -265,7 +270,7 @@ class MongoManager(Object):
             if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
                 return
             # for user removal of mongos-k8s router, we let the router remove itself
-            if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.substrate == "k8s":
+            if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 logger.info("K8s routers will remove themselves.")
                 managed_users.remove(username)
                 self.state.app_peer_data.managed_users = managed_users

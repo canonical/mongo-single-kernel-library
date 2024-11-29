@@ -114,19 +114,24 @@ class CharmState(Object):
         return set(self.model.relations[RelationNames.DATABASE.value])
 
     @property
-    def cluster_relation(self) -> Relation | None:
-        """The Cluster relation."""
+    def mongos_cluster_relation(self) -> Relation | None:
+        """The Mongos side of the cluster relation."""
         return self.model.get_relation(RelationNames.CLUSTER.value)
 
     @property
-    def shard_relations(self) -> list[Relation]:
-        """The set of shard relations."""
-        return self.model.relations[RelationNames.SHARDING.value]
+    def cluster_relations(self) -> set[Relation]:
+        """The Config Server side of the cluster relation."""
+        return set(self.model.relations[RelationNames.CLUSTER.value])
 
     @property
-    def config_server_relation(self) -> Relation | None:
+    def shard_relation(self) -> Relation | None:
+        """The set of shard relations."""
+        return self.model.get_relation(RelationNames.SHARDING.value)
+
+    @property
+    def config_server_relation(self) -> set[Relation]:
         """The config-server relation if it exists."""
-        return self.model.get_relation(RelationNames.CONFIG_SERVER.value)
+        return set(self.model.relations[RelationNames.CONFIG_SERVER.value])
 
     @property
     def s3_relation(self) -> Relation | None:
@@ -183,7 +188,7 @@ class CharmState(Object):
     def cluster(self) -> ClusterState:
         """The cluster state of the current running App."""
         return ClusterState(
-            relation=self.cluster_relation,
+            relation=self.mongos_cluster_relation,
             data_interface=ClusterData(self.model, RelationNames.CLUSTER),
             component=self.model.app,
         )
@@ -275,12 +280,12 @@ class CharmState(Object):
     def config_server_name(self) -> str | None:
         """Gets the config server name."""
         if self.charm_role == CharmRole.MONGOS:
-            if self.cluster_relation:
-                return self.cluster_relation.app.name
+            if self.mongos_cluster_relation:
+                return self.mongos_cluster_relation.app.name
             return None
         if self.is_role(MongoDBRoles.SHARD):
-            if self.shard_relations:
-                return self.shard_relations[0].app.name
+            if self.shard_relation:
+                return self.shard_relation.app.name
             return None
         logger.info(
             "Component %s is not a shard, cannot be integrated to a config-server.",

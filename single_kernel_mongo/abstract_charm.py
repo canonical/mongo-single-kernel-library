@@ -66,7 +66,7 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
 
     def on_install(self, _):
         """First install event handler."""
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             self.status_manager.to_maintenance("installing MongoDB")
             if not self.workload.install():
                 self.status_manager.to_blocked("couldn't install MongoDB")

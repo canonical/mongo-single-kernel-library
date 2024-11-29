@@ -5,13 +5,20 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Generic, Literal, TypeVar
+from typing import Generic, TypeVar
 
-Substrates = Literal["vm", "k8s"]
+# Substrates = Literal["vm", "k8s"]
 
 LOCALHOST = "127.0.0.1"
 
 CONTAINER = "mongod"
+
+
+class Substrates(str, Enum):
+    """Possible substrates."""
+
+    VM = "vm"
+    K8S = "k8s"
 
 
 class CharmRole(str, Enum):

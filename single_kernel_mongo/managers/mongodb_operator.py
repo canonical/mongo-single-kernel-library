@@ -87,14 +87,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         super(OperatorProtocol, self).__init__(charm, self.name.value)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
-        self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
+        self.role = VM_MONGO if self.substrate == Substrates.VM else K8S_MONGO
         self.state = CharmState(
             self.charm,
             self.substrate,
             self.name,
         )
 
-        container = self.charm.unit.get_container(CONTAINER) if self.substrate == "k8s" else None
+        container = (
+            self.charm.unit.get_container(CONTAINER) if self.substrate == Substrates.K8S else None
+        )
 
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
@@ -227,7 +229,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
             raise
 
-        if self.substrate == "k8s":
+        if self.substrate == Substrates.K8S:
             if not self.workload.exists(self.workload.paths.socket_path):
                 logger.debug("The mongod socket is not ready yet.")
                 raise WorkloadNotReadyError
@@ -251,11 +253,16 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         self._initialise_replica_set()
+        self.charm.status_manager.to_active(None)
 
     @override
     def on_stop(self) -> None:  # pragma: nocover
-        """Handler for the stop event."""
-        ...
+        """Handler for the stop event.
+
+        Does nothing for now.
+        """
+        # TODO : Implement this when porting upgrades.
+        pass
 
     @override
     def on_config_changed(self) -> None:
@@ -391,7 +398,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         This should handle fixing the permissions for the data dir.
         """
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
             self.workload.exec(
                 [
@@ -535,7 +542,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         VM-only.
         """
-        if self.substrate != "vm":
+        if self.substrate != Substrates.VM:
             return
         ports = [MongoPorts.MONGODB_PORT]
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
@@ -651,9 +658,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             "percona-backup-mongodb",
             "percona-server",
         ]
-        prefix = Path("./src/licenses") if self.substrate == "vm" else Path("./")
+        prefix = Path("./src/licenses") if self.substrate == Substrates.VM else Path("./")
         # Create the directory if needed.
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             prefix.mkdir(exist_ok=True)
             file = Path("./LICENSE")
             dst = prefix / "LICENSE-charm"
@@ -699,13 +706,24 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Helpful method to initialise the replica set and the users.
 
         This is executed only by the leader.
-        This function first initialises the replica set, and then the three users.
+        This function first initialises the replica set, and then the three charm users.
+        Finally, if there are any integrated clients (direct clients in the
+        case of replication, or mongos clients in case of config-server),
+        oversee the relation to create the associated users.
         At the very end, it sets the `db_initialised` flag to True.
         """
         if not self.model.unit.is_leader():
             return
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_users()
+        logger.info("Manage client relation users")
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            for relation in self.state.client_relations:
+                self.mongo_manager.oversee_relation(relation)
+        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            for relation in self.state.cluster_relations:
+                self.mongo_manager.oversee_relation(relation)
+
         self.state.app_peer_data.db_initialised = True
 
     @property

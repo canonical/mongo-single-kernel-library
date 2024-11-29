@@ -62,12 +62,12 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     @property
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             return self.bind_address or str(
                 self.relation_data.get(UnitPeerRelationKeys.private_address.value)
             )
 
-        if self.substrate == "k8s":
+        if self.substrate == Substrates.K8S:
             return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
 
         return ""
@@ -75,7 +75,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     @property
     def host(self) -> str:
         """Return the hostname of a unit."""
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             return self.internal_address
         return self.node_ip or self.internal_address
 

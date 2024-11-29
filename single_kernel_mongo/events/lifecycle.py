@@ -24,6 +24,7 @@ from ops.charm import (
 )
 from ops.framework import Object
 
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -52,7 +53,7 @@ class LifecycleEventsHandler(Object):
         self.framework.observe(getattr(self.charm.on, "stop"), self.on_stop)
         self.framework.observe(getattr(self.charm.on, "leader_elected"), self.on_leader_elected)
 
-        if self.charm.substrate == "k8s":
+        if self.charm.substrate == Substrates.K8S:
             self.framework.observe(getattr(self.charm.on, "mongod_pebble_ready"), self.on_start)
 
         self.framework.observe(getattr(self.charm.on, "config_changed"), self.on_config_changed)

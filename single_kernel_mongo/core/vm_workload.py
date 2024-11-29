@@ -28,7 +28,7 @@ logger = getLogger(__name__)
 
 
 class VMWorkload(WorkloadBase):
-    """Wrapper for performing common operations specific to the Kafka Snap."""
+    """Wrapper for performing common operations specific to the MongoDB Snap."""
 
     substrate = "vm"
     container = None

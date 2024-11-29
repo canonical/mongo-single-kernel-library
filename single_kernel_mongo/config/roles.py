@@ -17,7 +17,7 @@ class Role:
     paths: dict[str, str]
 
 
-VM_MONGO = Role(substrate="vm", paths=VM_PATH["mongod"])
-K8S_MONGO = Role(substrate="k8s", paths=K8S_PATH["mongod"])
+VM_MONGO = Role(substrate=Substrates.VM, paths=VM_PATH["mongod"])
+K8S_MONGO = Role(substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
 
 ROLES = {"vm": VM_MONGO, "k8s": K8S_MONGO}

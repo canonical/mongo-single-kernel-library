@@ -126,7 +126,7 @@ class LogRotateConfigManager(CommonConfigManager):
     def connect(self) -> None:
         """Setup logrotate and cron."""
         self.workload.build_template()
-        if self.substrate == "vm":
+        if self.substrate == Substrates.VM:
             self.workload.setup_cron(
                 [
                     f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",

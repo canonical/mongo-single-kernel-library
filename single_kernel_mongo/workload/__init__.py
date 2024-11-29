@@ -74,28 +74,28 @@ class KubernetesMongoDBExporterWorkload(MongoDBExporterWorkload, KubernetesWorkl
 
 def get_mongodb_workload_for_substrate(substrate: Substrates) -> type[MongoDBWorkload]:
     """Return substrate appropriate workload."""
-    if substrate == "k8s":
+    if substrate == Substrates.K8S:
         return KubernetesMongoDBWorkload
     return VMMongoDBWorkload
 
 
 def get_mongos_workload_for_substrate(substrate: Substrates) -> type[MongosWorkload]:
     """Return substrate appropriate workload."""
-    if substrate == "k8s":
+    if substrate == Substrates.K8S:
         return KubernetesMongosWorkload
     return VMMongosWorkload
 
 
 def get_pbm_workload_for_substrate(substrate: Substrates) -> type[PBMWorkload]:
     """Return substrate appropriate workload."""
-    if substrate == "k8s":
+    if substrate == Substrates.K8S:
         return KubernetesPBMWorkload
     return VMPBMWorkload
 
 
 def get_logrotate_workload_for_substrate(substrate: Substrates) -> type[LogRotateWorkload]:
     """Return substrate appropriate workload."""
-    if substrate == "k8s":
+    if substrate == Substrates.K8S:
         return KubernetesLogRotateDBWorkload
     return VMLogRotateDBWorkload
 
@@ -104,6 +104,6 @@ def get_mongodb_exporter_workload_for_substrate(
     substrate: Substrates,
 ) -> type[MongoDBExporterWorkload]:
     """Return substrate appropriate workload."""
-    if substrate == "k8s":
+    if substrate == Substrates.K8S:
         return KubernetesMongoDBExporterWorkload
     return VMMongoDBExporterWorkload
