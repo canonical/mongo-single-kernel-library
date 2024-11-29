@@ -231,7 +231,7 @@ class TLSManager:
 
     def delete_certificates_from_workload(self):
         """Deletes the certificates from the workload."""
-        logger.info("Deleting TLS certificate from VM")
+        logger.info("Deleting TLS certificates from filesystem")
 
         for file in self.workload.paths.tls_files:
             self.workload.delete(file)

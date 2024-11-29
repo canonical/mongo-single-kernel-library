@@ -290,7 +290,7 @@ class MongoManager(Object):
             return
         username = data_interface.fetch_my_relation_field(relation.id, "username")
         password = data_interface.fetch_my_relation_field(relation.id, "password")
-        endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints")
+        endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
         uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         if not username or not password:
             username = username or f"relation-{relation.id}"
@@ -310,17 +310,15 @@ class MongoManager(Object):
         with MongoConnection(self.state.mongo_config) as mongo:
             user_exists = mongo.user_exists(username)
         if user_exists:
-            new_uri = ",".join(config.hosts)
-            new_endpoints = config.uri
-            if new_endpoints != endpoints:
+            if config.hosts != set(endpoints.split(",")):
                 data_interface.set_endpoints(
                     relation.id,
-                    new_endpoints,
+                    ",".join(config.hosts),
                 )
-            if new_uri != uris:
+            if config.uri != uris:
                 data_interface.set_uris(
                     relation.id,
-                    new_uri,
+                    config.uri,
                 )
 
     def auto_delete_db(self, relation: Relation) -> None:

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, final
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Container, Unit
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
@@ -470,9 +470,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
 
-        self.perform_self_healing()
-
-        self.charm.status_manager.to_active(None)
+        try:
+            self.perform_self_healing()
+        except ServerSelectionTimeoutError:
+            deployment = (
+                "replica set" if self.state.is_role(MongoDBRoles.REPLICATION) else "cluster"
+            )
+            self.charm.status_manager.to_waiting(
+                f"Waiting to sync internal membership across the {deployment}"
+            )
+        else:
+            self.charm.status_manager.to_active(None)
         # TODO: Process statuses.
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
