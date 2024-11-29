@@ -313,3 +313,11 @@ def test_logrotate_build_template(monkeypatch, tmp_path):
     monkeypatch.setattr(workload, "exec", mock_exec)
     workload.build_template()
     assert "mongodb/*.log" in tmp_file.read_text()
+
+
+def test_exists(tmp_path):
+    tmp_file = tmp_path / "check_file"
+    workload = VMMongoDBWorkload(container=None)
+
+    tmp_file.write_text("0xdeadbeef")
+    assert workload.exists(tmp_file)

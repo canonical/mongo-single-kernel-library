@@ -154,6 +154,11 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         ...
 
     @abstractmethod
+    def exists(self, path: Path) -> bool:
+        """Checks if the given path exists or not."""
+        ...
+
+    @abstractmethod
     def read(self, path: Path) -> list[str]:
         """Reads a file from the workload.
 

@@ -76,6 +76,10 @@ class KubernetesWorkload(WorkloadBase):
         self.container.make_dir(path, make_parents=make_parents)
 
     @override
+    def exists(self, path: Path) -> bool:
+        return self.container.exists(path)
+
+    @override
     def read(self, path: Path) -> list[str]:
         if not self.container.exists(path):
             return []

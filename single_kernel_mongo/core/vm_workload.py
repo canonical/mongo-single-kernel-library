@@ -82,6 +82,10 @@ class VMWorkload(WorkloadBase):
             raise WorkloadServiceError(str(e)) from e
 
     @override
+    def exists(self, path: Path) -> bool:
+        return path.is_file()
+
+    @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:
         path.mkdir(exist_ok=True, parents=make_parents)
 

@@ -17,8 +17,7 @@ def tenacity_wait(mocker):
 
 
 def setup_secrets(harness: Harness) -> None:
-    harness.set_leader(True)
-    harness.charm.operator.on_leader_elected()
+    harness.set_leader(True)  # This runs the on_leader_elected event.
     harness.set_leader(False)
 
 

@@ -88,16 +88,36 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = VM_MONGO if self.substrate == "vm" else K8S_MONGO
-        self.state = CharmState(self.charm, self.substrate, self.name)
+        self.state = CharmState(
+            self.charm,
+            self.substrate,
+            self.name,
+        )
+
         container = self.charm.unit.get_container(CONTAINER) if self.substrate == "k8s" else None
 
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
         # Managers
-        self.backup_manager = BackupManager(self.charm, self.substrate, self.state, container)
-        self.tls_manager = TLSManager(self, self.workload, self.state, self.substrate)
-        self.mongo_manager = MongoManager(self, self.workload, self.state, self.substrate)
+        self.backup_manager = BackupManager(
+            self.charm,
+            self.substrate,
+            self.state,
+            container,
+        )
+        self.tls_manager = TLSManager(
+            self,
+            self.workload,
+            self.state,
+            self.substrate,
+        )
+        self.mongo_manager = MongoManager(
+            self,
+            self.workload,
+            self.state,
+            self.substrate,
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -207,7 +227,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
             raise
 
-        # FIXME: Do we need to check for socket path here?
+        if self.substrate == "k8s":
+            if not self.workload.exists(self.workload.paths.socket_path):
+                logger.debug("The mongod socket is not ready yet.")
+                raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("waiting for MongoDB to start")
@@ -280,7 +303,12 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def on_relation_joined(self) -> None:
-        """Handle relation joined events."""
+        """Handle relation joined events.
+
+        In this event, we first check for status checks (are we leader, is the
+        application in upgrade ?). Then we proceed to call the relation changed
+        handler and update the list of related hosts.
+        """
         if not self.charm.unit.is_leader():
             return
         if self.state.upgrade_in_progress:
@@ -293,14 +321,24 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_related_hosts()
 
     def on_relation_changed(self) -> None:
-        """Handle relation changed events."""
+        """Handle relation changed events.
+
+        Adds the unit as a replica to the MongoDB replica set.
+        """
+        # Changing the monitor or the backup password will lead to non-leader
+        # units receiving a relation changed event. We must update the monitor
+        # and pbm URI if the password changes so that COS/pbm can continue to
+        # work
         self.mongodb_exporter_config_manager.connect()
         self.backup_manager.connect()
 
+        # only leader should configure replica set and we should do it only if
+        # the replica set is initialised.
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
         try:
+            # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
@@ -327,6 +365,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         logging.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
         self.state.secrets.get(scope)
 
+        # Always update the PBM and mongodb exporter configuration so that if
+        # the secret changed, the configuration is updated and will still work
+        # afterwards.
         self.mongodb_exporter_config_manager.connect()
         self.backup_manager.connect()
 
@@ -362,26 +403,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
     @override
-    def on_update_status(self) -> None:
-        """Status update Handler."""
-        if not self.backup_manager.is_valid_s3_integration():
-            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
-            return
-        # TODO: Cluster integration status + Cluster Mismatch revision.
-        if not self.state.db_initialised:
-            return
-
-        # TODO: TLS + Shard check.
-
-        if not self.mongo_manager.mongod_ready():
-            self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
-
-        self.perform_self_healing()
-
-        self.charm.status_manager.to_active(None)
-        # TODO: Process statuses.
-
-    @override
     def on_storage_detaching(self) -> None:
         """Before storage detaches, allow removing unit to remove itself from the set.
 
@@ -395,7 +416,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         # A single replica cannot step down as primary and we cannot reconfigure the replica set to
         # have 0 members.
-        # TODO:
+        # TODO: When we have config server and shard managers.
         # if self._is_removing_last_replica:
         #    pass
 
@@ -418,6 +439,26 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         except PyMongoError as e:
             logger.error("Failed to remove %s from replica set, error=%r", self.charm.unit.name, e)
+
+    @override
+    def on_update_status(self) -> None:
+        """Status update Handler."""
+        if not self.backup_manager.is_valid_s3_integration():
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            return
+        # TODO: Cluster integration status + Cluster Mismatch revision.
+        if not self.state.db_initialised:
+            return
+
+        # TODO: TLS + Shard check.
+
+        if not self.mongo_manager.mongod_ready():
+            self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
+
+        self.perform_self_healing()
+
+        self.charm.status_manager.to_active(None)
+        # TODO: Process statuses.
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
         """Handler for the set password action."""
@@ -463,8 +504,12 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
             return
 
+        # remove any IPs that are no longer juju hosts & update app data.
         self.update_hosts()
+        # Add in any new IPs to the replica set. Relation handlers require a reference to
+        # a unit.
         self.on_relation_changed()
+
         # make sure all nodes in the replica set have the same priority for re-election. This is
         # necessary in the case that pre-upgrade hook fails to reset the priority of election for
         # cluster nodes.
@@ -520,41 +565,53 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def start_charm_services(self):
-        """Start the relevant services."""
+        """Start the relevant services.
+
+        If we are running as config-server, we should start both mongod and mongos.
+        """
         self.workload.start()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_workload.start()
 
     @override
     def stop_charm_services(self):
-        """Stop the relevant services."""
+        """Stop the relevant services.
+
+        If we are running as config-server, we should stop both mongod and mongos.
+        """
         self.workload.stop()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_workload.stop()
 
     @override
     def restart_charm_services(self):
-        """Restarts the charm services with updated config."""
+        """Restarts the charm services with updated config.
+
+        If we are running as config-server, we should update both mongod and mongos environments.
+        """
         self.stop_charm_services()
         self.config_manager.set_environment()
-        self.mongos_config_manager.set_environment()
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.mongos_config_manager.set_environment()
         self.start_charm_services()
 
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
-        """Checks if the relation is feasible in this context."""
+        """Checks if the relation is feasible in the current context."""
         if self.state.is_sharding_component and rel_name == RelationNames.DATABASE:
             logger.error(
                 "Charm is in sharding role: %s. Does not support %s interface.",
                 self.state.app_peer_data.role,
                 rel_name,
             )
+            return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
             logger.error(
                 "Charm is in replication role: %s. Does not support %s interface.",
                 self.state.app_peer_data.role,
                 rel_name,
             )
+            return False
         return True
 
     @override
@@ -582,7 +639,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.write(self.workload.paths.keyfile, keyfile)
 
     def handle_licenses(self) -> None:
-        """Pull / Push licenses."""
+        """Pull / Push licenses.
+
+        This function runs differently according to the substrate. We do not
+        store the licenses at the same location, and we do not handle the same
+        licenses.
+        """
         licenses = [
             "snap",
             "mongodb-exporter",
@@ -611,7 +673,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.workload.copy_to_unit(file, dst)
 
     def set_permissions(self) -> None:
-        """Ensure directories and make permissions."""
+        """Ensure directories and make permissions.
+
+        We must ensure that the log status directory for LogRotate is existing.
+        We must also ensure that all data, log and log status directories have
+        the correct permissions.
+        """
         self.workload.mkdir(LogRotateConfig.log_status_dir, make_parents=True)
 
         for path in (
@@ -629,8 +696,19 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
     def _initialise_replica_set(self):
+        """Helpful method to initialise the replica set and the users.
+
+        This is executed only by the leader.
+        This function first initialises the replica set, and then the three users.
+        At the very end, it sets the `db_initialised` flag to True.
+        """
         if not self.model.unit.is_leader():
             return
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_users()
         self.state.app_peer_data.db_initialised = True
+
+    @property
+    def is_removing_last_replica(self) -> bool:
+        """Returns True if the last replica (juju unit) is getting removed."""
+        return self.state.planned_units == 0 and len(self.state.peers_units) == 0
