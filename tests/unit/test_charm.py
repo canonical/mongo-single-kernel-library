@@ -172,12 +172,12 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
 
 def test_on_leader_elected(harness):
     state = harness.charm.operator.state
-    assert state.app_peer_data.keyfile == ""
+    assert state.get_keyfile() == ""
     assert state.get_user_password(MonitorUser) == ""
     assert state.get_user_password(OperatorUser) == ""
     assert state.get_user_password(BackupUser) == ""
     harness.set_leader(True)
-    assert len(state.app_peer_data.keyfile) == 1024
+    assert len(state.get_keyfile()) == 1024
     assert len(state.get_user_password(MonitorUser)) == 32
     assert len(state.get_user_password(OperatorUser)) == 32
     assert len(state.get_user_password(BackupUser)) == 32

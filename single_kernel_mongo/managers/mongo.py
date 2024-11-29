@@ -342,7 +342,7 @@ class MongoManager(Object):
         if not password:
             password = self.workload.generate_password()
         database_name = data_inteface.fetch_relation_field(relation_id, "database")
-        roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles")
+        roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles") or "default"
         if not database_name or not roles:
             raise Exception("Missing database name or roles.")
         mongo_args = {
@@ -350,7 +350,7 @@ class MongoManager(Object):
             "username": username,
             "password": password,
             "hosts": self.state.app_hosts,
-            "roles": roles,
+            "roles": set(roles.split(",")),
             "tls_external": False,
             "tls_internal": False,
             "port": self.state.host_port,

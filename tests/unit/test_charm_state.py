@@ -60,7 +60,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm]):
     assert not state.db_initialised
     assert state.app_peer_data.replica_set_hosts == []
     assert state.app_peer_data.managed_users == set()
-    assert len(state.app_peer_data.keyfile) == 1024
+    assert len(state.get_keyfile() or "") == 1024
     assert state.app_peer_data.replica_set == "test-mongodb"
 
     assert not state.app_peer_data.is_user_created(MonitorUser.username)
