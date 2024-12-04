@@ -127,8 +127,8 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 
     @property
     @abstractmethod
-    def snap_present(self) -> bool:
-        """Checks if the snap is present or not.
+    def binaries_presents(self) -> bool:
+        """Checks if the binaries are present or not.
 
         VM-only: on k8s, just returns True.
         """

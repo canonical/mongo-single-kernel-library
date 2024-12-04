@@ -40,7 +40,7 @@ class KubernetesWorkload(WorkloadBase):
 
     @property
     @override
-    def snap_present(self) -> bool:
+    def binaries_presents(self) -> bool:
         return True
 
     @override
@@ -50,8 +50,7 @@ class KubernetesWorkload(WorkloadBase):
     @override
     def start(self) -> None:
         try:
-            self.container.add_layer(self.layer_name, self.layer, combine=True)
-            self.container.restart(self.service)
+            self.restart()
         except ChangeError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(e.err) from e
@@ -67,7 +66,8 @@ class KubernetesWorkload(WorkloadBase):
     @override
     def restart(self) -> None:
         try:
-            self.start()
+            self.container.add_layer(self.layer_name, self.layer, combine=True)
+            self.container.restart(self.service)
         except ChangeError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(e.err) from e
@@ -119,8 +119,7 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def update_env(self, parameters: chain[str]):
-        content = " ".join(parameters)
-        self._env = content
+        self._env = " ".join(parameters)
 
     @override
     def exec(
@@ -151,9 +150,11 @@ class KubernetesWorkload(WorkloadBase):
     def run_bin_command(
         self,
         bin_keyword: str,
-        bin_args: list[str] = [],
-        environment: dict[str, str] = {},
+        bin_args: list[str] | None = None,
+        environment: dict[str, str] | None = None,
     ) -> str:
+        bin_args = bin_args or []
+        environment = environment or {}
         command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
         return self.exec(command=command, env=environment or None)
 

@@ -156,8 +156,7 @@ class TLSManager:
         if not self.state.tls.is_tls_enabled(internal=internal):
             return None
 
-        pem_file = self.get_tls_secret(internal, SECRET_CERT_LABEL)
-        if not pem_file:
+        if not (pem_file := self.get_tls_secret(internal, SECRET_CERT_LABEL)):
             logger.info("No PEM file but TLS enabled.")
             raise Exception("No PEM file but TLS enabled. Please, fix.")
         try:

@@ -8,7 +8,7 @@ from single_kernel_mongo.config.literals import VmUser
 from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS
 from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
-from single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap import SnapError
+from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import SnapError
 from single_kernel_mongo.workload import (
     VMLogRotateDBWorkload,
     VMMongoDBExporterWorkload,
@@ -262,7 +262,7 @@ def test_command_success_failure(monkeypatch, caplog, command):
 )
 def test_active(mocker, value: dict, expected: bool):
     mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap.Snap.services",
+        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.services",
         return_value=value,
         new_callable=mocker.PropertyMock,
     )

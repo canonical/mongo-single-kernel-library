@@ -28,7 +28,7 @@ from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 )
 def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: list):
     mock = mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap.Snap.set",
+        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.set",
     )
 
     mock_state = mocker.MagicMock(CharmState)
@@ -102,7 +102,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
 
 def test_mongos_config_manager(mocker):
     mock = mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap.Snap.set",
+        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.set",
     )
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)

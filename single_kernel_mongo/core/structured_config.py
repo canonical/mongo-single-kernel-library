@@ -38,7 +38,7 @@ class MongoDBRoles(str, Enum):
     MONGOS = "mongos"
 
 
-class ExposeExternalEnum(str, Enum):
+class ExposeExternal(str, Enum):
     """The possible values for the expose-external config value."""
 
     NODEPORT = "nodeport"
@@ -49,7 +49,9 @@ class ExposeExternalEnum(str, Enum):
 class MongoConfigModel(BaseConfigModel):
     """Default class for typing."""
 
-    expose_external: ExposeExternalEnum = ExposeExternalEnum.NONE
+    expose_external: SerializeLiteralAsStr[ExposeExternal] = Field(
+        default=ExposeExternal.NONE, alias="expose-external"
+    )
     role: SerializeLiteralAsStr[MongoDBRoles]
     auto_delete: bool = Field(default=False, alias="auto-delete")
 
@@ -62,8 +64,6 @@ class MongoDBCharmConfig(MongoConfigModel):
 
     role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.REPLICATION)
 
-    expose_external: ExposeExternalEnum = ExposeExternalEnum.NONE
-
 
 # The config for Mongos Charms (unused in case of mongos VM)
 class MongosCharmConfig(MongoConfigModel):
@@ -72,6 +72,3 @@ class MongosCharmConfig(MongoConfigModel):
     model_config = ConfigDict(use_enum_values=True, extra="allow")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = MongoDBRoles.MONGOS
-    expose_external: SerializeLiteralAsStr[ExposeExternalEnum] = Field(
-        default=ExposeExternalEnum.NONE, alias="expose-external"
-    )

@@ -188,7 +188,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def on_install(self) -> None:
         """Handler on install."""
-        if not self.workload.snap_present:
+        if not self.workload.binaries_presents:
             return
         if not self.workload.container_can_connect:
             raise ContainerNotReadyError
@@ -607,9 +607,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         If we are running as config-server, we should stop both mongod and mongos.
         """
-        self.workload.stop()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_workload.stop()
+        self.workload.stop()
 
     @override
     def restart_charm_services(self):

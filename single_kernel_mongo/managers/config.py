@@ -82,7 +82,7 @@ class BackupConfigManager(CommonConfigManager):
         ]
 
     def connect(self):
-        """Exposes the endpoint to PBM Agent."""
+        """Sets up PBM with right configuration and restarts it."""
         if not self.workload.container_can_connect:
             logger.info("Container cannot connect.")
             return

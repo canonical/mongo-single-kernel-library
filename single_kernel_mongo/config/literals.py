@@ -57,10 +57,10 @@ class Snap:
 
     name: str = "charmed-mongodb"
     channel: str = "6/edge"
-    revision: int = 123
+    revision: str = "123"
 
 
-SNAP = Snap(channel="6/edge/use-snap-config-for-services", revision=124)
+SNAP = Snap(channel="6/edge/use-snap-config-for-services", revision="124")
 
 T = TypeVar("T", bound=str | int)
 

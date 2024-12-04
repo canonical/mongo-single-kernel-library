@@ -149,7 +149,7 @@ class BackupEventsHandler(Object):
             )
 
         try:
-            self.manager.can_backup()
+            self.manager.assert_can_backup()
         except InvalidPBMStatusError as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
@@ -181,7 +181,7 @@ class BackupEventsHandler(Object):
             return
 
         try:
-            self.manager.can_list_backup()
+            self.manager.assert_can_list_backup()
         except InvalidPBMStatusError as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
@@ -215,7 +215,7 @@ class BackupEventsHandler(Object):
             return
 
         try:
-            self.manager.can_restore(
+            self.manager.assert_can_restore(
                 backup_id,
                 remapping_pattern,
             )

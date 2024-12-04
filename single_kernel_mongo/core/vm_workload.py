@@ -23,7 +23,7 @@ from single_kernel_mongo.config.literals import (
 from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
-from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
+from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 
 logger = getLogger(__name__)
 
@@ -32,7 +32,7 @@ class VMWorkload(WorkloadBase):
     """Wrapper for performing common operations specific to the MongoDB Snap."""
 
     substrate = "vm"
-    container = None
+    container: None
     users = VmUser()
 
     def __init__(self, role: Role, container: Container | None) -> None:
@@ -47,7 +47,7 @@ class VMWorkload(WorkloadBase):
 
     @property
     @override
-    def snap_present(self) -> bool:
+    def binaries_presents(self) -> bool:
         return self.mongod.present
 
     @override

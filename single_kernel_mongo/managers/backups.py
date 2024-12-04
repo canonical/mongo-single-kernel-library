@@ -71,6 +71,13 @@ S3_PBM_OPTION_MAP = {
 logger = logging.getLogger(__name__)
 
 
+def _backup_restore_retry_before_sleep(retry_state) -> None:
+    logger.error(
+        f"Attempt {retry_state.attempt_number} failed. {BACKUP_RESTORE_MAX_ATTEMPTS - retry_state.attempt_number} attempts left."
+        f"Retrying after {BACKUP_RESTORE_ATTEMPT_COOLDOWN} seconds."
+    )
+
+
 class BackupManager(Object, BackupConfigManager):
     """Manager for the S3 integrator and backups."""
 
@@ -108,6 +115,13 @@ class BackupManager(Object, BackupConfigManager):
         """
         return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
 
+    @retry(
+        stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
+        retry=retry_if_not_exception_type(BackupError),
+        wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
+        reraise=True,
+        before_sleep=_backup_restore_retry_before_sleep,
+    )
     def create_backup_action(self) -> str:  # type: ignore[return]
         """Try to create a backup and return the backup id.
 
@@ -117,32 +131,23 @@ class BackupManager(Object, BackupConfigManager):
 
         If PMB returen any other error, the function will raise BackupError.
         """
-        for attempt in Retrying(  # noqa: RET503
-            stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
-            retry=retry_if_not_exception_type(BackupError),
-            wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
-            reraise=True,
-            before_sleep=_backup_restore_retry_before_sleep,
-        ):
-            with attempt:
-                try:
-                    output = self.workload.run_bin_command(
-                        "backup",
-                        environment=self.environment,
-                    )
-                    backup_id_match = re.search(
-                        r"Starting backup '(?P<backup_id>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)'",
-                        output,
-                    )
-                    return backup_id_match.group("backup_id") if backup_id_match else "N/A"
-                except WorkloadExecError as e:
-                    error_message = e.stdout
-                    if "Resync" in error_message:
-                        raise ResyncError from e
+        try:
+            output = self.workload.run_bin_command(
+                "backup",
+                environment=self.environment,
+            )
+            backup_id_match = re.search(
+                r"Starting backup '(?P<backup_id>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)'",
+                output,
+            )
+            return backup_id_match.group("backup_id") if backup_id_match else "N/A"
+        except WorkloadExecError as e:
+            error_message = e.stdout
+            if "Resync" in error_message:
+                raise ResyncError from e
 
-                    fail_message = f"Backup failed: {str(e)}"
-
-                    raise BackupError(fail_message)
+            fail_message = f"Backup failed: {str(e)}"
+            raise BackupError(fail_message)
 
     def list_backup_action(self) -> str:
         """List the backups entries."""
@@ -185,6 +190,13 @@ class BackupManager(Object, BackupConfigManager):
 
         return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
 
+    @retry(
+        stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
+        retry=retry_if_not_exception_type(RestoreError),
+        wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
+        reraise=True,
+        before_sleep=_backup_restore_retry_before_sleep,
+    )
     def restore_backup(self, backup_id: str, remapping_pattern: str | None = None) -> None:
         """Try to restore cluster a backup specified by backup id.
 
@@ -194,34 +206,24 @@ class BackupManager(Object, BackupConfigManager):
 
         If PMB returen any other error, the function will raise RestoreError.
         """
-        for attempt in Retrying(
-            stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
-            retry=retry_if_not_exception_type(RestoreError),
-            wait=wait_fixed(BACKUP_RESTORE_ATTEMPT_COOLDOWN),
-            reraise=True,
-            before_sleep=_backup_restore_retry_before_sleep,
-        ):
-            with attempt:
-                try:
-                    remapping_pattern = remapping_pattern or self._remap_replicaset(backup_id)
-                    remapping_args = (
-                        ["--replset-remapping", remapping_pattern] if remapping_pattern else []
-                    )
-                    self.workload.run_bin_command(
-                        "restore",
-                        [backup_id] + remapping_args,
-                        environment=self.environment,
-                    )
-                except WorkloadExecError as e:
-                    error_message = e.stdout
-                    if "Resync" in e.stdout:
-                        raise ResyncError
+        try:
+            remapping_pattern = remapping_pattern or self._remap_replicaset(backup_id)
+            remapping_args = ["--replset-remapping", remapping_pattern] if remapping_pattern else []
+            self.workload.run_bin_command(
+                "restore",
+                [backup_id] + remapping_args,
+                environment=self.environment,
+            )
+        except WorkloadExecError as e:
+            error_message = e.stdout
+            if "Resync" in e.stdout:
+                raise ResyncError
 
-                    fail_message = f"Restore failed: {str(e)}"
-                    if f"backup '{backup_id}' not found" in error_message:
-                        fail_message = f"Restore failed: Backup id '{backup_id}' does not exist in list of backups, please check list-backups for the available backup_ids."
+            fail_message = f"Restore failed: {str(e)}"
+            if f"backup '{backup_id}' not found" in error_message:
+                fail_message = f"Restore failed: Backup id '{backup_id}' does not exist in list of backups, please check list-backups for the available backup_ids."
 
-                    raise RestoreError(fail_message)
+            raise RestoreError(fail_message)
 
     def get_status(self) -> StatusBase | None:
         """Gets the PBM status."""
@@ -372,7 +374,7 @@ class BackupManager(Object, BackupConfigManager):
             case _:
                 return ActiveStatus("")
 
-    def can_restore(self, backup_id: str, remapping_pattern: str) -> None:
+    def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
 
         Returns:
@@ -399,7 +401,7 @@ class BackupManager(Object, BackupConfigManager):
                 "Cannot restore backup, 'remap-pattern' must be set."
             )
 
-    def can_backup(self) -> None:
+    def assert_can_backup(self) -> None:
         """Is PBM is a state where it can backup?"""
         pbm_status = self.get_status()
         match pbm_status:
@@ -416,7 +418,7 @@ class BackupManager(Object, BackupConfigManager):
             case _:
                 return
 
-    def can_list_backup(self) -> None:
+    def assert_can_list_backup(self) -> None:
         """Is PBM in a state to list backup?"""
         pbm_status = self.get_status()
         match pbm_status:
@@ -430,7 +432,8 @@ class BackupManager(Object, BackupConfigManager):
                 return
 
     @retry(
-        stop=stop_after_attempt(20),
+        stop=stop_after_attempt(60),
+        wait=wait_fixed(5),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
         before=before_log(logger, logging.DEBUG),
@@ -447,31 +450,22 @@ class BackupManager(Object, BackupConfigManager):
         Retrying for resync is handled by decorator, retrying for configuration errors is handled
         within this function.
         """
-        # on occasion it takes the pbm_agent daemon time to update its configs, meaning that it
-        # will error for incorrect configurations for <15s before resolving itself.
+        try:
+            pbm_status = self.pbm_status
+            pbm_as_dict = json.loads(pbm_status)
+            current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
 
-        for attempt in Retrying(
-            stop=stop_after_attempt(3),
-            wait=wait_fixed(5),
-            reraise=True,
-        ):
-            with attempt:
-                try:
-                    pbm_status = self.pbm_status
-                    pbm_as_dict = json.loads(pbm_status)
-                    current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
-
-                    if current_pbm_op.get("type", "") == "resync":
-                        # since this process takes several minutes we should let the user know
-                        # immediately.
-                        self.charm.status_manager.set_and_share_status(
-                            WaitingStatus("waiting to sync s3 configurations.")
-                        )
-                        raise ResyncError
-                except WorkloadExecError as e:
-                    self.charm.status_manager.set_and_share_status(
-                        BlockedStatus(self.process_pbm_error(e.stdout))
-                    )
+            if current_pbm_op.get("type", "") == "resync":
+                # since this process takes several minutes we should let the user know
+                # immediately.
+                self.charm.status_manager.set_and_share_status(
+                    WaitingStatus("waiting to sync s3 configurations.")
+                )
+                raise ResyncError
+        except WorkloadExecError as e:
+            self.charm.status_manager.set_and_share_status(
+                BlockedStatus(self.process_pbm_error(e.stdout))
+            )
 
     def _get_backup_restore_operation_result(
         self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
@@ -574,10 +568,3 @@ def map_s3_config_to_pbm_config(credentials: dict[str, str]):
 
         pbm_configs[S3_PBM_OPTION_MAP[s3_option]] = s3_value
     return pbm_configs
-
-
-def _backup_restore_retry_before_sleep(retry_state) -> None:
-    logger.error(
-        f"Attempt {retry_state.attempt_number} failed. {BACKUP_RESTORE_MAX_ATTEMPTS - retry_state.attempt_number} attempts left."
-        f"Retrying after {BACKUP_RESTORE_ATTEMPT_COOLDOWN} seconds."
-    )

@@ -316,7 +316,7 @@ def test_can_restore_fail_status(
 
     mock.return_value = pbm_status
     with pytest.raises(InvalidPBMStatusError) as e:
-        backup_manager.can_restore("backup", "remapping_pattern")
+        backup_manager.assert_can_restore("backup", "remapping_pattern")
     assert e.match(pattern)
 
 
@@ -343,7 +343,7 @@ def test_can_restore_fail_params(
         return_value=True,
     )
     with pytest.raises(InvalidArgumentForActionError) as e:
-        backup_manager.can_restore(backup_id, remap_pattern)
+        backup_manager.assert_can_restore(backup_id, remap_pattern)
 
     assert e.match(pattern)
 
@@ -371,7 +371,7 @@ def test_can_backup_fail(harness: Harness[MongoTestCharm], mocker, pbm_status, p
 
     mock.return_value = pbm_status
     with pytest.raises(InvalidPBMStatusError) as e:
-        backup_manager.can_backup()
+        backup_manager.assert_can_backup()
     assert e.match(pattern)
 
 
@@ -399,5 +399,5 @@ def test_can_list_backup_fail(
 
     mock.return_value = pbm_status
     with pytest.raises(InvalidPBMStatusError) as e:
-        backup_manager.can_list_backup()
+        backup_manager.assert_can_list_backup()
     assert e.match(pattern)
