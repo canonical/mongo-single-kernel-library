@@ -74,6 +74,8 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
             self.status_manager.to_maintenance("Installed MongoDB")
 
     def on_leader_elected(self, _):
-        """Set the role in the databag."""
+        """First leader elected handler."""
         # FIXME: Check role status in databag first.
+
+        # Sets the role in the databag.
         self.operator.state.app_peer_data.role = self.parsed_config.role
