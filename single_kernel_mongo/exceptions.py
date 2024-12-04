@@ -122,6 +122,49 @@ class DatabaseRequestedHasNotRunYetError(Exception):
     """Raised when the database event has not run yet."""
 
 
+class ShardAuthError(Exception):
+    """Raised when a shard doesn't have the same auth as the config server."""
+
+    def __init__(self, shard: str):
+        self.shard = shard
+
+
+class RemoveLastShardError(Exception):
+    """Raised when there is an attempt to remove the last shard in the cluster."""
+
+
+class NotEnoughSpaceError(Exception):
+    """Raised when there isn't enough space to movePrimary."""
+
+
+class ShardNotInClusterError(Exception):
+    """Raised when shard is not present in cluster, but it is expected to be."""
+
+
+class ShardNotPlannedForRemovalError(Exception):
+    """Raised when it is expected that a shard is planned for removal, but it is not."""
+
+
+class NotDrainedError(Exception):
+    """Raised when a shard is still being drained."""
+
+
+class BalancerNotEnabledError(Exception):
+    """Raised when balancer process is not enabled."""
+
+
+class WaitingForSecretsError(Exception):
+    """Raised when we are still waiting for secrets."""
+
+
+class WaitingForCertificatesError(Exception):
+    """Raised when we are waiting for certificates."""
+
+
+class FailedToUpdateCredentialsError(Exception):
+    """Raised when we failed to update credentials."""
+
+
 class DeferrableFailedHookChecksError(Exception):
     """Raised when we failed to pass hook checks and we should defer."""
 
