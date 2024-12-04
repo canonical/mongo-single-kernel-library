@@ -132,7 +132,10 @@ class TLSEventsHandler(Object):
         self.manager.disable_certificates_for_unit()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """...."""
+        """Handler for the certificate available event.
+
+        This event is emitted by the TLS charm when the some certificates are available.
+        """
         if (
             self.manager.state.is_role(MongoDBRoles.MONGOS)
             and not self.manager.state.config_server_name is not None
