@@ -127,11 +127,9 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 
     @property
     @abstractmethod
-    def binaries_presents(self) -> bool:
-        """Checks if the binaries are present or not.
-
-        VM-only: on k8s, just returns True.
-        """
+    def workload_present(self) -> bool:
+        """Flag to check if workload is present and installed."""
+        ...
 
     @abstractmethod
     def start(self) -> None:
@@ -267,12 +265,6 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     @abstractmethod
     def layer(self) -> Layer:
         """Gets the Pebble Layer definition for the current workload."""
-        ...
-
-    @property
-    @abstractmethod
-    def container_can_connect(self) -> bool:
-        """Flag to check if workload container can connect."""
         ...
 
     @abstractmethod

@@ -42,12 +42,7 @@ class VMWorkload(WorkloadBase):
 
     @property
     @override
-    def container_can_connect(self) -> bool:
-        return True  # Always True on VM
-
-    @property
-    @override
-    def binaries_presents(self) -> bool:
+    def workload_present(self) -> bool:
         return self.mongod.present
 
     @override

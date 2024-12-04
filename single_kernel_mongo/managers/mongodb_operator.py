@@ -188,9 +188,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def on_install(self) -> None:
         """Handler on install."""
-        if not self.workload.binaries_presents:
-            return
-        if not self.workload.container_can_connect:
+        if not self.workload.workload_present:
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
 
@@ -205,8 +203,8 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def on_start(self) -> None:
         """Handler on start."""
-        if not self.workload.container_can_connect:
-            logger.debug("mongod container is not ready yet.")
+        if not self.workload.workload_present:
+            logger.debug("mongod installation is not ready yet.")
             raise ContainerNotReadyError
 
         if any(not storage for storage in self.model.storages.values()):

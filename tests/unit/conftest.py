@@ -23,6 +23,11 @@ def setup_secrets(harness: Harness) -> None:
 
 @pytest.fixture
 def mock_fs_interactions(mocker) -> None:
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")

@@ -28,7 +28,7 @@ def test_mongodb_workload_init(monkeypatch):
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGOD_ARGS"
     assert workload.role == ROLES["vm"]["mongod"]
-    assert workload.container_can_connect
+    assert not workload.workload_present
 
     assert workload.layer == Layer(
         {

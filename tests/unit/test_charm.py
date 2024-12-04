@@ -35,7 +35,9 @@ def test_install_snap_install_success(harness, mocker):
 
 def test_charm_install_success_calls_set_env(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.snap_present", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present", return_value=True
+    )
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write", return_value=True)
     mock_connect = mocker.patch(
         "single_kernel_mongo.managers.config.LogRotateConfigManager.connect"
@@ -258,6 +260,11 @@ def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
     mocker.patch(
         "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=False
     )
+    mocker.patch(
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
     mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
     mock_stop = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.stop")
     mock_set_env = mocker.patch(
@@ -275,6 +282,11 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=True
+    )
+    mocker.patch(
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
     )
     mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
     mock_stop = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.stop")

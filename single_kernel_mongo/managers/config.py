@@ -83,7 +83,7 @@ class BackupConfigManager(CommonConfigManager):
 
     def connect(self):
         """Sets up PBM with right configuration and restarts it."""
-        if not self.workload.container_can_connect:
+        if not self.workload.workload_present:
             logger.info("Container cannot connect.")
             return
         if not self.state.db_initialised:
