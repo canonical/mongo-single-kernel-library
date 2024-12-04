@@ -9,7 +9,7 @@ this operator.
   [opening an issue](https://github.com/canonical/mongo-single-kernel-library/issues) explaining
   your use case.
 - If you would like to chat with us about your use-cases or proposed
-  implementation, you can reach us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/charm-dev) or [Discourse](https://discourse.charmhub.io/).
+  implementation, you can reach us at [Data Platform Matrix public channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [Discourse](https://discourse.charmhub.io/).
 - Familiarising yourself with the [Charmed Operator Framework](https://juju.is/docs/sdk) library will help you a lot when working
   on new features or bug fixes.
 - All enhancements require review before being merged. Code review typically
