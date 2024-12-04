@@ -13,7 +13,7 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Unit
 
-from single_kernel_mongo.config.literals import CharmRole, Substrates
+from single_kernel_mongo.config.literals import RoleEnum, Substrates
 from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -31,7 +31,7 @@ class OperatorProtocol(ABC, Object):
 
     A Charm Operator must define the following elements:
      * charm: The Charm it is bound to.
-     * name: The charm operator name, which is one value of the `CharmRole`
+     * name: The charm operator name, which is one value of the `RoleEnum`
         enum. This is a class var defined in the operator.
      * tls_manager: The TLS manager for the mandatory tls events and handlers
      * state : The CharmState, object handling peer databag interactions, and model interactions.
@@ -40,7 +40,7 @@ class OperatorProtocol(ABC, Object):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[CharmRole]
+    name: ClassVar[RoleEnum]
     substrate: Substrates
     config_manager: CommonConfigManager
     tls_manager: TLSManager

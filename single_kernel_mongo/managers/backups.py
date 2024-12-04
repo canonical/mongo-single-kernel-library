@@ -34,6 +34,7 @@ from tenacity import (
 )
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
@@ -76,16 +77,23 @@ class BackupManager(Object, BackupConfigManager):
     def __init__(
         self,
         charm: AbstractMongoCharm,
+        role: Role,
         substrate: Substrates,
         state: CharmState,
         container: Container | None,
     ) -> None:
         super().__init__(parent=charm, key="backup")
         super(Object, self).__init__(
-            substrate=substrate, config=charm.parsed_config, state=state, container=container
+            role=role,
+            substrate=substrate,
+            config=charm.parsed_config,
+            state=state,
+            container=container,
         )
         self.charm = charm
-        self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(container=container)
+        self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
+            role=role, container=container
+        )
         self.state = state
 
     @cached_property

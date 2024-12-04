@@ -9,8 +9,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
-from single_kernel_mongo.config.logrotate_config import LogRotateConfig
-from single_kernel_mongo.config.roles import ROLES
+from single_kernel_mongo.config.models import LogRotateConfig, Role
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
@@ -23,9 +22,8 @@ class LogRotateWorkload(WorkloadBase):
     env_var = ""
     snap_param = ""
 
-    def __init__(self, container: Container | None) -> None:
-        super().__init__(container)
-        self.role = ROLES[self.substrate]
+    def __init__(self, role: Role, container: Container | None) -> None:
+        super().__init__(role, container)
         self.paths = MongoPaths(self.role)
 
     def build_template(self) -> None:

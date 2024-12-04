@@ -1,7 +1,7 @@
 import pytest
 
-from single_kernel_mongo.config.literals import CharmRole
-from single_kernel_mongo.config.mongo_paths import VM_PATH
+from single_kernel_mongo.config.literals import RoleEnum, Substrates
+from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS, VM_PATH
 from single_kernel_mongo.core.structured_config import (
     MongoDBCharmConfig,
     MongoDBRoles,
@@ -35,12 +35,12 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data = mock_app_state
     mock_state.tls = mocker.MagicMock(TLSState)
-    mock_state.charm_role = CharmRole.MONGODB
+    mock_state.charm_role = ROLES[Substrates.VM][RoleEnum.MONGOD]
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = role
     mock_state.tls.internal_enabled = False
     mock_state.tls.external_enabled = False
-    workload = VMMongoDBWorkload(None)
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
         config,
@@ -106,14 +106,14 @@ def test_mongos_config_manager(mocker):
     )
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
-    mock_state.charm_role = CharmRole.MONGOS
+    mock_state.charm_role = ROLES[Substrates.VM][RoleEnum.MONGOS]
     mock_state.cluster = mocker.MagicMock(ClusterState)
     mock_state.cluster.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.internal_enabled = False
     mock_state.tls.external_enabled = False
-    workload = VMMongosWorkload(None)
+    workload = VMMongosWorkload(VM_MONGOS, None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
         config,
@@ -178,7 +178,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
     mock_state.tls.internal_enabled = True
     mock_state.tls.external_enabled = True
-    workload = VMMongoDBWorkload(None)
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
         config,
@@ -211,7 +211,7 @@ def test_mongos_default_config_server(mocker):
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.internal_enabled = False
     mock_state.tls.externalenabled = False
-    workload = VMMongoDBWorkload(None)
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
         config,

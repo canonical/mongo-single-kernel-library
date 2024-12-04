@@ -15,7 +15,7 @@ from ops import Container
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import WorkloadUser
-from single_kernel_mongo.config.roles import Role
+from single_kernel_mongo.config.models import Role
 
 
 class MongoPaths:
@@ -303,5 +303,6 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 class WorkloadBase(WorkloadProtocol):  # pragma: nocover
     """Base interface for common workload operations."""
 
-    def __init__(self, container: Container | None):
+    def __init__(self, role: Role, container: Container | None):
         self.container = container
+        self.role = role

@@ -21,14 +21,13 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import (
     CONTAINER,
     MAX_PASSWORD_LENGTH,
-    CharmRole,
     MongoPorts,
+    RoleEnum,
     Scope,
     Substrates,
 )
-from single_kernel_mongo.config.logrotate_config import LogRotateConfig
+from single_kernel_mongo.config.models import ROLES, LogRotateConfig
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.roles import K8S_MONGO, VM_MONGO
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -81,18 +80,18 @@ logger = logging.getLogger(__name__)
 class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
 
-    name = CharmRole.MONGODB
+    name = RoleEnum.MONGOD
     workload: MongoDBWorkload
 
     def __init__(self, charm: AbstractMongoCharm):
-        super(OperatorProtocol, self).__init__(charm, self.name.value)
+        super(OperatorProtocol, self).__init__(charm, self.name)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
-        self.role = VM_MONGO if self.substrate == Substrates.VM else K8S_MONGO
+        self.role = ROLES[self.substrate][self.name]
         self.state = CharmState(
             self.charm,
             self.substrate,
-            self.name,
+            self.role,
         )
 
         container = (
@@ -105,6 +104,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Managers
         self.backup_manager = BackupManager(
             self.charm,
+            self.role,
             self.substrate,
             self.state,
             container,
@@ -137,9 +137,11 @@ class MongoDBOperator(OperatorProtocol, Object):
     def define_workloads_and_config_managers(self, container: Container | None) -> None:
         """Export all workload and config definition for readability."""
         # BEGIN: Define workloads.
-        self.workload = get_mongodb_workload_for_substrate(self.substrate)(container=container)
+        self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+            role=self.role, container=container
+        )
         self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
-            container=container
+            role=self.role, container=container
         )
         # END: Define workloads
 
@@ -155,12 +157,14 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state,
         )
         self.logrotate_config_manager = LogRotateConfigManager(
+            self.role,
             self.substrate,
             self.config,
             self.state,
             container,
         )
         self.mongodb_exporter_config_manager = MongoDBExporterConfigManager(
+            self.role,
             self.substrate,
             self.config,
             self.state,

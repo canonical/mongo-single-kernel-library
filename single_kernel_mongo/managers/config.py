@@ -12,9 +12,13 @@ from itertools import chain
 from ops import Container
 from typing_extensions import override
 
-from single_kernel_mongo.config.audit_config import AuditLog
-from single_kernel_mongo.config.literals import LOCALHOST, CharmRole, MongoPorts, Substrates
-from single_kernel_mongo.config.logrotate_config import LogRotateConfig
+from single_kernel_mongo.config.literals import (
+    LOCALHOST,
+    MongoPorts,
+    RoleEnum,
+    Substrates,
+)
+from single_kernel_mongo.config.models import AuditLogConfig, LogRotateConfig, Role
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -60,12 +64,13 @@ class BackupConfigManager(CommonConfigManager):
     def __init__(
         self,
         substrate: Substrates,
+        role: Role,
         config: MongoConfigModel,
         state: CharmState,
         container: Container | None,
     ):
         self.config = config
-        self.workload = get_pbm_workload_for_substrate(substrate)(container=container)
+        self.workload = get_pbm_workload_for_substrate(substrate)(role=role, container=container)
         self.state = state
 
     @override
@@ -107,6 +112,7 @@ class LogRotateConfigManager(CommonConfigManager):
 
     def __init__(
         self,
+        role: Role,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
@@ -114,7 +120,7 @@ class LogRotateConfigManager(CommonConfigManager):
     ):
         self.config = config
         self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
-            container=container
+            role=role, container=container
         )
         self.state = state
         self.substrate = substrate
@@ -142,13 +148,16 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     def __init__(
         self,
+        role: Role,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
         container: Container | None,
     ):
         self.config = config
-        self.workload = get_mongodb_exporter_workload_for_substrate(substrate)(container=container)
+        self.workload = get_mongodb_exporter_workload_for_substrate(substrate)(
+            role=role, container=container
+        )
         self.state = state
 
     @override
@@ -196,7 +205,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
         if (
-            self.state.charm_role == CharmRole.MONGOS
+            self.state.charm_role.name == RoleEnum.MONGOS
             and not self.state.app_peer_data.external_connectivity
         ):
             return [
@@ -219,8 +228,8 @@ class MongoConfigManager(CommonConfigManager, ABC):
     def audit_options(self) -> list[str]:
         """The argument for the audit log options."""
         return [
-            f"--auditDestination={AuditLog.destination}",
-            f"--auditFormat={AuditLog.format}",
+            f"--auditDestination={AuditLogConfig.destination}",
+            f"--auditFormat={AuditLogConfig.format}",
             f"--auditPath={self.workload.paths.audit_file}",
         ]
 

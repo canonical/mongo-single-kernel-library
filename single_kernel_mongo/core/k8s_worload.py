@@ -13,6 +13,7 @@ from ops.pebble import ChangeError, ExecError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import KubernetesUser
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 
@@ -26,11 +27,11 @@ class KubernetesWorkload(WorkloadBase):
     container: Container  # We always have a container in a Kubernetes Workload
     users = KubernetesUser()
 
-    def __init__(self, container: Container | None) -> None:
+    def __init__(self, role: Role, container: Container | None) -> None:
         if not container:
             raise AttributeError("Container is required.")
 
-        self.container = container
+        super().__init__(role, container)
 
     @property
     @override

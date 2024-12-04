@@ -16,11 +16,12 @@ from ops import Object, Relation, Unit
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
-    CharmRole,
     MongoPorts,
+    RoleEnum,
     Scope,
     Substrates,
 )
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -67,18 +68,16 @@ class CharmState(Object):
 
     This object represents the charm state, including the different relations
     the charm is bound to, and the model information.
-    It is parametrized by  the substrate and the CharmRole.
+    It is parametrized by the substrate and the RoleEnum.
 
     The substrate will allow to compute the right hosts.
-    The CharmRole allows selection of the right peer relation name and also the
+    The Role allows selection of the right peer relation name and also the
     generation of the correct mongo uri.
     The charm is passed as an argument to build the secret storage, and provide
     an access to the charm configuration.
     """
 
-    def __init__(
-        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmRole
-    ):
+    def __init__(self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: Role):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
         self.config = charm.parsed_config
@@ -288,7 +287,7 @@ class CharmState(Object):
     @property
     def config_server_name(self) -> str | None:
         """Gets the config server name."""
-        if self.charm_role == CharmRole.MONGOS:
+        if self.charm_role.name == RoleEnum.MONGOS:
             if self.mongos_cluster_relation:
                 return self.mongos_cluster_relation.app.name
             return None
@@ -422,7 +421,7 @@ class CharmState(Object):
     @property
     def mongo_config(self) -> MongoConfiguration:
         """The mongo configuration to use by default for charm interactions."""
-        if self.charm_role == CharmRole.MONGODB:
+        if self.charm_role.name == RoleEnum.MONGOD:
             return self.operator_config
         return self.mongos_config
 

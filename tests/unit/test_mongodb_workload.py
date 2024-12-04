@@ -5,7 +5,7 @@ import pytest
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VmUser
-from single_kernel_mongo.config.roles import ROLES
+from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS
 from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1.snap import SnapError
@@ -19,15 +19,15 @@ from single_kernel_mongo.workload import (
 
 
 def test_mongodb_workload_init(monkeypatch):
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     def mock_snap(*arg, **kwargs):
         return ""
 
     monkeypatch.setattr(workload.mongod, "get", mock_snap)
-    assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGOD_ARGS"
-    assert workload.role == ROLES["vm"]
+    assert workload.role == ROLES["vm"]["mongod"]
     assert workload.container_can_connect
 
     assert workload.layer == Layer(
@@ -50,11 +50,11 @@ def test_mongodb_workload_init(monkeypatch):
 
 
 def test_mongos_workload_init(monkeypatch):
-    workload = VMMongosWorkload(container=None)
+    workload = VMMongosWorkload(role=VM_MONGOS, container=None)
 
-    assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths == MongoPaths(ROLES["vm"]["mongos"])
     assert workload.env_var == "MONGOS_ARGS"
-    assert workload.role == ROLES["vm"]
+    assert workload.role == ROLES["vm"]["mongos"]
 
     def mock_snap(*arg, **kwargs):
         return ""
@@ -81,16 +81,16 @@ def test_mongos_workload_init(monkeypatch):
 
 
 def test_mongodb_exporter_workload_init(monkeypatch):
-    workload = VMMongoDBExporterWorkload(container=None)
+    workload = VMMongoDBExporterWorkload(role=VM_MONGOD, container=None)
 
     def mock_snap(*arg, **kwargs):
         return ""
 
     monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
-    assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGODB_URI"
-    assert workload.role == ROLES["vm"]
+    assert workload.role == ROLES["vm"]["mongod"]
 
     assert workload.layer == Layer(
         {
@@ -112,19 +112,19 @@ def test_mongodb_exporter_workload_init(monkeypatch):
 
 
 def test_pbm_workload_init(monkeypatch):
-    workload = VMPBMWorkload(container=None)
+    workload = VMPBMWorkload(role=ROLES["vm"]["mongod"], container=None)
 
     def mock_snap(*arg, **kwargs):
         return ""
 
     monkeypatch.setattr(workload.mongod, "get", mock_snap)
 
-    assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.paths.pbm_config == Path(
         "/var/snap/charmed-mongodb/current/etc/pbm/pbm_config.yaml"
     )
     assert workload.env_var == "PBM_MONGODB_URI"
-    assert workload.role == ROLES["vm"]
+    assert workload.role == ROLES["vm"]["mongod"]
 
     assert workload.layer == Layer(
         {
@@ -146,11 +146,11 @@ def test_pbm_workload_init(monkeypatch):
 
 
 def test_logrotate_workload_init():
-    workload = VMLogRotateDBWorkload(container=None)
+    workload = VMLogRotateDBWorkload(ROLES["vm"]["mongod"], container=None)
 
-    assert workload.paths == MongoPaths(ROLES["vm"])
+    assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == ""
-    assert workload.role == ROLES["vm"]
+    assert workload.role == ROLES["vm"]["mongod"]
 
     assert workload.layer == Layer(
         {
@@ -176,7 +176,7 @@ def test_snap_install_failure(monkeypatch):
     def mock_snap_ensure(*args, **kwargs):
         raise SnapError
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     monkeypatch.setattr(workload.mongod, "ensure", mock_snap_ensure)
 
@@ -187,7 +187,7 @@ def test_install_success(monkeypatch):
     def mock_snap(*args, **kwargs):
         return
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     monkeypatch.setattr(workload.mongod, "ensure", mock_snap)
     monkeypatch.setattr(workload.mongod, "hold", mock_snap)
@@ -196,7 +196,7 @@ def test_install_success(monkeypatch):
 
 
 def test_read_file_fail():
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.read(Path("/nonexistent")) == []
 
 
@@ -204,12 +204,12 @@ def test_read_file_succeed(tmp_path):
     tmp_file = tmp_path / "test_file.txt"
     tmp_file.write_text("need\ndead\ncafe\n")
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.read(tmp_file) == ["need", "dead", "cafe"]
 
 
 def test_delete_fail():
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.delete(Path("/nonexistent")) is None
 
 
@@ -217,7 +217,7 @@ def test_delete_success(tmp_path):
     tmp_file = tmp_path / "test_file.txt"
     tmp_file.write_text("need\ndead\ncafe\n")
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     workload.delete(tmp_file)
 
     assert not tmp_file.is_file()
@@ -228,7 +228,7 @@ def test_command_success(monkeypatch, command):
     def mock_snap(*args, **kwargs):
         return
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     monkeypatch.setattr(workload.mongod, command, mock_snap)
 
     assert getattr(workload, command)() is None
@@ -239,7 +239,7 @@ def test_command_success_failure(monkeypatch, caplog, command):
     def mock_snap(*args, **kwargs):
         raise SnapError
 
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     monkeypatch.setattr(workload.mongod, command, mock_snap)
 
     caplog.clear()
@@ -266,19 +266,19 @@ def test_active(mocker, value: dict, expected: bool):
         return_value=value,
         new_callable=mocker.PropertyMock,
     )
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.active() == expected
 
 
 def test_exec():
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     user = getpass.getuser()
     user_exec = workload.exec(["whoami"]).strip()
     assert user == user_exec
 
 
 def test_exec_fail(mocker, caplog):
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     caplog.clear()
     with pytest.raises(WorkloadExecError) as err:
         workload.exec("false")
@@ -293,7 +293,7 @@ def test_exec_fail(mocker, caplog):
 
 def test_run_bin_command(mocker):
     mock = mocker.patch("single_kernel_mongo.workload.VMMongoDBWorkload.exec")
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     workload.run_bin_command("fail", [])
 
     mock.assert_called_once_with(command=["/snap/bin/charmed-mongodb.mongosh", "fail"], env={})
@@ -308,7 +308,7 @@ def test_logrotate_build_template(monkeypatch, tmp_path):
     def mock_exec(*args):
         return
 
-    workload = VMLogRotateDBWorkload(container=None)
+    workload = VMLogRotateDBWorkload(role=VM_MONGOD, container=None)
     monkeypatch.setattr(workload, "write", mock_write)
     monkeypatch.setattr(workload, "exec", mock_exec)
     workload.build_template()
@@ -317,7 +317,7 @@ def test_logrotate_build_template(monkeypatch, tmp_path):
 
 def test_exists(tmp_path):
     tmp_file = tmp_path / "check_file"
-    workload = VMMongoDBWorkload(container=None)
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     tmp_file.write_text("0xdeadbeef")
     assert workload.exists(tmp_file)

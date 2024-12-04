@@ -8,7 +8,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
-from single_kernel_mongo.config.roles import ROLES
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
@@ -21,9 +21,8 @@ class MongoDBWorkload(WorkloadBase):
     env_var = "MONGOD_ARGS"
     snap_param = "mongod-args"
 
-    def __init__(self, container: Container | None) -> None:
-        super().__init__(container)
-        self.role = ROLES[self.substrate]
+    def __init__(self, role: Role, container: Container | None) -> None:
+        super().__init__(role, container)
         self.paths = MongoPaths(self.role)
 
     @property

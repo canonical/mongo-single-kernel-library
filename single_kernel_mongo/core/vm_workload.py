@@ -20,6 +20,7 @@ from single_kernel_mongo.config.literals import (
     SNAP,
     VmUser,
 )
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1 import snap
@@ -34,7 +35,8 @@ class VMWorkload(WorkloadBase):
     container = None
     users = VmUser()
 
-    def __init__(self, container: Container | None) -> None:
+    def __init__(self, role: Role, container: Container | None) -> None:
+        super().__init__(role, container)
         self.snap = SNAP
         self.mongod = snap.SnapCache()[self.snap.name]
 
