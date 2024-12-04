@@ -30,6 +30,7 @@ from single_kernel_mongo.config.relations import (
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseRequirerData,
     DataPeerData,
     DataPeerOtherUnitData,
     DataPeerUnitData,
@@ -39,6 +40,10 @@ from single_kernel_mongo.state.app_peer_state import (
     AppPeerReplicaSet,
 )
 from single_kernel_mongo.state.cluster_state import ClusterState
+from single_kernel_mongo.state.config_server_state import (
+    SECRETS_FIELDS,
+    ConfigServerState,
+)
 from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
@@ -133,6 +138,11 @@ class CharmState(Object):
     def config_server_relation(self) -> set[Relation]:
         """The config-server relation if it exists."""
         return set(self.model.relations[RelationNames.CONFIG_SERVER.value])
+
+    @property
+    def tls_relation(self) -> Relation | None:
+        """The TLS relation."""
+        return self.model.get_relation(ExternalRequirerRelations.TLS.value)
 
     @property
     def s3_relation(self) -> Relation | None:
@@ -284,6 +294,17 @@ class CharmState(Object):
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
+
+    @property
+    def shard_state(self):
+        """The shard state."""
+        return ConfigServerState(
+            relation=self.shard_relation,
+            data_interface=DatabaseRequirerData(
+                self.model, RelationNames.SHARDING, "", additional_secret_fields=SECRETS_FIELDS
+            ),
+            component=self.model.app,
+        )
 
     @property
     def config_server_name(self) -> str | None:
