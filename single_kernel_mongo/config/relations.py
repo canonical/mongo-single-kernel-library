@@ -6,12 +6,17 @@
 from enum import Enum
 
 
+class PeerRelationNames(str, Enum):
+    """The peer relation names."""
+
+    PEERS = "database-peers"  # check.
+    ROUTER_PEERS = "router-peers"
+
+
 class RelationNames(str, Enum):
     """The different relations."""
 
     DATABASE = "database"  # In progress
-    PEERS = "database-peers"  # check.
-    ROUTER_PEERS = "router-peers"
     SHARDING = "sharding"
     CONFIG_SERVER = "config-server"
     CLUSTER = "cluster"

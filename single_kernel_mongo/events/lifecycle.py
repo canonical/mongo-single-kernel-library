@@ -25,6 +25,7 @@ from ops.charm import (
 from ops.framework import Object
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -42,7 +43,7 @@ class LifecycleEventsHandler(Object):
     In charge of handling the lifecycle events such as install, start, pebble ready, etc.
     """
 
-    def __init__(self, dependent: OperatorProtocol, rel_name: str):
+    def __init__(self, dependent: OperatorProtocol, rel_name: PeerRelationNames):
         super().__init__(parent=dependent, key=dependent.name)
         self.dependent = dependent
         self.charm = dependent.charm
@@ -60,9 +61,15 @@ class LifecycleEventsHandler(Object):
         self.framework.observe(getattr(self.charm.on, "update_status"), self.on_update_status)
         self.framework.observe(getattr(self.charm.on, "secret_changed"), self.on_secret_changed)
 
-        self.framework.observe(self.charm.on[rel_name].relation_joined, self.on_relation_joined)
-        self.framework.observe(self.charm.on[rel_name].relation_changed, self.on_relation_changed)
-        self.framework.observe(self.charm.on[rel_name].relation_departed, self.on_relation_departed)
+        self.framework.observe(
+            self.charm.on[rel_name.value].relation_joined, self.on_relation_joined
+        )
+        self.framework.observe(
+            self.charm.on[rel_name.value].relation_changed, self.on_relation_changed
+        )
+        self.framework.observe(
+            self.charm.on[rel_name.value].relation_departed, self.on_relation_departed
+        )
 
         self.framework.observe(
             getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached

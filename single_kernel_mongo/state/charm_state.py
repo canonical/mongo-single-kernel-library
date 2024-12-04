@@ -24,6 +24,7 @@ from single_kernel_mongo.config.literals import (
 from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
+    PeerRelationNames,
     RelationNames,
 )
 from single_kernel_mongo.core.secrets import SecretCache
@@ -86,11 +87,11 @@ class CharmState(Object):
 
         self.peer_app_interface = DataPeerData(
             self.model,
-            relation_name=RelationNames.PEERS.value,
+            relation_name=PeerRelationNames.PEERS.value,
         )
         self.peer_unit_interface = DataPeerUnitData(
             self.model,
-            relation_name=RelationNames.PEERS.value,
+            relation_name=PeerRelationNames.PEERS.value,
             additional_secret_fields=SECRETS_UNIT,
         )
 
@@ -99,7 +100,7 @@ class CharmState(Object):
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
-        return self.model.get_relation(RelationNames.PEERS.value)
+        return self.model.get_relation(PeerRelationNames.PEERS.value)
 
     @property
     def peers_units(self) -> set[Unit]:
@@ -260,7 +261,7 @@ class CharmState(Object):
         """The cluster peer relation."""
         return {
             unit: DataPeerOtherUnitData(
-                model=self.model, unit=unit, relation_name=RelationNames.PEERS.value
+                model=self.model, unit=unit, relation_name=PeerRelationNames.PEERS.value
             )
             for unit in self.peers_units
         }

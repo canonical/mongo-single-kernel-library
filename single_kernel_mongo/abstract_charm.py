@@ -8,6 +8,7 @@ from typing import ClassVar, Generic, TypeVar
 from ops.charm import CharmBase
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
@@ -35,7 +36,7 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
     config_type: type[T]
     operator_type: type[U]
     substrate: ClassVar[Substrates]
-    peer_rel_name: ClassVar[str]
+    peer_rel_name: ClassVar[PeerRelationNames]
     name: ClassVar[str]
 
     def __init__(self, *args):
