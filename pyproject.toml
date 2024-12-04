@@ -1,0 +1,168 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[tool.poetry]
+name = "mongo-charms-single-kernel"
+version = "0.0.1"
+description = "Shared and reusable code for Mongo-related charms"
+authors = ["Neha Oudin <neha@oudin.red>"]
+readme = "README.md"
+license = "Apache-2.0"
+package-mode = true
+packages = [
+    {include = "single_kernel_mongo"},
+]
+include = [".single_kernel_mongo/templates/"]
+homepage = "https://github.com/canonical/mongo-single-kernel-library"
+repository = "https://github.com/canonical/mongo-single-kernel-library"
+classifiers = [
+ "Development Status :: 2 - Pre-Alpha",
+ "Intended Audience :: Developers",
+ "Intended Audience :: System Administrators",
+ "Operating System :: POSIX :: Linux",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/canonical/mongo-single-kernel-library/issues"
+"Matrix" = "https://matrix.to/#/#charmhub-data-platform:ubuntu.com"
+"Contribute" = "https://github.com/canonical/mongo-single-kernel-library/blob/main/CONTRIBUTING.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+poetry-core = "^1.9.0"
+ops = "~2.15.0"
+overrides = "^7.7.0"
+pydantic = "~2.9.0"
+pydantic-settings = "*"
+pyOpenSSL = "^24.2.1"
+pyyaml = "^6.0.1"
+tenacity = "^8.2.3"
+pymongo = "*"
+jinja2 = "*"
+lightkube = "*"
+dacite = "^1.8.0"
+
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.charm-libs.dependencies]
+cryptography = "^42.0.5"  # tls_certificates lib v3
+jsonschema = "^4.22.0"  # tls_certificates lib v3
+ops = "~2.15.0"
+pydantic = "~2.9.0"
+pydantic-settings = "*"
+pyOpenSSL = "^24.2.1"
+pymongo = "*"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.0.1"
+ruff = "^0.7.2"
+pydantic = "~2.9.0"
+mypy = "*"
+types-PyYAML = "*"
+
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
+ruff = "^0.7.2"
+pydantic = "~2.9.0"
+mypy = "*"
+types-PyYAML = "*"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+ruff = "^0.7.2"
+tomli = "*"
+codespell = "^2.2.6"
+shellcheck-py = "^0.10.0.1"
+pydantic = "~2.9.0"
+mypy = "*"
+types-PyYAML = "*"
+
+[tool.poetry.group.unit.dependencies]
+coverage = {extras = ["toml"], version = "^7.5.0"}
+pytest = "^8.1.1"
+parameterized = "^0.9.0"
+factory_boy = "*"
+mongomock = "^4.2.0.post1"
+pytest-mock = "*"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [".git", "__pycache__", ".tox", "build", "dist", "*.egg_info", "venv", "single_kernel_mongo/lib"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "C", "N", "R", "D", "I001", "UP"]
+# Ignore W503, E501 because using black creates errors with this
+# Ignore D107 Missing docstring in __init__
+ignore = ["E501", "D107", "D417"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 99
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-copyright]
+author = "Canonical Ltd."
+notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+# D100, D101, D102, D103: Ignore missing docstrings in tests
+"tests/*" = ["D100","D101","D102","D103","D104"]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "single_kernel_mongo/lib/charms/data_platform_libs/*",
+    "single_kernel_mongo/lib/charms/operator_libs_linux/*",
+    "single_kernel_mongo/lib/charms/tls_certificates_interface/*",
+    "single_kernel_mongo/state/abstract_state.py",
+    "single_kernel_mongo/core/operator.py",
+    "*__init__*"
+]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+markers = ["unstable"]
+filterwarnings = [
+    "error:RuntimeWarning"
+]
+
+[tool.mypy]
+exclude = [
+    "./build/",
+    "./dist/",
+    "./site/",
+    "./venv",
+    "./__pypackages__/",
+    "^single_kernel_mongo/lib/.*"
+]
+# https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-ignore-missing-imports
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[tool.codespell]
+ignore-words=".codespellignore"
+skip="*/single_kernel_mongo/lib/*"

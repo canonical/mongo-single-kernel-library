@@ -1,0 +1,48 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: test-mongodb
+display-name: Test MongoDB
+description: |
+  Test charm for MongoDB single kernel.
+docs: https://discourse.charmhub.io/t/charmed-mongodb-6-docs/12461
+source: https://github.com/canonical/mongodb-operator
+issues: https://github.com/canonical/mongodb-operator/issues
+website:
+  - https://ubuntu.com/data/mongodb
+  - https://charmhub.io/mongodb
+  - https://github.com/canonical/mongodb-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+summary: A Test MongoDB operator charm
+series:
+  - jammy
+
+storage:
+  mongodb:
+    type: filesystem
+    location: /var/snap/charmed-mongodb/common
+
+provides:
+  database:
+    interface: mongodb_client
+  cos-agent:
+    interface: cos_agent
+  config-server:
+    interface: shards
+  cluster:
+    interface: config-server
+
+peers:
+  database-peers:
+    interface: mongodb-peers
+
+requires:
+  s3-credentials:
+    interface: s3
+    limit: 1
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  sharding:
+    interface: shards
+    # shards can only relate to one config-server
+    limit: 1

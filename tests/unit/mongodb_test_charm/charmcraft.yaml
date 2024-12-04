@@ -1,0 +1,32 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+type: charm
+bases:
+  - build-on:
+      - name: "ubuntu"
+        channel: "22.04"
+    run-on:
+      - name: "ubuntu"
+        channel: "22.04"
+parts:
+  charm:
+    charm-strict-dependencies: true
+    override-build: |
+      rustup default stable
+      craftctl default
+    build-snaps:
+      - rustup
+    build-packages:
+      - git
+      - build-essential
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
+      - rustc
+      - cargo
+  version_data:
+    plugin: dump
+    source: .
+    prime:
+      - workload_version
