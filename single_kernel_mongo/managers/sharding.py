@@ -75,11 +75,13 @@ class ConfigServerManager(Object):
             self.model, relation_name=self.relation_name.value
         )
 
-    def on_relation_joined(self, relation: Relation):
+    def on_database_requested(self, relation: Relation):
         """Relation joined event."""
+        self.assert_pass_hook_checks(relation)
+
         if self.data_interface.fetch_relation_field(relation.id, "database") is None:
             raise DeferrableFailedHookChecksError(
-                "Database Requested event has not run yet for relation {relation.id}"
+                f"Database Requested event has not run yet for relation {relation.id}"
             )
         relation_data = {
             ConfigServerKeys.operator_password.value: self.state.get_user_password(OperatorUser),
@@ -99,7 +101,7 @@ class ConfigServerManager(Object):
 
         Updating of shards is done automatically via MongoDB change-streams.
         """
-        # TODO: Hook checks
+        self.assert_pass_hook_checks(relation, is_leaving)
         try:
             logger.info("Adding/Removing shards not present in cluster.")
             match is_leaving:
