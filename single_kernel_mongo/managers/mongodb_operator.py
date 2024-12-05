@@ -586,7 +586,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Retrieves the primary unit with the primary replica."""
         with MongoConnection(self.state.mongo_config) as connection:
             try:
-                primary_ip = connection.primary
+                primary_ip = connection.primary()
             except Exception as e:
                 logger.error(f"Unable to get primary: {e}")
                 return None
