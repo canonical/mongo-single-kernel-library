@@ -33,6 +33,7 @@ from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, Ba
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
+from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -144,6 +145,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
+        self.config_server_events = ConfigServerEventHandler(self)
+        self.sharding_event_handlers = ShardEventHandler(self)
 
     @property
     def config(self):
