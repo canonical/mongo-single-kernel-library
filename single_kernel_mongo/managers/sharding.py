@@ -461,7 +461,6 @@ class ShardManager(Object):
         # if re-using an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
-        self.data_requirer._on_relation_created_event
 
     def relation_changed(self, relation: Relation, leaving: bool = False):
         """Retrieves secrets from config-server and updates them within the shard."""
