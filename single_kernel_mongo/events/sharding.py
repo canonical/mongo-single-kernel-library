@@ -22,6 +22,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
+    WaitingForCertificatesError,
     WaitingForSecretsError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -54,7 +55,7 @@ class ConfigServerEventHandler(Object):
             self.charm, self.manager.data_interface
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_joined, self._on_relation_joined
+            self.database_provider_events.on.database_requested, self._on_database_requested
         )
         self.framework.observe(
             self.charm.on[self.relation_name].relation_departed,
@@ -77,11 +78,12 @@ class ConfigServerEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_relation_joined(self, event: RelationJoinedEvent):
+    def _on_database_requested(self, event: RelationJoinedEvent):
         """Relation joined events."""
         try:
-            self.manager.on_relation_joined(event.relation)
+            self.manager.on_database_requested(event.relation)
         except DeferrableFailedHookChecksError as e:
+            logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -127,7 +129,11 @@ class ShardEventHandler(Object):
     def _on_relation_changed(self, event: RelationChangedEvent):
         try:
             self.manager.relation_changed(event.relation)
-        except DeferrableFailedHookChecksError as e:
+        except (
+            DeferrableFailedHookChecksError,
+            WaitingForSecretsError,
+            WaitingForCertificatesError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
