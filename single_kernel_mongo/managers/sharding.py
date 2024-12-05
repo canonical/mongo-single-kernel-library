@@ -102,6 +102,12 @@ class ConfigServerManager(Object):
         Updating of shards is done automatically via MongoDB change-streams.
         """
         self.assert_pass_hook_checks(relation, is_leaving)
+
+        if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+            raise DeferrableFailedHookChecksError(
+                f"Database Requested event has not run yet for relation {relation.id}"
+            )
+
         try:
             logger.info("Adding/Removing shards not present in cluster.")
             match is_leaving:
