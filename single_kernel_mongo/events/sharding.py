@@ -16,6 +16,7 @@ from ops.charm import (
     SecretChangedEvent,
 )
 from ops.framework import Object
+from pymongo.errors import ServerSelectionTimeoutError
 
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -74,7 +75,7 @@ class ConfigServerEventHandler(Object):
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
             self.manager.on_relation_event(event.relation, is_leaving)
-        except DeferrableFailedHookChecksError as e:
+        except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
