@@ -13,7 +13,6 @@ from ops.charm import (
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
-    RelationJoinedEvent,
     SecretChangedEvent,
 )
 from ops.framework import Object
@@ -26,7 +25,9 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseCreatedEvent,
     DatabaseProviderEventHandlers,
+    DatabaseRequestedEvent,
     DatabaseRequirerEventHandlers,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
@@ -78,7 +79,7 @@ class ConfigServerEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_database_requested(self, event: RelationJoinedEvent):
+    def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Relation joined events."""
         try:
             self.manager.on_database_requested(event.relation)
@@ -107,6 +108,9 @@ class ShardEventHandler(Object):
             self.charm.on[self.relation_name].relation_created, self._on_relation_created
         )
         self.framework.observe(
+            self.database_require_events.on.database_created, self._on_relation_changed
+        )
+        self.framework.observe(
             self.charm.on[self.relation_name].relation_changed, self._on_relation_changed
         )
 
@@ -126,7 +130,7 @@ class ShardEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent):
         self.manager.relation_created()
 
-    def _on_relation_changed(self, event: RelationChangedEvent):
+    def _on_relation_changed(self, event: RelationChangedEvent | DatabaseCreatedEvent):
         try:
             self.manager.relation_changed(event.relation)
         except (
