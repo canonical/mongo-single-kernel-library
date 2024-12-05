@@ -138,6 +138,7 @@ class ShardEventHandler(Object):
             DeferrableFailedHookChecksError,
             WaitingForSecretsError,
             WaitingForCertificatesError,
+            NotReadyError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
