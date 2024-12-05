@@ -405,6 +405,18 @@ class MongoManager(Object):
                     raise NotReadyError
                 mongo.add_replset_member(member)
 
+    def get_draining_shards(self, config: MongoConfiguration | None = None) -> list[str]:
+        """Returns the shard that is currently draining."""
+        with MongoConnection(config or self.state.mongos_config) as mongo:
+            draining_shards = mongo.get_draining_shards()
+
+            # in theory, this should always be a list of one. But if something has gone wrong we
+            # should take note and log it
+            if len(draining_shards) > 1:
+                logger.error("Multiple shards draining at the same time.")
+
+            return draining_shards
+
     # Keep for memory for now.
     # def get_relation_name(self):
     #    """Returns the name of the relation to use."""
