@@ -60,7 +60,8 @@ class VMWorkload(WorkloadBase):
     @override
     def update_env(self, parameters: chain[str]):
         content = " ".join(parameters)
-        self.mongod.set({self.snap_param: content})
+        if content != "":
+            self.mongod.set({self.snap_param: content})
 
     @override
     def stop(self) -> None:
