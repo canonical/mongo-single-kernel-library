@@ -269,7 +269,11 @@ class ConfigServerManager(Object):
             return
 
         self.charm.status_manager.to_maintenance(f"Adding shard {shard_name} to config-server")
-        with MongoConnection(self.state.mongos_config) as mongo:
+        config = self.state.mongos_config_for_user(
+            OperatorUser,
+            self.state.app_hosts,
+        )
+        with MongoConnection(config) as mongo:
             try:
                 mongo.add_shard(shard_name, hosts)
             except OperationFailure as e:
@@ -287,7 +291,11 @@ class ConfigServerManager(Object):
         """Removes a shard from the cluster."""
         shard_name = relation.app.name
 
-        with MongoConnection(self.state.mongos_config) as mongo:
+        config = self.state.mongos_config_for_user(
+            OperatorUser,
+            self.state.app_hosts,
+        )
+        with MongoConnection(config) as mongo:
             try:
                 self.charm.status_manager.to_maintenance(f"Draining shard {shard_name}")
                 logger.info("Attempting to removing shard: %s", shard_name)
@@ -310,9 +318,13 @@ class ConfigServerManager(Object):
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return True
 
+        config = self.state.mongos_config_for_user(
+            OperatorUser,
+            self.state.app_hosts,
+        )
         try:
             # check our ability to use connect to mongos
-            with MongoConnection(self.state.mongos_config) as mongos:
+            with MongoConnection(config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
@@ -439,7 +451,7 @@ class ShardManager(Object):
     def relation_created(self):
         """Sets status and flags in relation data relevant to sharding."""
         # if re-using an old shard, re-set flags.
-        self.state.unit_peer_data["drained"] = json.dumps(False)
+        self.state.unit_peer_data.drained = False
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
 
     def relation_changed(self, relation: Relation, leaving: bool = False):
