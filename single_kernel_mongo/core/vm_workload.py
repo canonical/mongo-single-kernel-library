@@ -59,9 +59,13 @@ class VMWorkload(WorkloadBase):
 
     @override
     def update_env(self, parameters: chain[str]):
-        content = " ".join(parameters)
-        if content != "":
-            self.mongod.set({self.snap_param: content})
+        try:
+            content = " ".join(parameters)
+            if content != "":
+                self.mongod.set({self.snap_param: content})
+        except snap.SnapError as e:
+            logger.exception(str(e))
+            raise WorkloadServiceError(str(e)) from e
 
     @override
     def stop(self) -> None:
