@@ -69,17 +69,21 @@ class ConfigServerManager(Object):
 
     def on_relation_joined(self, relation: Relation):
         """Relation joined event."""
+        data_interface = DatabaseProviderData(self.model, relation_name=self.relation_name.value)
+        if data_interface.fetch_relation_field(relation.id, "database") is None:
+            raise DeferrableFailedHookChecksError(
+                "Database Requested event has not run yet for relation {relation.id}"
+            )
         relation_data = {
             ConfigServerKeys.operator_password.value: self.state.get_user_password(OperatorUser),
             ConfigServerKeys.backup_password.value: self.state.get_user_password(BackupUser),
             ConfigServerKeys.key_file.value: self.state.get_keyfile(),
             ConfigServerKeys.host.value: json.dumps(sorted(self.state.app_hosts)),
         }
-        data_interface = DatabaseProviderData(self.model, relation_name=self.relation_name.value)
 
         int_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
         if int_tls_ca:
-            relation_data[f"int-{SECRET_CA_LABEL}"] = int_tls_ca
+            relation_data[ConfigServerKeys.int_ca_secret.value] = int_tls_ca
 
         data_interface.update_relation_data(relation.id, relation_data)
 
@@ -118,10 +122,55 @@ class ConfigServerManager(Object):
             logger.error(f"Deferring _on_relation_event for shards interface since: error={e}")
             raise
 
+    def assert_pass_sanity_hook_checks(self) -> None:
+        """Runs some sanity hook checks.
+
+        Raises:
+            NonDeferrableFailedHookChecksError, DeferrableFailedHookChecksError
+        """
+        if not self.state.db_initialised:
+            raise DeferrableFailedHookChecksError("db is not initialised.")
+        if not self.dependent.is_relation_feasible(self.relation_name):
+            raise NonDeferrableFailedHookChecksError("relation is not feasible")
+        # TODO: revision checks.
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
+        if not self.charm.unit.is_leader():
+            raise NonDeferrableFailedHookChecksError
+
+    def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
+        """Runs pre hooks checks and raises the appropriate error if it fails.
+
+        Raises:
+            NonDeferrableFailedHookChecksError, DeferrableFailedHookChecksError
+        """
+        self.assert_pass_sanity_hook_checks()
+
+        pbm_status = self.dependent.backup_manager.get_status()
+        if isinstance(pbm_status, MaintenanceStatus):
+            raise DeferrableFailedHookChecksError(
+                "Cannot add/remove shards while a backup/restore is in progress."
+            )
+
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
+            )
+            if not leaving:
+                raise DeferrableFailedHookChecksError
+            if self.state.has_departed_run(relation.id):
+                raise DeferrableFailedHookChecksError(
+                    "must wait for relation departed hook to decide if relation should be removed"
+                )
+            self.dependent.assert_proceed_on_broken_event(relation)
+
     def update_credentials(self, key: str, value: str) -> None:
         """Sends new credentials for a new key value pair across all shards."""
         data_interface = DatabaseProviderData(self.model, self.relation_name.value)
         for relation in self.state.config_server_relation:
+            if data_interface.fetch_relation_field(relation.id, "database") is None:
+                logger.info("Database Requested event has not run yet for relation {relation.id}")
+                continue
             data_interface.update_relation_data(relation.id, {key: value})
 
     def update_mongos_hosts(self):
@@ -136,14 +185,17 @@ class ConfigServerManager(Object):
         """Updates the new CA for all related shards."""
         data_interface = DatabaseProviderData(self.model, self.relation_name.value)
         for relation in self.state.config_server_relation:
+            if data_interface.fetch_relation_field(relation.id, "database") is None:
+                logger.info("Database Requested event has not run yet for relation {relation.id}")
+                continue
             if new_ca is None:
                 data_interface.delete_relation_data(
                     relation.id, [ConfigServerKeys.int_ca_secret.value]
                 )
-            else:
-                data_interface.update_relation_data(
-                    relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
-                )
+                continue
+            data_interface.update_relation_data(
+                relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
+            )
 
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""
@@ -403,10 +455,10 @@ class ShardManager(Object):
         self.state.unit_peer_data["drained"] = json.dumps(False)
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
 
-    def relation_changed(self, relation: Relation):
+    def relation_changed(self, relation: Relation, leaving: bool = False):
         """Retrieves secrets from config-server and updates them within the shard."""
         try:
-            self.assert_pass_hook_checks(relation)
+            self.assert_pass_hook_checks(relation=relation, leaving=leaving)
         except:
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
