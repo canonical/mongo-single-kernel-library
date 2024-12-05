@@ -24,10 +24,10 @@ def test_tls_relation_joined(harness: Harness[MongoTestCharm]):
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
-    external_key = manager.get_tls_secret(False, SECRET_KEY_LABEL)
-    external_csr = manager.get_tls_secret(False, SECRET_CSR_LABEL)
-    internal_key = manager.get_tls_secret(True, SECRET_KEY_LABEL)
-    internal_csr = manager.get_tls_secret(True, SECRET_CSR_LABEL)
+    external_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    external_csr = manager.state.tls.get_secret(False, SECRET_CSR_LABEL)
+    internal_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    internal_csr = manager.state.tls.get_secret(True, SECRET_CSR_LABEL)
 
     assert external_csr is not None
     assert external_key is not None
@@ -88,8 +88,8 @@ def test_set_private_key(harness: Harness[MongoTestCharm]):
         "set-tls-private-key", params={"internal-key": internal_key, "external-key": external_key}
     )
 
-    external_key_from_secret = manager.get_tls_secret(False, SECRET_KEY_LABEL)
-    internal_key_from_secret = manager.get_tls_secret(True, SECRET_KEY_LABEL)
+    external_key_from_secret = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    internal_key_from_secret = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
 
     assert internal_key.rstrip() == internal_key_from_secret
     assert external_key.rstrip() == external_key_from_secret
