@@ -148,7 +148,6 @@ def test_mongos_config_manager(mocker):
         f"--auditPath={VM_PATH['mongod']['LOGS']}/audit.log",
     ]
     assert auth_parameter == [
-        "--auth",
         "--clusterAuthMode=keyFile",
         f"--keyFile={VM_PATH['mongod']['CONF']}/keyFile",
     ]

@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 """The peer unit relation databag."""
 
+import json
 from enum import Enum
 from functools import cached_property
 
@@ -99,3 +100,14 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         K8s-only.
         """
         return self.k8s.get_node_port(MongoPorts.MONGOS_PORT)
+
+    @property
+    def drained(self) -> bool:
+        """Is the shard drained."""
+        return json.loads(self.relation_data.get("drained", "true"))
+
+    @drained.setter
+    def drained(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError(f"drained value is not boolean but {value}")
+        self.update({"drained": json.dumps(value)})

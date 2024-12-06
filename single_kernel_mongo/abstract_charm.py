@@ -10,7 +10,7 @@ from ops.charm import CharmBase
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
-from single_kernel_mongo.core.structured_config import MongoConfigModel
+from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
 from single_kernel_mongo.status import StatusManager
 
@@ -76,7 +76,6 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
 
     def on_leader_elected(self, _):
         """First leader elected handler."""
-        # FIXME: Check role status in databag first.
-
         # Sets the role in the databag.
-        self.operator.state.app_peer_data.role = self.parsed_config.role
+        if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
+            self.operator.state.app_peer_data.role = self.parsed_config.role

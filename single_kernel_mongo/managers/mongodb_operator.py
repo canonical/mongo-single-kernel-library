@@ -7,13 +7,12 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
-from ops.model import Container, Unit
+from ops.model import Container, Relation, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -35,9 +34,13 @@ from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, Ba
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
+from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DeferrableFailedHookChecksError,
+    EarlyRemovalOfConfigServerError,
+    NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardingMigrationError,
     UpgradeInProgressError,
@@ -47,13 +50,13 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.managers.backups import BackupManager
 from single_kernel_mongo.managers.config import (
-    CommonConfigManager,
     LogRotateConfigManager,
     MongoDBConfigManager,
     MongoDBExporterConfigManager,
     MongosConfigManager,
 )
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
@@ -121,6 +124,20 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state,
             self.substrate,
         )
+        self.config_server_manager = ConfigServerManager(
+            self,
+            self.workload,
+            self.state,
+            self.substrate,
+            RelationNames.CONFIG_SERVER,
+        )
+        self.shard_manager = ShardManager(
+            self,
+            self.workload,
+            self.state,
+            self.substrate,
+            RelationNames.SHARDING,
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -128,6 +145,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
+        self.config_server_events = ConfigServerEventHandler(self)
+        self.sharding_event_handlers = ShardEventHandler(self)
 
     @property
     def config(self):
@@ -172,17 +191,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         # END: Define config managers
 
-    @property
-    def config_managers(self) -> Iterable[CommonConfigManager]:  # pragma: nocover
-        """All config managers for iteration."""
-        return (
-            self.config_manager,
-            self.mongos_config_manager,
-            self.backup_manager,
-            self.logrotate_config_manager,
-            self.mongodb_exporter_config_manager,
-        )
-
     # BEGIN: Handlers.
 
     @override
@@ -195,8 +203,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-        for config_manager in self.config_managers:
-            config_manager.set_environment()
+        self.config_manager.set_environment()
+        self.mongos_config_manager.set_environment()
 
         self.logrotate_config_manager.connect()
 
@@ -433,9 +441,21 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         # A single replica cannot step down as primary and we cannot reconfigure the replica set to
         # have 0 members.
-        # TODO: When we have config server and shard managers.
-        # if self._is_removing_last_replica:
-        #    pass
+        if self.is_removing_last_replica:
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.state.config_server_relation:
+                current_shards = [
+                    relation.app.name for relation in self.state.config_server_relation
+                ]
+                early_removal_message = f"Cannot remoe config-server, still related to shards {', '.join(current_shards)}"
+                logger.error(early_removal_message)
+                raise EarlyRemovalOfConfigServerError(early_removal_message)
+            if self.state.is_role(MongoDBRoles.SHARD) and self.state.shard_relation is not None:
+                logger.info("Wait for shard to drain before detaching storage.")
+                self.charm.status_manager.to_maintenance("Draining shard from cluster")
+                mongos_hosts = self.state.shard_state.mongos_hosts
+                self.shard_manager.wait_for_draining(mongos_hosts)
+                logger.info("Shard successfully drained storage.")
+            return
 
         try:
             # retries over a period of 10 minutes in an attempt to resolve race conditions it is
@@ -467,10 +487,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             return
 
-        # TODO: TLS + Shard check.
+        if self.state.is_role(MongoDBRoles.SHARD):
+            shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
+            if config_server_has_tls and not shard_has_tls:
+                self.charm.status_manager.to_blocked("Shard requires TLS to be enabled")
+                return
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
+            return
 
         try:
             self.perform_self_healing()
@@ -554,7 +579,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:
                 self.mongo_manager.update_app_relation_data(relation)
-        # TODO: Update related hosts for config server , cluster.
+        self.config_server_manager.update_mongos_hosts()
+        # TODO: Update related hosts for cluster.
 
     def open_ports(self) -> None:
         """Open ports on the workload.
@@ -579,7 +605,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Retrieves the primary unit with the primary replica."""
         with MongoConnection(self.state.mongo_config) as connection:
             try:
-                primary_ip = connection.primary
+                primary_ip = connection.primary()
             except Exception as e:
                 logger.error(f"Unable to get primary: {e}")
                 return None
@@ -749,3 +775,15 @@ class MongoDBOperator(OperatorProtocol, Object):
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
         return self.state.planned_units == 0 and len(self.state.peers_units) == 0
+
+    def assert_proceed_on_broken_event(self, relation: Relation):
+        """Runs some checks on broken relation event."""
+        if not self.state.has_departed_run(relation.id):
+            raise DeferrableFailedHookChecksError(
+                "must wait for relation departed hook to decide if relation should be removed"
+            )
+
+        if self.state.is_scaling_down(relation.id):
+            raise NonDeferrableFailedHookChecksError(
+                "Relation broken event occurring during scale down, do not proceed to remove users."
+            )
