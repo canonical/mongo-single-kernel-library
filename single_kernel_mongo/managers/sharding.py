@@ -96,6 +96,9 @@ class ConfigServerManager(Object):
             relation_data[ConfigServerKeys.int_ca_secret.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
+        self.data_interface.set_credentials(
+            relation.id, "unused", "unused"
+        )  # Triggers the database created event
 
     def on_relation_event(self, relation: Relation, is_leaving: bool = False):
         """Handles adding and removing shards.
@@ -574,11 +577,13 @@ class ShardManager(Object):
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""
-        if self.dependent.primary is None:
-            logger.info(
-                "Replica set has not elected a primary after restarting, cannot update passwords."
-            )
-            raise NotReadyError
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                if self.dependent.primary is None:
+                    logger.info(
+                        "Replica set has not elected a primary after restarting, cannot update passwords."
+                    )
+                    raise NotReadyError
 
         try:
             self.update_password(user=OperatorUser, new_password=operator_password)
