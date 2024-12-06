@@ -100,7 +100,7 @@ class BackupConfigManager(CommonConfigManager):
                 self.workload.stop()
                 self.set_environment()
                 # Avoid restart errors on PBM.
-                time.sleep(2)
+                time.sleep(5)
                 self.workload.start()
             except WorkloadServiceError as e:
                 logger.error(f"Failed to restart {self.workload.service}: {e}")

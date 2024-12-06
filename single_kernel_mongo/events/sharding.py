@@ -41,8 +41,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
-
 
 class ConfigServerEventHandler(Object):
     """Event Handler for managing config server side events."""
@@ -110,10 +108,7 @@ class ShardEventHandler(Object):
             self.charm.on[self.relation_name].relation_created, self._on_relation_created
         )
         self.framework.observe(
-            self.database_require_events.on.database_created, self._on_relation_changed
-        )
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_changed
+            self.database_require_events.on.database_created, self._on_database_created
         )
 
         self.framework.observe(
@@ -132,9 +127,9 @@ class ShardEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent):
         self.manager.relation_created()
 
-    def _on_relation_changed(self, event: RelationChangedEvent | DatabaseCreatedEvent):
+    def _on_database_created(self, event: DatabaseCreatedEvent):
         try:
-            self.manager.relation_changed(event.relation)
+            self.manager.on_database_created(event.relation)
         except (
             DeferrableFailedHookChecksError,
             WaitingForSecretsError,
