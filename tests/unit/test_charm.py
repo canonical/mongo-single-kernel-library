@@ -50,7 +50,7 @@ def test_charm_install_success_calls_set_env(harness, mocker):
     harness.charm.on.install.emit()
 
     mock_connect.assert_called()
-    assert mock_set_env.call_count == 5
+    assert mock_set_env.call_count == 2
 
 
 def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_interactions):
@@ -431,7 +431,6 @@ def test_primary(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        new_callable=mocker.PropertyMock,
         return_value="1.1.1.1",
     )
     output = harness.run_action("get-primary")
@@ -453,7 +452,6 @@ def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        new_callable=mocker.PropertyMock,
         return_value=PEER_ADDR["private-address"],
     )
     rel = harness.charm.operator.state.peer_relation

@@ -167,3 +167,7 @@ class DeferrableFailedHookChecksError(Exception):
 
 class NonDeferrableFailedHookChecksError(Exception):
     """Raised when we failed to pass hook checks and we should skip."""
+
+
+class EarlyRemovalOfConfigServerError(Exception):
+    """Raised when we try to remove config server while it still has shards."""

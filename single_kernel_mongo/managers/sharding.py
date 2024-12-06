@@ -612,8 +612,6 @@ class ShardManager(Object):
         # service was restarted. Sometimes this requires units getting insync again.
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
-                # TODO, in the future use set_password from src/charm.py - this will require adding
-                # a library, for exceptions used in both charm code and lib code.
                 with MongoConnection(self.state.mongo_config) as mongo:
                     try:
                         mongo.set_user_password(user.username, new_password)
