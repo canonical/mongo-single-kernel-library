@@ -402,7 +402,7 @@ class ShardManager(Object):
             self.model,
             relation_name=self.relation_name,
             additional_secret_fields=SECRETS_FIELDS,
-            database_name="",  # Needed for relation events
+            database_name="unused",  # Needed for relation events
         )
 
     def assert_pass_sanity_hook_checks(self):
