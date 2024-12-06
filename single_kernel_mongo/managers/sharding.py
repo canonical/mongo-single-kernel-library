@@ -77,6 +77,7 @@ class ConfigServerManager(Object):
 
     def on_database_requested(self, relation: Relation):
         """Relation joined event."""
+        logger.info("Running Database requested hook.")
         self.assert_pass_hook_checks(relation)
 
         if self.data_interface.fetch_relation_field(relation.id, "database") is None:
@@ -101,12 +102,16 @@ class ConfigServerManager(Object):
 
         Updating of shards is done automatically via MongoDB change-streams.
         """
+        logger.info("Running Relation Changed hook.")
         self.assert_pass_hook_checks(relation, is_leaving)
 
         if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-            raise DeferrableFailedHookChecksError(
-                f"Database Requested event has not run yet for relation {relation.id}"
-            )
+            logger.info("Waiting for secrets requested")
+            return
+
+        if not self.data_interface.fetch_relation_field(relation.id, "auth-updated") == "true":
+            logger.info(f"Waiting for shard {relation.app.name} to update its authentication")
+            return
 
         try:
             logger.info("Adding/Removing shards not present in cluster.")
@@ -496,6 +501,8 @@ class ShardManager(Object):
 
         self.sync_cluster_passwords(operator_password, backup_password)
 
+        # We have updated our auth, config-server can add the shard.
+        self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
     def handle_secret_changed(self, secret_label: str | None):
