@@ -22,6 +22,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
+    ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
 )
@@ -75,7 +76,7 @@ class ConfigServerEventHandler(Object):
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
             self.manager.on_relation_event(event.relation, is_leaving)
-        except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError) as e:
+        except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError, ShardAuthError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
