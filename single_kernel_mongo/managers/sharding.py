@@ -467,7 +467,7 @@ class ShardManager(Object):
         self.state.unit_peer_data.drained = False
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
 
-    def relation_changed(self, relation: Relation, leaving: bool = False):
+    def on_database_created(self, relation: Relation, leaving: bool = False):
         """Retrieves secrets from config-server and updates them within the shard."""
         try:
             self.assert_pass_hook_checks(relation=relation, is_leaving=leaving)
@@ -478,7 +478,7 @@ class ShardManager(Object):
         keyfile = self.state.shard_state.keyfile
         tls_ca = self.state.shard_state.internal_ca_secret
 
-        if keyfile is None and tls_ca is None:
+        if keyfile is None:
             logger.info("Waiting for secrets from config-server")
             raise WaitingForSecretsError
 
@@ -517,6 +517,8 @@ class ShardManager(Object):
             return
         if not (relation := self.state.shard_relation):
             return
+        if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
+            return
 
         # many secret changed events occur, only listen to those related to our interface with the
         # config-server
@@ -546,10 +548,9 @@ class ShardManager(Object):
 
         self.charm.status_manager.to_active("Shard drained from cluster, ready for removal")
 
-    def update_member_auth(self, keyfile: str | None, tls_ca: str | None):
+    def update_member_auth(self, keyfile: str, tls_ca: str | None):
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = tls_ca is not None
-        cluster_auth_keyfile = keyfile is not None
         tls_integrated = self.state.tls_relation is not None
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
@@ -560,14 +561,16 @@ class ShardManager(Object):
             logger.info("Cluster implements internal membership auth via certificates")
             self.dependent.tls_manager.generate_certificate_request(param=None, internal=True)
             self.dependent.tls_manager.generate_certificate_request(param=None, internal=False)
-        elif cluster_auth_keyfile and not cluster_auth_tls and not tls_integrated:
+        else:
             logger.info("Cluster implements internal membership auth via keyFile")
 
         # Copy over keyfile regardless of whether the cluster uses TLS or or KeyFile for internal
         # membership authentication. If TLS is disabled on the cluster this enables the cluster to
         # have the correct cluster KeyFile readily available.
-        if keyfile:
-            self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
+        self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
+        self.dependent.restart_charm_services()
+        if self.charm.unit.is_leader():
+            self.state.app_peer_data.keyfile = keyfile
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""
