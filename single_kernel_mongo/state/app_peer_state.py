@@ -82,8 +82,8 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         return MongoDBRoles(databag_role)
 
     @role.setter
-    def role(self, value: str) -> None:
-        self.update({"role": value})
+    def role(self, value: MongoDBRoles) -> None:
+        self.update({"role": value.value})
 
     def is_role(self, role_name: str) -> bool:
         """Checks if the application is running in the provided role."""
