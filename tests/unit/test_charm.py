@@ -33,30 +33,12 @@ def test_install_snap_install_success(harness, mocker):
     assert harness.charm.unit.status == MaintenanceStatus("Installed MongoDB")
 
 
-def test_charm_install_success_calls_set_env(harness, mocker):
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present", return_value=True
-    )
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write", return_value=True)
-    mock_connect = mocker.patch(
-        "single_kernel_mongo.managers.config.LogRotateConfigManager.connect"
-    )
-
-    mock_set_env = mocker.patch(
-        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
-    )
-
-    harness.charm.on.install.emit()
-
-    mock_connect.assert_called()
-    assert mock_set_env.call_count == 5
-
-
 def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_interactions):
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
     )
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     harness.set_leader(True)
     harness.charm.on.start.emit()
@@ -67,6 +49,7 @@ def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_int
 def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock(return_value=False),
@@ -87,6 +70,7 @@ def test_start_unable_to_open_tcp_moves_to_blocked(harness, mocker, mock_fs_inte
             raise WorkloadExecError("open-port", 1, None, None)
 
     harness.charm.workload.exec = mock_exec
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     harness.set_leader(True)
     harness.charm.on.start.emit()
@@ -94,6 +78,7 @@ def test_start_unable_to_open_tcp_moves_to_blocked(harness, mocker, mock_fs_inte
 
 
 def test_start_success(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch(
@@ -116,6 +101,7 @@ def test_start_success(harness, mocker, mock_fs_interactions):
 
 
 def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch(
@@ -135,6 +121,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
 
 
 def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch(

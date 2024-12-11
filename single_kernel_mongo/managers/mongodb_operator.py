@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, final
 
@@ -46,7 +45,6 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.managers.backups import BackupManager
 from single_kernel_mongo.managers.config import (
-    CommonConfigManager,
     LogRotateConfigManager,
     MongoDBConfigManager,
     MongoDBExporterConfigManager,
@@ -173,17 +171,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         # END: Define config managers
 
-    @property
-    def config_managers(self) -> Iterable[CommonConfigManager]:  # pragma: nocover
-        """All config managers for iteration."""
-        return (
-            self.config_manager,
-            self.mongos_config_manager,
-            self.backup_manager,
-            self.logrotate_config_manager,
-            self.mongodb_exporter_config_manager,
-        )
-
     # BEGIN: Handlers.
 
     @override
@@ -195,9 +182,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
-
-        for config_manager in self.config_managers:
-            config_manager.set_environment()
 
         self.logrotate_config_manager.connect()
 
@@ -212,9 +196,20 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Storages not attached yet.")
             raise ContainerNotReadyError
 
+        # Configure the workloads
+        self.config_manager.set_environment()
+        self.mongos_config_manager.set_environment()
+
+        # Instantiate the keyfile
         self.instantiate_keyfile()
+
+        # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
+
+        # Update licenses
         self.handle_licenses()
+
+        # Sets directory permissions
         self.set_permissions()
 
         try:
