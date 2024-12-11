@@ -119,6 +119,8 @@ class CharmState(Object):
     @property
     def client_relations(self) -> set[Relation]:
         """The set of client relations."""
+        if self.charm_role.name == RoleEnum.MONGOS:
+            return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])
 
     @property

@@ -7,10 +7,10 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+
+# from pathlib import Path
 from typing import TYPE_CHECKING, final
 
-from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Container, MaintenanceStatus, Relation, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
@@ -687,63 +687,12 @@ class MongoDBOperator(OperatorProtocol, Object):
             return False
         return True
 
-    @override
-    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent):
-        """Checks relation departed event is the result of removed relation or scale down.
-
-        Relation departed and relation broken events occur during scaling down or during relation
-        removal, only relation departed events have access to metadata to determine which case.
-        """
-        departing_name = event.departing_unit.name if event.departing_unit else ""
-        scaling_down = self.state.set_scaling_down(
-            event.relation.id, departing_unit_name=departing_name
-        )
-
-        if scaling_down:
-            logger.info(
-                "Scaling down the application, no need to process removed relation in broken hook."
-            )
-
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
             raise Exception("Waiting for leader unit to generate keyfile contents")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
-
-    def handle_licenses(self) -> None:
-        """Pull / Push licenses.
-
-        This function runs differently according to the substrate. We do not
-        store the licenses at the same location, and we do not handle the same
-        licenses.
-        """
-        licenses = [
-            "snap",
-            "mongodb-exporter",
-            "percona-backup-mongodb",
-            "percona-server",
-        ]
-        prefix = Path("./src/licenses") if self.substrate == Substrates.VM else Path("./")
-        # Create the directory if needed.
-        if self.substrate == Substrates.VM:
-            prefix.mkdir(exist_ok=True)
-            file = Path("./LICENSE")
-            dst = prefix / "LICENSE-charm"
-            self.workload.copy_to_unit(file, dst)
-        else:
-            name = "LICENSE-rock"
-            file = Path(f"{self.workload.paths.licenses_path}/{name}")
-            dst = prefix / name
-            if not dst.is_file():
-                self.workload.copy_to_unit(file, dst)
-
-        for license in licenses:
-            name = f"LICENSE-{license}"
-            file = Path(f"{self.workload.paths.licenses_path}/{name}")
-            dst = prefix / name
-            if not dst.is_file():
-                self.workload.copy_to_unit(file, dst)
 
     def set_permissions(self) -> None:
         """Ensure directories and make permissions.

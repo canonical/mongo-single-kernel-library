@@ -40,6 +40,7 @@ from single_kernel_mongo.state.tls_state import (
 )
 from single_kernel_mongo.utils.helpers import parse_tls_file
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
+from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
     pass
@@ -61,7 +62,7 @@ class TLSManager:
     def __init__(
         self,
         dependent: OperatorProtocol,
-        workload: MongoDBWorkload,
+        workload: MongoDBWorkload | MongosWorkload,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
@@ -328,3 +329,34 @@ class TLSManager:
             return self.state.config_server_name or self.charm.app.name
 
         return self.charm.app.name
+
+    def update_tls_sans(self) -> None:
+        """Emits a certificate expiring event when sans in current certificates are out of date.
+
+        This can occur for a variety of reasons:
+        1. Node port has been toggled on
+        2. Node port has been toggled off
+        3. The public K8s IP has changed
+
+        Mongos k8s only.
+        """
+        for internal in [True, False]:
+            # if the certificate has already been requested, we do not want to re-request
+            # another one and lead to an infinite chain of certificate events.
+            if self.is_set_waiting_for_cert_to_update(internal):
+                continue
+            current_sans = self.get_current_sans(internal)
+            current_sans_ip = set(current_sans["sans_ip"]) if current_sans else set()
+            expected_sans_ip = set(self.get_new_sans()["sans_ip"]) if current_sans else set()
+            sans_ip_changed = current_sans_ip ^ expected_sans_ip
+
+            if not sans_ip_changed:
+                continue
+
+            logger.info(
+                f'Mongos {self.charm.unit.name.split("/")[1]} updating certificate SANs - '
+                f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
+                f"NEW SANs = {expected_sans_ip - current_sans_ip}"
+            )
+
+            self.generate_new_csr(internal)
