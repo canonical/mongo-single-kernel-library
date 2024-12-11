@@ -107,6 +107,8 @@ class CharmState(Object):
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
+        if self.charm_role.name == RoleEnum.MONGOS:
+            return self.model.get_relation(PeerRelationNames.ROUTER_PEERS.value)
         return self.model.get_relation(PeerRelationNames.PEERS.value)
 
     @property
