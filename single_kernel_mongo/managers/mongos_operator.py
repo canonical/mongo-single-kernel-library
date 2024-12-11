@@ -133,10 +133,9 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
-            # TODO: Updated external service
+            self.update_external_services()
 
             self.tls_manager.update_tls_sans()
-            # TODO: Updated client related hosts
             self.share_connection_info()
 
     @override
