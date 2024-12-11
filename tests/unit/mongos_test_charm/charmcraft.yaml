@@ -1,0 +1,30 @@
+# This file configures Charmcraft.
+# See https://juju.is/docs/sdk/charmcraft-config for guidance.
+
+type: charm
+bases:
+  - build-on:
+      - name: ubuntu
+        channel: "22.04"
+    run-on:
+      - name: ubuntu
+        channel: "22.04"
+
+parts:
+  charm:
+    charm-strict-dependencies: true
+    override-pull: |
+      craftctl default
+      if [[ ! -f requirements.txt ]]
+      then
+          echo 'ERROR: Use "tox run -e build" instead of calling "charmcraft pack" directly' >&2
+          exit 1
+      fi
+    build-packages:
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
+      - rustc
+      - cargo
+    prime:
+      - workload_version
