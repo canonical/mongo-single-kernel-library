@@ -66,7 +66,7 @@ class MongosOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
+            self.charm.unit.get_container(CONTAINER) if self.substrate == Substrates.K8S else None
         )
 
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
@@ -133,9 +133,10 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
-            self.update_external_services()
+            # TODO: Updated external service
 
             self.tls_manager.update_tls_sans()
+            # TODO: Updated client related hosts
             self.share_connection_info()
 
     @override
