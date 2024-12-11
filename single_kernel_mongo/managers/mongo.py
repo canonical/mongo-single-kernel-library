@@ -45,6 +45,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     OperatorUser,
 )
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
+from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import OperatorProtocol
@@ -58,7 +59,7 @@ class MongoManager(Object):
     def __init__(
         self,
         dependent: OperatorProtocol,
-        workload: MongoDBWorkload,
+        workload: MongoDBWorkload | MongosWorkload,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
@@ -294,8 +295,6 @@ class MongoManager(Object):
             return
         username = data_interface.fetch_my_relation_field(relation.id, "username")
         password = data_interface.fetch_my_relation_field(relation.id, "password")
-        endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
-        uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         if not username or not password:
             username = username or f"relation-{relation.id}"
             password = password or self.workload.generate_password()
@@ -311,8 +310,16 @@ class MongoManager(Object):
             data_interface,
             relation.id,
         )
+        self.update_app_relation_data_for_config(relation, config)
+
+    def update_app_relation_data_for_config(self, relation: Relation, config: MongoConfiguration):
+        """Updates the data for a given config."""
+        data_interface = DatabaseProviderData(self.model, relation.name)
+        endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
+        uris = data_interface.fetch_my_relation_field(relation.id, "uris")
+        database = data_interface.fetch_my_relation_field(relation.id, "database")
         with MongoConnection(self.state.mongo_config) as mongo:
-            user_exists = mongo.user_exists(username)
+            user_exists = mongo.user_exists(config.username)
         if user_exists:
             if config.hosts != set(endpoints.split(",")):
                 data_interface.set_endpoints(
@@ -323,6 +330,11 @@ class MongoManager(Object):
                 data_interface.set_uris(
                     relation.id,
                     config.uri,
+                )
+            if config.database != database:
+                data_interface.set_database(
+                    relation.id,
+                    config.database,
                 )
 
     def auto_delete_db(self, relation: Relation) -> None:

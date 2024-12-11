@@ -9,7 +9,7 @@ from ops.model import Application, Relation
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import SECRETS_APP
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import ExposeExternal, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
     DataPeerData,
 )
@@ -19,12 +19,21 @@ from single_kernel_mongo.state.abstract_state import AbstractRelationState
 class AppPeerDataKeys(str, Enum):
     """Enum to access the app peer data keys."""
 
+    # MongoDB
     managed_users_key = "managed-users-key"
     db_initialised = "db_initialised"
     role = "role"
     keyfile = "keyfile"
     external_connectivity = "external-connectivity"
     mongos_hosts = "mongos_hosts"
+
+    # Shared
+    role = "role"
+
+    # Mongos
+    database = "database"
+    extra_user_roles = "extra-user-roles"
+    expose_external = "expose-external"
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
@@ -165,3 +174,40 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
             raise ValueError(
                 f"'external-connectivity' must be a boolean value. Provided: {value} is of type {type(value)}"
             )
+
+    @property
+    def database(self) -> str:
+        """Database tag for mongos."""
+        return self.relation_data.get(AppPeerDataKeys.database.value, "mongos-database")
+
+    @database.setter
+    def database(self, value: str):
+        """Sets database tag in databag."""
+        self.update({AppPeerDataKeys.database.value: value})
+
+    @property
+    def extra_user_roles(self) -> set[str]:
+        """extra_user_roles tag for mongos."""
+        return set(
+            self.relation_data.get(
+                AppPeerDataKeys.extra_user_roles.value,
+                "default",
+            ).split(",")
+        )
+
+    @extra_user_roles.setter
+    def extra_user_roles(self, value: set[str]):
+        """Sets extra_user_roles tag in databag."""
+        roles_str = ",".join(value)
+        self.update({AppPeerDataKeys.extra_user_roles.value: roles_str})
+
+    @property
+    def expose_external(self) -> ExposeExternal:
+        """The value of the expose-external flag."""
+        if not self.relation:
+            return ExposeExternal.UNKNOWN
+        return ExposeExternal(self.relation_data.get(AppPeerDataKeys.expose_external.value, ""))
+
+    @expose_external.setter
+    def expose_external(self, value: ExposeExternal):
+        self.update({AppPeerDataKeys.expose_external.value: value.value})
