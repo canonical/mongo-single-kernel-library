@@ -17,7 +17,7 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import CONTAINER, MongoPorts, RoleEnum, Substrates
+from single_kernel_mongo.config.literals import MongoPorts, RoleEnum, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -66,7 +66,7 @@ class MongosOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(CONTAINER) if self.substrate == Substrates.K8S else None
+            self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
         )
 
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
