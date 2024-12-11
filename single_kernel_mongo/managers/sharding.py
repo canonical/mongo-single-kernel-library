@@ -37,8 +37,8 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProviderData,
-    DatabaseRequirerData,
+    ProviderData,
+    RequirerData,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import SECRETS_FIELDS, ConfigServerKeys
@@ -71,16 +71,14 @@ class ConfigServerManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = DatabaseProviderData(
-            self.model, relation_name=self.relation_name.value
-        )
+        self.data_interface = ProviderData(self.model, relation_name=self.relation_name.value)
 
     def on_database_requested(self, relation: Relation):
         """Relation joined event."""
         logger.info("Running Database requested hook.")
         self.assert_pass_hook_checks(relation)
 
-        if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+        if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
             raise DeferrableFailedHookChecksError(
                 f"Database Requested event has not run yet for relation {relation.id}"
             )
@@ -96,9 +94,6 @@ class ConfigServerManager(Object):
             relation_data[ConfigServerKeys.int_ca_secret.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
-        self.data_interface.set_credentials(
-            relation.id, "unused", "unused"
-        )  # Triggers the database created event
 
     def on_relation_event(self, relation: Relation, is_leaving: bool = False):
         """Handles adding and removing shards.
@@ -108,12 +103,8 @@ class ConfigServerManager(Object):
         logger.info("Running Relation Changed hook.")
         self.assert_pass_hook_checks(relation, is_leaving)
 
-        if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+        if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
             logger.info("Waiting for secrets requested")
-            return
-
-        if not self.data_interface.fetch_relation_field(relation.id, "auth-updated") == "true":
-            logger.info(f"Waiting for shard {relation.app.name} to update its authentication")
             return
 
         try:
@@ -406,11 +397,10 @@ class ShardManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_requirer = DatabaseRequirerData(
+        self.data_requirer = RequirerData(
             self.model,
             relation_name=self.relation_name,
             additional_secret_fields=SECRETS_FIELDS,
-            database_name="unused",  # Needed for relation events
         )
 
     def assert_pass_sanity_hook_checks(self):
@@ -505,7 +495,6 @@ class ShardManager(Object):
         self.sync_cluster_passwords(operator_password, backup_password)
 
         # We have updated our auth, config-server can add the shard.
-        self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
     def handle_secret_changed(self, secret_label: str | None):
@@ -519,8 +508,6 @@ class ShardManager(Object):
         if not secret_label:
             return
         if not (relation := self.state.shard_relation):
-            return
-        if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
             return
 
         # many secret changed events occur, only listen to those related to our interface with the
