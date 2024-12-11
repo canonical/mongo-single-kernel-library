@@ -33,7 +33,7 @@ class AuditLogConfig:
     destination: str = "file"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Role:
     """Defines a role for the charm."""
 

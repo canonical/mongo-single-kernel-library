@@ -24,7 +24,7 @@ def test_mongodb_workload_init(monkeypatch):
     def mock_snap(*arg, **kwargs):
         return ""
 
-    monkeypatch.setattr(workload.mongod, "get", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGOD_ARGS"
     assert workload.role == ROLES["vm"]["mongod"]
@@ -59,7 +59,7 @@ def test_mongos_workload_init(monkeypatch):
     def mock_snap(*arg, **kwargs):
         return ""
 
-    monkeypatch.setattr(workload.mongod, "get", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
 
     assert workload.layer == Layer(
         {
@@ -86,7 +86,7 @@ def test_mongodb_exporter_workload_init(monkeypatch):
     def mock_snap(*arg, **kwargs):
         return ""
 
-    monkeypatch.setattr(workload.mongod, "get", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
 
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGODB_URI"
@@ -117,7 +117,7 @@ def test_pbm_workload_init(monkeypatch):
     def mock_snap(*arg, **kwargs):
         return ""
 
-    monkeypatch.setattr(workload.mongod, "get", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
 
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.paths.pbm_config == Path(
@@ -178,7 +178,7 @@ def test_snap_install_failure(monkeypatch):
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
-    monkeypatch.setattr(workload.mongod, "ensure", mock_snap_ensure)
+    monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap_ensure)
 
     assert not workload.install()
 
@@ -189,8 +189,8 @@ def test_install_success(monkeypatch):
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
-    monkeypatch.setattr(workload.mongod, "ensure", mock_snap)
-    monkeypatch.setattr(workload.mongod, "hold", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, "hold", mock_snap)
 
     assert workload.install()
 
@@ -229,7 +229,7 @@ def test_command_success(monkeypatch, command):
         return
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
-    monkeypatch.setattr(workload.mongod, command, mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, command, mock_snap)
 
     assert getattr(workload, command)() is None
 
@@ -240,7 +240,7 @@ def test_command_success_failure(monkeypatch, caplog, command):
         raise SnapError
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
-    monkeypatch.setattr(workload.mongod, command, mock_snap)
+    monkeypatch.setattr(workload.mongod_snap, command, mock_snap)
 
     caplog.clear()
     with pytest.raises(WorkloadServiceError):

@@ -38,34 +38,34 @@ class VMWorkload(WorkloadBase):
     def __init__(self, role: Role, container: Container | None) -> None:
         super().__init__(role, container)
         self.snap = SNAP
-        self.mongod = snap.SnapCache()[self.snap.name]
+        self.mongod_snap = snap.SnapCache()[self.snap.name]
 
     @property
     @override
     def workload_present(self) -> bool:
-        return self.mongod.present
+        return self.mongod_snap.present
 
     @override
     def start(self) -> None:
         try:
-            self.mongod.start(services=[self.service])
+            self.mongod_snap.start(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
 
     @override
     def get_env(self) -> dict[str, str]:
-        return {self.env_var: self.mongod.get(self.snap_param)}
+        return {self.env_var: self.mongod_snap.get(self.snap_param)}
 
     @override
-    def update_env(self, parameters: chain[str]):
+    def update_env(self, parameters: chain[str]) -> None:
         content = " ".join(parameters)
-        self.mongod.set({self.snap_param: content})
+        self.mongod_snap.set({self.snap_param: content})
 
     @override
     def stop(self) -> None:
         try:
-            self.mongod.stop(services=[self.service])
+            self.mongod_snap.stop(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
@@ -73,7 +73,7 @@ class VMWorkload(WorkloadBase):
     @override
     def restart(self) -> None:
         try:
-            self.mongod.restart(services=[self.service])
+            self.mongod_snap.restart(services=[self.service])
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
@@ -165,7 +165,7 @@ class VMWorkload(WorkloadBase):
     )
     def active(self) -> bool:
         try:
-            return self.mongod.services[self.service]["active"]
+            return self.mongod_snap.services[self.service]["active"]
         except KeyError:
             return False
 
@@ -177,12 +177,12 @@ class VMWorkload(WorkloadBase):
             True if successfully installed. False otherwise.
         """
         try:
-            self.mongod.ensure(
+            self.mongod_snap.ensure(
                 snap.SnapState.Latest,
                 channel=self.snap.channel,
                 revision=self.snap.revision,
             )
-            self.mongod.hold()
+            self.mongod_snap.hold()
 
             return True
         except snap.SnapError as err:

@@ -9,8 +9,6 @@ from typing import Generic, TypeVar
 
 LOCALHOST = "127.0.0.1"
 
-CONTAINER = "mongod"
-
 
 class Substrates(str, Enum):
     """Possible substrates."""

@@ -17,8 +17,9 @@ import json
 import logging
 import re
 import time
+from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NewType
 
 from ops import Container
 from ops.framework import Object
@@ -55,6 +56,8 @@ from single_kernel_mongo.workload.backup_workload import PBMWorkload
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
+BackupListType = NewType("BackupListType", list[tuple[str, str, str]])
+
 BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
 REMAPPING_PATTERN = r"\ABackup doesn't match current cluster topology - it has different replica set names. Extra shards in the backup will cause this, for a simple example. The extra/unknown replica set names found in the backup are: ([\w\d\-,\s]+)([.] Backup has no data for the config server or sole replicaset)?\Z"
@@ -68,7 +71,16 @@ S3_PBM_OPTION_MAP = {
     "endpoint": "storage.s3.endpointUrl",
     "storage-class": "storage.s3.storageClass",
 }
+
 logger = logging.getLogger(__name__)
+
+
+class StatusCodeError(str, Enum):
+    """Status codes returned in PBM."""
+
+    MOVED_PERMANENTLY = "status code: 301"
+    FORBIDDEN = "status code: 403"
+    NOTFOUND = "status code: 404"
 
 
 def _backup_restore_retry_before_sleep(retry_state) -> None:
@@ -105,7 +117,11 @@ class BackupManager(Object, BackupConfigManager):
 
     @cached_property
     def environment(self) -> dict[str, str]:
-        """The environment used to run PBM commands."""
+        """The environment used to run PBM commands.
+
+        For security reason, we never provide the URI via arguments to the PBM
+        CLI. So we provide it as an environment variable.
+        """
         return {self.workload.env_var: self.state.backup_config.uri}
 
     def is_valid_s3_integration(self) -> bool:
@@ -151,12 +167,25 @@ class BackupManager(Object, BackupConfigManager):
 
     def list_backup_action(self) -> str:
         """List the backups entries."""
-        backup_list: list[tuple[str, str, str]] = []
+        backup_list: BackupListType = BackupListType([])
         try:
             pbm_status_output = self.pbm_status
         except WorkloadExecError as e:
             raise ListBackupError from e
         pbm_status = json.loads(pbm_status_output)
+
+        finished_backups = self.list_finished_backups(pbm_status=pbm_status)
+        backup_list = self.list_with_backups_in_progress(
+            pbm_status=pbm_status, backup_list=finished_backups
+        )
+
+        # process in progress backups
+
+        return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
+
+    def list_finished_backups(self, pbm_status: dict) -> BackupListType:
+        """Lists the finished backups from the status."""
+        backup_list: BackupListType = BackupListType([])
         backups = pbm_status.get("backups", {}).get("snapshot", [])
         for backup in backups:
             backup_status = "finished"
@@ -171,8 +200,12 @@ class BackupManager(Object, BackupConfigManager):
             if backup["status"] not in ["error", "done"]:
                 backup_status = "in progress"
             backup_list.append((backup["name"], backup["type"], backup_status))
+        return backup_list
 
-        # process in progress backups
+    def list_with_backups_in_progress(
+        self, pbm_status: dict, backup_list: BackupListType
+    ) -> BackupListType:
+        """Lists all the backups with the one in progress from the status and finished list."""
         running_backup = pbm_status["running"]
         if running_backup.get("type", None) == "backup":
             # backups are sorted in reverse order
@@ -187,8 +220,7 @@ class BackupManager(Object, BackupConfigManager):
                 )
             else:
                 backup_list.append((running_backup["name"], "logical", "in progress"))
-
-        return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
+        return backup_list
 
     @retry(
         stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
@@ -352,11 +384,11 @@ class BackupManager(Object, BackupConfigManager):
         except json.JSONDecodeError:
             error_message = pbm_status
 
-        if "status code: 403" in error_message:
+        if StatusCodeError.FORBIDDEN in error_message:
             message = "s3 credentials are incorrect."
-        elif "status code: 404" in error_message:
+        elif StatusCodeError.NOTFOUND in error_message:
             message = "s3 configurations are incompatible."
-        elif "status code: 301" in error_message:
+        elif StatusCodeError.MOVED_PERMANENTLY in error_message:
             message = "s3 configurations are incompatible."
         return message
 

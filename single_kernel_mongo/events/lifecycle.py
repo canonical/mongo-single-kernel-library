@@ -24,7 +24,7 @@ from ops.charm import (
 )
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import RoleEnum, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
@@ -71,12 +71,13 @@ class LifecycleEventsHandler(Object):
             self.charm.on[rel_name.value].relation_departed, self.on_relation_departed
         )
 
-        self.framework.observe(
-            getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached
-        )
-        self.framework.observe(
-            getattr(self.charm.on, "mongodb_storage_detaching"), self.on_storage_detaching
-        )
+        if self.dependent.name == RoleEnum.MONGOD:
+            self.framework.observe(
+                getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached
+            )
+            self.framework.observe(
+                getattr(self.charm.on, "mongodb_storage_detaching"), self.on_storage_detaching
+            )
 
     def on_start(self, event: StartEvent):
         """Start event."""

@@ -1,6 +1,10 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""Skeleton for the abstract charm."""
+"""Skeleton for the abstract charm.
+
+This abstract class is inherited by all actual charms that need to define the different ClassVar.
+An example can be found in ../tests/unit/mongodb_test_charm/src/charm.py.
+"""
 
 import logging
 from typing import ClassVar, Generic, TypeVar

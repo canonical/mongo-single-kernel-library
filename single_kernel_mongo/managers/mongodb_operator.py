@@ -19,7 +19,6 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
-    CONTAINER,
     MAX_PASSWORD_LENGTH,
     MongoPorts,
     RoleEnum,
@@ -95,7 +94,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(CONTAINER) if self.substrate == Substrates.K8S else None
+            self.charm.unit.get_container(self.role.name)
+            if self.substrate == Substrates.K8S
+            else None
         )
 
         # Defined workloads and configs
@@ -501,7 +502,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.connect()
-        # Rotate password.
+        # TODO: Rotate password.
         if user in (OperatorUser, BackupUser):
             pass
 

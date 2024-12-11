@@ -82,7 +82,6 @@ class DatabaseEventsHandler(Object):
 
         if isinstance(event, RelationBrokenEvent):
             relation_departing = True
-            # TODO: Checks
             if not self.dependent.state.has_departed_run(event.relation.id):
                 defer_event_with_info_log(
                     logger,

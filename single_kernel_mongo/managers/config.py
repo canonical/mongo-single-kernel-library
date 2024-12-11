@@ -319,6 +319,8 @@ class MongosConfigManager(MongoConfigManager):
     @property
     def config_server_db_parameter(self) -> list[str]:
         """The config server DB parameter."""
+        # In case we are integrated with a config-server, we need to provide
+        # it's URI to mongos so it can connect to it.
         if uri := self.state.cluster.config_server_uri:
             return [f"--configdb {uri}"]
         return [

@@ -14,6 +14,7 @@ from ops.framework import Object
 from ops.model import Unit
 
 from single_kernel_mongo.config.literals import RoleEnum, Substrates
+from single_kernel_mongo.config.models import Role
 from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -42,6 +43,7 @@ class OperatorProtocol(ABC, Object):
     charm: AbstractMongoCharm
     name: ClassVar[RoleEnum]
     substrate: Substrates
+    role: Role
     config_manager: CommonConfigManager
     tls_manager: TLSManager
     state: CharmState

@@ -49,7 +49,7 @@ pre-commit run --all-files
 
 ## Project and community
 
-Charmed Mongos K8s is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback.
+Mongo Charms Single Kernel library is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback.
 
 * Check our [Code of Conduct](https://ubuntu.com/community/ethos/code-of-conduct)
 * Raise software issues or feature requests on [GitHub](https://github.com/canonical/mongo-single-kernel-library/issues)

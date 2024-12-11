@@ -2,7 +2,10 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Structure configuration for the Mongo charms."""
+"""Structured classes for the available configurations for Mongo charms.
+
+Modifiable configurations should be defined in `config.yaml` in each charm.
+"""
 
 from enum import Enum
 from typing import Annotated, TypeVar

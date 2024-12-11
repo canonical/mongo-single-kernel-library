@@ -94,7 +94,7 @@ class KubernetesWorkload(WorkloadBase):
         )
 
     @override
-    def delete(self, path: Path):
+    def delete(self, path: Path) -> None:
         self.container.remove_path(path)
 
     @override
@@ -113,7 +113,7 @@ class KubernetesWorkload(WorkloadBase):
         )
 
     @override
-    def update_env(self, parameters: chain[str]):
+    def update_env(self, parameters: chain[str]) -> None:
         self._env = " ".join(parameters)
 
     @override
