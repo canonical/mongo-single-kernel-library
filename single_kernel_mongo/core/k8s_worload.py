@@ -21,7 +21,7 @@ logger = getLogger(__name__)
 
 
 class KubernetesWorkload(WorkloadBase):
-    """Wrapper for performing common operations specific to the Kafka container."""
+    """Wrapper for performing common operations specific to the Mongo container."""
 
     substrate = "k8s"
     container: Container  # We always have a container in a Kubernetes Workload
