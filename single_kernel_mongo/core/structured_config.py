@@ -101,4 +101,4 @@ class MongosCharmConfig(MongoConfigModel):
 
     model_config = ConfigDict(use_enum_values=True, extra="allow")
 
-    role: SerializeLiteralAsStr[MongoDBRoles] = MongoDBRoles.MONGOS
+    role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.MONGOS)
