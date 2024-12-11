@@ -78,7 +78,7 @@ class MongoConfiguration:
                 f"localhost:{self.port}/?authSource=admin"
             )
 
-        complete_hosts = ",".join(self.formatted_hosts)
+        complete_hosts = ",".join(sorted(self.formatted_hosts))
         replset = self.formatted_replset
         auth_source = self.formatted_auth_source
 

@@ -95,6 +95,7 @@ class BackupConfigManager(CommonConfigManager):
             return
 
         if not self.workload.active() or self.get_environment() != self.state.backup_config.uri:
+            logger.error("{self.get_environment()=}, {self.state.backup_config.uri=}")
             logger.info("Restarting the PBM agent.")
             try:
                 self.workload.stop()
