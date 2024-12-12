@@ -74,7 +74,7 @@ class ClusterProvider(Object):
             )
 
         if not self.charm.unit.is_leader():
-            raise NonDeferrableFailedHookChecksError
+            raise NonDeferrableFailedHookChecksError("Not leader")
 
         if self.state.upgrade_in_progress:
             raise DeferrableFailedHookChecksError(
@@ -189,6 +189,7 @@ class ClusterRequirer(Object):
             extra_user_roles=",".join(sorted(self.state.app_peer_data.extra_user_roles)),
             additional_secret_fields=[
                 ClusterStateKeys.keyfile.value,
+                ClusterStateKeys.config_server_db.value,
                 ClusterStateKeys.int_ca_secret.value,
             ],
         )
@@ -251,7 +252,7 @@ class ClusterRequirer(Object):
         config_server_db_uri = self.state.cluster.config_server_uri
 
         if not key_file_contents or not config_server_db_uri:
-            raise WaitingForSecretsError
+            raise WaitingForSecretsError("Waiting for keyfile or config server db uri")
 
         updated_keyfile = self.dependent.update_keyfile(key_file_contents)
         updated_config = self.dependent.update_config_server_db(config_server_db_uri)
@@ -341,7 +342,7 @@ class ClusterRequirer(Object):
         config_server_relation = self.state.mongos_cluster_relation
         if config_server_relation:
             mongos_has_tls = self.state.tls_relation is not None
-            config_server_has_tls = self.state.shard_state.internal_ca_secret is not None
+            config_server_has_tls = self.state.cluster.internal_ca_secret is not None
             return mongos_has_tls, config_server_has_tls
 
         return False, False
