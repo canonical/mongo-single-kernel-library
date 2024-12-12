@@ -38,10 +38,9 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
-    DatabaseRequirerData,
 )
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import SECRETS_FIELDS, ConfigServerKeys
+from single_kernel_mongo.state.config_server_state import ConfigServerKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
@@ -401,12 +400,7 @@ class ShardManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_requirer = DatabaseRequirerData(
-            self.model,
-            relation_name=self.relation_name,
-            additional_secret_fields=SECRETS_FIELDS,
-            database_name="unused",  # Needed for relation events
-        )
+        self.data_requirer = self.state.shard_state_interface
 
     def assert_pass_sanity_hook_checks(self):
         """Returns True if all the sanity hook checks for sharding pass."""
