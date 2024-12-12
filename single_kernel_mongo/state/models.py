@@ -21,6 +21,7 @@ class ClusterData(ProviderData, RequirerData):  # type: ignore[misc]
         "uris",
         "key-file",
         "int-ca-secret",
+        "config-server-db",
     ]
 
 
