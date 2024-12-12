@@ -83,7 +83,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @role.setter
     def role(self, value: MongoDBRoles) -> None:
-        self.update({"role": str(value)})
+        self.update({"role": f"{value}"})
 
     def is_role(self, role_name: str) -> bool:
         """Checks if the application is running in the provided role."""
@@ -183,7 +183,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @database.setter
     def database(self, value: str):
         """Sets database tag in databag."""
-        self.update({AppPeerDataKeys.database: value})
+        self.update({AppPeerDataKeys.database.value: value})
 
     @property
     def extra_user_roles(self) -> set[str]:
