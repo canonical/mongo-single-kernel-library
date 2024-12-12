@@ -38,12 +38,11 @@ from single_kernel_mongo.state.app_peer_state import (
     AppPeerDataKeys,
     AppPeerReplicaSet,
 )
-from single_kernel_mongo.state.cluster_state import ClusterState
+from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
     ConfigServerState,
 )
-from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
@@ -198,11 +197,26 @@ class CharmState(Object):
         return _units
 
     @property
+    def cluster_data_interface(self) -> DatabaseRequirerData:
+        """The Cluster Data interface."""
+        return DatabaseRequirerData(
+            self.model,
+            RelationNames.CLUSTER,
+            database_name=self.app_peer_data.database,
+            extra_user_roles=",".join(sorted(self.app_peer_data.extra_user_roles)),
+            additional_secret_fields=[
+                ClusterStateKeys.keyfile.value,
+                ClusterStateKeys.config_server_db.value,
+                ClusterStateKeys.int_ca_secret.value,
+            ],
+        )
+
+    @property
     def cluster(self) -> ClusterState:
         """The cluster state of the current running App."""
         return ClusterState(
             relation=self.mongos_cluster_relation,
-            data_interface=ClusterData(self.model, RelationNames.CLUSTER),
+            data_interface=self.cluster_data_interface,
             component=self.model.app,
         )
 
@@ -298,13 +312,21 @@ class CharmState(Object):
         return MongoPorts.MONGODB_PORT
 
     @property
+    def shard_state_interface(self) -> DatabaseRequirerData:
+        """The shard database interface."""
+        return DatabaseRequirerData(
+            self.model,
+            relation_name=RelationNames.SHARDING,
+            additional_secret_fields=SECRETS_FIELDS,
+            database_name="unused",  # Needed for relation events
+        )
+
+    @property
     def shard_state(self):
         """The shard state."""
         return ConfigServerState(
             relation=self.shard_relation,
-            data_interface=DatabaseRequirerData(
-                self.model, RelationNames.SHARDING, "", additional_secret_fields=SECRETS_FIELDS
-            ),
+            data_interface=self.shard_state_interface,
             component=self.model.app,
         )
 
