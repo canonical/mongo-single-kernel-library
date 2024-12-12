@@ -183,7 +183,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @database.setter
     def database(self, value: str):
         """Sets database tag in databag."""
-        self.update({AppPeerDataKeys.database.value: value})
+        self.update({AppPeerDataKeys.database: value})
 
     @property
     def extra_user_roles(self) -> set[str]:
