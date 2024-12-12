@@ -22,10 +22,14 @@ from typing import TYPE_CHECKING, ClassVar
 
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
-from ops.model import Unit
+from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import KindEnum, Substrates
 from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.exceptions import (
+    DeferrableFailedHookChecksError,
+    NonDeferrableFailedHookChecksError,
+)
 from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -147,6 +151,18 @@ class OperatorProtocol(ABC, Object):
     def is_relation_feasible(self, name: str) -> bool:
         """Checks if the relation is feasible in this context."""
         ...
+
+    def assert_proceed_on_broken_event(self, relation: Relation):
+        """Runs some checks on broken relation event."""
+        if not self.state.has_departed_run(relation.id):
+            raise DeferrableFailedHookChecksError(
+                "must wait for relation departed hook to decide if relation should be removed"
+            )
+
+        if self.state.is_scaling_down(relation.id):
+            raise NonDeferrableFailedHookChecksError(
+                "Relation broken event occurring during scale down, do not proceed to remove users."
+            )
 
     def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent):
         """Checks relation departed event is the result of removed relation or scale down.

@@ -4,6 +4,8 @@
 
 """MongoDB and Mongos workloads definition."""
 
+import re
+
 from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
@@ -47,3 +49,16 @@ class MongosWorkload(WorkloadBase):
             },
         }
         return Layer(layer_config)  # type: ignore
+
+    @property
+    def config_server_db(self) -> str | None:
+        """The config server DB on the workload."""
+        regex = re.compile(r"--configdb (\S+)")
+        env = self.get_env().get(self.env_var, None)
+        if not env:
+            return None
+
+        match = regex.search(env)
+        if match:
+            return match.group(1)
+        return None
