@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 from ops.framework import Object
-from ops.model import Container, MaintenanceStatus, Relation, Unit
+from ops.model import Container, MaintenanceStatus, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -30,6 +30,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
+from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
@@ -37,7 +38,6 @@ from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardE
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
-    DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
@@ -48,6 +48,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.managers.backups import BackupManager
+from single_kernel_mongo.managers.cluster import ClusterProvider
 from single_kernel_mongo.managers.config import (
     LogRotateConfigManager,
     MongoDBConfigManager,
@@ -139,6 +140,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.substrate,
             RelationNames.SHARDING,
         )
+        self.cluster_manager = ClusterProvider(
+            self, self.state, self.substrate, RelationNames.CLUSTER
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -148,6 +152,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
+        self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
 
     @property
     def config(self):
@@ -755,5 +760,5 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.state.is_scaling_down(relation.id):
             raise NonDeferrableFailedHookChecksError(
-                "Relation broken event occurring during scale down, no need to proceed with broken event."
+                "Relation broken event occurring during scale down, do not proceed to remove users."
             )

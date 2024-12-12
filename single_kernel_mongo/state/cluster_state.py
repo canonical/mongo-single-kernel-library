@@ -21,6 +21,8 @@ class ClusterStateKeys(str, Enum):
     alias = "alias"
     external_node_connectivity = "external-node-connectivity"
     config_server_db = "config-server-db"
+    keyfile = "key-file"
+    int_ca_secret = "int-ca-secret"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -47,6 +49,11 @@ class ClusterState(AbstractRelationState[Data]):
         self.update({ClusterStateKeys.database.value: value})
 
     @property
+    def keyfile(self) -> str:
+        """The keyfile in the relation databag."""
+        return self.relation_data.get(ClusterStateKeys.keyfile.value, "")
+
+    @property
     def extra_user_roles(self) -> set[str]:
         """Return extra user roles value in the databag."""
         return set(  # type: ignore[return-value]
@@ -57,3 +64,10 @@ class ClusterState(AbstractRelationState[Data]):
     def extra_user_roles(self, value: set[str]):
         roles_str = ",".join(value)
         self.update({ClusterStateKeys.extra_user_roles.value: roles_str})
+
+    @property
+    def internal_ca_secret(self) -> str | None:
+        """Returns the internal CA secret."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(ClusterStateKeys.int_ca_secret.value, None)

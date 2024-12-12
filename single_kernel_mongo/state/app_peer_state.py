@@ -33,6 +33,8 @@ class AppPeerDataKeys(str, Enum):
     database = "database"
     extra_user_roles = "extra-user-roles"
     expose_external = "expose-external"
+    username = "username"
+    password = "password"
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
