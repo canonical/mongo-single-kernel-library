@@ -25,7 +25,6 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
-    DatabaseRequirerData,
 )
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
@@ -182,17 +181,7 @@ class ClusterRequirer(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = DatabaseRequirerData(
-            self.model,
-            relation_name=self.relation_name.value,
-            database_name=self.state.app_peer_data.database,
-            extra_user_roles=",".join(sorted(self.state.app_peer_data.extra_user_roles)),
-            additional_secret_fields=[
-                ClusterStateKeys.keyfile.value,
-                ClusterStateKeys.config_server_db.value,
-                ClusterStateKeys.int_ca_secret.value,
-            ],
-        )
+        self.data_interface = self.state.cluster_data_interface
 
     def assert_pass_hook_checks(self):
         """Runs pre-hook checks, raises if one fails."""
