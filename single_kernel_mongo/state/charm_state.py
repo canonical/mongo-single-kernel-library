@@ -325,6 +325,12 @@ class CharmState(Object):
         )
         return None
 
+    def generate_config_server_db(self) -> str:
+        """Generates the config server DB URI."""
+        replica_set_name = self.model.app.name
+        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.app_hosts)
+        return f"{replica_set_name}/{','.join(hosts)}"
+
     # END: Helpers
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
@@ -425,8 +431,8 @@ class CharmState(Object):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the mongos user."""
-        username = self.secrets.get_for_key(Scope.APP, key="username")
-        password = self.secrets.get_for_key(Scope.APP, key="password")
+        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
+        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
         if not username or not password:
             raise Exception("Missing credentials.")
 
