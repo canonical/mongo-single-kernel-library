@@ -384,9 +384,7 @@ class Snap(object):
         args = ["logs", "-n={}".format(num_lines)] if num_lines else ["logs"]
         return self._snap_daemons(args, services).stdout
 
-    def connect(
-        self, plug: str, service: Optional[str] = None, slot: Optional[str] = None
-    ) -> None:
+    def connect(self, plug: str, service: Optional[str] = None, slot: Optional[str] = None) -> None:
         """Connect a plug to a slot.
 
         Args:
@@ -445,9 +443,7 @@ class Snap(object):
                 )
             )
 
-    def restart(
-        self, services: Optional[List[str]] = None, reload: Optional[bool] = False
-    ) -> None:
+    def restart(self, services: Optional[List[str]] = None, reload: Optional[bool] = False) -> None:
         """Restarts a snap's services.
 
         Args:
@@ -787,7 +783,7 @@ class SnapClient:
             status = response["status"]
             if status == "Done":
                 return response.get("data")
-            if status == "Doing":
+            if status == "Doing" or status == "Do":
                 time.sleep(0.1)
                 continue
             if status == "Wait":
