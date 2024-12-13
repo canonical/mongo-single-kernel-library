@@ -318,24 +318,21 @@ class MongoManager(Object):
         endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
         uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         database = data_interface.fetch_my_relation_field(relation.id, "database")
-        with MongoConnection(self.state.mongo_config) as mongo:
-            user_exists = mongo.user_exists(config.username)
-        if user_exists:
-            if config.hosts != set(endpoints.split(",")):
-                data_interface.set_endpoints(
-                    relation.id,
-                    ",".join(config.hosts),
-                )
-            if config.uri != uris:
-                data_interface.set_uris(
-                    relation.id,
-                    config.uri,
-                )
-            if config.database != database:
-                data_interface.set_database(
-                    relation.id,
-                    config.database,
-                )
+        if config.hosts != set(endpoints.split(",")):
+            data_interface.set_endpoints(
+                relation.id,
+                ",".join(config.hosts),
+            )
+        if config.uri != uris:
+            data_interface.set_uris(
+                relation.id,
+                config.uri,
+            )
+        if config.database != database:
+            data_interface.set_database(
+                relation.id,
+                config.database,
+            )
 
     def auto_delete_db(self, relation: Relation) -> None:
         """Delete a DB if necessary."""
