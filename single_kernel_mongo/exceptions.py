@@ -173,13 +173,13 @@ class NonDeferrableFailedHookChecksError(Exception):
     """Raised when we failed to pass hook checks and we should skip."""
 
 
-class EarlyRemovalOfConfigServerError(Exception):
-    """Raised when we try to remove config server while it still has shards."""
-
-
 class DeferrableError(Exception):
     """Raised for all deferrable errors."""
 
 
 class MissingConfigServerError(Exception):
     """Raise when the mongos charm is missing config server integration."""
+
+
+class EarlyRemovalOfConfigServerError(Exception):
+    """Raised when we try to remove config server while it still has shards."""
