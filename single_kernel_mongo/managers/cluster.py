@@ -55,9 +55,7 @@ class ClusterProvider(Object):
         self.state = state
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = DatabaseProviderData(
-            self.model, relation_name=self.relation_name.value
-        )
+        self.data_interface = self.state.cluster_provider_data_interface
 
     def assert_pass_hook_checks(self) -> None:
         """Runs the pre hook checks, raises if it fails."""
@@ -181,7 +179,7 @@ class ClusterRequirer(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = self.state.cluster_data_interface
+        self.data_interface = self.state.cluster_requirer_data_interface
 
     def assert_pass_hook_checks(self):
         """Runs pre-hook checks, raises if one fails."""

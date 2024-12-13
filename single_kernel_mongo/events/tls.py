@@ -155,6 +155,17 @@ class TLSEventsHandler(Object):
             self.manager.set_certificates(
                 event.certificate_signing_request, event.chain, event.certificate, event.ca
             )
+            self.dependent.state.update_ca_secrets(event.ca)
+
+            # If we don't have both certificates, we early return, the next
+            # certificate available event will enable certificates for this
+            # unit.
+            if self.manager.is_waiting_for_both_certs():
+                logger.info(
+                    "Waiting for both internal and external TLS certificates available to avoid second restart."
+                )
+                return
+
             self.manager.enable_certificates_for_unit()
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")

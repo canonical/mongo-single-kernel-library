@@ -31,6 +31,7 @@ from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseProviderData,
     DatabaseRequirerData,
     DataPeerData,
     DataPeerOtherUnitData,
@@ -43,6 +44,7 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
+    ConfigServerKeys,
     ShardingComponentState,
 )
 from single_kernel_mongo.state.tls_state import TLSState
@@ -215,8 +217,16 @@ class CharmState(Object):
         return _units
 
     @property
-    def cluster_data_interface(self) -> DatabaseRequirerData:
-        """The Cluster Data interface."""
+    def cluster_provider_data_interface(self) -> DatabaseProviderData:
+        """The Requirer Data interface for the cluster relation (config-server side)."""
+        return DatabaseProviderData(
+            self.model,
+            RelationNames.CLUSTER,
+        )
+
+    @property
+    def cluster_requirer_data_interface(self) -> DatabaseRequirerData:
+        """The Requirer Data interface for the cluster relation (mongos side)."""
         return DatabaseRequirerData(
             self.model,
             RelationNames.CLUSTER,
@@ -234,7 +244,7 @@ class CharmState(Object):
         """The cluster state of the current running App."""
         return ClusterState(
             relation=self.mongos_cluster_relation,
-            data_interface=self.cluster_data_interface,
+            data_interface=self.cluster_requirer_data_interface,
             component=self.model.app,
         )
 
@@ -320,7 +330,7 @@ class CharmState(Object):
         """Retrieve the hosts associated with MongoDB application."""
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == RoleEnum.MONGOS
+            and self.charm_role.name == KindEnum.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
@@ -331,7 +341,7 @@ class CharmState(Object):
         """Internal hosts for internal access."""
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == RoleEnum.MONGOS
+            and self.charm_role.name == KindEnum.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
@@ -345,6 +355,11 @@ class CharmState(Object):
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
+
+    @property
+    def config_server_data_interface(self) -> DatabaseProviderData:
+        """The config server database interface."""
+        return DatabaseProviderData(self.model, RelationNames.CONFIG_SERVER)
 
     @property
     def shard_state_interface(self) -> DatabaseRequirerData:
@@ -389,6 +404,29 @@ class CharmState(Object):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
+    def update_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the CA secret in the cluster and config-server relations."""
+        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+        for relation in self.cluster_relations:
+            if new_ca is None:
+                self.cluster_provider_data_interface.delete_relation_data(
+                    relation.id, [ClusterStateKeys.int_ca_secret]
+                )
+            else:
+                self.cluster_provider_data_interface.update_relation_data(
+                    relation.id, {ClusterStateKeys.int_ca_secret.value: new_ca}
+                )
+        for relation in self.config_server_relation:
+            if new_ca is None:
+                self.config_server_data_interface.delete_relation_data(
+                    relation.id, [ConfigServerKeys.int_ca_secret]
+                )
+            else:
+                self.config_server_data_interface.update_relation_data(
+                    relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
+                )
+
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
         rel_departed_key = generate_relation_departed_key(rel_id)
