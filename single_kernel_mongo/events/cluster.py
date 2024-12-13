@@ -139,6 +139,7 @@ class ClusterMongosEventHandler(Object):
         try:
             self.manager.relation_changed()
         except (
+            DeferrableError,
             DeferrableFailedHookChecksError,
             WaitingForSecretsError,
         ) as e:
