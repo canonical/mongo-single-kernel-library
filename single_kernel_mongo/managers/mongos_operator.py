@@ -308,8 +308,11 @@ class MongosOperator(OperatorProtocol, Object):
 
     def update_keyfile(self, keyfile_content: str) -> bool:
         """Updates the keyfile in the app databag and on the workload."""
-        # Keyfile is only one line long.
-        current_key_file = self.workload.read(self.workload.paths.keyfile)[0]
+        current_key_file_lines = self.workload.read(self.workload.paths.keyfile)
+
+        # Keyfile is either empty or one line long.
+        current_key_file = current_key_file_lines[0] if current_key_file_lines else None
+
         if not keyfile_content or current_key_file == keyfile_content:
             return False
 
