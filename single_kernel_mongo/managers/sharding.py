@@ -36,9 +36,6 @@ from single_kernel_mongo.exceptions import (
     WaitingForCertificatesError,
     WaitingForSecretsError,
 )
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProviderData,
-)
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import ConfigServerKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
@@ -70,9 +67,7 @@ class ConfigServerManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = DatabaseProviderData(
-            self.model, relation_name=self.relation_name.value
-        )
+        self.data_interface = self.state.config_server_data_interface
 
     def prepare_sharding_config(self, relation: Relation):
         """Handles the database requested event.
@@ -201,21 +196,6 @@ class ConfigServerManager(Object):
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
                 relation.id, {ConfigServerKeys.host.value: sorted(self.state.app_hosts)}
-            )
-
-    def update_ca_secret(self, new_ca: str | None) -> None:
-        """Updates the new CA for all related shards."""
-        for relation in self.state.config_server_relation:
-            if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-                logger.info("Database Requested event has not run yet for relation {relation.id}")
-                continue
-            if new_ca is None:
-                self.data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.int_ca_secret.value]
-                )
-                continue
-            self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
             )
 
     def skip_config_server_status(self) -> bool:

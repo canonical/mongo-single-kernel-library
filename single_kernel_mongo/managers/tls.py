@@ -203,10 +203,7 @@ class TLSManager:
             self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
             self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
 
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            # self.state.cluster.update_ca_secret(new_ca=None)
-            # self.state.config_server.update_ca_secret(new_ca=None)
-            pass
+        self.state.update_ca_secrets(new_ca=None)
 
         self.charm.status_manager.to_maintenance("Disabling TLS")
         self.delete_certificates_from_workload()
