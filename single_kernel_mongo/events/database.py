@@ -66,14 +66,13 @@ class DatabaseEventsHandler(Object):
         """
         relation_departing = False
         relation_changed = False
-        # TODO : Handle the Mongos VM case
-        # (https://github.com/canonical/mongos-operator/blob/6/edge/lib/charms/mongos/v0/mongos_client_interface.py)
-        # for interface unification.
         if (
             self.dependent.substrate == Substrates.VM
             and self.relation_name == RelationNames.MONGOS_PROXY
         ):
             self.dependent.share_credentials(event.relation)  # type: ignore[attr-defined]
+            return
+
         try:
             if not self.pass_hook_checks(event):
                 logger.info(f"Skipping {type(event)}: Hook checks did not pass")

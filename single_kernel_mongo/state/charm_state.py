@@ -475,11 +475,12 @@ class CharmState(Object):
         """Mongos Configuration for the mongos user."""
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
         password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
+        database = self.app_peer_data.database
         if not username or not password:
             raise Exception("Missing credentials.")
 
         return MongoConfiguration(
-            database=f"{self.model.app.name}_{self.model.name}",
+            database=database,
             username=username,
             password=password,
             hosts=self.internal_hosts,
