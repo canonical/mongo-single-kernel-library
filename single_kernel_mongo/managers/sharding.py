@@ -199,7 +199,7 @@ class ConfigServerManager(Object):
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""
         if self.state.is_role(MongoDBRoles.SHARD):
-            logger.info("skipping config server status check, charm is  running as a shard")
+            logger.info("skipping config server status check, charm is running as a shard")
             return True
 
         if not self.state.db_initialised:
