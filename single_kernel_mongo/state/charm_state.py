@@ -11,6 +11,7 @@ import logging
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, TypeVar
+from urllib.parse import quote
 
 from ops import Object, Relation, Unit
 
@@ -295,6 +296,11 @@ class CharmState(Object):
         }
 
     @property
+    def formatted_socket_path(self) -> str:
+        """URL encoded socket path."""
+        return quote(f"{self.paths.socket_path}", safe="")
+
+    @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
         if (
@@ -302,19 +308,25 @@ class CharmState(Object):
             and self.charm_role.name == RoleEnum.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
-            return {f"{self.paths.socket_path}"}
+            return {self.formatted_socket_path}
         return {unit.host for unit in self.units}
 
     @property
     def internal_hosts(self) -> set[str]:
         """Internal hosts for internal access."""
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == RoleEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {self.formatted_socket_path}
         return {unit.internal_address for unit in self.units}
 
     @property
     def host_port(self) -> int:
         """Retrieve the port associated with MongoDB application."""
         if self.is_role(MongoDBRoles.MONGOS):
-            if self.config["expose_external"]:
+            if self.app_peer_data.external_connectivity:
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
