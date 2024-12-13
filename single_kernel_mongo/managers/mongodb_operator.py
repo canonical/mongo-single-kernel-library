@@ -612,7 +612,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             for relation in self.state.client_relations:
                 self.mongo_manager.update_app_relation_data(relation)
         self.config_server_manager.update_mongos_hosts()
-        # TODO: Update related hosts for cluster.
+        self.cluster_manager.update_config_server_db()
 
     def open_ports(self) -> None:
         """Open ports on the workload.
