@@ -257,9 +257,6 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         Returns:
             String of mongo version
         """
-        if not self.active():
-            return ""
-
         try:
             version = Path("workload_version").read_text().strip()
         except:  # noqa: E722
