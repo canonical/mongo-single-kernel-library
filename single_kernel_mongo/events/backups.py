@@ -18,6 +18,7 @@ from single_kernel_mongo.exceptions import (
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
     ListBackupError,
+    NonDeferrableFailedHookChecksError,
     PBMBusyError,
     RestoreError,
     ResyncError,
@@ -139,22 +140,14 @@ class BackupEventsHandler(Object):
 
     def _on_create_backup_action(self, event: ActionEvent):
         action = "backup"
-        check, reason = self.pass_sanity_checks()
-        if not check:
-            fail_action_with_error_log(logger, event, action, reason)
-            return
         if not self.charm.unit.is_leader():
             fail_action_with_error_log(
                 logger, event, action, "The action can be run only on leader unit."
             )
 
         try:
+            self.assert_pass_sanity_checks()
             self.manager.assert_can_backup()
-        except InvalidPBMStatusError as e:
-            fail_action_with_error_log(logger, event, action, str(e))
-            return
-
-        try:
             backup_id = self.manager.create_backup_action()
             self.charm.status_manager.set_and_share_status(
                 MaintenanceStatus(f"backup started/running, backup id:'{backup_id}'")
@@ -165,31 +158,18 @@ class BackupEventsHandler(Object):
                 action,
                 {"backup-status": f"backup started. backup id: {backup_id}"},
             )
-        except Exception as e:
-            fail_action_with_error_log(
-                logger,
-                event,
-                action,
-                str(e),
-            )
-
-    def _on_list_backups_action(self, event: ActionEvent):
-        action = "list-backups"
-        check, reason = self.pass_sanity_checks()
-        if not check:
-            fail_action_with_error_log(logger, event, action, reason)
-            return
-
-        try:
-            self.manager.assert_can_list_backup()
-        except InvalidPBMStatusError as e:
+        except (NonDeferrableFailedHookChecksError, InvalidPBMStatusError, Exception) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
+    def _on_list_backups_action(self, event: ActionEvent):
+        action = "list-backups"
         try:
+            self.assert_pass_sanity_checks()
+            self.manager.assert_can_list_backup()
             formatted_list = self.manager.list_backup_action()
             success_action_with_info_log(logger, event, action, {"backups": formatted_list})
-        except ListBackupError as e:
+        except (NonDeferrableFailedHookChecksError, InvalidPBMStatusError, ListBackupError) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
@@ -199,31 +179,24 @@ class BackupEventsHandler(Object):
         backup_id = str(event.params.get("backup-id", ""))
         remapping_pattern = str(event.params.get("remap-pattern", ""))
 
-        if self.dependent.state.upgrade_in_progress:
-            fail_action_with_error_log(
-                logger, event, action, "Restoring a backup is not supported during an upgrade."
-            )
-            return
-        check, message = self.pass_sanity_checks()
-        if not check:
-            fail_action_with_error_log(logger, event, action, message)
-            return
         if not self.charm.unit.is_leader():
             fail_action_with_error_log(
                 logger, event, action, "The action can be run only on a leader unit."
             )
             return
 
+        if self.dependent.state.upgrade_in_progress:
+            fail_action_with_error_log(
+                logger, event, action, "Restoring a backup is not supported during an upgrade."
+            )
+            return
+
         try:
+            self.assert_pass_sanity_checks()
             self.manager.assert_can_restore(
                 backup_id,
                 remapping_pattern,
             )
-        except (InvalidPBMStatusError, InvalidArgumentForActionError) as e:
-            fail_action_with_error_log(logger, event, action, str(e))
-            return
-
-        try:
             self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_manager.set_and_share_status(
                 MaintenanceStatus(f"restore started/running, backup id:'{backup_id}'")
@@ -231,22 +204,28 @@ class BackupEventsHandler(Object):
             success_action_with_info_log(
                 logger, event, action, {"restore-status": "restore started"}
             )
+        except (
+            NonDeferrableFailedHookChecksError,
+            InvalidPBMStatusError,
+            InvalidArgumentForActionError,
+            RestoreError,
+        ) as e:
+            fail_action_with_error_log(logger, event, action, str(e))
+            return
         except ResyncError:
             raise
-        except RestoreError as restore_error:
-            fail_action_with_error_log(logger, event, action, str(restore_error))
 
-    def pass_sanity_checks(self) -> tuple[bool, str]:
-        """Return True if basic pre-conditions for running backup actions are met.
+    def assert_pass_sanity_checks(self) -> None:
+        """Return None if basic conditions for running backup actions are met, raises otherwise.
 
         No matter what backup-action is being run, these requirements must be met.
         """
         if self.manager.state.s3_relation is None:
-            return False, "Relation with s3-integrator charm missing, cannot restore from a backup."
-        if not self.manager.is_valid_s3_integration():
-            return (
-                False,
-                "Shards do not support backup operations, please run action on config-server.",
+            raise NonDeferrableFailedHookChecksError(
+                "Relation with s3-integrator charm missing, cannot restore from a backup."
             )
-
-        return True, ""
+        if not self.manager.is_valid_s3_integration():
+            raise NonDeferrableFailedHookChecksError(
+                "Shards do not support backup operations, please run action on config-server."
+            )
+        return

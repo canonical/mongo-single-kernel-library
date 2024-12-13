@@ -116,3 +116,11 @@ class UnknownCertificateAvailableError(Exception):
 
 class DatabaseRequestedHasNotRunYetError(Exception):
     """Raised when the database event has not run yet."""
+
+
+class DeferrableFailedHookChecksError(Exception):
+    """Raised when we failed to pass hook checks and we should defer."""
+
+
+class NonDeferrableFailedHookChecksError(Exception):
+    """Raised when we failed to pass hook checks and we should skip."""
