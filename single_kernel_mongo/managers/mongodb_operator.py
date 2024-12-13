@@ -528,9 +528,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
-        # TODO: Rotate password.
-        if user in (OperatorUser, BackupUser):
-            pass
+        if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.config_server_manager.update_credentials(
+                user.password_key_name,
+                new_password,
+            )
 
         return new_password, secret_id
 
