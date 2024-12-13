@@ -343,6 +343,6 @@ class MongosOperator(OperatorProtocol, Object):
         else:
             uri = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
 
-        return self.mongo_manager.mongod_ready(uri=uri)
+        return self.mongo_manager.mongod_ready(uri=uri, direct=False)
 
     # END: Helpers

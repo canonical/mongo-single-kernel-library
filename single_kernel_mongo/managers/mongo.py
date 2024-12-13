@@ -76,11 +76,11 @@ class MongoManager(Object):
             except DeployedWithoutTrustError:
                 self.charm.status_manager.to_blocked("Charm deployed without `trust`")
 
-    def mongod_ready(self, uri: str | None = None) -> bool:
+    def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
         """Is MongoDB ready and running?"""
         config = EMPTY_CONFIGURATION
         actual_uri = uri or "localhost"
-        with MongoConnection(config, actual_uri, direct=True) as direct_mongo:
+        with MongoConnection(config, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
 
     def set_user_password(self, user: MongoDBUser, password: str) -> str:
