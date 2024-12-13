@@ -165,6 +165,7 @@ class CharmState(Object):
             data_interface=self.peer_app_interface,
             component=self.model.app,
             role=self.config.role,
+            model=self.model,
         )
 
     @property

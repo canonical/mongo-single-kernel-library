@@ -5,10 +5,10 @@
 import json
 from enum import Enum
 
-from ops.model import Application, Relation
+from ops.model import Application, Model, Relation
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import SECRETS_APP
+from single_kernel_mongo.config.literals import SECRETS_APP, Substrates
 from single_kernel_mongo.core.structured_config import ExposeExternal, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
     DataPeerData,
@@ -48,9 +48,11 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         data_interface: DataPeerData,
         component: Application,
         role: MongoDBRoles,
+        model: Model,
     ):
         super().__init__(relation, data_interface, component)
         self.data_interface = data_interface
+        self._model = model
         self._role = role
 
     @override
@@ -179,6 +181,8 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @property
     def database(self) -> str:
         """Database tag for mongos."""
+        if self.substrate == Substrates.K8S:
+            return f"{self.component.name}_{self._model}"
         return self.relation_data.get(AppPeerDataKeys.database.value, "mongos-database")
 
     @database.setter
@@ -189,6 +193,8 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @property
     def extra_user_roles(self) -> set[str]:
         """extra_user_roles tag for mongos."""
+        if self.substrate == Substrates.K8S:
+            return {"admin"}
         return set(
             self.relation_data.get(
                 AppPeerDataKeys.extra_user_roles.value,
