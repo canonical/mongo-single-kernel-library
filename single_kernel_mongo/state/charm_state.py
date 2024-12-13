@@ -28,6 +28,7 @@ from single_kernel_mongo.config.relations import (
 )
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
+from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequirerData,
     DataPeerData,
@@ -100,6 +101,7 @@ class CharmState(Object):
             relation_name=self.peer_relation_name,
             additional_secret_fields=SECRETS_UNIT,
         )
+        self.paths = MongoPaths(self.charm_role)
 
     @property
     def peer_relation(self) -> Relation | None:
@@ -295,6 +297,12 @@ class CharmState(Object):
     @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == RoleEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {f"{self.paths.socket_path}"}
         return {unit.host for unit in self.units}
 
     @property
