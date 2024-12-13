@@ -490,7 +490,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.backup_manager.is_valid_s3_integration():
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return
-        # TODO: Cluster integration status + Cluster Mismatch revision.
+        # TODO: Cluster Mismatch revision.
+        if not self.cluster_manager.is_valid_mongos_integration():
+            self.charm.status_manager.to_blocked(
+                "Relation to mongos not supported, config role must be config-server"
+            )
         if not self.state.db_initialised:
             return
 
@@ -515,6 +519,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         else:
             self.charm.status_manager.to_active(None)
+
+        self.charm.status_manager.set_and_share_status(self.mongo_manager.get_status())
         # TODO: Process statuses.
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:

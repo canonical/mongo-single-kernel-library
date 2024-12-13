@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 
 from dacite import from_dict
 from ops import Object
-from ops.model import Relation
-from pymongo.errors import PyMongoError
+from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
+from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -438,11 +438,36 @@ class MongoManager(Object):
 
             return draining_shards
 
-    # Keep for memory for now.
-    # def get_relation_name(self):
-    #    """Returns the name of the relation to use."""
-    #    if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-    #        return RelationNames.CLUSTER
-    #    if self.state.is_role(MongoDBRoles.MONGOS):
-    #        return RelationNames.MONGOS_PROXY
-    #    return RelationNames.DATABASE
+    def get_status(self) -> StatusBase:
+        """Generates the status of a unit based on its status reported by mongod."""
+        try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                replset_status = mongo.get_replset_status()
+
+            unit_host = self.state.unit_peer_data.host
+            if unit_host not in replset_status:
+                return WaitingStatus("Member being added.")
+
+            replica_status = replset_status[unit_host]
+
+            match replica_status:
+                case "PRIMARY":
+                    return ActiveStatus("Primary")
+                case "SECONDARY":
+                    return ActiveStatus("")
+                case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
+                    return WaitingStatus("Member is syncing...")
+                case "REMOVED":
+                    return WaitingStatus("Member is removing...")
+                case _:
+                    return BlockedStatus(replica_status)
+
+        except ServerSelectionTimeoutError as e:
+            # Usually it is du to ReplicaSetNoPrimary
+            logger.debug(f"Got error {e} while checking replica set status")
+            return WaitingStatus("Waiting for primary re-election.")
+        except AutoReconnect as e:
+            # AutoReconnect is raised when a connection to the database is lost and an attempt to
+            # auto-reconnect will be made by pymongo.
+            logger.debug("Got error: %s, while checking replica set status", str(e))
+            return WaitingStatus("Waiting to reconnect to unit..")
