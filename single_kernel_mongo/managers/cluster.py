@@ -231,9 +231,6 @@ class ClusterRequirer(Object):
         self.state.secrets.set(AppPeerDataKeys.username.value, username, Scope.APP)
         self.state.secrets.set(AppPeerDataKeys.password.value, password, Scope.APP)
 
-        if self.substrate == Substrates.VM:
-            self.dependent.share_connection_info()
-
     def relation_changed(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
@@ -259,8 +256,10 @@ class ClusterRequirer(Object):
 
             self.charm.status_manager.to_active("")
 
-            if self.charm.unit.is_leader():
-                self.state.app_peer_data.db_initialised = True
+        if self.charm.unit.is_leader():
+            self.state.app_peer_data.db_initialised = True
+
+        self.dependent.share_connection_info()
 
     def relation_broken(self, relation: Relation):
         """Proceeds on relation broken."""

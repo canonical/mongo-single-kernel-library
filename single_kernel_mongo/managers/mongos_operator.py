@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING, final
-from urllib.parse import quote
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
@@ -185,6 +184,8 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("Waiting for mongos to start.")
             return
 
+        self.share_connection_info()
+
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
 
@@ -337,11 +338,13 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                uri = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+                host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
             else:
-                uri = quote(f"{self.workload.paths.socket_path}", safe="")
+                host = self.state.formatted_socket_path
         else:
-            uri = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+            host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+
+        uri = f"mongodb://{host}"
 
         return self.mongo_manager.mongod_ready(uri=uri, direct=False)
 
