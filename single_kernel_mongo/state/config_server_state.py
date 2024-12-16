@@ -43,7 +43,7 @@ class ConfigServerState(AbstractRelationState[Data]):
         """The mongos hosts in the relation."""
         if not self.relation:
             return []
-        return json.loads(self.relation_data.get(ConfigServerKeys, "[]"))
+        return json.loads(self.relation_data.get(ConfigServerKeys.host.value, "[]"))
 
     @mongos_hosts.setter
     def mongos_hosts(self, value: list[str]):
