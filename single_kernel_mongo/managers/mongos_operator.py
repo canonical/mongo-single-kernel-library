@@ -138,10 +138,9 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
-            # TODO: Updated external service
+            self.update_external_services()
 
             self.tls_manager.update_tls_sans()
-            # TODO: Updated client related hosts
             self.share_connection_info()
 
     @override
@@ -177,7 +176,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("Missing relation to config-server.")
             return
 
-        # TODO : Check TLS status
+        if status := self.cluster_manager.get_tls_statuses():
+            logger.info(f"Invalid TLS integration: {status.message}")
+            self.charm.status_manager.set_and_share_status(status)
+            return
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
