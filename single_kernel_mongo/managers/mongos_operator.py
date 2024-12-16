@@ -17,7 +17,7 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import MongoPorts, RoleEnum, Substrates
+from single_kernel_mongo.config.literals import KindEnum, MongoPorts, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 class MongosOperator(OperatorProtocol, Object):
     """Operator for Mongos Related Charms."""
 
-    name = RoleEnum.MONGOS
+    name = KindEnum.MONGOS
     workload: MongosWorkload
 
     def __init__(self, charm: AbstractMongoCharm):

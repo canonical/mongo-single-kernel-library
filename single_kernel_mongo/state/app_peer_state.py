@@ -22,7 +22,6 @@ class AppPeerDataKeys(str, Enum):
     # MongoDB
     managed_users_key = "managed-users-key"
     db_initialised = "db_initialised"
-    role = "role"
     keyfile = "keyfile"
     external_connectivity = "external-connectivity"
     mongos_hosts = "mongos_hosts"
