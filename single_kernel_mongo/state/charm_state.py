@@ -316,7 +316,7 @@ class CharmState(Object):
         """Retrieve the hosts associated with MongoDB application."""
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == RoleEnum.MONGOS
+            and self.charm_role.name == KindEnum.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
@@ -327,7 +327,7 @@ class CharmState(Object):
         """Internal hosts for internal access."""
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == RoleEnum.MONGOS
+            and self.charm_role.name == KindEnum.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
