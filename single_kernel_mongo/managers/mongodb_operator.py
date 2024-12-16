@@ -414,9 +414,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongodb_exporter_config_manager.configure_and_restart()
         self.backup_manager.configure_and_restart()
 
-        # Always process the statuses.
-        self.charm.status_manager.process_and_share_statuses()
-
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""

@@ -747,7 +747,7 @@ class ShardManager(Object, StatusProvider):
             return BlockedStatus("Shard CA and Config-Server CA don't match.")
         return None
 
-    def get_status(self) -> StatusBase | None:
+    def get_status(self) -> StatusBase | None:  # noqa: C901
         """Returns the current status of the shard."""
         if self.skip_shard_status():
             return None
@@ -765,6 +765,9 @@ class ShardManager(Object, StatusProvider):
 
         if not self.state.shard_relation and self.state.unit_peer_data.drained:
             return ActiveStatus("Shard drained from cluster, ready for removal")
+
+        if not self.state.shard_relation:
+            return BlockedStatus("missing relation to config-server")
 
         if not self.cluster_password_synced():
             return WaitingStatus("Waiting to sync passwords across the cluster")

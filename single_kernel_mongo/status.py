@@ -78,18 +78,25 @@ class StatusManager(Object):
 
     def get_statuses(self) -> StatusesDict:
         """Collects the statuses of all managers."""
-        mongodb_status = self.operator.mongo_manager.get_status()
-        statuses: StatusesDict = {
-            "mongodb": mongodb_status,
-            "shard": None,
-            "config-server": None,
-            "PBM": None,
-        }
         if self.operator.name == KindEnum.MONGOD:
-            statuses["shard"] = self.operator.shard_manager.get_status()
-            statuses["config-server"] = self.operator.config_server_manager.get_status()
-            statuses["PBM"] = self.operator.backup_manager.get_status()
-        return statuses
+            return StatusesDict(
+                {
+                    "mongodb": self.operator.mongo_manager.get_status(),
+                    "shard": self.operator.shard_manager.get_status(),
+                    "config-server": self.operator.config_server_manager.get_status(),
+                    "PBM": self.operator.backup_manager.get_status(),
+                }
+            )
+        return StatusesDict(
+            {
+                "mongodb": WaitingStatus("waiting for mongos to start")
+                if not self.operator.workload.active
+                else ActiveStatus(),
+                "shard": None,
+                "config-server": None,
+                "PBM": None,
+            }
+        )
 
     def prioritize_statuses(self, statuses: StatusesDict) -> StatusBase:
         """Prioritizes the statuses."""
