@@ -208,6 +208,7 @@ class TLSManager:
         self.charm.status_manager.to_maintenance("Disabling TLS")
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services()
+        self.charm.status_manager.process_and_share_statuses()
 
     def enable_certificates_for_unit(self):
         """Enables the new certificates for this unit."""
@@ -220,6 +221,7 @@ class TLSManager:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_manager.to_blocked("couldn't start MongoDB")
             return
+        self.charm.status_manager.process_and_share_statuses()
 
     def delete_certificates_from_workload(self):
         """Deletes the certificates from the workload."""

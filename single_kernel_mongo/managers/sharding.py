@@ -277,6 +277,7 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
+        self.charm.status_manager.process_and_share_statuses()
 
     def remove_shards(self, relation: Relation):
         """Removes a shard from the cluster."""
@@ -673,11 +674,7 @@ class ShardManager(Object, StatusProvider):
 
         try:
             # check our ability to use connect to mongos
-            config = self.state.mongos_config_for_user(
-                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-            )
-
-            with MongoConnection(config) as mongos:
+            with MongoConnection(self.state.mongos_config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
@@ -699,11 +696,8 @@ class ShardManager(Object, StatusProvider):
             return False
 
         try:
-            config = self.state.mongos_config_for_user(
-                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-            )
             # check our ability to use connect to mongos
-            with MongoConnection(config) as mongos:
+            with MongoConnection(self.state.mongos_config) as mongos:
                 members = mongos.get_shard_members()
         except OperationFailure as e:
             if e.code in [13, 18, 133]:
@@ -717,10 +711,7 @@ class ShardManager(Object, StatusProvider):
         return self.state.app_peer_data.replica_set in members
 
     def _is_shard_aware(self) -> bool:
-        config = self.state.mongos_config_for_user(
-            OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-        )
-        with MongoConnection(config) as mongo:
+        with MongoConnection(self.state.mongos_config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
 
     def skip_shard_status(self) -> bool:
@@ -753,7 +744,7 @@ class ShardManager(Object, StatusProvider):
             return BlockedStatus("Shard CA and Config-Server CA don't match.")
         return None
 
-    def get_status(self) -> StatusBase | None:  # noqa: C901
+    def get_status(self) -> StatusBase | None:
         """Returns the current status of the shard."""
         if self.skip_shard_status():
             return None
