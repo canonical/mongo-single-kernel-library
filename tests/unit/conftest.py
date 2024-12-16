@@ -16,6 +16,23 @@ def tenacity_wait(mocker):
     mocker.patch("tenacity.nap.time")
 
 
+@pytest.fixture(autouse=True)
+def get_charm_internal_revision(mocker):
+    mocker.patch(
+        "single_kernel_mongo.core.workload.WorkloadProtocol.get_internal_revision", return_value="1"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.get_charm_revision", return_value="1"
+    )
+
+
+@pytest.fixture(autouse=True)
+def mongod_ready(mocker):
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready", return_value=True
+    )
+
+
 def setup_secrets(harness: Harness) -> None:
     harness.set_leader(True)  # This runs the on_leader_elected event.
     harness.set_leader(False)

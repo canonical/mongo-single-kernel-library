@@ -111,7 +111,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.define_workloads_and_config_managers(container)
 
         self.version_checker = CrossAppVersionChecker(
-            self,
+            self.charm,
             version=get_charm_revision(
                 self.charm.unit, local_version=self.workload.get_internal_revision()
             ),
