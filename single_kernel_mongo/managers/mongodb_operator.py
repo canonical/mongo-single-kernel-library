@@ -11,6 +11,10 @@ import logging
 # from pathlib import Path
 from typing import TYPE_CHECKING, final
 
+from data_platform_helpers.version_check import (
+    CrossAppVersionChecker,
+    get_charm_revision,
+)
 from ops.framework import Object
 from ops.model import Container, MaintenanceStatus, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
@@ -105,6 +109,17 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
+
+        self.version_checker = CrossAppVersionChecker(
+            self,
+            version=get_charm_revision(
+                self.charm.unit, local_version=self.workload.get_internal_revision()
+            ),
+            relations_to_check=[
+                RelationNames.SHARDING.value,
+                RelationNames.CONFIG_SERVER.value,
+            ],
+        )
 
         # Managers
         self.backup_manager = BackupManager(
