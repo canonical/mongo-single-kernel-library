@@ -2,7 +2,16 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Abstract Operator for Mongo Related Charms."""
+"""Abstract Operator for Mongo Related Charms.
+
+The Charm operator defines the minimal interface that should be specified when
+defining an operator. This is a Mongo manager for all mongodb related
+operations, a TLS manager since all charms should be able to support TLS, a
+main workload (MongoDBWorkload or MongosWorkload) and some client events.
+
+To that, each operator can add some extra event handlers that are specific to
+this operator like backups or cluster event handlers, etc.
+"""
 
 from __future__ import annotations
 
@@ -13,8 +22,8 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Unit
 
-from single_kernel_mongo.config.literals import RoleEnum, Substrates
-from single_kernel_mongo.config.models import Role
+from single_kernel_mongo.config.literals import KindEnum, Substrates
+from single_kernel_mongo.config.models import CharmKind
 from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -32,7 +41,7 @@ class OperatorProtocol(ABC, Object):
 
     A Charm Operator must define the following elements:
      * charm: The Charm it is bound to.
-     * name: The charm operator name, which is one value of the `RoleEnum`
+     * name: The charm operator name, which is one value of the `KindEnum`
         enum. This is a class var defined in the operator.
      * tls_manager: The TLS manager for the mandatory tls events and handlers
      * state : The CharmState, object handling peer databag interactions, and model interactions.
@@ -41,9 +50,9 @@ class OperatorProtocol(ABC, Object):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[RoleEnum]
+    name: ClassVar[KindEnum]
     substrate: Substrates
-    role: Role
+    role: CharmKind
     config_manager: CommonConfigManager
     tls_manager: TLSManager
     state: CharmState

@@ -53,17 +53,6 @@ def test_set_user_pymongo_error(harness: Harness[MongoTestCharm], mocker):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_initialise_replica_set(harness: Harness[MongoTestCharm], mocker):
-    harness.set_leader(True)
-    mocker.patch(
-        "single_kernel_mongo.utils.mongo_connection.MongoConnection.init_replset",
-    )
-    harness.charm.operator.mongo_manager.initialise_replica_set()
-
-    assert harness.charm.operator.state.app_peer_data.replica_set_hosts == ["1.1.1.1"]
-
-
-@patch_network_get(private_address="1.1.1.1")
 def test_initialise_replica_set_operation_failure(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     mocker.patch(

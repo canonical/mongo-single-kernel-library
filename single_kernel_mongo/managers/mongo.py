@@ -95,7 +95,6 @@ class MongoManager(Object):
         """Initialises the replica set."""
         with MongoConnection(self.state.mongo_config, "localhost", direct=True) as direct_mongo:
             direct_mongo.init_replset()
-            self.state.app_peer_data.replica_set_hosts = [self.state.unit_peer_data.host]
 
     def initialise_users(self) -> None:
         """First initialisation of each user."""

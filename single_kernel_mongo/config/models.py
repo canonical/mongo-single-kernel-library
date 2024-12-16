@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""The different config models."""
+"""The different configuration models.
+
+This file should contain the models that are used for the charm configuration.
+The models specify the dataclasses and roles used to configure and fully specify a charm.
+"""
 
 from dataclasses import dataclass
 from importlib import resources as impresources
@@ -9,7 +13,7 @@ from importlib.abc import Traversable
 from pathlib import Path
 
 from single_kernel_mongo import templates
-from single_kernel_mongo.config.literals import RoleEnum, Substrates
+from single_kernel_mongo.config.literals import KindEnum, Substrates
 
 TEMPLATE_DIRECTORY = impresources.files(templates)
 
@@ -34,10 +38,10 @@ class AuditLogConfig:
 
 
 @dataclass(frozen=True)
-class Role:
+class CharmKind:
     """Defines a role for the charm."""
 
-    name: RoleEnum
+    name: KindEnum
     substrate: Substrates
     paths: dict[str, str]
 
@@ -71,10 +75,10 @@ K8S_PATH = {
     }
 }
 
-VM_MONGOD = Role(name=RoleEnum.MONGOD, substrate=Substrates.VM, paths=VM_PATH["mongod"])
-K8S_MONGOD = Role(name=RoleEnum.MONGOD, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
-VM_MONGOS = Role(name=RoleEnum.MONGOS, substrate=Substrates.VM, paths=VM_PATH["mongod"])
-K8S_MONGOS = Role(name=RoleEnum.MONGOS, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
+VM_MONGOD = CharmKind(name=KindEnum.MONGOD, substrate=Substrates.VM, paths=VM_PATH["mongod"])
+K8S_MONGOD = CharmKind(name=KindEnum.MONGOD, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
+VM_MONGOS = CharmKind(name=KindEnum.MONGOS, substrate=Substrates.VM, paths=VM_PATH["mongod"])
+K8S_MONGOS = CharmKind(name=KindEnum.MONGOS, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
 
 ROLES = {
     "vm": {"mongod": VM_MONGOD, "mongos": VM_MONGOS},

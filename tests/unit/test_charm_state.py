@@ -58,7 +58,6 @@ def test_app_peer_data(harness: Harness[MongoTestCharm]):
 
     assert state.app_peer_data.role == MongoDBRoles.REPLICATION
     assert not state.db_initialised
-    assert state.app_peer_data.replica_set_hosts == []
     assert state.app_peer_data.managed_users == set()
     assert len(state.get_keyfile() or "") == 1024
     assert state.app_peer_data.replica_set == "test-mongodb"

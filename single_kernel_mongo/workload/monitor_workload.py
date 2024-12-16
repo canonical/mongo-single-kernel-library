@@ -8,7 +8,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
-from single_kernel_mongo.config.models import Role
+from single_kernel_mongo.config.models import CharmKind
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
@@ -21,7 +21,7 @@ class MongoDBExporterWorkload(WorkloadBase):
     env_var = "MONGODB_URI"
     snap_param = "monitor-uri"
 
-    def __init__(self, role: Role, container: Container | None) -> None:
+    def __init__(self, role: CharmKind, container: Container | None) -> None:
         super().__init__(role, container)
         self.paths = MongoPaths(self.role)
 

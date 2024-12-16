@@ -1,6 +1,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""Literal string for the different charms."""
+"""Literal string for the different charms.
+
+This module should contain the literals used in the charms (paths, enums, etc).
+"""
 
 from dataclasses import dataclass
 from enum import Enum
@@ -17,7 +20,7 @@ class Substrates(str, Enum):
     K8S = "k8s"
 
 
-class RoleEnum(str, Enum):
+class KindEnum(str, Enum):
     """The two possible role names."""
 
     MONGOD = "mongod"

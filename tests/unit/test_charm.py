@@ -212,7 +212,7 @@ def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
 def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
     mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
     harness.charm.operator.state.db_initialised = True
-    harness.charm.operator.backup_manager.connect()
+    harness.charm.operator.backup_manager.configure_and_restart()
 
     mock_active.assert_not_called()
 
@@ -220,7 +220,7 @@ def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
 def test_pbm_connect_no_db_initialised(harness: Harness[MongoTestCharm], mocker):
     mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
     harness.charm.operator.state.db_initialised = False
-    harness.charm.operator.backup_manager.connect()
+    harness.charm.operator.backup_manager.configure_and_restart()
 
     mock_active.assert_not_called()
 
@@ -237,7 +237,7 @@ def test_pbm_connect_same_env(harness: Harness[MongoTestCharm], mocker):
     mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.get_environment", return_value=uri
     )
-    harness.charm.operator.backup_manager.connect()
+    harness.charm.operator.backup_manager.configure_and_restart()
     mock_start.assert_not_called()
 
 
@@ -258,7 +258,7 @@ def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
         "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
     )
 
-    harness.charm.operator.backup_manager.connect()
+    harness.charm.operator.backup_manager.configure_and_restart()
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
@@ -285,7 +285,7 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
         return_value="deadbeef",
     )
 
-    harness.charm.operator.backup_manager.connect()
+    harness.charm.operator.backup_manager.configure_and_restart()
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()

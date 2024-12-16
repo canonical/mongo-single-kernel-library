@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING, final
 
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
-from ops.model import Container, Unit
+from ops.model import Container, MaintenanceStatus, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     MAX_PASSWORD_LENGTH,
+    KindEnum,
     MongoPorts,
-    RoleEnum,
     Scope,
     Substrates,
 )
@@ -36,6 +36,7 @@ from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardingMigrationError,
     UpgradeInProgressError,
@@ -77,7 +78,7 @@ logger = logging.getLogger(__name__)
 class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
 
-    name = RoleEnum.MONGOD
+    name = KindEnum.MONGOD
     workload: MongoDBWorkload
 
     def __init__(self, charm: AbstractMongoCharm):
@@ -183,7 +184,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-        self.logrotate_config_manager.connect()
+        self.logrotate_config_manager.configure_and_restart()
 
     @override
     def on_start(self) -> None:
@@ -241,13 +242,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.charm.status_manager.to_active(None)
 
         try:
-            self.mongodb_exporter_config_manager.connect()
+            self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
             self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
             return
 
         try:
-            self.backup_manager.connect()
+            self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
             self.charm.status_manager.to_blocked("couldn't start pbm-agent")
             return
@@ -296,17 +297,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
-        # Set the password for the Operator User.
-        if not self.state.get_user_password(OperatorUser):
-            self.state.set_user_password(OperatorUser, self.workload.generate_password())
-
-        # Set the password for the Monitor User.
-        if not self.state.get_user_password(MonitorUser):
-            self.state.set_user_password(MonitorUser, self.workload.generate_password())
-
-        # Set the password for the Backup User.
-        if not self.state.get_user_password(BackupUser):
-            self.state.set_user_password(BackupUser, self.workload.generate_password())
+        # Sets the password for the system users
+        for user in (OperatorUser, BackupUser, MonitorUser):
+            self.state.set_user_password(user, self.workload.generate_password())
 
     @override
     def on_relation_joined(self) -> None:
@@ -336,8 +329,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
         # work
-        self.mongodb_exporter_config_manager.connect()
-        self.backup_manager.connect()
+        self.mongodb_exporter_config_manager.configure_and_restart()
+        self.backup_manager.configure_and_restart()
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
@@ -381,8 +374,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Always update the PBM and mongodb exporter configuration so that if
         # the secret changed, the configuration is updated and will still work
         # afterwards.
-        self.mongodb_exporter_config_manager.connect()
-        self.backup_manager.connect()
+        self.mongodb_exporter_config_manager.configure_and_restart()
+        self.backup_manager.configure_and_restart()
 
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
@@ -493,10 +486,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         secret_id = self.mongo_manager.set_user_password(user, new_password)
         if user == BackupUser:
             # Update and restart PBM Agent.
-            self.backup_manager.connect()
+            self.backup_manager.configure_and_restart()
         if user == MonitorUser:
             # Update and restart mongodb exporter.
-            self.mongodb_exporter_config_manager.connect()
+            self.mongodb_exporter_config_manager.configure_and_restart()
         # TODO: Rotate password.
         if user in (OperatorUser, BackupUser):
             pass
@@ -508,6 +501,25 @@ class MongoDBOperator(OperatorProtocol, Object):
         return self.get_password(username)
 
     # END: Handlers.
+
+    def assert_pass_password_checks(self) -> None:
+        """Sanity checks to run before password changes."""
+        if not self.model.unit.is_leader():
+            raise NonDeferrableFailedHookChecksError(
+                "Password rotation must be called on leader unit."
+            )
+        if self.state.upgrade_in_progress:
+            raise NonDeferrableFailedHookChecksError(
+                "Cannot set passwords while an upgrade is in progress"
+            )
+        if self.state.is_role(MongoDBRoles.SHARD):
+            raise NonDeferrableFailedHookChecksError(
+                "Cannot set password on shard, please set password on config-server."
+            )
+        if isinstance(self.backup_manager.get_status(), MaintenanceStatus):
+            raise NonDeferrableFailedHookChecksError(
+                "Cannot change a password while a backup/restore is in progress."
+            )
 
     def get_password(self, username: str) -> str:
         """Gets the password for the relevant username."""
@@ -541,8 +553,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             return
         self.mongo_manager.process_unremoved_units()
-        if set(self.state.app_peer_data.replica_set_hosts) != self.state.app_hosts:
-            self.state.app_peer_data.replica_set_hosts = list(self.state.app_hosts)
         self.update_related_hosts()
 
     def update_related_hosts(self):

@@ -22,7 +22,6 @@ class AppPeerDataKeys(str, Enum):
     managed_users_key = "managed-users-key"
     db_initialised = "db_initialised"
     role = "role"
-    replica_set_hosts = "replica_set_hosts"
     keyfile = "keyfile"
     external_connectivity = "external-connectivity"
 
@@ -93,18 +92,6 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
             raise ValueError(
                 f"'db_initialised' must be a boolean value. Provided: {value} is of type {type(value)}"
             )
-
-    @property
-    def replica_set_hosts(self) -> list[str]:
-        """Returns the stored list of replica set hosts."""
-        if not self.relation:
-            return []
-
-        return json.loads(self.relation_data.get(AppPeerDataKeys.replica_set_hosts.value, "[]"))
-
-    @replica_set_hosts.setter
-    def replica_set_hosts(self, value: list[str]) -> None:
-        self.update({AppPeerDataKeys.replica_set_hosts.value: json.dumps(sorted(value))})
 
     @property
     def managed_users(self) -> set[str]:

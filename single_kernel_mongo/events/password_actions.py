@@ -10,10 +10,8 @@ from typing import TYPE_CHECKING
 
 from ops.charm import ActionEvent
 from ops.framework import Object
-from ops.model import MaintenanceStatus
 
-from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import SetPasswordError
+from single_kernel_mongo.exceptions import NonDeferrableFailedHookChecksError, SetPasswordError
 from single_kernel_mongo.utils.event_helpers import fail_action_with_error_log
 from single_kernel_mongo.utils.mongodb_users import CharmUsers, OperatorUser
 
@@ -53,34 +51,10 @@ class PasswordActionEvents(Object):
         Set the password for a specific user, if no passwords are passed, generate them.
         """
         action = "set-password"
-        if not self.model.unit.is_leader():
-            fail_action_with_error_log(
-                logger, event, action, "Password rotation must be called on leader unit"
-            )
-            return
-        if self.dependent.state.upgrade_in_progress:
-            fail_action_with_error_log(
-                logger,
-                event,
-                action,
-                "Cannot set passwords while an upgrade is in progress.",
-            )
-            return
-        if self.dependent.state.is_role(MongoDBRoles.SHARD):
-            fail_action_with_error_log(
-                logger,
-                event,
-                action,
-                "Cannot set password on shard, please set password on config-server.",
-            )
-            return
-        if isinstance(self.dependent.backup_manager.get_status(), MaintenanceStatus):
-            fail_action_with_error_log(
-                logger,
-                event,
-                action,
-                "Cannot change password while a backup/restore is in progress.",
-            )
+        try:
+            self.dependent.assert_pass_password_checks()
+        except NonDeferrableFailedHookChecksError as e:
+            fail_action_with_error_log(logger, event, action, str(e))
             return
         username = event.params.get(PasswordActionParameter.USERNAME, OperatorUser.username)
         password = event.params.get(PasswordActionParameter.PASSWORD)

@@ -15,13 +15,13 @@ from ops import Container
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import WorkloadUser
-from single_kernel_mongo.config.models import Role
+from single_kernel_mongo.config.models import CharmKind
 
 
 class MongoPaths:
     """Object to store the common paths for a mongodb instance."""
 
-    def __init__(self, role: Role):
+    def __init__(self, role: CharmKind):
         self.conf_path = role.paths["CONF"]
         self.data_path = role.paths["DATA"]
         self.binaries_path = role.paths["BIN"]
@@ -238,12 +238,17 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 
     @abstractmethod
     def get_env(self) -> dict[str, str]:
-        """Returns the environment as defined by /etc/environment."""
+        """Returns the environment as defined in the substrate backend."""
         ...
 
     @abstractmethod
     def update_env(self, parameters: chain[str]):
-        """Updates the environment with the new values."""
+        """Updates the environment with the new values.
+
+        While the name may seem misleading, this interface works for both substrates.
+        In the case of VM, it will set the snap config variable, while it the
+        case of k8s, it will use the Layer environment mechanism.
+        """
         ...
 
     def get_version(self) -> str:
@@ -295,6 +300,6 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
 class WorkloadBase(WorkloadProtocol):  # pragma: nocover
     """Base interface for common workload operations."""
 
-    def __init__(self, role: Role, container: Container | None):
+    def __init__(self, role: CharmKind, container: Container | None):
         self.container = container
         self.role = role

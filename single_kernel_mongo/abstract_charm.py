@@ -4,6 +4,23 @@
 
 This abstract class is inherited by all actual charms that need to define the different ClassVar.
 An example can be found in ../tests/unit/mongodb_test_charm/src/charm.py.
+
+
+When defining a charm, the developer should go this way:
+```
+class MyCharm(AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
+    config_type = MongoDBCharmConfig
+    operator_type = MongoDBOperator
+    substrate = Substrates.VM
+    peer_rel_name = PeerRelationNames.PEERS
+    name = "mongodb-test"
+
+```
+
+This defines a charm that has the `MongoDBCharmConfig` configuration model,
+will use the `MongoDBOperator` operator (which specifies a MongoD charm running
+a DB Engine and storage), and the main peer relation name will be
+`database-peers`. The name `mongodb-test` will be used for the dependency.
 """
 
 import logging

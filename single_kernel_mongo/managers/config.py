@@ -14,11 +14,11 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     LOCALHOST,
+    KindEnum,
     MongoPorts,
-    RoleEnum,
     Substrates,
 )
-from single_kernel_mongo.config.models import AuditLogConfig, LogRotateConfig, Role
+from single_kernel_mongo.config.models import AuditLogConfig, CharmKind, LogRotateConfig
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -64,7 +64,7 @@ class BackupConfigManager(CommonConfigManager):
     def __init__(
         self,
         substrate: Substrates,
-        role: Role,
+        role: CharmKind,
         config: MongoConfigModel,
         state: CharmState,
         container: Container | None,
@@ -81,10 +81,10 @@ class BackupConfigManager(CommonConfigManager):
             ]
         ]
 
-    def connect(self):
+    def configure_and_restart(self):
         """Sets up PBM with right configuration and restarts it."""
         if not self.workload.workload_present:
-            logger.info("Container cannot connect.")
+            logger.info("Workload is not present.")
             return
         if not self.state.db_initialised:
             logger.info("DB is not initialised.")
@@ -112,7 +112,7 @@ class LogRotateConfigManager(CommonConfigManager):
 
     def __init__(
         self,
-        role: Role,
+        role: CharmKind,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
@@ -129,7 +129,7 @@ class LogRotateConfigManager(CommonConfigManager):
     def build_parameters(self) -> list[list[str]]:
         return [[]]
 
-    def connect(self) -> None:
+    def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
         self.workload.build_template()
         if self.substrate == Substrates.VM:
@@ -148,7 +148,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     def __init__(
         self,
-        role: Role,
+        role: CharmKind,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
@@ -164,7 +164,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
     def build_parameters(self) -> list[list[str]]:
         return [[self.state.monitor_config.uri]]
 
-    def connect(self):
+    def configure_and_restart(self):
         """Exposes the endpoint to mongodb_exporter."""
         if not self.state.db_initialised:
             return
@@ -205,7 +205,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
         if (
-            self.state.charm_role.name == RoleEnum.MONGOS
+            self.state.charm_role.name == KindEnum.MONGOS
             and not self.state.app_peer_data.external_connectivity
         ):
             return [
@@ -257,7 +257,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
             return [
                 f"--tlsCAFile={self.workload.paths.ext_ca_file}",
                 f"--tlsCertificateKeyFile={self.workload.paths.ext_pem_file}",
-                # allow non-TLS connections
+                # allow non-TLS configure_and_restartions
                 "--tlsMode=preferTLS",
                 "--tlsDisabledProtocols=TLS1_0,TLS1_1",
             ]
@@ -320,7 +320,7 @@ class MongosConfigManager(MongoConfigManager):
     def config_server_db_parameter(self) -> list[str]:
         """The config server DB parameter."""
         # In case we are integrated with a config-server, we need to provide
-        # it's URI to mongos so it can connect to it.
+        # it's URI to mongos so it can configure_and_restart to it.
         if uri := self.state.cluster.config_server_uri:
             return [f"--configdb {uri}"]
         return [
