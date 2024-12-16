@@ -596,7 +596,7 @@ class ShardManager(Object):
             )
             raise FailedToUpdateCredentialsError
         # after updating the password of the backup user, restart pbm with correct password
-        self.dependent.backup_manager.connect()
+        self.dependent.backup_manager.configure_and_restart()
 
     def update_password(self, user: MongoDBUser, new_password: str):
         """Updates the password for the given user."""
