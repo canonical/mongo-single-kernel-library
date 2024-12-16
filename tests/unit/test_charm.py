@@ -109,7 +109,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
         new_callable=mocker.PropertyMock(return_value=True),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect",
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
         side_effect=WorkloadServiceError,
     )
     harness.set_leader(True)
@@ -129,7 +129,7 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
         new_callable=mocker.PropertyMock(return_value=True),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.config.BackupConfigManager.connect",
+        "single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart",
         side_effect=WorkloadServiceError,
     )
     harness.set_leader(True)
@@ -182,7 +182,7 @@ def test_on_leader_elected_dont_rotate_if_present(harness):
 
 def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     mocked = mocker.patch(
-        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect"
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
     harness.set_leader(True)
     password = "deadbeef"
@@ -337,8 +337,10 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mocked_add_replset_member = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
     )
-    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
-    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
 
     rel = harness.charm.operator.state.peer_relation
     harness.add_relation_unit(rel.id, "test-mongodb/1")
@@ -360,8 +362,10 @@ def test_on_relation_departed_not_leader(
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
-    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
     update_host_mock = mocker.patch(
@@ -387,8 +391,10 @@ def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mo
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
-    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
     update_host_mock = mocker.patch(
@@ -432,8 +438,10 @@ def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    mocker.patch("single_kernel_mongo.managers.config.MongoDBExporterConfigManager.connect")
-    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.connect")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_app_relation_data")
     harness.set_leader(True)

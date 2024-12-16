@@ -299,7 +299,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Sets the password for the system users
         for user in (OperatorUser, BackupUser, MonitorUser):
-            self.state.set_user_password(user, self.workload.generate_password())
+            if not self.state.get_user_password(user):
+                self.state.set_user_password(user, self.workload.generate_password())
 
     @override
     def on_relation_joined(self) -> None:
