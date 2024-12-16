@@ -75,6 +75,7 @@ class ClusterConfigServerEventHandler(Object):
         """Handle relation changed and relation broken events."""
         try:
             self.manager.on_relation_changed(event.relation)
+            self.charm.status_manager.process_and_share_statuses()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -83,6 +84,7 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_broken_event(self, event: RelationBrokenEvent):
         try:
             self.manager.on_relation_broken(event.relation)
+            self.charm.status_manager.process_and_share_statuses()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:

@@ -164,9 +164,12 @@ class LifecycleEventsHandler(Object):
             event.defer()
             return
 
+        self.charm.status_manager.process_and_share_statuses()
+
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
         self.dependent.on_relation_departed(departing_unit=event.departing_unit)
+        self.charm.status_manager.process_and_share_statuses()
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""

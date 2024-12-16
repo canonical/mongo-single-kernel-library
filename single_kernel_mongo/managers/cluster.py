@@ -256,7 +256,6 @@ class ClusterRequirer(Object):
             self.state.app_peer_data.db_initialised = True
 
         self.dependent.share_connection_info()
-        self.charm.status_manager.process_and_share_statuses()
 
     def relation_broken(self, relation: Relation):
         """Proceeds on relation broken."""
@@ -272,7 +271,6 @@ class ClusterRequirer(Object):
         logger.info("Cleaning database and user removed for mongos application")
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.username.value)
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.password.value)
-        self.charm.status_manager.process_and_share_statuses()
 
     def update_users(self):
         """Updates users after being initialised."""

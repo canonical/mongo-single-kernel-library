@@ -383,8 +383,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("waiting to reconfigure replica set")
             raise
 
-        self.charm.status_manager.process_and_share_statuses()
-
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
@@ -432,7 +430,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         self.update_hosts()
-        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_storage_attached(self) -> None:  # pragma: nocover
@@ -554,7 +551,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 new_password,
             )
 
-        self.charm.status_manager.process_and_share_statuses()
         return new_password, secret_id
 
     def on_get_password_action(self, username: str) -> str:

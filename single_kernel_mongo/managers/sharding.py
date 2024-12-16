@@ -277,7 +277,6 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
-        self.charm.status_manager.process_and_share_statuses()
 
     def remove_shards(self, relation: Relation):
         """Removes a shard from the cluster."""
@@ -674,7 +673,11 @@ class ShardManager(Object, StatusProvider):
 
         try:
             # check our ability to use connect to mongos
-            with MongoConnection(self.state.mongos_config) as mongos:
+            config = self.state.mongos_config_for_user(
+                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
+            )
+
+            with MongoConnection(config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:

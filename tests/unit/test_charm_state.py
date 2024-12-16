@@ -13,8 +13,9 @@ PEER_ADDR = {"private-address": "127.4.5.6"}
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_app_hosts(harness: Harness[MongoTestCharm]):
+def test_app_hosts(harness: Harness[MongoTestCharm], mocker):
     rel_id = harness.charm.model.get_relation(PeerRelationNames.PEERS.value).id  # type: ignore
+    mocker.patch("single_kernel_mongo.status.StatusManager.process_and_share_statuses")
     harness.add_relation_unit(rel_id, "test-mongodb/1")
     harness.update_relation_data(rel_id, "test-mongodb/1", PEER_ADDR)
     resulting_ips = harness.charm.operator.state.app_hosts
