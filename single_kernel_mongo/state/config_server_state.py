@@ -23,6 +23,7 @@ class ConfigServerKeys(str, Enum):
     host = "host"
     key_file = "key-file"
     int_ca_secret = "int-ca-secret"
+    status_ready_for_upgrade = "status-shows-ready-for-upgrade"
 
 
 SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
@@ -75,3 +76,16 @@ class ConfigServerState(AbstractRelationState[Data]):
         if not self.relation:
             return None
         return self.relation_data.get(ConfigServerKeys.backup_password.value, None)
+
+    @property
+    def status_ready_for_upgrade(self) -> bool:
+        """Returns true if the shard is ready for upgrade."""
+        if not self.relation:
+            return True
+        return json.loads(
+            self.relation_data.get(ConfigServerKeys.status_ready_for_upgrade.value, "false")
+        )
+
+    @status_ready_for_upgrade.setter
+    def status_ready_for_upgrade(self, value: bool):
+        self.update({ConfigServerKeys.status_ready_for_upgrade.value: json.dumps(value)})

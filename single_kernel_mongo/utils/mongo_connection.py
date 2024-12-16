@@ -32,6 +32,8 @@ from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
 logger = logging.getLogger(__name__)
 
+SHARD_AWARE_STATE = 1
+
 
 class NotReadyError(PyMongoError):
     """Raised when mongo is not ready."""
@@ -615,3 +617,12 @@ class MongoConnection:
                 draining_shards.append(shard["_id"])
 
         return draining_shards
+
+    def is_shard_aware(self, shard_name: str) -> bool:
+        """Returns True if the shard is in the AWARE state."""
+        sc_status = self.client.admin.command("listShards")
+        for shard in sc_status["shards"]:
+            if shard["_id"] == shard_name:
+                return shard["state"] == SHARD_AWARE_STATE
+
+        return False

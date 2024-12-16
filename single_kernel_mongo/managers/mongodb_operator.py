@@ -242,7 +242,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.info("Starting MongoDB.")
             self.charm.status_manager.to_maintenance("starting MongoDB")
             self.start_charm_services()
-            self.charm.status_manager.to_active(None)
         except WorkloadServiceError as e:
             logger.error(f"An exception occurred when starting mongod agent, error: {e}.")
             self.charm.status_manager.to_blocked("couldn't start MongoDB")
@@ -264,8 +263,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("waiting for MongoDB to start")
             raise WorkloadNotReadyError
 
-        self.charm.status_manager.to_active(None)
-
         try:
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
@@ -279,7 +276,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         self._initialise_replica_set()
-        self.charm.status_manager.to_active(None)
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_stop(self) -> None:  # pragma: nocover
@@ -370,7 +367,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error(f"Not reconfiguring: error={e}")
             self.charm.status_manager.to_waiting("waiting to reconfigure replica set")
             raise
-        self.charm.status_manager.to_active(None)
+
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
@@ -403,6 +401,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongodb_exporter_config_manager.configure_and_restart()
         self.backup_manager.configure_and_restart()
 
+        # Always process the statuses.
+        self.charm.status_manager.process_and_share_statuses()
+
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""
@@ -416,6 +417,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         self.update_hosts()
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_storage_attached(self) -> None:  # pragma: nocover
@@ -510,18 +512,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         try:
             self.perform_self_healing()
-        except ServerSelectionTimeoutError:
-            deployment = (
-                "replica set" if self.state.is_role(MongoDBRoles.REPLICATION) else "cluster"
-            )
-            self.charm.status_manager.to_waiting(
-                f"Waiting to sync internal membership across the {deployment}"
-            )
-        else:
-            self.charm.status_manager.to_active(None)
+        except ServerSelectionTimeoutError as e:
+            logger.info(f"Failed to perform self healing: {e}")
 
-        self.charm.status_manager.set_and_share_status(self.mongo_manager.get_status())
-        # TODO: Process statuses.
+        self.charm.status_manager.process_and_share_statuses()
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
         """Handler for the set password action."""
@@ -545,6 +539,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 new_password,
             )
 
+        self.charm.status_manager.process_and_share_statuses()
         return new_password, secret_id
 
     def on_get_password_action(self, username: str) -> str:

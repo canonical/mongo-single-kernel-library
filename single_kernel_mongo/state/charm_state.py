@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
 from ops import Object, Relation, Unit
+from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
@@ -432,6 +433,21 @@ class CharmState(Object):
         self.unit_peer_data.update({rel_departed_key: json.dumps(scaling_down)})
         return scaling_down
 
+    def share_status_with_config_server(self, status: StatusBase):
+        """Shares this shard's status with the config server."""
+        if not self.is_role(MongoDBRoles.SHARD):
+            return
+        if not self.shard_relation:
+            return
+        if isinstance(status, ActiveStatus):
+            self.shard_state.status_ready_for_upgrade = True
+        if not isinstance(status, BlockedStatus):
+            self.shard_state.status_ready_for_upgrade = False
+        if status.message and "is not up-to date with config-server" in status.message:
+            self.shard_state.status_ready_for_upgrade = True
+
+        self.shard_state.status_ready_for_upgrade = False
+
     # BEGIN: Configuration accessors
 
     def mongodb_config_for_user(
@@ -512,6 +528,8 @@ class CharmState(Object):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the mongos user."""
+        if self.charm_role.name == KindEnum.MONGOD:
+            return self.mongos_config_for_user(OperatorUser, self.app_hosts)
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
         password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
         database = self.app_peer_data.database

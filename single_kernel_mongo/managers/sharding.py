@@ -22,6 +22,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class ConfigServerManager(Object):
+class ConfigServerManager(Object, StatusProvider):
     """Manage relations between the config server and the shard, on the config-server's side."""
 
     def __init__(
@@ -222,7 +223,7 @@ class ConfigServerManager(Object):
             )
 
         uri = f"mongodb://{','.join(self.state.app_hosts)}"
-        if not self.dependent.mongo_manager.mongod_ready(uri):
+        if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
             return BlockedStatus("Internal mongos is not running.")
 
         if not self.cluster_password_synced():
@@ -264,11 +265,7 @@ class ConfigServerManager(Object):
             return
 
         self.charm.status_manager.to_maintenance(f"Adding shard {shard_name} to config-server")
-        config = self.state.mongos_config_for_user(
-            OperatorUser,
-            self.state.app_hosts,
-        )
-        with MongoConnection(config) as mongo:
+        with MongoConnection(self.state.mongos_config) as mongo:
             try:
                 mongo.add_shard(shard_name, hosts)
             except OperationFailure as e:
@@ -280,17 +277,13 @@ class ConfigServerManager(Object):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
-        self.charm.status_manager.to_active(None)
+        self.charm.status_manager.process_and_share_statuses()
 
     def remove_shards(self, relation: Relation):
         """Removes a shard from the cluster."""
         shard_name = relation.app.name
 
-        config = self.state.mongos_config_for_user(
-            OperatorUser,
-            self.state.app_hosts,
-        )
-        with MongoConnection(config) as mongo:
+        with MongoConnection(self.state.mongos_config) as mongo:
             try:
                 self.charm.status_manager.to_maintenance(f"Draining shard {shard_name}")
                 logger.info("Attempting to removing shard: %s", shard_name)
@@ -313,13 +306,9 @@ class ConfigServerManager(Object):
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return True
 
-        config = self.state.mongos_config_for_user(
-            OperatorUser,
-            self.state.app_hosts,
-        )
         try:
             # check our ability to use connect to mongos
-            with MongoConnection(config) as mongos:
+            with MongoConnection(self.state.mongos_config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
@@ -361,13 +350,13 @@ class ConfigServerManager(Object):
             # use a URI that is not dependent on the operator password, as we are not guaranteed
             # that the shard has received the password yet.
             uri = f"mongodb://{','.join(hosts)}"
-            if not self.dependent.mongo_manager.mongod_ready(uri):
+            if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
                 unreachable_hosts.append(shard_name)
 
         return unreachable_hosts
 
 
-class ShardManager(Object):
+class ShardManager(Object, StatusProvider):
     """Manage relations between the config server and the shard, on the shard's side."""
 
     def __init__(
@@ -676,3 +665,114 @@ class ShardManager(Object):
 
         self.state.unit_peer_data.drained = drained
         return drained
+
+    def cluster_password_synced(self) -> bool:
+        """Returns True if the cluster password is synced."""
+        # base case: not config-server
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return True
+
+        try:
+            # check our ability to use connect to mongos
+            with MongoConnection(self.state.mongos_config) as mongos:
+                mongos.get_shard_members()
+            # check our ability to use connect to mongod
+            with MongoConnection(self.state.mongo_config) as mongod:
+                mongod.get_replset_status()
+        except OperationFailure as e:
+            if e.code in [13, 18, 133]:
+                return False
+            raise
+        except ServerSelectionTimeoutError:
+            # Connection refused, - this occurs when internal membership is not in sync across the
+            # cluster (i.e. TLS + KeyFile).
+            return False
+
+        return True
+
+    def _is_added_to_cluster(self) -> bool:
+        """Returns true if the shard has been added to the clusted."""
+        if not self.state.config_server_name or not self.state.app_peer_data.mongos_hosts:
+            return False
+
+        try:
+            # check our ability to use connect to mongos
+            with MongoConnection(self.state.mongos_config) as mongos:
+                members = mongos.get_shard_members()
+        except OperationFailure as e:
+            if e.code in [13, 18, 133]:
+                return False
+            raise
+        except ServerSelectionTimeoutError:
+            # Connection refused, - this occurs when internal membership is not in sync across the
+            # cluster (i.e. TLS + KeyFile).
+            return False
+
+        return self.state.app_peer_data.replica_set in members
+
+    def _is_shard_aware(self) -> bool:
+        with MongoConnection(self.state.mongos_config) as mongo:
+            return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
+
+    def skip_shard_status(self) -> bool:
+        """Returns true if the status check should be skipped."""
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            logger.info("Skipping shard status check, charm is running as a config-server")
+            return True
+
+        if not self.state.db_initialised:
+            logger.info("No status for shard to report, waiting for db to be initialised.")
+            return True
+
+        return False
+
+    def get_tls_status(self) -> StatusBase | None:
+        """Returns the TLS status of the sharded deployment."""
+        shard_has_tls, config_server_has_tls = self.tls_status()
+        match (shard_has_tls, config_server_has_tls):
+            case False, True:
+                return BlockedStatus("Shard requires TLS to be enabled.")
+            case True, False:
+                return BlockedStatus("Shard has TLS enabled, but config-server does not.")
+            case _:
+                pass
+
+        if not self.is_ca_compatible():
+            logger.error(
+                "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
+            )
+            return BlockedStatus("Shard CA and Config-Server CA don't match.")
+        return None
+
+    def get_status(self) -> StatusBase | None:
+        """Returns the current status of the shard."""
+        if self.skip_shard_status():
+            return None
+
+        if self.state.is_role(MongoDBRoles.REPLICATION) and self.state.shard_relation:
+            return BlockedStatus("Sharding interface cannot be used by replicas")
+
+        if self.state.client_relations:
+            return BlockedStatus(
+                f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
+            )
+
+        if not self.state.shard_relation and not self.state.unit_peer_data.drained:
+            return BlockedStatus("Missing relation to config-server.")
+
+        if not self.state.shard_relation and self.state.unit_peer_data.drained:
+            return ActiveStatus("Shard drained from cluster, ready for removal")
+
+        if not self.cluster_password_synced():
+            return WaitingStatus("Waiting to sync passwords across the cluster")
+
+        if status := self.get_tls_status():
+            return status
+
+        if not self._is_added_to_cluster():
+            return MaintenanceStatus("Adding shard to config-server")
+
+        if not self._is_shard_aware():
+            return BlockedStatus("Shard is not yet shard aware")
+
+        return None
