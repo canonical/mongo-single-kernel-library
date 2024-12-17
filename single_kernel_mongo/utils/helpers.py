@@ -30,3 +30,8 @@ def generate_relation_departed_key(rel_id: int) -> str:  # noqa
 def hostname_from_hostport(host: str) -> str:
     """Takes hostname:port and returns hostname."""
     return host.split(":")[0]
+
+
+def hostname_from_shardname(host: str) -> str:
+    """Takes hostname/ip:port and returns hostname."""
+    return host.split("/")[0]

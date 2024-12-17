@@ -26,7 +26,7 @@ from single_kernel_mongo.exceptions import (
     NotEnoughSpaceError,
     ShardNotInClusterError,
 )
-from single_kernel_mongo.utils.helpers import hostname_from_hostport
+from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
@@ -370,7 +370,7 @@ class MongoConnection:
             ConfigurationError, OperationFailure
         """
         shard_list = self.client.admin.command("listShards")
-        return {hostname_from_hostport(member["host"]) for member in shard_list["shards"]}
+        return {hostname_from_shardname(member["host"]) for member in shard_list["shards"]}
 
     def add_shard(self, shard_name, shard_hosts, shard_port=MongoPorts.MONGODB_PORT):
         """Adds shard to the cluster.

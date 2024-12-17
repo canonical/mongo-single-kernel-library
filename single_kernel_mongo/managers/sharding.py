@@ -699,8 +699,11 @@ class ShardManager(Object, StatusProvider):
             return False
 
         try:
+            config = self.state.mongos_config_for_user(
+                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
+            )
             # check our ability to use connect to mongos
-            with MongoConnection(self.state.mongos_config) as mongos:
+            with MongoConnection(config) as mongos:
                 members = mongos.get_shard_members()
         except OperationFailure as e:
             if e.code in [13, 18, 133]:
@@ -714,7 +717,10 @@ class ShardManager(Object, StatusProvider):
         return self.state.app_peer_data.replica_set in members
 
     def _is_shard_aware(self) -> bool:
-        with MongoConnection(self.state.mongos_config) as mongo:
+        config = self.state.mongos_config_for_user(
+            OperatorUser, set(self.state.app_peer_data.mongos_hosts)
+        )
+        with MongoConnection(config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
 
     def skip_shard_status(self) -> bool:
