@@ -772,9 +772,6 @@ class ShardManager(Object, StatusProvider):
         if not self.state.shard_relation and self.state.unit_peer_data.drained:
             return ActiveStatus("Shard drained from cluster, ready for removal")
 
-        if not self.state.shard_relation:
-            return BlockedStatus("missing relation to config-server")
-
         if not self.cluster_password_synced():
             return WaitingStatus("Waiting to sync passwords across the cluster")
 

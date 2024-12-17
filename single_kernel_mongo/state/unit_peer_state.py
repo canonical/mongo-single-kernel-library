@@ -104,7 +104,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     @property
     def drained(self) -> bool:
         """Is the shard drained."""
-        return json.loads(self.relation_data.get("drained", "true"))
+        return json.loads(self.relation_data.get("drained", "false"))
 
     @drained.setter
     def drained(self, value: bool):

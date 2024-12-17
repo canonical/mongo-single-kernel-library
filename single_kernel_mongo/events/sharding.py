@@ -74,7 +74,6 @@ class ConfigServerEventHandler(Object):
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
             self.manager.on_relation_event(event.relation, is_leaving)
-            self.charm.status_manager.process_and_share_statuses()
         except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError, ShardAuthError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -84,7 +83,6 @@ class ConfigServerEventHandler(Object):
         """Relation joined events."""
         try:
             self.manager.on_database_requested(event.relation)
-            self.charm.status_manager.process_and_share_statuses()
         except DeferrableFailedHookChecksError as e:
             logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
