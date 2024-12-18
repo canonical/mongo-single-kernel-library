@@ -80,15 +80,15 @@ class ConfigServerManager(Object, StatusProvider):
                 f"Database Requested event has not run yet for relation {relation.id}"
             )
         relation_data = {
-            ConfigServerKeys.operator_password.value: self.state.get_user_password(OperatorUser),
-            ConfigServerKeys.backup_password.value: self.state.get_user_password(BackupUser),
-            ConfigServerKeys.key_file.value: self.state.get_keyfile(),
-            ConfigServerKeys.host.value: json.dumps(sorted(self.state.app_hosts)),
+            ConfigServerKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(OperatorUser),
+            ConfigServerKeys.BACKUP_PASSWORD.value: self.state.get_user_password(BackupUser),
+            ConfigServerKeys.KEY_FILE.value: self.state.get_keyfile(),
+            ConfigServerKeys.HOST.value: json.dumps(sorted(self.state.app_hosts)),
         }
 
         int_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
         if int_tls_ca:
-            relation_data[ConfigServerKeys.int_ca_secret.value] = int_tls_ca
+            relation_data[ConfigServerKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -194,7 +194,7 @@ class ConfigServerManager(Object, StatusProvider):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.host.value: sorted(self.state.app_hosts)}
+                relation.id, {ConfigServerKeys.HOST.value: sorted(self.state.app_hosts)}
             )
 
     def skip_config_server_status(self) -> bool:

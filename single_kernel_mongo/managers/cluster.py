@@ -92,14 +92,14 @@ class ClusterProvider(Object):
         config_server_db = self.state.generate_config_server_db()
         self.dependent.mongo_manager.oversee_relation(relation)
         relation_data = {
-            ClusterStateKeys.keyfile.value: self.state.get_keyfile(),
-            ClusterStateKeys.config_server_db.value: config_server_db,
+            ClusterStateKeys.KEYFILE.value: self.state.get_keyfile(),
+            ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
         }
 
         int_tls_ca = self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True)
 
         if int_tls_ca:
-            relation_data[ClusterStateKeys.int_ca_secret.value] = int_tls_ca
+            relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
 
@@ -144,7 +144,7 @@ class ClusterProvider(Object):
             self.data_interface.update_relation_data(
                 relation.id,
                 {
-                    ClusterStateKeys.config_server_db.value: config_server_db,
+                    ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
                 },
             )
 
@@ -153,11 +153,11 @@ class ClusterProvider(Object):
         for relation in self.state.cluster_relations:
             if new_ca is None:
                 self.data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.int_ca_secret]
+                    relation.id, [ClusterStateKeys.INT_CA_SECRET]
                 )
             else:
                 self.data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.int_ca_secret.value: new_ca}
+                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
                 )
 
 
@@ -226,8 +226,8 @@ class ClusterRequirer(Object):
             return
 
         logger.info("Database and user created for mongos application.")
-        self.state.secrets.set(AppPeerDataKeys.username.value, username, Scope.APP)
-        self.state.secrets.set(AppPeerDataKeys.password.value, password, Scope.APP)
+        self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
+        self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
 
     def relation_changed(self) -> None:
         """Start/restarts mongos with config server information."""
@@ -269,8 +269,8 @@ class ClusterRequirer(Object):
             return
 
         logger.info("Cleaning database and user removed for mongos application")
-        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.username.value)
-        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.password.value)
+        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
+        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
 
     def update_users(self):
         """Updates users after being initialised."""

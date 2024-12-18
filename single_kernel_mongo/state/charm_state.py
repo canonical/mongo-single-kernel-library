@@ -220,9 +220,9 @@ class CharmState(Object):
             database_name=self.app_peer_data.database,
             extra_user_roles=",".join(sorted(self.app_peer_data.extra_user_roles)),
             additional_secret_fields=[
-                ClusterStateKeys.keyfile.value,
-                ClusterStateKeys.config_server_db.value,
-                ClusterStateKeys.int_ca_secret.value,
+                ClusterStateKeys.KEYFILE.value,
+                ClusterStateKeys.CONFIG_SERVER_DB.value,
+                ClusterStateKeys.INT_CA_SECRET.value,
             ],
         )
 
@@ -286,11 +286,11 @@ class CharmState(Object):
 
     def set_keyfile(self, keyfile_content: str) -> str:
         """Sets the keyfile content in the secret."""
-        return self.secrets.set(AppPeerDataKeys.keyfile.value, keyfile_content, Scope.APP).label
+        return self.secrets.set(AppPeerDataKeys.KEYFILE.value, keyfile_content, Scope.APP).label
 
     def get_keyfile(self) -> str | None:
         """Gets the keyfile content from the secret."""
-        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.keyfile.value)
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
 
     @property
     def planned_units(self) -> int:
@@ -398,20 +398,20 @@ class CharmState(Object):
         for relation in self.cluster_relations:
             if new_ca is None:
                 self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.int_ca_secret]
+                    relation.id, [ClusterStateKeys.INT_CA_SECRET]
                 )
             else:
                 self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.int_ca_secret.value: new_ca}
+                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
                 )
         for relation in self.config_server_relation:
             if new_ca is None:
                 self.config_server_data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.int_ca_secret]
+                    relation.id, [ConfigServerKeys.INT_CA_SECRET]
                 )
             else:
                 self.config_server_data_interface.update_relation_data(
-                    relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
+                    relation.id, {ConfigServerKeys.INT_CA_SECRET.value: new_ca}
                 )
 
     def is_scaling_down(self, rel_id: int) -> bool:
@@ -530,8 +530,8 @@ class CharmState(Object):
         """Mongos Configuration for the mongos user."""
         if self.charm_role.name == KindEnum.MONGOD:
             return self.mongos_config_for_user(OperatorUser, self.app_hosts)
-        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
-        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
+        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
+        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
         database = self.app_peer_data.database
         if not username or not password:
             raise Exception("Missing credentials.")
