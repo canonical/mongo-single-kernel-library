@@ -35,6 +35,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         data_interface: DataPeerUnitData,
         component: Unit,
         substrate: Substrates,
+        k8s_manager: K8sManager,
         bind_address: str | None = None,
     ):
         super().__init__(relation, data_interface, component, None)
@@ -42,10 +43,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         self.substrate = substrate
         self.unit = component
         self.bind_address = bind_address
-        self.k8s = K8sManager(
-            pod_name=self.pod_name,
-            namespace=self.unit._backend.model_name,
-        )
+        self.k8s = k8s_manager
 
     @property
     def pod_name(self) -> str:

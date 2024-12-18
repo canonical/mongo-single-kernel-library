@@ -4,9 +4,19 @@
 
 """All general exceptions."""
 
+from ops.model import BlockedStatus, StatusBase
+
 
 class DeployedWithoutTrustError(Exception):
-    """Raised when the charm is deployed without trust."""
+    """Deployed without `juju deploy --trust` or `juju trust`.
+
+    Needed to access Kubernetes StatefulSet.
+    """
+
+    def __init__(self, *, app_name: str):
+        super().__init__(
+            f"Run `juju trust {app_name} --scope=cluster` and `juju resolve` for each unit (or remove & re-deploy {app_name} with `--trust`)"
+        )
 
 
 class WorkloadExecError(Exception):
@@ -183,3 +193,49 @@ class MissingConfigServerError(Exception):
 
 class EarlyRemovalOfConfigServerError(Exception):
     """Raised when we try to remove config server while it still has shards."""
+
+
+class StatusError(Exception):
+    """Exception with ops status."""
+
+    def __init__(self, status: StatusBase) -> None:
+        super().__init__(status.message)
+        self.status = status
+
+
+class PrecheckFailedError(StatusError):
+    """App is not ready to upgrade."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(
+            BlockedStatus(f"Rollback with `juju refresh`. Pre-refresh check failed: {self.message}")
+        )
+
+
+class FailedToElectNewPrimaryError(Exception):
+    """Raised when a new primary isn't elected after stepping down."""
+
+
+class ClusterNotHealthyError(Exception):
+    """Raised when the cluster is not healthy."""
+
+
+class BalancerStillRunningError(Exception):
+    """Raised when the balancer is still running after stopping it."""
+
+
+class PeerRelationNotReadyError(Exception):
+    """Upgrade peer relation not available (to this unit)."""
+
+
+class FailedToMovePrimaryError(Exception):
+    """Raised when attempt to move a primary fails."""
+
+
+class ActionFailedError(Exception):
+    """Raised when we failed an action."""
+
+
+class UnhealthyUpgradeError(Exception):
+    """Raised when the upgrade is unhealthy during an post upgrade check."""

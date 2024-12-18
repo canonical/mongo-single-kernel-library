@@ -275,6 +275,18 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
             version = ""
         return version
 
+    def get_charm_revision(self) -> str:
+        """Get the charm revision.
+
+        Returns:
+            String of charm revision
+        """
+        try:
+            version = Path("charm_version").read_text().strip()
+        except:  # noqa: E722
+            version = ""
+        return version
+
     @property
     @abstractmethod
     def layer(self) -> Layer:

@@ -36,6 +36,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.core.abstract_upgrades import GenericMongoDBUpgradeManager
     from single_kernel_mongo.core.workload import WorkloadBase
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
@@ -65,6 +66,7 @@ class OperatorProtocol(ABC, Object):
     tls_manager: TLSManager
     state: CharmState
     mongo_manager: MongoManager
+    upgrade_manager: GenericMongoDBUpgradeManager
     workload: WorkloadBase
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
