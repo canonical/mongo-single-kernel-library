@@ -18,6 +18,7 @@ from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
+    SNAP,
     KindEnum,
     MongoPorts,
     Scope,
@@ -38,6 +39,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DataPeerOtherUnitData,
     DataPeerUnitData,
 )
+from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.app_peer_state import (
     AppPeerDataKeys,
     AppPeerReplicaSet,
@@ -52,7 +54,8 @@ from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
 )
-from single_kernel_mongo.utils.helpers import generate_relation_departed_key
+from single_kernel_mongo.state.upgrade_state import AppUpgradePeerData, UnitUpgradePeerData
+from single_kernel_mongo.utils.helpers import generate_relation_departed_key, unit_number
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -105,7 +108,23 @@ class CharmState(Object):
             relation_name=self.peer_relation_name,
             additional_secret_fields=SECRETS_UNIT,
         )
+        self.upgrade_app_interface = DataPeerData(
+            self.model, relation_name=RelationNames.UPGRADE_VERSION.value
+        )
+        self.upgrade_unit_interface = DataPeerUnitData(
+            self.model, relation_name=RelationNames.UPGRADE_VERSION.value
+        )
         self.paths = MongoPaths(self.charm_role)
+
+        self.k8s_manager = K8sManager(
+            pod_name=self.pod_name,
+            namespace=self.model.unit._backend.model_name,
+        )
+
+    @property
+    def pod_name(self) -> str:
+        """K8S only: The pod name."""
+        return self.model.unit.name.replace("/", "-")
 
     @property
     def peer_relation(self) -> Relation | None:
@@ -125,6 +144,11 @@ class CharmState(Object):
         if self.charm_role.name == KindEnum.MONGOS:
             return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])
+
+    @property
+    def upgrade_relation(self) -> Relation | None:
+        """The set of upgrade relations."""
+        return self.model.get_relation(RelationNames.UPGRADE_VERSION.value)
 
     @property
     def mongos_cluster_relation(self) -> Relation | None:
@@ -179,8 +203,51 @@ class CharmState(Object):
             data_interface=self.peer_unit_interface,
             component=self.model.unit,
             substrate=self.substrate,
+            k8s_manager=self.k8s_manager,
             bind_address=str(self.bind_address),
         )
+
+    @property
+    def unit_upgrade_peer_data(self) -> UnitUpgradePeerData:
+        """This unit upgrade databag."""
+        return UnitUpgradePeerData(
+            relation=self.upgrade_relation,
+            data_interface=self.upgrade_unit_interface,
+            component=self.model.unit,
+            substrate=self.substrate,
+        )
+
+    @property
+    def app_upgrade_peer_data(self) -> AppUpgradePeerData:
+        """The app upgrade databag."""
+        return AppUpgradePeerData(
+            relation=self.upgrade_relation,
+            data_interface=self.upgrade_app_interface,
+            component=self.model.app,
+            substrate=self.substrate,
+        )
+
+    @property
+    def units_upgrade_peer_data(self) -> list[UnitUpgradePeerData]:
+        """Grabs all units in the current peer relation, including this unit.
+
+        Returns:
+            Sorted list of UnitUpgradePeerData in the current upgrade relation,
+            including this unit.
+        """
+        _units = []
+        for unit, data_interface in self.upgrade_units_data_interfaces.items():
+            _units.append(
+                UnitUpgradePeerData(
+                    relation=self.upgrade_relation,
+                    data_interface=data_interface,
+                    component=unit,
+                    substrate=self.substrate,
+                )
+            )
+        _units.append(self.unit_upgrade_peer_data)
+
+        return sorted(_units, key=unit_number, reverse=True)
 
     @property
     def units(self) -> set[UnitPeerReplicaSet]:
@@ -197,11 +264,22 @@ class CharmState(Object):
                     data_interface=data_interface,
                     component=unit,
                     substrate=self.substrate,
+                    k8s_manager=self.k8s_manager,
                 )
             )
         _units.add(self.unit_peer_data)
 
         return _units
+
+    def peer_unit_data(self, unit: Unit) -> UnitPeerReplicaSet:
+        """Returns the peer data for a peer unit."""
+        return UnitPeerReplicaSet(
+            relation=self.peer_relation,
+            data_interface=self.peer_units_data_interfaces[unit],
+            component=unit,
+            substrate=self.substrate,
+            k8s_manager=self.k8s_manager,
+        )
 
     @property
     def cluster_provider_data_interface(self) -> DatabaseProviderData:
@@ -262,9 +340,61 @@ class CharmState(Object):
         self.app_peer_data.db_initialised = other
 
     @property
+    def unit_workload_container_versions(self) -> dict[str, str]:
+        """{Unit name: unique identifier for unit's workload container version}.
+
+        If and only if this version changes, the workload will restart (during upgrade or
+        rollback).
+
+        On Kubernetes, the workload & charm are upgraded together
+        On machines, the charm is upgraded before the workload
+
+        VM: container version is the snap revision.
+        K8S: container version is the stateful set hash.
+
+        This identifier should be comparable to `_app_workload_container_version` to determine if
+        the unit & app are the same workload container version.
+        """
+        if self.substrate == Substrates.K8S:
+            return self.k8s_manager.list_revisions()
+        return {
+            unit.name: unit.snap_revision
+            for unit in self.units_upgrade_peer_data
+            if unit.snap_revision
+        }
+
+    @property
+    def unit_workload_container_version(self) -> str | None:
+        """Installed snap revision for this unit."""
+        if self.substrate == Substrates.K8S:
+            return self.k8s_manager.list_revisions().get(self.model.unit.name)
+        return self.unit_upgrade_peer_data.snap_revision
+
+    @unit_workload_container_version.setter
+    def unit_workload_container_version(self, value: str):
+        if self.substrate == Substrates.VM:
+            self.unit_upgrade_peer_data.snap_revision = value
+
+    @property
+    def app_workload_container_version(self) -> str:
+        """Unique identifier for the app's workload container version.
+
+        This should match the workload version in the current Juju app charm version.
+
+        This identifier should be comparable to `_unit_workload_container_versions` to determine if
+        the app & unit are the same workload container version.
+        """
+        if self.substrate == Substrates.K8S:
+            return self.k8s_manager.get_revision()
+        return SNAP.revision
+
+    @property
     def upgrade_in_progress(self) -> bool:
         """Is the charm in upgrade?"""
-        return False
+        app_version = self.app_workload_container_version
+        unit_versions = self.unit_workload_container_versions
+        logger.debug(f"{app_version} {unit_versions}")
+        return any(version != app_version for version in unit_versions)
 
     @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
@@ -303,6 +433,16 @@ class CharmState(Object):
         return {
             unit: DataPeerOtherUnitData(
                 model=self.model, unit=unit, relation_name=self.peer_relation_name
+            )
+            for unit in self.peers_units
+        }
+
+    @cached_property
+    def upgrade_units_data_interfaces(self) -> dict[Unit, DataPeerOtherUnitData]:
+        """The cluster peer relation."""
+        return {
+            unit: DataPeerOtherUnitData(
+                model=self.model, unit=unit, relation_name=RelationNames.UPGRADE_VERSION.value
             )
             for unit in self.peers_units
         }
@@ -447,6 +587,13 @@ class CharmState(Object):
             self.shard_state.status_ready_for_upgrade = True
 
         self.shard_state.status_ready_for_upgrade = False
+
+    @property
+    def upgrade_resumed(self) -> bool:
+        """Whether the user has resumed upgrade with juju action."""
+        if self.substrate == Substrates.K8S:
+            return self.k8s_manager.get_partition() < unit_number(self.units_upgrade_peer_data[0])
+        return self.app_upgrade_peer_data.upgrade_resumed
 
     # BEGIN: Configuration accessors
 

@@ -92,6 +92,14 @@ class K8sManager:
         """Gets the stateful set rolling partition."""
         return self._get_partition(self.get_ttl_hash())
 
+    def get_revision(self) -> str:
+        """Gets the stateful set revision."""
+        return self._get_revision(self.get_ttl_hash())
+
+    def list_revisions(self) -> dict[str, str]:
+        """Returns a mapping of {unit name: Kubernetes controller revision hash."""
+        return self._list_revisions(self.get_ttl_hash())
+
     def get_unit_service_name(self, pod_name: str = "") -> str:
         """Returns the service name for the current unit."""
         pod_name = pod_name or self.pod_name
@@ -104,7 +112,7 @@ class K8sManager:
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message."""
         logger.error("Kubernetes application needs `juju trust`")
-        raise DeployedWithoutTrustError()
+        raise DeployedWithoutTrustError(app_name=self.app_name)
 
     def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""
@@ -274,3 +282,30 @@ class K8sManager:
         ):
             raise Exception("Incomplete stateful set.")
         return partition.spec.updateStrategy.rollingUpdate.partition
+
+    @cache
+    def _get_revision(self, *_) -> str:
+        stateful_set = self.client.get(res=StatefulSet, name=self.app_name)
+        if not stateful_set.status or not stateful_set.status.updateRevision:
+            raise Exception("Incomplete stateful set")
+        return stateful_set.status.updateRevision
+
+    @cache
+    def _list_revisions(self, *_) -> dict[str, str]:
+        pods = self.client.list(res=Pod, labels={"app.kubernetes.io/name": self.app_name})
+
+        def get_unit_name(pod_name: str) -> str:
+            *app_name, unit_number = pod_name.split("-")
+            return f'{"-".join(app_name)}/{unit_number}'
+
+        if any(
+            not pod.metadata or not pod.metadata.name or not pod.metadata or not pod.metadata.labels
+            for pod in pods
+        ):
+            raise Exception("Incomplete Pod description")
+
+        # We can type ignore because we checked the fields first but mypy doesn't understand it.
+        return {
+            get_unit_name(pod.metadata.name): pod.metadata.labels["controller-revision-hash"]  # type: ignore
+            for pod in pods
+        }

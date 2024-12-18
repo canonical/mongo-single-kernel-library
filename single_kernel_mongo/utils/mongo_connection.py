@@ -22,6 +22,7 @@ from tenacity import (
 from single_kernel_mongo.config.literals import MongoPorts
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
+    FailedToMovePrimaryError,
     NotDrainedError,
     NotEnoughSpaceError,
     ShardNotInClusterError,
@@ -190,7 +191,7 @@ class MongoConnection:
             raise
 
     def set_replicaset_election_priority(
-        self, priority: int, ignore_member: str | None = None
+        self, priority: int | float, ignore_member: str | None = None
     ) -> None:
         """Set the election priority for the entire replica set."""
         rs_config = self.client.admin.command("replSetGetConfig")
@@ -568,6 +569,41 @@ class MongoConnection:
                 new_shard,
             )
 
+    def step_down_primary(self) -> None:
+        """Steps down the current primary, forcing a re-election."""
+        self.client.admin.command("replSetStepDown", {"stepDownSecs": "60"})
+
+    def move_primary(self, new_primary_ip: str) -> None:
+        """Forcibly moves the primary to the new primary provided.
+
+        Args:
+            new_primary_ip: ip address of the unit chosen to be the new primary.
+        """
+        # Do not move a priary unless the cluster is in sync
+        rs_status = self.client.admin.command("replSetGetStatus")
+        if self.is_any_sync(rs_status):
+            # it can take a while, we should defer
+            raise NotReadyError
+
+        is_move_successful = True
+        self.set_replicaset_election_priority(priority=0.5, ignore_member=new_primary_ip)
+        try:
+            for attempt in Retrying(stop=stop_after_delay(180), wait=wait_fixed(3)):
+                with attempt:
+                    self.step_down_primary()
+                    if self.primary() != new_primary_ip:
+                        raise FailedToMovePrimaryError
+        except RetryError:
+            # catch all possible exceptions when failing to step down primary. We do this in order
+            # to ensure that we reset the replica set election priority.
+            is_move_successful = False
+
+        # reset all replicas to the same priority
+        self.set_replicaset_election_priority(priority=1)
+
+        if not is_move_successful:
+            raise FailedToMovePrimaryError
+
     def get_db_size(self, database_name, primary_shard) -> int:
         """Returns the size of a DB on a given shard in bytes."""
         database = self.client[database_name]
@@ -626,3 +662,8 @@ class MongoConnection:
                 return shard["state"] == SHARD_AWARE_STATE
 
         return False
+
+    def are_all_shards_aware(self) -> bool:
+        """Returns True if all shards are shard aware."""
+        sc_status = self.client.admin.command("listShards")
+        return all(shard["state"] == SHARD_AWARE_STATE for shard in sc_status["shards"])

@@ -327,7 +327,7 @@ class ConfigServerManager(Object, StatusProvider):
     def get_unreachable_shards(self) -> list[str]:
         """Returns a list of unreable shard hosts."""
         unreachable_hosts: list[str] = []
-        if not self.model.relations[self.relation_name]:
+        if not self.state.config_server_relation:
             logger.info("shards are not reachable, none related to config-sever")
             return unreachable_hosts
 

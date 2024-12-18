@@ -55,3 +55,10 @@ class AbstractRelationState(Generic[PData]):
             self.data_interface.fetch_my_relation_field(relation_id=self.relation.id, field=key)
             or default
         )
+
+    @property
+    def name(self) -> str:
+        """The name of this component."""
+        if self.component:
+            return self.component.name
+        return ""

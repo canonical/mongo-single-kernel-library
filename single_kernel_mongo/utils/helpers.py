@@ -7,6 +7,8 @@
 import base64
 import re
 
+from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
+
 
 def parse_tls_file(raw_content: str) -> bytes:
     """Parse TLS files from both plain text or base64 format."""
@@ -35,3 +37,8 @@ def hostname_from_hostport(host: str) -> str:
 def hostname_from_shardname(host: str) -> str:
     """Takes hostname/ip:port and returns hostname."""
     return host.split("/")[0]
+
+
+def unit_number(unit: UnitUpgradePeerData) -> int:
+    """Gets the unit number from a unit upgrade peer data."""
+    return int(unit.component.name.split("/")[-1])

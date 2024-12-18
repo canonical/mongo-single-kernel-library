@@ -33,6 +33,7 @@ from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
@@ -110,7 +111,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
-        self.version_checker = CrossAppVersionChecker(
+        self.cross_app_version_checker = CrossAppVersionChecker(
             self.charm,
             version=get_charm_revision(
                 self.charm.unit, local_version=self.workload.get_internal_revision()
@@ -120,6 +121,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 RelationNames.CONFIG_SERVER.value,
             ],
         )
+        self.cluster_version_checker = VersionChecker(self)
 
         # Managers
         self.backup_manager = BackupManager(
