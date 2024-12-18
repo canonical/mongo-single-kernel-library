@@ -20,21 +20,21 @@ class AppPeerDataKeys(str, Enum):
     """Enum to access the app peer data keys."""
 
     # MongoDB
-    managed_users_key = "managed-users-key"
-    db_initialised = "db_initialised"
-    keyfile = "keyfile"
-    external_connectivity = "external-connectivity"
-    mongos_hosts = "mongos_hosts"
+    MANAGED_USERS_KEY = "managed-users-key"
+    DB_INITIALISED = "db_initialised"
+    KEYFILE = "keyfile"
+    EXTERNAL_CONNECTIVITY = "external-connectivity"
+    MONGOS_HOSTS = "mongos_hosts"
 
     # Shared
-    role = "role"
+    ROLE = "role"
 
     # Mongos
-    database = "database"
-    extra_user_roles = "extra-user-roles"
-    expose_external = "expose-external"
-    username = "username"
-    password = "password"
+    DATABASE = "database"
+    EXTRA_USER_ROLES = "extra-user-roles"
+    EXPOSE_EXTERNAL = "expose-external"
+    USERNAME = "username"
+    PASSWORD = "password"
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
@@ -77,7 +77,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
         Either from the app databag or from the default from config.
         """
-        databag_role: str | None = self.relation_data.get(AppPeerDataKeys.role.value)
+        databag_role: str | None = self.relation_data.get(AppPeerDataKeys.ROLE.value)
         if not databag_role:
             return MongoDBRoles.UNKNOWN
         if not self.relation:
@@ -97,12 +97,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         """Whether the db is initialised or not yet."""
         if not self.relation:
             return False
-        return json.loads(self.relation_data.get(AppPeerDataKeys.db_initialised.value, "false"))
+        return json.loads(self.relation_data.get(AppPeerDataKeys.DB_INITIALISED.value, "false"))
 
     @db_initialised.setter
     def db_initialised(self, value: bool):
         if isinstance(value, bool):
-            self.update({AppPeerDataKeys.db_initialised.value: json.dumps(value)})
+            self.update({AppPeerDataKeys.DB_INITIALISED.value: json.dumps(value)})
         else:
             raise ValueError(
                 f"'db_initialised' must be a boolean value. Provided: {value} is of type {type(value)}"
@@ -115,13 +115,13 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
             return set()
 
         return set(
-            json.loads(self.relation_data.get(AppPeerDataKeys.managed_users_key.value, "[]"))
+            json.loads(self.relation_data.get(AppPeerDataKeys.MANAGED_USERS_KEY.value, "[]"))
         )
 
     @managed_users.setter
     def managed_users(self, value: set[str]) -> None:
         """Stores the managed users set."""
-        self.update({AppPeerDataKeys.managed_users_key.value: json.dumps(sorted(value))})
+        self.update({AppPeerDataKeys.MANAGED_USERS_KEY.value: json.dumps(sorted(value))})
 
     @property
     def keyfile(self) -> str:
@@ -129,12 +129,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         if not self.relation:
             return ""
 
-        return self.relation_data.get(AppPeerDataKeys.keyfile.value, "")
+        return self.relation_data.get(AppPeerDataKeys.KEYFILE.value, "")
 
     @keyfile.setter
     def keyfile(self, keyfile: str):
         """Stores the keyfile in the app databag."""
-        self.update({AppPeerDataKeys.keyfile.value: keyfile})
+        self.update({AppPeerDataKeys.KEYFILE.value: keyfile})
 
     @property
     def mongos_hosts(self) -> list[str]:
@@ -142,12 +142,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         if not self.relation:
             return []
 
-        return json.loads(self.relation_data.get(AppPeerDataKeys.mongos_hosts.value, "[]"))
+        return json.loads(self.relation_data.get(AppPeerDataKeys.MONGOS_HOSTS.value, "[]"))
 
     @mongos_hosts.setter
     def mongos_hosts(self, value: list[str]):
         """Stores the mongos hosts in the databag."""
-        self.update({AppPeerDataKeys.mongos_hosts.value: json.dumps(sorted(value))})
+        self.update({AppPeerDataKeys.MONGOS_HOSTS.value: json.dumps(sorted(value))})
 
     def set_user_created(self, user: str):
         """Stores the flag stating if user was created."""
@@ -166,13 +166,13 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def external_connectivity(self) -> bool:
         """Is the external connectivity tag in the databag?"""
         return json.loads(
-            self.relation_data.get(AppPeerDataKeys.external_connectivity.value, "false")
+            self.relation_data.get(AppPeerDataKeys.EXTERNAL_CONNECTIVITY.value, "false")
         )
 
     @external_connectivity.setter
     def external_connectivity(self, value: bool) -> None:
         if isinstance(value, bool):
-            self.update({AppPeerDataKeys.external_connectivity.value: json.dumps(value)})
+            self.update({AppPeerDataKeys.EXTERNAL_CONNECTIVITY.value: json.dumps(value)})
         else:
             raise ValueError(
                 f"'external-connectivity' must be a boolean value. Provided: {value} is of type {type(value)}"
@@ -183,12 +183,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         """Database tag for mongos."""
         if self.substrate == Substrates.K8S:
             return f"{self.component.name}_{self._model}"
-        return self.relation_data.get(AppPeerDataKeys.database.value, "mongos-database")
+        return self.relation_data.get(AppPeerDataKeys.DATABASE.value, "mongos-database")
 
     @database.setter
     def database(self, value: str):
         """Sets database tag in databag."""
-        self.update({AppPeerDataKeys.database.value: value})
+        self.update({AppPeerDataKeys.DATABASE.value: value})
 
     @property
     def extra_user_roles(self) -> set[str]:
@@ -197,7 +197,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
             return {"admin"}
         return set(
             self.relation_data.get(
-                AppPeerDataKeys.extra_user_roles.value,
+                AppPeerDataKeys.EXTRA_USER_ROLES.value,
                 "default",
             ).split(",")
         )
@@ -206,15 +206,15 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def extra_user_roles(self, value: set[str]):
         """Sets extra_user_roles tag in databag."""
         roles_str = ",".join(value)
-        self.update({AppPeerDataKeys.extra_user_roles.value: roles_str})
+        self.update({AppPeerDataKeys.EXTRA_USER_ROLES.value: roles_str})
 
     @property
     def expose_external(self) -> ExposeExternal:
         """The value of the expose-external flag."""
         if not self.relation:
             return ExposeExternal.UNKNOWN
-        return ExposeExternal(self.relation_data.get(AppPeerDataKeys.expose_external.value, ""))
+        return ExposeExternal(self.relation_data.get(AppPeerDataKeys.EXPOSE_EXTERNAL.value, ""))
 
     @expose_external.setter
     def expose_external(self, value: ExposeExternal):
-        self.update({AppPeerDataKeys.expose_external.value: value.value})
+        self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: value.value})

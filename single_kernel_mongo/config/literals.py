@@ -91,7 +91,7 @@ class VmUser(WorkloadUser[int]):
 
 
 CRON_FILE = Path("/etc/cron.d/mongodb")
-ENVIRONMENT_FILE = Path("/etc/environment")
+
 
 SECRETS_UNIT: list[str] = []
 

@@ -21,6 +21,7 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, Waiting
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MongoManager(Object):
+class MongoManager(Object, StatusProvider):
     """Manager for Mongo related operations."""
 
     def __init__(
@@ -448,6 +449,8 @@ class MongoManager(Object):
 
     def get_status(self) -> StatusBase:
         """Generates the status of a unit based on its status reported by mongod."""
+        if not self.mongod_ready():
+            return WaitingStatus("waiting for MongoDB to start")
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
