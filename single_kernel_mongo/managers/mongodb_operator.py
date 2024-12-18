@@ -741,7 +741,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.model.unit.is_leader():
             return
         self.mongo_manager.initialise_replica_set()
-        self.mongo_manager.initialise_users()
+        self.mongo_manager.initialise_charm_admin_users()
         logger.info("Manage client relation users")
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:

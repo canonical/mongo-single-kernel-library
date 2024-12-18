@@ -22,7 +22,11 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import DatabaseRequestedHasNotRunYetError, SetPasswordError
+from single_kernel_mongo.exceptions import (
+    DatabaseRequestedHasNotRunYetError,
+    DeployedWithoutTrustError,
+    SetPasswordError,
+)
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
@@ -65,6 +69,11 @@ class MongoManager(Object):
         self.substrate = substrate
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
+        if self.substrate == Substrates.K8S:
+            try:
+                self.k8s.get_pod()
+            except DeployedWithoutTrustError:
+                self.charm.status_manager.to_blocked("Charm deployed without `trust`")
 
     def mongod_ready(self, uri: str | None = None) -> bool:
         """Is MongoDB ready and running?"""
@@ -96,7 +105,7 @@ class MongoManager(Object):
         with MongoConnection(self.state.mongo_config, "localhost", direct=True) as direct_mongo:
             direct_mongo.init_replset()
 
-    def initialise_users(self) -> None:
+    def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
         self.initialise_operator_user()
         self.initialise_monitor_user()
@@ -195,12 +204,13 @@ class MongoManager(Object):
             self.model,
             relation.name,
         )
+        username = f"relation-{relation.id}"
+
         # We do nothing if the Database Requested event has not run yet.
         if not data_interface.fetch_relation_field(relation.id, "database"):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
-        username = f"relation-{relation.id}"
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
 
@@ -263,17 +273,20 @@ class MongoManager(Object):
         username = f"relation-{relation.id}"
         managed_users = self.state.app_peer_data.managed_users
         mongo_config = self.state.mongo_config
+
+        # Skip our user.
+        if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
+            return
+
+        # for user removal of mongos-k8s router, we let the router remove itself
+        if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            logger.info("K8s routers will remove themselves.")
+            managed_users.remove(username)
+            self.state.app_peer_data.managed_users = managed_users
+            return
+
         with MongoConnection(mongo_config) as mongo:
             logger.info("Remove relation user: %s", username)
-            # Skip our user.
-            if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
-                return
-            # for user removal of mongos-k8s router, we let the router remove itself
-            if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-                logger.info("K8s routers will remove themselves.")
-                managed_users.remove(username)
-                self.state.app_peer_data.managed_users = managed_users
-                return
             mongo.drop_user(username)
             managed_users.remove(username)
         self.state.app_peer_data.managed_users = managed_users

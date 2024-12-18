@@ -17,7 +17,11 @@ from lightkube.models.meta_v1 import ObjectMeta, OwnerReference
 from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Node, Pod, Service
 
-from single_kernel_mongo.exceptions import FailedToFindNodePortError, FailedToFindServiceError
+from single_kernel_mongo.exceptions import (
+    DeployedWithoutTrustError,
+    FailedToFindNodePortError,
+    FailedToFindServiceError,
+)
 
 # default logging from lightkube httpx requests is very noisy
 logging.getLogger("lightkube").disabled = True
@@ -100,6 +104,7 @@ class K8sManager:
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message."""
         logger.error("Kubernetes application needs `juju trust`")
+        raise DeployedWithoutTrustError()
 
     def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""

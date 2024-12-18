@@ -5,6 +5,10 @@
 """All general exceptions."""
 
 
+class DeployedWithoutTrustError(Exception):
+    """Raised when the charm is deployed without trust."""
+
+
 class WorkloadExecError(Exception):
     """Raised when a workload fails to exec a command."""
 

@@ -89,7 +89,7 @@ def test_start_success(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
     )
     patched_mongo_initialise_user = mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.initialise_users"
+        "single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users"
     )
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
