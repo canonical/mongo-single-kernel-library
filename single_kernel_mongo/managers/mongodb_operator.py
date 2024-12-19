@@ -759,15 +759,3 @@ class MongoDBOperator(OperatorProtocol, Object):
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
         return self.state.planned_units == 0 and len(self.state.peers_units) == 0
-
-    def assert_proceed_on_broken_event(self, relation: Relation):
-        """Runs some checks on broken relation event."""
-        if not self.state.has_departed_run(relation.id):
-            raise DeferrableFailedHookChecksError(
-                "must wait for relation departed hook to decide if relation should be removed"
-            )
-
-        if self.state.is_scaling_down(relation.id):
-            raise NonDeferrableFailedHookChecksError(
-                "Relation broken event occurring during scale down, do not proceed to remove users."
-            )

@@ -90,7 +90,7 @@ class ClusterProvider(Object):
         self.assert_pass_hook_checks()
 
         config_server_db = self.state.generate_config_server_db()
-        self.dependent.mongo_manager.oversee_relation(relation)
+        self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
         relation_data = {
             ClusterStateKeys.keyfile.value: self.state.get_keyfile(),
             ClusterStateKeys.config_server_db.value: config_server_db,
@@ -133,7 +133,9 @@ class ClusterProvider(Object):
         self.dependent.assert_proceed_on_broken_event(relation)
 
         if self.substrate == Substrates.VM:
-            self.dependent.mongo_manager.oversee_relation(relation, relation_departing=True)
+            self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(
+                relation, relation_departing=True
+            )
 
     def update_config_server_db(self):
         """Updates the config server DB URI in the mongos relation."""
