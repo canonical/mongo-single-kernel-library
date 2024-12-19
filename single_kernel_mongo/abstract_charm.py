@@ -97,6 +97,8 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
 
     def on_leader_elected(self, _):
         """First leader elected handler."""
-        # Sets the role in the databag.
+        # Sets the role in the databag: when the charm is first created, its
+        # role won't exist in the databag. We save it in the databag because we
+        # don't allow role changing yet.
         if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
             self.operator.state.app_peer_data.role = self.parsed_config.role

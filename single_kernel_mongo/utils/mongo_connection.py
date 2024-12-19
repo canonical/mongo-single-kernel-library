@@ -536,7 +536,7 @@ class MongoConnection:
             NotEnoughSpaceError, ConfigurationError, OperationFailure
         """
         for database_name in databases_to_move:
-            db_size = self.get_db_size(database_name, old_primary)
+            db_size = self.get_db_size_on_primary_shard(database_name, old_primary)
             new_shard, avail_space = self.get_shard_with_most_available_space(
                 shard_to_ignore=old_primary
             )
@@ -551,7 +551,7 @@ class MongoConnection:
             # From MongoDB Docs: After starting movePrimary, do not perform any read or write
             # operations against any unsharded collection in that database until the command
             # completes.
-            logger.info(
+            logger.warning(
                 "Moving primary on %s database to new primary: %s. Do NOT write to %s database.",
                 database_name,
                 new_shard,
@@ -566,7 +566,7 @@ class MongoConnection:
                 new_shard,
             )
 
-    def get_db_size(self, database_name, primary_shard) -> int:
+    def get_db_size_on_primary_shard(self, database_name: str, primary_shard: str) -> int:
         """Returns the size of a DB on a given shard in bytes."""
         database = self.client[database_name]
         db_stats = database.command("dbStats")
@@ -583,7 +583,7 @@ class MongoConnection:
 
         return 0
 
-    def get_shard_with_most_available_space(self, shard_to_ignore) -> tuple[str, int]:
+    def get_shard_with_most_available_space(self, shard_to_ignore: str) -> tuple[str, int]:
         """Returns the shard in the cluster with the most available space and the space in bytes.
 
         Algorithm used was similar to that used in mongo in `selectShardForNewDatabase`:

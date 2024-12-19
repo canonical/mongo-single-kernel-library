@@ -42,7 +42,7 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
-    ConfigServerState,
+    ShardingComponentState,
 )
 from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
@@ -176,6 +176,20 @@ class CharmState(Object):
             bind_address=str(self.bind_address),
         )
 
+    def unit_peer_data_for(self, unit: Unit, relation: Relation) -> UnitPeerReplicaSet:
+        """The provided unit peer relation data."""
+        data_interface = DataPeerOtherUnitData(
+            model=self.model,
+            unit=unit,
+            relation=relation,
+        )
+        return UnitPeerReplicaSet(
+            relation=relation,
+            data_interface=data_interface,
+            component=unit,
+            substrate=self.substrate,
+        )
+
     @property
     def units(self) -> set[UnitPeerReplicaSet]:
         """Grabs all units in the current peer relation, including this unit.
@@ -298,12 +312,15 @@ class CharmState(Object):
         return MongoPorts.MONGODB_PORT
 
     @property
-    def shard_state(self):
+    def shard_state(self) -> ShardingComponentState:
         """The shard state."""
-        return ConfigServerState(
+        return ShardingComponentState(
             relation=self.shard_relation,
             data_interface=DatabaseRequirerData(
-                self.model, RelationNames.SHARDING, "", additional_secret_fields=SECRETS_FIELDS
+                self.model,
+                RelationNames.SHARDING,
+                "unused",
+                additional_secret_fields=SECRETS_FIELDS,
             ),
             component=self.model.app,
         )

@@ -806,5 +806,5 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.state.is_scaling_down(relation.id):
             raise NonDeferrableFailedHookChecksError(
-                "Relation broken event occurring during scale down, do not proceed to remove users."
+                "Relation broken event occurring during scale down, no need to proceed with broken event."
             )
