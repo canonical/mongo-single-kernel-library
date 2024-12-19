@@ -24,6 +24,7 @@ class AppPeerDataKeys(str, Enum):
     role = "role"
     keyfile = "keyfile"
     external_connectivity = "external-connectivity"
+    mongos_hosts = "mongos_hosts"
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
@@ -64,8 +65,10 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
         Either from the app databag or from the default from config.
         """
-        databag_role: str = str(self.relation_data.get(AppPeerDataKeys.role.value))
-        if not self.relation or not databag_role:
+        databag_role: str | None = self.relation_data.get(AppPeerDataKeys.role.value)
+        if not databag_role:
+            return MongoDBRoles.UNKNOWN
+        if not self.relation:
             return self._role
         return MongoDBRoles(databag_role)
 
@@ -120,6 +123,19 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def keyfile(self, keyfile: str):
         """Stores the keyfile in the app databag."""
         self.update({AppPeerDataKeys.keyfile.value: keyfile})
+
+    @property
+    def mongos_hosts(self) -> list[str]:
+        """Gets the mongos hosts from the databag."""
+        if not self.relation:
+            return []
+
+        return json.loads(self.relation_data.get(AppPeerDataKeys.mongos_hosts.value, "[]"))
+
+    @mongos_hosts.setter
+    def mongos_hosts(self, value: list[str]):
+        """Stores the mongos hosts in the databag."""
+        self.update({AppPeerDataKeys.mongos_hosts.value: json.dumps(sorted(value))})
 
     def set_user_created(self, user: str):
         """Stores the flag stating if user was created."""

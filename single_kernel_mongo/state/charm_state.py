@@ -30,6 +30,7 @@ from single_kernel_mongo.config.relations import (
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseRequirerData,
     DataPeerData,
     DataPeerOtherUnitData,
     DataPeerUnitData,
@@ -39,6 +40,10 @@ from single_kernel_mongo.state.app_peer_state import (
     AppPeerReplicaSet,
 )
 from single_kernel_mongo.state.cluster_state import ClusterState
+from single_kernel_mongo.state.config_server_state import (
+    SECRETS_FIELDS,
+    ShardingComponentState,
+)
 from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
@@ -137,6 +142,11 @@ class CharmState(Object):
         return set(self.model.relations[RelationNames.CONFIG_SERVER.value])
 
     @property
+    def tls_relation(self) -> Relation | None:
+        """The TLS relation."""
+        return self.model.get_relation(ExternalRequirerRelations.TLS.value)
+
+    @property
     def s3_relation(self) -> Relation | None:
         """The S3 relation if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS.value)
@@ -164,6 +174,20 @@ class CharmState(Object):
             component=self.model.unit,
             substrate=self.substrate,
             bind_address=str(self.bind_address),
+        )
+
+    def unit_peer_data_for(self, unit: Unit, relation: Relation) -> UnitPeerReplicaSet:
+        """The provided unit peer relation data."""
+        data_interface = DataPeerOtherUnitData(
+            model=self.model,
+            unit=unit,
+            relation=relation,
+        )
+        return UnitPeerReplicaSet(
+            relation=relation,
+            data_interface=data_interface,
+            component=unit,
+            substrate=self.substrate,
         )
 
     @property
@@ -286,6 +310,20 @@ class CharmState(Object):
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
+
+    @property
+    def shard_state(self) -> ShardingComponentState:
+        """The shard state."""
+        return ShardingComponentState(
+            relation=self.shard_relation,
+            data_interface=DatabaseRequirerData(
+                self.model,
+                RelationNames.SHARDING,
+                "unused",
+                additional_secret_fields=SECRETS_FIELDS,
+            ),
+            component=self.model.app,
+        )
 
     @property
     def config_server_name(self) -> str | None:
