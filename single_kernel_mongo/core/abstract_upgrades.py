@@ -14,6 +14,7 @@ import logging
 import secrets
 import string
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
@@ -22,8 +23,15 @@ from ops.model import BlockedStatus, MaintenanceStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.config.literals import FEATURE_VERSION_6, KindEnum, Substrates, UnitState
+from single_kernel_mongo.config.literals import (
+    FEATURE_VERSION_6,
+    SNAP,
+    KindEnum,
+    Substrates,
+    UnitState,
+)
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerStillRunningError,
@@ -37,23 +45,27 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongodb_users import OperatorUser
-from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
-from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-    from single_kernel_mongo.core.operator import OperatorProtocol
+    from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
+    from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
     from single_kernel_mongo.managers.mongos_operator import MongosOperator
 
-    T = TypeVar("T", bound=MongoDBOperator | MongosOperator)
+T = TypeVar("T", covariant=True, bound=OperatorProtocol)
 
 logger = logging.getLogger(__name__)
 
-RESUME_ACTION_NAME = "resume-refresh"
-PRECHECK_ACTION_NAME = "pre-refresh-check"
 WRITE_KEY = "write_value"
 SHARD_NAME_INDEX = "_id"
+
+
+class UpgradeActions(str, Enum):
+    """All upgrade actions."""
+
+    RESUME_ACTION_NAME = "resume-refresh"
+    PRECHECK_ACTION_NAME = "pre-refresh-check"
+    FORCE_REFRESH_START = "force-refresh-start"
 
 
 # BEGIN: Useful classes
@@ -67,7 +79,7 @@ class AbstractUpgrade(ABC):
     def __init__(
         self,
         dependent: OperatorProtocol,
-        workload: MongoDBWorkload | MongosWorkload,
+        workload: MainWorkloadType,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
@@ -163,9 +175,7 @@ class AbstractUpgrade(ABC):
             # 2.9.45
             resume_string = ""
             if len(self.state.units_upgrade_peer_data) > 1:
-                resume_string = (
-                    f"Verify highest unit is healthy & run `{RESUME_ACTION_NAME}` action. "
-                )
+                resume_string = f"Verify highest unit is healthy & run `{UpgradeActions.RESUME_ACTION_NAME.value}` action. "
             return BlockedStatus(
                 f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
             )
@@ -255,21 +265,52 @@ class AbstractUpgrade(ABC):
 class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
     """Substrate agnostif, abstract handler for upgrade events."""
 
-    def __init__(self, dependent: T, *args, **kwargs):
+    def __init__(
+        self,
+        dependent: T,
+        upgrade_backend: type[KubernetesUpgrade | MachineUpgrade],
+        *args,
+        **kwargs,
+    ):
         super().__init__(dependent, *args, **kwargs)
         self.dependent = dependent
+        self.substrate = self.dependent.substrate
+        self.upgrade_backend = upgrade_backend
         self.charm = dependent.charm
         self.state = dependent.state
-        self._observe_events(dependent.charm)
-
-    @abstractmethod
-    def _observe_events(self, charm: AbstractMongoCharm) -> None:
-        """Handler that should register all event observers."""
-        raise NotImplementedError()
 
     @property
+    def _upgrade(self) -> KubernetesUpgrade | MachineUpgrade | None:
+        try:
+            return self.upgrade_backend(
+                self.dependent, self.dependent.workload, self.state, self.dependent.substrate
+            )
+        except PeerRelationNotReadyError:
+            return None
+
+    def on_upgrade_peer_relation_created(self):
+        """Handle peer relation created event."""
+        assert self._upgrade
+        if self.substrate == Substrates.VM:
+            self.state.unit_workload_container_version = SNAP.revision
+            logger.debug(f"Saved {SNAP.revision=} in unit databag after first install")
+        if self.charm.unit.is_leader():
+            if not self.state.upgrade_in_progress:
+                # Save versions on initial start
+                self._upgrade.set_versions_in_app_databag()
+
     @abstractmethod
-    def _upgrade(self) -> AbstractUpgrade | None:
+    def run_post_app_upgrade_task(self) -> None:
+        """Runs the post upgrade check to verify that the deployment is healthy."""
+        raise NotImplementedError()
+
+    def run_post_cluster_upgrade_task(self) -> None:
+        """Runs the post upgrade check to verify that the deployment is healthy."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def run_post_upgrade_checks(self, finished_whole_cluster: bool = False) -> None:
+        """Runs post-upgrade checks for after an application upgrade."""
         raise NotImplementedError()
 
     # BEGIN: Helpers
@@ -428,7 +469,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             rs_status = mongod.client.admin.command("replSetGetStatus")
             return not mongod.is_any_sync(rs_status)
 
-    def is_cluster_able_to_read_write(self: GenericMongoDBUpgradeManager[MongoDBOperator]) -> bool:
+    def is_cluster_able_to_read_write(
+        self: GenericMongoDBUpgradeManager[MongoDBOperator],
+    ) -> bool:
         """Returns True if read and write is feasible for cluster."""
         if self.state.is_role(MongoDBRoles.REPLICATION):
             return self.is_replica_set_able_read_write()

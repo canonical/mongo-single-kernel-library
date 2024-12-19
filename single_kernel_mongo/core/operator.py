@@ -18,7 +18,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
@@ -33,16 +33,20 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.managers.config import CommonConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
+from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-    from single_kernel_mongo.core.abstract_upgrades import GenericMongoDBUpgradeManager
-    from single_kernel_mongo.core.workload import WorkloadBase
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
+    from single_kernel_mongo.events.upgrades import UpgradeEventHandler
     from single_kernel_mongo.managers.tls import TLSManager
+    from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
 
 logger = getLogger(__name__)
+
+MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
 class OperatorProtocol(ABC, Object):
@@ -66,10 +70,11 @@ class OperatorProtocol(ABC, Object):
     tls_manager: TLSManager
     state: CharmState
     mongo_manager: MongoManager
-    upgrade_manager: GenericMongoDBUpgradeManager
-    workload: WorkloadBase
+    upgrade_manager: MongoUpgradeManager
+    workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
+    upgrade_events: UpgradeEventHandler
 
     if TYPE_CHECKING:
 

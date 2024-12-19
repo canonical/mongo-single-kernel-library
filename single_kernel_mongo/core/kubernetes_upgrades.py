@@ -8,6 +8,8 @@ It is required to deploy the application with `--trust` for this code to work
 as it has to interact with the Kubernetes StatefulSet.
 """
 
+from __future__ import annotations
+
 from logging import getLogger
 from typing import TYPE_CHECKING
 
@@ -16,14 +18,14 @@ from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
 from single_kernel_mongo.config.literals import KindEnum, UnitState
+from single_kernel_mongo.core.abstract_upgrades import (
+    AbstractUpgrade,
+)
 from single_kernel_mongo.exceptions import ActionFailedError, DeployedWithoutTrustError
 from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
 from single_kernel_mongo.utils.helpers import unit_number
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.core.abstract_upgrades import (
-        AbstractUpgrade,
-    )
     from single_kernel_mongo.core.operator import OperatorProtocol
 
 logger = getLogger()
