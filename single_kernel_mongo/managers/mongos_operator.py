@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING, final
-from urllib.parse import quote
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
@@ -22,6 +21,7 @@ from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import ExposeExternal
+from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
@@ -32,6 +32,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
+from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.managers.mongo import MongoManager
@@ -89,11 +90,15 @@ class MongosOperator(OperatorProtocol, Object):
             self.state,
             self.substrate,
         )
+        self.cluster_manager = ClusterRequirer(
+            self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
+        )
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
 
         self.tls_events = TLSEventsHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
+        self.cluster_event_handlers = ClusterMongosEventHandler(self)
 
     @property
     def config(self):
@@ -171,12 +176,17 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("Missing relation to config-server.")
             return
 
-        # TODO : Check TLS status
+        if status := self.cluster_manager.get_tls_statuses():
+            logger.info(f"Invalid TLS integration: {status.message}")
+            self.charm.status_manager.set_and_share_status(status)
+            return
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
             self.charm.status_manager.to_waiting("Waiting for mongos to start.")
             return
+
+        self.share_connection_info()
 
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
@@ -299,6 +309,29 @@ class MongosOperator(OperatorProtocol, Object):
                 self.k8s.delete_service()
             self.state.app_peer_data.expose_external = self.config.expose_external
 
+    def update_keyfile(self, keyfile_content: str) -> bool:
+        """Updates the keyfile in the app databag and on the workload."""
+        current_key_file_lines = self.workload.read(self.workload.paths.keyfile)
+
+        # Keyfile is either empty or one line long.
+        current_key_file = current_key_file_lines[0] if current_key_file_lines else None
+
+        if not keyfile_content or current_key_file == keyfile_content:
+            return False
+
+        self.workload.write(self.workload.paths.keyfile, keyfile_content)
+        if self.charm.unit.is_leader():
+            self.state.set_keyfile(keyfile_content)
+        return True
+
+    def update_config_server_db(self, config_server_db_uri: str) -> bool:
+        """Updates the config server db uri if necessary."""
+        if self.workload.config_server_db == config_server_db_uri:
+            return False
+
+        self.mongos_config_manager.set_environment()
+        return True
+
     def is_mongos_running(self) -> bool:
         """Is the mongos service running ?"""
         # Useless to even try to connect if we haven't started the service.
@@ -307,12 +340,14 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                uri = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+                host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
             else:
-                uri = quote(f"{self.workload.paths.socket_path}", safe="")
+                host = self.state.formatted_socket_path
         else:
-            uri = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+            host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
 
-        return self.mongo_manager.mongod_ready(uri=uri)
+        uri = f"mongodb://{host}"
+
+        return self.mongo_manager.mongod_ready(uri=uri, direct=False)
 
     # END: Helpers

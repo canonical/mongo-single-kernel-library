@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 
 from dacite import from_dict
 from ops import Object
-from ops.model import Relation
-from pymongo.errors import PyMongoError
+from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
+from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -76,10 +76,10 @@ class MongoManager(Object):
             except DeployedWithoutTrustError:
                 self.charm.status_manager.to_blocked("Charm deployed without `trust`")
 
-    def mongod_ready(self, uri: str | None = None) -> bool:
+    def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
         """Is MongoDB ready and running?"""
         actual_uri = uri or "localhost"
-        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=True) as direct_mongo:
+        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
 
     def set_user_password(self, user: MongoDBUser, password: str) -> str:
@@ -318,24 +318,29 @@ class MongoManager(Object):
         endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
         uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         database = data_interface.fetch_my_relation_field(relation.id, "database")
-        with MongoConnection(self.state.mongo_config) as mongo:
-            user_exists = mongo.user_exists(config.username)
-        if user_exists:
-            if config.hosts != set(endpoints.split(",")):
-                data_interface.set_endpoints(
-                    relation.id,
-                    ",".join(config.hosts),
-                )
-            if config.uri != uris:
-                data_interface.set_uris(
-                    relation.id,
-                    config.uri,
-                )
-            if config.database != database:
-                data_interface.set_database(
-                    relation.id,
-                    config.database,
-                )
+        username = data_interface.fetch_my_relation_field(relation.id, "username")
+        password = data_interface.fetch_my_relation_field(relation.id, "password")
+        if not username or not password:
+            data_interface.set_credentials(
+                relation.id,
+                config.username,
+                config.password,
+            )
+        if config.hosts != set(endpoints.split(",")):
+            data_interface.set_endpoints(
+                relation.id,
+                ",".join(config.hosts),
+            )
+        if config.uri != uris:
+            data_interface.set_uris(
+                relation.id,
+                config.uri,
+            )
+        if config.database != database:
+            data_interface.set_database(
+                relation.id,
+                config.database,
+            )
 
     def auto_delete_db(self, relation: Relation) -> None:
         """Delete a DB if necessary."""
@@ -433,11 +438,36 @@ class MongoManager(Object):
 
             return draining_shards
 
-    # Keep for memory for now.
-    # def get_relation_name(self):
-    #    """Returns the name of the relation to use."""
-    #    if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-    #        return RelationNames.CLUSTER
-    #    if self.state.is_role(MongoDBRoles.MONGOS):
-    #        return RelationNames.MONGOS_PROXY
-    #    return RelationNames.DATABASE
+    def get_status(self) -> StatusBase:
+        """Generates the status of a unit based on its status reported by mongod."""
+        try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                replset_status = mongo.get_replset_status()
+
+            unit_host = self.state.unit_peer_data.host
+            if unit_host not in replset_status:
+                return WaitingStatus("Member being added.")
+
+            replica_status = replset_status[unit_host]
+
+            match replica_status:
+                case "PRIMARY":
+                    return ActiveStatus("Primary")
+                case "SECONDARY":
+                    return ActiveStatus("")
+                case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
+                    return WaitingStatus("Member is syncing...")
+                case "REMOVED":
+                    return WaitingStatus("Member is removing...")
+                case _:
+                    return BlockedStatus(replica_status)
+
+        except ServerSelectionTimeoutError as e:
+            # Usually it is du to ReplicaSetNoPrimary
+            logger.debug(f"Got error {e} while checking replica set status")
+            return WaitingStatus("Waiting for primary re-election.")
+        except AutoReconnect as e:
+            # AutoReconnect is raised when a connection to the database is lost and an attempt to
+            # auto-reconnect will be made by pymongo.
+            logger.debug("Got error: %s, while checking replica set status", str(e))
+            return WaitingStatus("Waiting to reconnect to unit..")

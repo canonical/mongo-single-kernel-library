@@ -11,6 +11,7 @@ import logging
 from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, TypeVar
+from urllib.parse import quote
 
 from ops import Object, Relation, Unit
 
@@ -28,7 +29,9 @@ from single_kernel_mongo.config.relations import (
 )
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
+from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    DatabaseProviderData,
     DatabaseRequirerData,
     DataPeerData,
     DataPeerOtherUnitData,
@@ -38,12 +41,12 @@ from single_kernel_mongo.state.app_peer_state import (
     AppPeerDataKeys,
     AppPeerReplicaSet,
 )
-from single_kernel_mongo.state.cluster_state import ClusterState
+from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
+    ConfigServerKeys,
     ShardingComponentState,
 )
-from single_kernel_mongo.state.models import ClusterData
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
@@ -101,6 +104,7 @@ class CharmState(Object):
             relation_name=self.peer_relation_name,
             additional_secret_fields=SECRETS_UNIT,
         )
+        self.paths = MongoPaths(self.charm_role)
 
     @property
     def peer_relation(self) -> Relation | None:
@@ -163,6 +167,7 @@ class CharmState(Object):
             data_interface=self.peer_app_interface,
             component=self.model.app,
             role=self.config.role,
+            model=self.model,
         )
 
     @property
@@ -212,11 +217,34 @@ class CharmState(Object):
         return _units
 
     @property
+    def cluster_provider_data_interface(self) -> DatabaseProviderData:
+        """The Requirer Data interface for the cluster relation (config-server side)."""
+        return DatabaseProviderData(
+            self.model,
+            RelationNames.CLUSTER,
+        )
+
+    @property
+    def cluster_requirer_data_interface(self) -> DatabaseRequirerData:
+        """The Requirer Data interface for the cluster relation (mongos side)."""
+        return DatabaseRequirerData(
+            self.model,
+            RelationNames.CLUSTER,
+            database_name=self.app_peer_data.database,
+            extra_user_roles=",".join(sorted(self.app_peer_data.extra_user_roles)),
+            additional_secret_fields=[
+                ClusterStateKeys.keyfile.value,
+                ClusterStateKeys.config_server_db.value,
+                ClusterStateKeys.int_ca_secret.value,
+            ],
+        )
+
+    @property
     def cluster(self) -> ClusterState:
         """The cluster state of the current running App."""
         return ClusterState(
             relation=self.mongos_cluster_relation,
-            data_interface=ClusterData(self.model, RelationNames.CLUSTER),
+            data_interface=self.cluster_requirer_data_interface,
             component=self.model.app,
         )
 
@@ -293,35 +321,62 @@ class CharmState(Object):
         }
 
     @property
+    def formatted_socket_path(self) -> str:
+        """URL encoded socket path."""
+        return quote(f"{self.paths.socket_path}", safe="")
+
+    @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == KindEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {self.formatted_socket_path}
         return {unit.host for unit in self.units}
 
     @property
     def internal_hosts(self) -> set[str]:
         """Internal hosts for internal access."""
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == KindEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {self.formatted_socket_path}
         return {unit.internal_address for unit in self.units}
 
     @property
     def host_port(self) -> int:
         """Retrieve the port associated with MongoDB application."""
         if self.is_role(MongoDBRoles.MONGOS):
-            if self.config["expose_external"]:
+            if self.app_peer_data.external_connectivity:
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
+
+    @property
+    def config_server_data_interface(self) -> DatabaseProviderData:
+        """The config server database interface."""
+        return DatabaseProviderData(self.model, RelationNames.CONFIG_SERVER)
+
+    @property
+    def shard_state_interface(self) -> DatabaseRequirerData:
+        """The shard database interface."""
+        return DatabaseRequirerData(
+            self.model,
+            relation_name=RelationNames.SHARDING,
+            additional_secret_fields=SECRETS_FIELDS,
+            database_name="unused",  # Needed for relation events
+        )
 
     @property
     def shard_state(self) -> ShardingComponentState:
         """The shard state."""
         return ShardingComponentState(
             relation=self.shard_relation,
-            data_interface=DatabaseRequirerData(
-                self.model,
-                RelationNames.SHARDING,
-                "unused",
-                additional_secret_fields=SECRETS_FIELDS,
-            ),
+            data_interface=self.shard_state_interface,
             component=self.model.app,
         )
 
@@ -342,7 +397,36 @@ class CharmState(Object):
         )
         return None
 
+    def generate_config_server_db(self) -> str:
+        """Generates the config server DB URI."""
+        replica_set_name = self.model.app.name
+        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.app_hosts)
+        return f"{replica_set_name}/{','.join(hosts)}"
+
     # END: Helpers
+    def update_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the CA secret in the cluster and config-server relations."""
+        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+        for relation in self.cluster_relations:
+            if new_ca is None:
+                self.cluster_provider_data_interface.delete_relation_data(
+                    relation.id, [ClusterStateKeys.int_ca_secret]
+                )
+            else:
+                self.cluster_provider_data_interface.update_relation_data(
+                    relation.id, {ClusterStateKeys.int_ca_secret.value: new_ca}
+                )
+        for relation in self.config_server_relation:
+            if new_ca is None:
+                self.config_server_data_interface.delete_relation_data(
+                    relation.id, [ConfigServerKeys.int_ca_secret]
+                )
+            else:
+                self.config_server_data_interface.update_relation_data(
+                    relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
+                )
+
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
         rel_departed_key = generate_relation_departed_key(rel_id)
@@ -442,13 +526,14 @@ class CharmState(Object):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the mongos user."""
-        username = self.secrets.get_for_key(Scope.APP, key="username")
-        password = self.secrets.get_for_key(Scope.APP, key="password")
+        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
+        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
+        database = self.app_peer_data.database
         if not username or not password:
             raise Exception("Missing credentials.")
 
         return MongoConfiguration(
-            database=f"{self.model.app.name}_{self.model.name}",
+            database=database,
             username=username,
             password=password,
             hosts=self.internal_hosts,

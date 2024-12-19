@@ -212,7 +212,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
             and not self.state.app_peer_data.external_connectivity
         ):
             return [
-                f"--bind-ip {self.workload.paths.socket_path}",
+                f"--bind_ip {self.workload.paths.socket_path}",
                 "--filePermissions 0766",
             ]
         return ["--bind_ip_all"]

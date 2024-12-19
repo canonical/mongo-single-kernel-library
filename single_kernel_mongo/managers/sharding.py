@@ -36,12 +36,8 @@ from single_kernel_mongo.exceptions import (
     WaitingForCertificatesError,
     WaitingForSecretsError,
 )
-from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProviderData,
-    DatabaseRequirerData,
-)
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import SECRETS_FIELDS, ConfigServerKeys
+from single_kernel_mongo.state.config_server_state import ConfigServerKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
@@ -71,9 +67,7 @@ class ConfigServerManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_interface = DatabaseProviderData(
-            self.model, relation_name=self.relation_name.value
-        )
+        self.data_interface = self.state.config_server_data_interface
 
     def prepare_sharding_config(self, relation: Relation):
         """Handles the database requested event.
@@ -204,25 +198,10 @@ class ConfigServerManager(Object):
                 relation.id, {ConfigServerKeys.host.value: sorted(self.state.app_hosts)}
             )
 
-    def update_ca_secret(self, new_ca: str | None) -> None:
-        """Updates the new CA for all related shards."""
-        for relation in self.state.config_server_relation:
-            if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-                logger.info("Database Requested event has not run yet for relation {relation.id}")
-                continue
-            if new_ca is None:
-                self.data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.int_ca_secret.value]
-                )
-                continue
-            self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
-            )
-
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""
         if self.state.is_role(MongoDBRoles.SHARD):
-            logger.info("skipping config server status check, charm is  running as a shard")
+            logger.info("skipping config server status check, charm is running as a shard")
             return True
 
         if not self.state.db_initialised:
@@ -401,12 +380,7 @@ class ShardManager(Object):
         self.workload = workload
         self.substrate = substrate
         self.relation_name = relation_name
-        self.data_requirer = DatabaseRequirerData(
-            self.model,
-            relation_name=self.relation_name,
-            additional_secret_fields=SECRETS_FIELDS,
-            database_name="unused",  # Needed for relation events
-        )
+        self.data_requirer = self.state.shard_state_interface
 
     def assert_pass_sanity_hook_checks(self):
         """Returns True if all the sanity hook checks for sharding pass."""

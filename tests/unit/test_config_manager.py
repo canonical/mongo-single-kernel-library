@@ -133,7 +133,7 @@ def test_mongos_config_manager(mocker):
 
     assert port_parameter == ["--port 27018"]
     assert binding_ips == [
-        f"--bind-ip {VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
+        f"--bind_ip {VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
         "--filePermissions 0766",
     ]
     assert log_options == [

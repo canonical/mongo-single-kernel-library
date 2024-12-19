@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 from ops.framework import Object
-from ops.model import Container, MaintenanceStatus, Relation, Unit
+from ops.model import Container, MaintenanceStatus, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -30,6 +30,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
+from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
@@ -37,7 +38,6 @@ from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardE
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
-    DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
@@ -48,6 +48,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.managers.backups import BackupManager
+from single_kernel_mongo.managers.cluster import ClusterProvider
 from single_kernel_mongo.managers.config import (
     LogRotateConfigManager,
     MongoDBConfigManager,
@@ -139,6 +140,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.substrate,
             RelationNames.SHARDING,
         )
+        self.cluster_manager = ClusterProvider(
+            self, self.state, self.substrate, RelationNames.CLUSTER
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -148,6 +152,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
+        self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
 
     @property
     def config(self):
@@ -485,7 +490,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.backup_manager.is_valid_s3_integration():
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return
-        # TODO: Cluster integration status + Cluster Mismatch revision.
+        # TODO: Cluster Mismatch revision.
+        if not self.cluster_manager.is_valid_mongos_integration():
+            self.charm.status_manager.to_blocked(
+                "Relation to mongos not supported, config role must be config-server"
+            )
         if not self.state.db_initialised:
             return
 
@@ -510,6 +519,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         else:
             self.charm.status_manager.to_active(None)
+
+        self.charm.status_manager.set_and_share_status(self.mongo_manager.get_status())
         # TODO: Process statuses.
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
@@ -600,8 +611,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:
                 self.mongo_manager.update_app_relation_data(relation)
+
+        # Update the mongos host in the sharded deployment
         self.config_server_manager.update_mongos_hosts()
-        # TODO: Update related hosts for cluster.
+        # Update the config server DB URI on the remote mongos
+        self.cluster_manager.update_config_server_db()
 
     def open_ports(self) -> None:
         """Open ports on the workload.
@@ -745,15 +759,3 @@ class MongoDBOperator(OperatorProtocol, Object):
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
         return self.state.planned_units == 0 and len(self.state.peers_units) == 0
-
-    def assert_proceed_on_broken_event(self, relation: Relation):
-        """Runs some checks on broken relation event."""
-        if not self.state.has_departed_run(relation.id):
-            raise DeferrableFailedHookChecksError(
-                "must wait for relation departed hook to decide if relation should be removed"
-            )
-
-        if self.state.is_scaling_down(relation.id):
-            raise NonDeferrableFailedHookChecksError(
-                "Relation broken event occurring during scale down, no need to proceed with broken event."
-            )
