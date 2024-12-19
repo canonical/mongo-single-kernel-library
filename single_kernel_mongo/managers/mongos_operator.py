@@ -45,6 +45,7 @@ from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
+
 logger = logging.getLogger(__name__)
 
 

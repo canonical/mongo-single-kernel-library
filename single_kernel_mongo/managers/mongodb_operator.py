@@ -7,8 +7,6 @@
 from __future__ import annotations
 
 import logging
-
-# from pathlib import Path
 from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.version_check import (
@@ -30,6 +28,8 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES, LogRotateConfig
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
+from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -41,6 +41,7 @@ from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
+from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
@@ -63,6 +64,7 @@ from single_kernel_mongo.managers.config import (
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
+from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
@@ -160,6 +162,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterProvider(
             self, self.state, self.substrate, RelationNames.CLUSTER
         )
+        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        self.upgrade_manager = MongoDBUpgradeManager(
+            self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -167,6 +173,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
+        self.upgrade_events = UpgradeEventHandler(self)
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
@@ -509,7 +516,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.backup_manager.is_valid_s3_integration():
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return
-        # TODO: Cluster Mismatch revision.
+        if (
+            revision_mismatch_status
+            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            return
         if not self.cluster_manager.is_valid_mongos_integration():
             self.charm.status_manager.to_blocked(
                 "Relation to mongos not supported, config role must be config-server"

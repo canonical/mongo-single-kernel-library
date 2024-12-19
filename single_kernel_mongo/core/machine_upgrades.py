@@ -7,6 +7,8 @@ Derived from specification: DA058 - In-Place Upgrades - Kubernetes v2
 (https://docs.google.com/document/d/1tLjknwHudjcHs42nzPVBNkHs98XxAOT2BXGGpP7NyEU/)
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -67,7 +69,7 @@ class MachineUpgrade(AbstractUpgrade):
 
     @property
     def _unit_workload_version(self) -> str | None:
-        """Installed OpenSearch version for this unit."""
+        """Installed MongoDB version for this unit."""
         return self._current_versions["workload_version"]
 
     def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:
@@ -161,8 +163,7 @@ class MachineUpgrade(AbstractUpgrade):
 
             # post upgrade check should be retried in case of failure, for this it is necessary to
             # emit a separate event.
-            if self.dependent.name == KindEnum.MONGOD:
-                dependent.upgrade_manager.post_app_upgrade_event.emit()
+            dependent.upgrade_events.post_app_upgrade_event.emit()
 
     def save_snap_revision_after_first_install(self):
         """Set snap revision on first install."""

@@ -150,7 +150,12 @@ class ConfigServerManager(Object, StatusProvider):
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        # TODO: revision checks.
+        if (
+            revision_mismatch_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
         if not self.charm.unit.is_leader():
@@ -382,7 +387,12 @@ class ShardManager(Object, StatusProvider):
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        # TODO: revision checks.
+        if (
+            revision_mismatch_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")
 

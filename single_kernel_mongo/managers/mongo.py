@@ -21,6 +21,7 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, Waiting
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.core.operator import MainWorkloadType
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -45,8 +46,6 @@ from single_kernel_mongo.utils.mongodb_users import (
     MonitorUser,
     OperatorUser,
 )
-from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
-from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import OperatorProtocol
@@ -60,7 +59,7 @@ class MongoManager(Object, StatusProvider):
     def __init__(
         self,
         dependent: OperatorProtocol,
-        workload: MongoDBWorkload | MongosWorkload,
+        workload: MainWorkloadType,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
