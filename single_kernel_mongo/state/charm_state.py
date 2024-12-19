@@ -24,7 +24,6 @@ from single_kernel_mongo.config.literals import (
 from single_kernel_mongo.config.models import CharmKind
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
-    PeerRelationNames,
     RelationNames,
 )
 from single_kernel_mongo.core.secrets import SecretCache
@@ -91,23 +90,22 @@ class CharmState(Object):
         self.config = charm.parsed_config
         self.substrate: Substrates = substrate
         self.secrets = SecretCache(charm)
+        self.peer_relation_name = charm.peer_rel_name.value
 
         self.peer_app_interface = DataPeerData(
             self.model,
-            relation_name=PeerRelationNames.PEERS.value,
+            relation_name=self.peer_relation_name,
         )
         self.peer_unit_interface = DataPeerUnitData(
             self.model,
-            relation_name=PeerRelationNames.PEERS.value,
+            relation_name=self.peer_relation_name,
             additional_secret_fields=SECRETS_UNIT,
         )
-
-    # BEGIN: Relations
 
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
-        return self.model.get_relation(PeerRelationNames.PEERS.value)
+        return self.model.get_relation(self.peer_relation_name)
 
     @property
     def peers_units(self) -> set[Unit]:
@@ -119,6 +117,8 @@ class CharmState(Object):
     @property
     def client_relations(self) -> set[Relation]:
         """The set of client relations."""
+        if self.charm_role.name == KindEnum.MONGOS:
+            return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])
 
     @property
@@ -287,7 +287,7 @@ class CharmState(Object):
         """The cluster peer relation."""
         return {
             unit: DataPeerOtherUnitData(
-                model=self.model, unit=unit, relation_name=PeerRelationNames.PEERS.value
+                model=self.model, unit=unit, relation_name=self.peer_relation_name
             )
             for unit in self.peers_units
         }
