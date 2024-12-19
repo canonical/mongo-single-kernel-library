@@ -77,9 +77,8 @@ class MongoManager(Object):
 
     def mongod_ready(self, uri: str | None = None) -> bool:
         """Is MongoDB ready and running?"""
-        config = EMPTY_CONFIGURATION
         actual_uri = uri or "localhost"
-        with MongoConnection(config, actual_uri, direct=True) as direct_mongo:
+        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=True) as direct_mongo:
             return direct_mongo.is_ready
 
     def set_user_password(self, user: MongoDBUser, password: str) -> str:
@@ -108,8 +107,8 @@ class MongoManager(Object):
     def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
         self.initialise_operator_user()
-        self.initialise_monitor_user()
-        self.initialise_backup_user()
+        self.initialise_user(MonitorUser)
+        self.initialise_user(BackupUser)
 
     def initialise_operator_user(self):
         """Creates initial admin user for MongoDB.
@@ -126,38 +125,29 @@ class MongoManager(Object):
             return
         config = self.state.mongo_config
         with MongoConnection(config, "localhost", direct=True) as direct_mongo:
-            direct_mongo.create_user(config=config, roles=OPERATOR_ROLE)
+            direct_mongo.create_user(config.username, config.password, roles=OPERATOR_ROLE)
         self.state.app_peer_data.set_user_created(OperatorUser.username)
 
-    def initialise_monitor_user(self):
-        """Creates the monitor user on the MongoDB database."""
-        if self.state.app_peer_data.is_user_created(MonitorUser.username):
+    def initialise_user(self, user: MongoDBUser):
+        """Creates a user and sets its role on the MongoDB database."""
+        if self.state.app_peer_data.is_user_created(user.username):
             return
         with MongoConnection(self.state.mongo_config) as mongo:
-            logger.debug("Creating the monitor user roles…")
+            logger.debug(f"Creating the {user.username} user roles…")
             mongo.create_role(
-                role_name=MonitorUser.mongodb_role,
-                privileges=MonitorUser.privileges,
+                role_name=user.mongodb_role,
+                privileges=user.privileges,
             )
-            logger.debug("creating the monitor user...")
-            mongo.create_user(self.state.monitor_config)
-        self.state.app_peer_data.set_user_created(MonitorUser.username)
-
-    def initialise_backup_user(self):
-        """Creates the monitor user on the MongoDB database."""
-        if self.state.app_peer_data.is_user_created(BackupUser.username):
-            return
-        with MongoConnection(self.state.mongo_config) as mongo:
-            logger.debug("Creating the backup user roles…")
-            mongo.create_role(
-                role_name=BackupUser.mongodb_role,
-                privileges=BackupUser.privileges,
+            logger.debug(f"Creating the {user.username} user...")
+            config = self.state.mongodb_config_for_user(user)
+            mongo.create_user(
+                config.username,
+                config.password,
+                config.supported_roles,
             )
-            logger.debug("creating the backup user...")
-            mongo.create_user(self.state.backup_config)
-        self.state.app_peer_data.set_user_created(BackupUser.username)
+        self.state.app_peer_data.set_user_created(user.username)
 
-    def oversee_relation(
+    def reconcile_mongo_users_and_dbs(
         self, relation: Relation, relation_departing: bool = False, relation_changed: bool = False
     ):
         """Oversees the users of the relation.
@@ -227,7 +217,7 @@ class MongoManager(Object):
             )
             logger.info("Create relation user: %s on %s", config.username, config.database)
 
-            mongo.create_user(config)
+            mongo.create_user(config.username, config.password, config.supported_roles)
             managed_users.add(username)
             data_interface.set_database(relation.id, config.database)
             data_interface.set_credentials(relation.id, config.username, config.password)
@@ -265,7 +255,9 @@ class MongoManager(Object):
         Note this only removes users that this application of Charmed MongoDB is responsible for
         managing. It won't remove:
         1. users created from other applications
-        2. users created from other mongos routers.
+        2. users created from other mongos routers. The removal of these is
+        triggered by the config-server in the case that the mongos and
+        config-server integration is prematurely removed.
 
         Raises:
             PyMongoError
@@ -278,9 +270,9 @@ class MongoManager(Object):
         if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
             return
 
-        # for user removal of mongos-k8s router, we let the router remove itself
+        # Dropping the admin-user for mongos-k8s-router is done by mongos-k8s charm.
         if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            logger.info("K8s routers will remove themselves.")
+            logger.info("K8s routers will drop themselves.")
             managed_users.remove(username)
             self.state.app_peer_data.managed_users = managed_users
             return

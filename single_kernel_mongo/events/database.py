@@ -101,7 +101,9 @@ class DatabaseEventsHandler(Object):
             logger.info("Relation changed event, updating relation data.")
 
         try:
-            self.manager.oversee_relation(event.relation, relation_departing, relation_changed)
+            self.manager.reconcile_mongo_users_and_dbs(
+                event.relation, relation_departing, relation_changed
+            )
         except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError) as e:
             # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
             # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can

@@ -38,14 +38,20 @@ class AbstractRelationState(Generic[PData]):
             return False
 
     def update(self, items: dict[str, str]) -> None:
-        """Writes to relation_data."""
+        """Updates the data in the databag.
+
+        It will add/update/delete the data in the databag according to the following scheme:
+         * If the provided value is None, the key field be deleted from the databag if it exists.
+         * If the field does not exist, it will be created and set to the provided value
+         * If the field already existed, the value will be updated to the provided value.
+        """
         delete_fields = [key for key in items if not items[key]]
         update_content = {k: items[k] for k in items if k not in delete_fields}
 
         self.relation_data.update(update_content)
 
         for field in delete_fields:
-            del self.relation_data[field]
+            self.relation_data.pop(field, None)
 
     def get(self, key: str, default: str = "") -> str:
         """Gets a key."""

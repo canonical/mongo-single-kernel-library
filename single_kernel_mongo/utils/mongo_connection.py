@@ -130,16 +130,16 @@ class MongoConnection:
                 logger.error("Cannot initialize replica set. error=%r", e)
                 raise e
 
-    def create_user(self, config: MongoConfiguration, roles: list[DBPrivilege] | None = None):
+    def create_user(self, username: str, password: str, roles: list[DBPrivilege]):
         """Create user.
 
         Grant read and write privileges for specified database.
         """
         self.client.admin.command(
             "createUser",
-            value=config.username,
-            pwd=config.password,
-            roles=roles or config.supported_roles,
+            value=username,
+            pwd=password,
+            roles=roles,
             mechanisms=["SCRAM-SHA-256"],
         )
 

@@ -745,10 +745,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         logger.info("Manage client relation users")
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:
-                self.mongo_manager.oversee_relation(relation)
+                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
         elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             for relation in self.state.cluster_relations:
-                self.mongo_manager.oversee_relation(relation)
+                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
 
         self.state.app_peer_data.db_initialised = True
 
