@@ -16,14 +16,23 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import KindEnum, MongoPorts, Substrates
+from single_kernel_mongo.config.literals import (
+    INCOMPATIBLE_UPGRADE,
+    UNHEALTHY_UPGRADE,
+    KindEnum,
+    MongoPorts,
+    Substrates,
+)
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
+from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import ExposeExternal, MongosCharmConfig
 from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
+from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
@@ -37,6 +46,7 @@ from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
+from single_kernel_mongo.managers.upgrade import MongosUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload import (
     get_mongos_workload_for_substrate,
@@ -94,12 +104,18 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
+        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        self.upgrade_manager = MongosUpgradeManager(
+            self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
+        )
+
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
 
         self.tls_events = TLSEventsHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
+        self.upgrade_events = UpgradeEventHandler(self)
 
     @property
     def config(self) -> MongosCharmConfig:
@@ -116,7 +132,6 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.workload.workload_present:
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
-        self.mongos_config_manager.set_environment()
 
     @override
     def on_start(self) -> None:
@@ -128,11 +143,20 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
             raise ContainerNotReadyError
+
+        self.tls_manager.push_tls_files_to_workload()
         self.handle_licenses()
+        self.set_permissions()
+
+        if self.substrate == Substrates.K8S:
+            self.upgrade_manager._reconcile_upgrade()
+
+        self.mongos_config_manager.set_environment()
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        self.charm.status_manager.to_blocked("Missing relation to config-server.")
+        if not self.state.mongos_cluster_relation:
+            self.charm.status_manager.to_blocked("Missing relation to config-server.")
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
@@ -219,6 +243,13 @@ class MongosOperator(OperatorProtocol, Object):
         # from Juju so we must monitor it and update our SANS as necessary.
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
+            self.upgrade_manager._reconcile_upgrade()
+
+        if self.charm.unit.status in (
+            UNHEALTHY_UPGRADE,
+            INCOMPATIBLE_UPGRADE,
+        ):
+            return
 
         self.charm.status_manager.to_active("")
 

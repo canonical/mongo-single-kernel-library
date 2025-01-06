@@ -26,7 +26,7 @@ from single_kernel_mongo.config.literals import (
     Scope,
     Substrates,
 )
-from single_kernel_mongo.config.models import ROLES, LogRotateConfig
+from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
@@ -233,8 +233,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-        self.logrotate_config_manager.configure_and_restart()
-
     @override
     def on_start(self) -> None:
         """Handler on start."""
@@ -246,21 +244,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Storages not attached yet.")
             raise ContainerNotReadyError
 
-        # Configure the workloads
-        self.config_manager.set_environment()
-        self.mongos_config_manager.set_environment()
-
-        # Instantiate the keyfile
-        self.instantiate_keyfile()
-
-        # Push TLS files if necessary
-        self.tls_manager.push_tls_files_to_workload()
-
-        # Update licenses
-        self.handle_licenses()
-
-        # Sets directory permissions
-        self.set_permissions()
+        self._configure_layers()
 
         try:
             logger.info("Starting MongoDB.")
@@ -288,16 +272,12 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise WorkloadNotReadyError
 
         try:
-            self.mongodb_exporter_config_manager.configure_and_restart()
+            self._restart_related_services()
         except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
             return
 
-        try:
-            self.backup_manager.configure_and_restart()
-        except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
-            return
+        if self.substrate == Substrates.K8S:
+            self.upgrade_manager._reconcile_upgrade()
 
         self._initialise_replica_set()
         self.charm.status_manager.process_and_share_statuses()
@@ -372,10 +352,13 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
+        if self.substrate == Substrates.K8S:
+            self.upgrade_manager._reconcile_upgrade()
+
         # Changing the monitor or the backup password will lead to non-leader
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
-        # work
+        # work.
         self.mongodb_exporter_config_manager.configure_and_restart()
         self.backup_manager.configure_and_restart()
 
@@ -383,6 +366,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         # the replica set is initialised.
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
+
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Adding replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            raise UpgradeInProgressError
 
         try:
             # Adds the newly added/updated units.
@@ -513,20 +502,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def on_update_status(self) -> None:
         """Status update Handler."""
-        if not self.backup_manager.is_valid_s3_integration():
-            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
-            return
-        if (
-            revision_mismatch_status
-            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
-            return
-        if not self.cluster_manager.is_valid_mongos_integration():
-            self.charm.status_manager.to_blocked(
-                "Relation to mongos not supported, config role must be config-server"
-            )
-        if not self.state.db_initialised:
+        if not self.pass_status_basic_checks():
             return
 
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -539,10 +515,17 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
             return
 
-        try:
-            self.perform_self_healing()
-        except ServerSelectionTimeoutError as e:
-            logger.info(f"Failed to perform self healing: {e}")
+        if self.substrate == Substrates.K8S:
+            self.upgrade_manager._reconcile_upgrade()
+
+        # It's useless to try to perform self healing if upgrade is in progress
+        # as the handlers would raise an UpgradeInProgressError anyway so
+        # better skip it when possible.
+        if not self.state.upgrade_in_progress:
+            try:
+                self.perform_self_healing()
+            except ServerSelectionTimeoutError as e:
+                logger.info(f"Failed to perform self healing: {e}")
 
         self.charm.status_manager.process_and_share_statuses()
 
@@ -706,6 +689,40 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongos_config_manager.set_environment()
         self.start_charm_services()
 
+    def _restart_related_services(self) -> None:
+        """Restarts mongodb exporter and backup manager."""
+        try:
+            self.mongodb_exporter_config_manager.configure_and_restart()
+        except WorkloadServiceError:
+            self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
+            raise
+
+        try:
+            self.backup_manager.configure_and_restart()
+        except WorkloadServiceError:
+            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
+            raise
+
+    def pass_status_basic_checks(self) -> bool:
+        """Integration and initial checks for update-status events."""
+        if not self.backup_manager.is_valid_s3_integration():
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            return False
+        if (
+            revision_mismatch_status
+            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            return False
+        if not self.cluster_manager.is_valid_mongos_integration():
+            self.charm.status_manager.to_blocked(
+                "Relation to mongos not supported, config role must be config-server"
+            )
+        if not self.state.db_initialised:
+            return False
+
+        return True
+
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
         """Checks if the relation is feasible in the current context."""
@@ -725,35 +742,33 @@ class MongoDBOperator(OperatorProtocol, Object):
             return False
         return True
 
+    def _configure_layers(self) -> None:
+        """Handle filesystem interactions for charm configuration."""
+        # Configure the workloads
+        self.config_manager.set_environment()
+        self.mongos_config_manager.set_environment()
+
+        # Start logrotate
+        self.logrotate_config_manager.configure_and_restart()
+
+        # Instantiate the keyfile
+        self.instantiate_keyfile()
+
+        # Push TLS files if necessary
+        self.tls_manager.push_tls_files_to_workload()
+
+        # Update licenses
+        self.handle_licenses()
+
+        # Sets directory permissions
+        self.set_permissions()
+
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
             raise Exception("Waiting for leader unit to generate keyfile contents")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
-
-    def set_permissions(self) -> None:
-        """Ensure directories and make permissions.
-
-        We must ensure that the log status directory for LogRotate is existing.
-        We must also ensure that all data, log and log status directories have
-        the correct permissions.
-        """
-        self.workload.mkdir(LogRotateConfig.log_status_dir, make_parents=True)
-
-        for path in (
-            self.workload.paths.data_path,
-            self.workload.paths.logs_path,
-            LogRotateConfig.log_status_dir,
-        ):
-            self.workload.exec(
-                [
-                    "chown",
-                    "-R",
-                    f"{self.workload.users.user}:{self.workload.users.group}",
-                    f"{path}",
-                ]
-            )
 
     def _initialise_replica_set(self):
         """Helpful method to initialise the replica set and the users.

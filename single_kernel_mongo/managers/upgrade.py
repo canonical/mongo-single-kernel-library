@@ -60,6 +60,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 # We can type ignore here because we know we are using a MongoD charm
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             self._upgrade.set_versions_in_app_databag()
+
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
             return
@@ -71,6 +72,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if self._upgrade.unit_state is UnitState.RESTARTING:  # Kubernetes only
             self._on_kubernetes_restarting()  # type: ignore
             return
+
         if self.dependent.substrate == Substrates.K8S:
             self._on_kubernetes_always(during_upgrade)  # type: ignore
         self._set_upgrade_status()
@@ -140,14 +142,17 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             if self.charm.unit.is_leader() and self.dependent.name == KindEnum.MONGOD:
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             try:
-                # Payload related install
-                self.dependent.on_install()
+                # Start services.
+                self.dependent.on_start()
+                if self.substrate == Substrates.K8S:
+                    self.dependent.start_charm_services()
             except ContainerNotReadyError:
                 self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
                 self._reconcile_upgrade(during_upgrade=True)
                 raise DeferrableError
 
             self.charm.status_manager.set_and_share_status(WAITING_POST_UPGRADE_STATUS)
+
         self._reconcile_upgrade(during_upgrade=True)
 
         if self._upgrade.is_compatible:

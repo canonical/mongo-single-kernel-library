@@ -25,7 +25,7 @@ from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import KindEnum, Substrates
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmKind, LogRotateConfig
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -220,3 +220,26 @@ class OperatorProtocol(ABC, Object):
             dst = prefix / name
             if not dst.is_file():
                 self.workload.copy_to_unit(file, dst)
+
+    def set_permissions(self) -> None:
+        """Ensure directories and make permissions.
+
+        We must ensure that the log status directory for LogRotate is existing.
+        We must also ensure that all data, log and log status directories have
+        the correct permissions.
+        """
+        self.workload.mkdir(LogRotateConfig.log_status_dir, make_parents=True)
+
+        for path in (
+            self.workload.paths.data_path,
+            self.workload.paths.logs_path,
+            LogRotateConfig.log_status_dir,
+        ):
+            self.workload.exec(
+                [
+                    "chown",
+                    "-R",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{path}",
+                ]
+            )
