@@ -107,7 +107,9 @@ class AppUpgradePeerData(AbstractRelationState[DataPeerData]):
         Reset to `False` after each `juju refresh`
         VM-Only.
         """
-        return json.loads(self.relation_data.get("upgrade-resumed", "false"))
+        return json.loads(
+            self.relation_data.get(AppUpgradeRelationKeys.UPGRADE_RESUMED.value, "false")
+        )
 
     @upgrade_resumed.setter
     def upgrade_resumed(self, value: bool):
@@ -115,7 +117,7 @@ class AppUpgradePeerData(AbstractRelationState[DataPeerData]):
         # (Needed when leader sets value to False during `ops.UpgradeCharmEvent`)
         self.update(
             {
-                AppUpgradeRelationKeys.UPGRADE_RESUMED: json.dumps(value),
+                AppUpgradeRelationKeys.UPGRADE_RESUMED.value: json.dumps(value),
                 AppUpgradeRelationKeys.UNUSED_TIMESTAMP.value: str(time.time()),
             }
         )
