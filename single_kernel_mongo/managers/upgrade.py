@@ -58,7 +58,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             # forced & completed on all units.
             if self.dependent.name == KindEnum.MONGOD:
                 # We can type ignore here because we know we are using a MongoD charm
-                self.dependent.cluster_version_checker.set_version_across_all_relations()  # type: ignore
+                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             self._upgrade.set_versions_in_app_databag()
         if not self._upgrade.is_compatible:
             self._set_upgrade_status()
@@ -132,13 +132,13 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                     logger.info("Charm refreshed. MongoDB version unchanged")
                 self.state.app_upgrade_peer_data.upgrade_resumed = False
                 if self.dependent.name == KindEnum.MONGOD:
-                    self.dependent.cluster_version_checker.set_version_across_all_relations()  # type: ignore
+                    self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
                 # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with
                 # `upgrade_resumed`
                 self._reconcile_upgrade()
         else:
             if self.charm.unit.is_leader() and self.dependent.name == KindEnum.MONGOD:
-                self.dependent.cluster_version_checker.set_version_across_all_relations()  # type: ignore
+                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             try:
                 # Payload related install
                 self.dependent.on_install()
