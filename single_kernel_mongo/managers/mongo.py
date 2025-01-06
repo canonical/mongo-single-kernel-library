@@ -21,7 +21,6 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, Waiting
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
-from single_kernel_mongo.core.operator import MainWorkloadType
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -48,7 +47,7 @@ from single_kernel_mongo.utils.mongodb_users import (
 )
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.core.operator import OperatorProtocol
+    from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
