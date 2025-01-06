@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -14,7 +13,7 @@ from ops.model import ActiveStatus, BlockedStatus, StatusBase, WaitingStatus
 
 from single_kernel_mongo.config.literals import UNHEALTHY_UPGRADE
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.state.config_server_state import ConfigServerKeys
+from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
@@ -132,11 +131,10 @@ class VersionChecker:
 
         for sharding_relation in self.state.config_server_relation:
             for unit in sharding_relation.units:
-                unit_data = sharding_relation.data[unit]
-                status_ready_for_upgrade = json.loads(
-                    unit_data.get(ConfigServerKeys.STATUS_READY_FOR_UPGRADE.value, "false")
+                unit_data = UnitShardingComponentState(
+                    sharding_relation, self.state.config_server_data_interface, unit
                 )
-                if not status_ready_for_upgrade:
+                if not unit_data.status_ready_for_upgrade:
                     return False
 
         return True

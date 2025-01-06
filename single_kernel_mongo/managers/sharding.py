@@ -38,7 +38,7 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import ConfigServerKeys
+from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
@@ -82,15 +82,19 @@ class ConfigServerManager(Object, StatusProvider):
                 f"Database Requested event has not run yet for relation {relation.id}"
             )
         relation_data = {
-            ConfigServerKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(OperatorUser),
-            ConfigServerKeys.BACKUP_PASSWORD.value: self.state.get_user_password(BackupUser),
-            ConfigServerKeys.KEY_FILE.value: self.state.get_keyfile(),
-            ConfigServerKeys.HOST.value: json.dumps(sorted(self.state.app_hosts)),
+            AppShardingComponentKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(
+                OperatorUser
+            ),
+            AppShardingComponentKeys.BACKUP_PASSWORD.value: self.state.get_user_password(
+                BackupUser
+            ),
+            AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
+            AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.app_hosts)),
         }
 
         int_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
         if int_tls_ca:
-            relation_data[ConfigServerKeys.INT_CA_SECRET.value] = int_tls_ca
+            relation_data[AppShardingComponentKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -201,7 +205,7 @@ class ConfigServerManager(Object, StatusProvider):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.HOST.value: sorted(self.state.app_hosts)}
+                relation.id, {AppShardingComponentKeys.HOST.value: sorted(self.state.app_hosts)}
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
@@ -212,11 +216,11 @@ class ConfigServerManager(Object, StatusProvider):
                 continue
             if new_ca is None:
                 self.data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.INT_CA_SECRET.value]
+                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
                 )
                 continue
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.INT_CA_SECRET.value: new_ca}
+                relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
             )
 
     def skip_config_server_status(self) -> bool:
@@ -697,7 +701,7 @@ class ShardManager(Object, StatusProvider):
 
         try:
             # check our ability to use connect to mongos
-            with MongoConnection(self.state.mongos_config) as mongos:
+            with MongoConnection(self.state.remote_mongos_config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
@@ -720,7 +724,7 @@ class ShardManager(Object, StatusProvider):
 
         try:
             # check our ability to use connect to mongos
-            with MongoConnection(self.state.mongos_config) as mongos:
+            with MongoConnection(self.state.remote_mongos_config) as mongos:
                 members = mongos.get_shard_members()
         except OperationFailure as e:
             if e.code in [13, 18, 133]:
@@ -734,7 +738,7 @@ class ShardManager(Object, StatusProvider):
         return self.state.app_peer_data.replica_set in members
 
     def _is_shard_aware(self) -> bool:
-        with MongoConnection(self.state.mongos_config) as mongo:
+        with MongoConnection(self.state.remote_mongos_config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
 
     def skip_shard_status(self) -> bool:

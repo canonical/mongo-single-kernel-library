@@ -47,8 +47,9 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
-    ConfigServerKeys,
-    ShardingComponentState,
+    AppShardingComponentKeys,
+    AppShardingComponentState,
+    UnitShardingComponentState,
 )
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
@@ -224,6 +225,7 @@ class CharmState(Object):
             data_interface=data_interface,
             component=unit,
             substrate=self.substrate,
+            k8s_manager=self.k8s_manager,
         )
 
     @property
@@ -524,12 +526,21 @@ class CharmState(Object):
         )
 
     @property
-    def shard_state(self) -> ShardingComponentState:
-        """The shard state."""
-        return ShardingComponentState(
+    def shard_state(self) -> AppShardingComponentState:
+        """The app shard state."""
+        return AppShardingComponentState(
             relation=self.shard_relation,
             data_interface=self.shard_state_interface,
             component=self.model.app,
+        )
+
+    @property
+    def unit_shard_state(self) -> UnitShardingComponentState:
+        """The unit shard state."""
+        return UnitShardingComponentState(
+            relation=self.shard_relation,
+            data_interface=self.shard_state_interface,
+            component=self.model.unit,
         )
 
     @property
@@ -572,11 +583,11 @@ class CharmState(Object):
         for relation in self.config_server_relation:
             if new_ca is None:
                 self.config_server_data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.INT_CA_SECRET.value]
+                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.config_server_data_interface.update_relation_data(
-                    relation.id, {ConfigServerKeys.INT_CA_SECRET.value: new_ca}
+                    relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
                 )
 
     def is_scaling_down(self, rel_id: int) -> bool:
@@ -605,13 +616,16 @@ class CharmState(Object):
         if not self.shard_relation:
             return
         if isinstance(status, ActiveStatus):
-            self.shard_state.status_ready_for_upgrade = True
+            self.unit_shard_state.status_ready_for_upgrade = True
+            return
         if not isinstance(status, BlockedStatus):
-            self.shard_state.status_ready_for_upgrade = False
+            self.unit_shard_state.status_ready_for_upgrade = False
+            return
         if status.message and "is not up-to date with config-server" in status.message:
-            self.shard_state.status_ready_for_upgrade = True
+            self.unit_shard_state.status_ready_for_upgrade = True
+            return
 
-        self.shard_state.status_ready_for_upgrade = False
+        self.unit_shard_state.status_ready_for_upgrade = False
 
     @property
     def upgrade_resumed(self) -> bool:
@@ -696,6 +710,12 @@ class CharmState(Object):
     def operator_config(self) -> MongoConfiguration:
         """Mongo Configuration for the operator user."""
         return self.mongodb_config_for_user(OperatorUser, hosts=self.app_hosts)
+
+    @property
+    def remote_mongos_config(self) -> MongoConfiguration:
+        """Mongos Configuration for the remote mongos server."""
+        mongos_hosts = self.app_peer_data.mongos_hosts
+        return self.mongos_config_for_user(OperatorUser, set(mongos_hosts))
 
     @property
     def mongos_config(self) -> MongoConfiguration:
