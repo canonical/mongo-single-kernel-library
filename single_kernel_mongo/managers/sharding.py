@@ -229,6 +229,9 @@ class ConfigServerManager(Object, StatusProvider):
             logger.info("No status for shard to report, waiting for db to be initialised.")
             return True
 
+        if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.config_server_relation:
+            return True
+
         return False
 
     def get_status(self) -> StatusBase | None:
@@ -742,6 +745,9 @@ class ShardManager(Object, StatusProvider):
 
         if not self.state.db_initialised:
             logger.info("No status for shard to report, waiting for db to be initialised.")
+            return True
+
+        if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.shard_relation:
             return True
 
         return False

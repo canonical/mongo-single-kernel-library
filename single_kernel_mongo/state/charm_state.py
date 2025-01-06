@@ -413,7 +413,7 @@ class CharmState(Object):
         app_version = self.app_workload_container_version
         unit_versions = self.unit_workload_container_versions
         logger.debug(f"{app_version} {unit_versions}")
-        return any(version != app_version for version in unit_versions)
+        return any(version != app_version for version in unit_versions.values())
 
     @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
