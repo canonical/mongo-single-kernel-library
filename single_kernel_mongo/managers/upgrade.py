@@ -143,8 +143,9 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             try:
                 # Start services.
-                self.dependent.on_start()
-                if self.substrate == Substrates.K8S:
+                self.dependent.on_install()
+                if self.dependent.name == KindEnum.MONGOS:
+                    self.dependent.on_start()
                     self.dependent.start_charm_services()
             except ContainerNotReadyError:
                 self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)

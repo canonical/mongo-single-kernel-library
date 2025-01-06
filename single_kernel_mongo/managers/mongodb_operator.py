@@ -228,6 +228,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handler on install."""
         if not self.workload.workload_present:
             raise ContainerNotReadyError
+
         self.charm.unit.set_workload_version(self.workload.get_version())
 
         # Truncate the file.
