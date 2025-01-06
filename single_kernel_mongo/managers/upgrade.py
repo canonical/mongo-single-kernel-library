@@ -259,7 +259,7 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             return
 
         # We can because we now we are a config server.
-        if not self.dependent.cluster_version_checker.are_related_apps_valid():  # type: ignore
+        if not self.dependent.cross_app_version_checker.are_related_apps_valid():  # type: ignore
             raise DeferrableError("Waiting to finalise refresh, one or more shards need refresh.")
 
         logger.debug(

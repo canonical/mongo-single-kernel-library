@@ -161,6 +161,8 @@ class MachineUpgrade(AbstractUpgrade):
             self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
             logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
 
+            self.charm.unit.set_workload_version(self.workload.get_version())
+
             # post upgrade check should be retried in case of failure, for this it is necessary to
             # emit a separate event.
             dependent.upgrade_events.post_app_upgrade_event.emit()
