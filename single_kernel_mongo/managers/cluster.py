@@ -80,9 +80,11 @@ class ClusterProvider(Object):
 
     def is_valid_mongos_integration(self):
         """Returns True if the integration to mongos is valid."""
+        # The integration is valid if and only if we are a config server or if
+        # we don't have any cluster relation.
         return self.state.is_role(MongoDBRoles.CONFIG_SERVER) or not self.state.cluster_relations
 
-    def on_database_requested(self, relation: Relation):
+    def share_secret_to_mongos(self, relation: Relation):
         """Handles the database requested event.
 
         The first time secrets are written to relations should be on this event.
@@ -103,7 +105,7 @@ class ClusterProvider(Object):
 
         self.data_interface.update_relation_data(relation.id, relation_data)
 
-    def on_relation_changed(self, relation: Relation) -> None:
+    def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:
         """Handles providing mongos with keyfile and hosts."""
         # First we need to ensure that the database requested event has run
         # otherwise we risk the chance of writing secrets in plain sight.
@@ -111,12 +113,15 @@ class ClusterProvider(Object):
             logger.info("Database Requested has not run yet, skipping.")
             return
 
-        self.on_database_requested(relation)
+        self.share_secret_to_mongos(relation)
 
     def on_relation_broken(self, relation: Relation) -> None:
         """Handles the relation broken event.
 
-        Needs to decide what we do based on the situation.
+        If the relation has not departed yet, we raise a DeferrableError to
+        handle the relation broken event in the future.
+        If it has departed, we run some checks and if we are a VM charm, we
+        proceed to reconcile the users and DB and cleanup mongoDB.
         """
         if self.state.upgrade_in_progress:
             logger.warning(
@@ -151,7 +156,7 @@ class ClusterProvider(Object):
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
-        """Updates the new CA for all related shards."""
+        """Updates the new CA for all related mongos charms."""
         for relation in self.state.cluster_relations:
             if new_ca is None:
                 self.data_interface.delete_relation_data(
@@ -278,12 +283,17 @@ class ClusterRequirer(Object):
 
     def update_users(self):
         """Updates users after being initialised."""
+        # VM Mongos Charm is not in charge of its users because it is a
+        # subordinate charm so we delegate everything to the MongoDB config
+        # server.
         if self.substrate != Substrates.K8S:
             return
 
+        # We are a Kubernetes Mongos Charm so we are in charge of our client
+        # applications and their users and we proceed to update the users and their DBs.
         try:
             for relation in self.state.client_relations:
-                self.dependent.mongo_manager.oversee_relation(relation)
+                self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
         except PyMongoError:
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
@@ -293,12 +303,17 @@ class ClusterRequirer(Object):
         Raises:
             PyMongoError
         """
+        # VM Mongos Charm is not in charge of its users because it is a
+        # subordinate charm so we delegate everything to the MongoDB config
+        # server.
         if self.substrate != Substrates.K8S:
             return
 
         if not self.charm.unit.is_leader():
             return
 
+        # We are a Kubernetes Mongos Charm so we are in charge of our client
+        # applications and their users and we proceed to remove the users we manage and their DBs.
         for relation in self.state.client_relations:
             self.dependent.mongo_manager.remove_user(relation)
             data_interface = DatabaseProviderData(self.model, relation.name)
@@ -314,7 +329,10 @@ class ClusterRequirer(Object):
             relation.data[self.charm.app].clear()
 
     def is_ca_compatible(self) -> bool:
-        """Returns true if both the mongos and the config-server use the same CA."""
+        """Returns true if both the mongos and the config-server use the same CA.
+
+        Using the same CA is a requirement for sharded clusters.
+        """
         config_server_relation = self.state.mongos_cluster_relation
         if not config_server_relation:
             return True

@@ -187,6 +187,8 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("Waiting for mongos to start.")
             return
 
+        # In case any information was changed, we proceed to update the
+        # connection information on the client databag.
         self.share_connection_info()
 
         # in K8s mongos charms which are exposed externally it is possible for
