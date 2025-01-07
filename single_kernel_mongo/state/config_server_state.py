@@ -106,4 +106,8 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
 
     @status_ready_for_upgrade.setter
     def status_ready_for_upgrade(self, value: bool):
-        self.update({UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value: json.dumps(value)})
+        if not self.relation:
+            raise Exception("No databag to write in")
+        self.relation.data[self.component][
+            UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value
+        ] = json.dumps(value)

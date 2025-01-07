@@ -205,7 +205,8 @@ class ConfigServerManager(Object, StatusProvider):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {AppShardingComponentKeys.HOST.value: sorted(self.state.app_hosts)}
+                relation.id,
+                {AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.app_hosts))},
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
