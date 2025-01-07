@@ -322,30 +322,36 @@ class CharmState(Object):
 
     @property
     def formatted_socket_path(self) -> str:
-        """URL encoded socket path."""
+        """URL encoded socket path.
+
+        Explanation: On Mongos VM which is a subordinate charm, we'd rather
+        share the connection with a socket in order to improve latency.
+        """
         return quote(f"{self.paths.socket_path}", safe="")
+
+    @property
+    def _socket_path(self) -> set[str] | None:
+        """If we prefer to use a socket, return it.
+
+        Otherwise return None.
+        """
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == KindEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {self.formatted_socket_path}
+        return None
 
     @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
-        if (
-            self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
-            and not self.app_peer_data.external_connectivity
-        ):
-            return {self.formatted_socket_path}
-        return {unit.host for unit in self.units}
+        return self._socket_path or {unit.host for unit in self.units}
 
     @property
     def internal_hosts(self) -> set[str]:
         """Internal hosts for internal access."""
-        if (
-            self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
-            and not self.app_peer_data.external_connectivity
-        ):
-            return {self.formatted_socket_path}
-        return {unit.internal_address for unit in self.units}
+        return self._socket_path or {unit.internal_address for unit in self.units}
 
     @property
     def host_port(self) -> int:
