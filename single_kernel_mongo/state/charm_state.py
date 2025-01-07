@@ -116,7 +116,12 @@ class CharmState(Object):
 
     @property
     def client_relations(self) -> set[Relation]:
-        """The set of client relations."""
+        """The set of client relations.
+
+        Client relations exist on two separate interfaces, one for sharding,
+        which is exposed for mongos charms, and one for replication which is
+        exposed for mongodb charms.
+        """
         if self.charm_role.name == KindEnum.MONGOS:
             return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])

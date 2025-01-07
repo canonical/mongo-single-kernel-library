@@ -73,7 +73,7 @@ class DatabaseEventsHandler(Object):
             self.dependent.substrate == Substrates.VM
             and self.relation_name == RelationNames.MONGOS_PROXY
         ):
-            self.dependent.share_credentials(event.relation)  # type: ignore[attr-defined]
+            self.dependent.proxy_information_to_client_and_handle_connectivity(event.relation)  # type: ignore[attr-defined]
         try:
             if not self.pass_hook_checks(event):
                 logger.info(f"Skipping {type(event)}: Hook checks did not pass")

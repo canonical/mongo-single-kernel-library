@@ -120,7 +120,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
-        # Nothing happens in this handler for mongos operators
+        """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
@@ -133,6 +133,7 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
+                return
             self.update_external_services()
 
             self.tls_manager.update_tls_sans()
@@ -140,12 +141,12 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_storage_attached(self) -> None:
-        # Nothing happens in this handler for mongos operators
+        """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
     def on_storage_detaching(self) -> None:
-        # Nothing happens in this handler for mongos operators
+        """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
@@ -178,6 +179,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("Waiting for mongos to start.")
             return
 
+        # in K8s mongos charms which are exposed externally it is possible for
+        # the node port to change. This can invalidate our current
+        # certificates. when this happens we do not receive any notifications
+        # from Juju so we must monitor it and update our SANS as necessary.
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
 
@@ -254,8 +259,8 @@ class MongosOperator(OperatorProtocol, Object):
                 for relation in self.state.client_relations:
                     self.mongo_manager.update_app_relation_data(relation)
 
-    def share_credentials(self, relation: Relation):
-        """Shares credentials to the client."""
+    def proxy_information_to_client_and_handle_connectivity(self, relation: Relation):
+        """Shares credentials to the client and opens the port if necessary."""
         data_interface = DatabaseProviderData(self.model, relation.name)
         if not self.charm.unit.is_leader():
             return
@@ -270,7 +275,8 @@ class MongosOperator(OperatorProtocol, Object):
             )
         )
         external_connectivity = json.loads(
-            data_interface.fetch_relation_field(relation.id, "external-node-conectivity") or "false"
+            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            or "false"
         )
 
         if new_database_name and new_database_name != self.state.app_peer_data.database:
@@ -290,7 +296,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     # BEGIN: Helpers
     def update_external_services(self):
-        """Updates the external service if necessary."""
+        """Updates the kubernetes external service if necessary."""
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.NODEPORT:
                 service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
