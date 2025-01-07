@@ -64,7 +64,7 @@ class ClusterConfigServerEventHandler(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Relation joined events."""
         try:
-            self.manager.on_database_requested(event.relation)
+            self.manager.share_secret_to_mongos(event.relation)
         except DeferrableFailedHookChecksError as e:
             logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -74,7 +74,7 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_event(self, event: RelationChangedEvent):
         """Handle relation changed and relation broken events."""
         try:
-            self.manager.on_relation_changed(event.relation)
+            self.manager.update_keyfile_and_hosts_on_mongos(event.relation)
             self.charm.status_manager.process_and_share_statuses()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))

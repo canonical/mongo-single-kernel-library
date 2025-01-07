@@ -29,7 +29,10 @@ class ConfigServerKeys(str, Enum):
 SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
 
 
-class ConfigServerState(AbstractRelationState[Data]):
+SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
+
+
+class ShardingComponentState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
 
     component: Application

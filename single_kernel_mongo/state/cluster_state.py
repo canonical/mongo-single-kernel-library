@@ -23,6 +23,11 @@ class ClusterStateKeys(str, Enum):
     CONFIG_SERVER_DB = "config-server-db"
     KEYFILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
+    database = "database"
+    extra_user_roles = "extra-user-roles"
+    alias = "alias"
+    external_node_connectivity = "external-node-connectivity"
+    config_server_db = "config-server-db"
 
 
 class ClusterState(AbstractRelationState[Data]):

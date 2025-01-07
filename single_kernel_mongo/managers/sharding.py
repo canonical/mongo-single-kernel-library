@@ -70,9 +70,11 @@ class ConfigServerManager(Object, StatusProvider):
         self.relation_name = relation_name
         self.data_interface = self.state.config_server_data_interface
 
-    def on_database_requested(self, relation: Relation):
-        """Relation joined event."""
-        logger.info("Running Database requested hook.")
+    def prepare_sharding_config(self, relation: Relation):
+        """Handles the database requested event.
+
+        It shares the different credentials and necessary files with the shard.
+        """
         self.assert_pass_hook_checks(relation)
 
         if self.data_interface.fetch_relation_field(relation.id, "database") is None:
@@ -95,7 +97,7 @@ class ConfigServerManager(Object, StatusProvider):
             relation.id, "unused", "unused"
         )  # Triggers the database created event
 
-    def on_relation_event(self, relation: Relation, is_leaving: bool = False):
+    def reconcile_shards_for_relation(self, relation: Relation, is_leaving: bool = False):
         """Handles adding and removing shards.
 
         Updating of shards is done automatically via MongoDB change-streams.
@@ -277,6 +279,7 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
+        self.charm.status_manager.to_active(None)
 
     def remove_shards(self, relation: Relation):
         """Removes a shard from the cluster."""
@@ -334,15 +337,8 @@ class ConfigServerManager(Object, StatusProvider):
             shard_name = relation.app.name
             hosts = []
             for unit in relation.units:
-                if self.substrate == "k8s":
-                    unit_name = unit.name.split("/")[0]
-                    unit_id = unit.name.split("/")[1]
-                    host_name = f"{unit_name}-{unit_id}.{unit_name}-endpoints"
-                    hosts.append(host_name)
-                else:
-                    if not (address := relation.data[unit].get("private-address")):
-                        raise Exception("Missing host")
-                    hosts.append(address)
+                unit_state = self.state.unit_peer_data_for(unit, relation)
+                hosts.append(unit_state.internal_address)
             if not hosts:
                 return unreachable_hosts
 
@@ -426,13 +422,13 @@ class ShardManager(Object, StatusProvider):
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
             )
 
-    def relation_created(self):
+    def prepare_to_add_shard(self):
         """Sets status and flags in relation data relevant to sharding."""
         # if re-using an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
 
-    def on_database_created(self, relation: Relation, leaving: bool = False):
+    def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False):
         """Retrieves secrets from config-server and updates them within the shard."""
         try:
             self.assert_pass_hook_checks(relation=relation, is_leaving=leaving)
@@ -501,7 +497,7 @@ class ShardManager(Object, StatusProvider):
             raise WaitingForSecretsError
         self.sync_cluster_passwords(operator_password, backup_password)
 
-    def relation_broken(self, relation: Relation) -> None:
+    def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""
         self.assert_pass_hook_checks(relation, is_leaving=True)
 

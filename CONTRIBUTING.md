@@ -53,6 +53,14 @@ tox                      # runs 'lint' and 'unit' environments
 This repository comes with a sensible [pre-commit](https://github.com/pre-commit/pre-commit) hook configuration.
 Please install it with `pre-commit install` as this will be checked in the CI anyway.
 
+### Development guidelines
+
+We try to create each object at most once, at the highest level it's used:
+We reduce the cost of object creation, and we also ensure that any variable
+modification is kept and accessible from everywhere: For example the
+Container object is created in the operator and then passed down to all
+workload objects.
+
 ## Canonical Contributor Agreement
 
 Canonical welcomes contributions to the Mongo Charms Single Kernel Library.

@@ -73,7 +73,7 @@ class ConfigServerEventHandler(Object):
         """Handle relation changed and relation broken events."""
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
-            self.manager.on_relation_event(event.relation, is_leaving)
+            self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
         except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError, ShardAuthError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -82,7 +82,7 @@ class ConfigServerEventHandler(Object):
     def _on_database_requested(self, event: DatabaseRequestedEvent):
         """Relation joined events."""
         try:
-            self.manager.on_database_requested(event.relation)
+            self.manager.prepare_sharding_config(event.relation)
         except DeferrableFailedHookChecksError as e:
             logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -125,11 +125,11 @@ class ShardEventHandler(Object):
         )
 
     def _on_relation_created(self, event: RelationCreatedEvent):
-        self.manager.relation_created()
+        self.manager.prepare_to_add_shard()
 
     def _on_database_created(self, event: DatabaseCreatedEvent):
         try:
-            self.manager.on_database_created(event.relation)
+            self.manager.synchronise_cluster_secrets(event.relation)
         except (
             DeferrableFailedHookChecksError,
             WaitingForSecretsError,
@@ -150,7 +150,7 @@ class ShardEventHandler(Object):
 
     def _on_relation_broken(self, event: RelationBrokenEvent):
         try:
-            self.manager.relation_broken(event.relation)
+            self.manager.drain_shard_from_cluster(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:

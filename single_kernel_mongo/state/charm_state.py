@@ -46,7 +46,7 @@ from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKe
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
     ConfigServerKeys,
-    ConfigServerState,
+    ShardingComponentState,
 )
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
@@ -182,6 +182,20 @@ class CharmState(Object):
             bind_address=str(self.bind_address),
         )
 
+    def unit_peer_data_for(self, unit: Unit, relation: Relation) -> UnitPeerReplicaSet:
+        """The provided unit peer relation data."""
+        data_interface = DataPeerOtherUnitData(
+            model=self.model,
+            unit=unit,
+            relation=relation,
+        )
+        return UnitPeerReplicaSet(
+            relation=relation,
+            data_interface=data_interface,
+            component=unit,
+            substrate=self.substrate,
+        )
+
     @property
     def units(self) -> set[UnitPeerReplicaSet]:
         """Grabs all units in the current peer relation, including this unit.
@@ -309,30 +323,36 @@ class CharmState(Object):
 
     @property
     def formatted_socket_path(self) -> str:
-        """URL encoded socket path."""
+        """URL encoded socket path.
+
+        Explanation: On Mongos VM which is a subordinate charm, we'd rather
+        share the connection with a socket in order to improve latency.
+        """
         return quote(f"{self.paths.socket_path}", safe="")
+
+    @property
+    def _socket_path(self) -> set[str] | None:
+        """If we prefer to use a socket, return it.
+
+        Otherwise return None.
+        """
+        if (
+            self.substrate == Substrates.VM
+            and self.charm_role.name == KindEnum.MONGOS
+            and not self.app_peer_data.external_connectivity
+        ):
+            return {self.formatted_socket_path}
+        return None
 
     @property
     def app_hosts(self) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
-        if (
-            self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
-            and not self.app_peer_data.external_connectivity
-        ):
-            return {self.formatted_socket_path}
-        return {unit.host for unit in self.units}
+        return self._socket_path or {unit.host for unit in self.units}
 
     @property
     def internal_hosts(self) -> set[str]:
         """Internal hosts for internal access."""
-        if (
-            self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
-            and not self.app_peer_data.external_connectivity
-        ):
-            return {self.formatted_socket_path}
-        return {unit.internal_address for unit in self.units}
+        return self._socket_path or {unit.internal_address for unit in self.units}
 
     @property
     def host_port(self) -> int:
@@ -359,9 +379,9 @@ class CharmState(Object):
         )
 
     @property
-    def shard_state(self):
+    def shard_state(self) -> ShardingComponentState:
         """The shard state."""
-        return ConfigServerState(
+        return ShardingComponentState(
             relation=self.shard_relation,
             data_interface=self.shard_state_interface,
             component=self.model.app,
@@ -398,7 +418,7 @@ class CharmState(Object):
         for relation in self.cluster_relations:
             if new_ca is None:
                 self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.INT_CA_SECRET]
+                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.cluster_provider_data_interface.update_relation_data(
@@ -407,7 +427,7 @@ class CharmState(Object):
         for relation in self.config_server_relation:
             if new_ca is None:
                 self.config_server_data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.INT_CA_SECRET]
+                    relation.id, [ConfigServerKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.config_server_data_interface.update_relation_data(

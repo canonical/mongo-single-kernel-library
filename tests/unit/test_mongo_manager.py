@@ -63,7 +63,7 @@ def test_initialise_replica_set_operation_failure(harness: Harness[MongoTestChar
         harness.charm.operator.mongo_manager.initialise_replica_set()
 
 
-@pytest.mark.parametrize(("user"), (MonitorUser, BackupUser, OperatorUser))
+@pytest.mark.parametrize(("user"), (MonitorUser, BackupUser))
 @patch_network_get(private_address="1.1.1.1")
 def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     harness.set_leader(True)
@@ -74,13 +74,25 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
     )
 
-    getattr(harness.charm.operator.mongo_manager, f"initialise_{user.username}_user")()
+    getattr(harness.charm.operator.mongo_manager, "initialise_user")(user)
     config = getattr(harness.charm.operator.state, f"{user.username}_config")
 
-    if user != OperatorUser:
-        mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
-        mock_create_user.assert_called_with(config)
-    else:
-        mock_create_user.assert_called_with(config=config, roles=OPERATOR_ROLE)
+    mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
+    mock_create_user.assert_called_with(config.username, config.password, config.supported_roles)
 
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    mock_create_user = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
+    )
+
+    getattr(harness.charm.operator.mongo_manager, "initialise_operator_user")()
+    config = getattr(harness.charm.operator.state, "operator_config")
+
+    mock_create_user.assert_called_with(config.username, config.password, roles=OPERATOR_ROLE)
+
+    assert harness.charm.operator.state.app_peer_data.is_user_created(OperatorUser.username)
