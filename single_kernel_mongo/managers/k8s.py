@@ -109,7 +109,7 @@ class K8sManager:
     def build_node_port_services(self, port: str) -> Service:
         """Builds a ClusterIP service for initial client connection."""
         pod = self.get_pod(pod_name=self.pod_name)
-        if not pod.metadata or not pod.apiVersion or not pod.kind or not pod.uid:
+        if not pod.metadata or not pod.apiVersion or not pod.kind or not pod.metadata.uid:
             raise Exception(f"Could not find metadata for {pod}")
 
         return Service(
