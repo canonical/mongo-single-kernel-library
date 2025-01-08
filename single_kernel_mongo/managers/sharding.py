@@ -180,7 +180,7 @@ class ConfigServerManager(Object):
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
             )
             if not leaving:
-                raise DeferrableFailedHookChecksError
+                raise DeferrableFailedHookChecksError("Upgrade is in progress")
             if self.state.has_departed_run(relation.id):
                 raise DeferrableFailedHookChecksError(
                     "must wait for relation departed hook to decide if relation should be removed"
@@ -268,15 +268,8 @@ class ConfigServerManager(Object):
 
         hosts = []
         for unit in relation.units:
-            if self.substrate == "k8s":
-                unit_name = unit.name.split("/")[0]
-                unit_id = unit.name.split("/")[1]
-                host_name = f"{unit_name}-{unit_id}.{unit_name}-endpoints"
-                hosts.append(host_name)
-            else:
-                if not (address := relation.data[unit].get("private-address")):
-                    raise Exception("Missing host")
-                hosts.append(address)
+            unit_state = self.state.unit_peer_data_for(unit, relation)
+            hosts.append(unit_state.internal_address)
         if not len(hosts):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
@@ -345,6 +338,7 @@ class ConfigServerManager(Object):
         except OperationFailure as e:
             if e.code in [13, 18]:  # Unauthorized, Auth Failed
                 return False
+            logger.error(f"Invalid operation failure when checking if cluster password synced: {e}")
             raise
         except ServerSelectionTimeoutError:
             # Connection refused, - this occurs when internal membership is not in sync across the
