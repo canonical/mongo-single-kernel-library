@@ -152,7 +152,7 @@ class OperatorProtocol(ABC, Object):
         """Checks if the relation is feasible in this context."""
         ...
 
-    def assert_proceed_on_broken_event(self, relation: Relation):
+    def assert_proceed_on_broken_event(self, relation: Relation) -> None:
         """Runs some checks on broken relation event."""
         if not self.state.has_departed_run(relation.id):
             raise DeferrableFailedHookChecksError(
@@ -164,7 +164,7 @@ class OperatorProtocol(ABC, Object):
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
 
-    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent):
+    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent) -> None:
         """Checks relation departed event is the result of removed relation or scale down.
 
         Relation departed and relation broken events occur during scaling down or during relation
