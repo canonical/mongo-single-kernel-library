@@ -61,8 +61,11 @@ class ClusterConfigServerEventHandler(Object):
             self.charm.on[self.relation_name].relation_broken, self._on_relation_broken_event
         )
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent):
-        """Relation joined events."""
+    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
+        """Relation joined events.
+
+        Calls the manager to share the secrets with mongos charm.
+        """
         try:
             self.manager.share_secret_to_mongos(event.relation)
         except DeferrableFailedHookChecksError as e:
@@ -71,8 +74,8 @@ class ClusterConfigServerEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_relation_event(self, event: RelationChangedEvent):
-        """Handle relation changed and relation broken events."""
+    def _on_relation_event(self, event: RelationChangedEvent) -> None:
+        """Handle relation changed events."""
         try:
             self.manager.update_keyfile_and_hosts_on_mongos(event.relation)
         except DeferrableFailedHookChecksError as e:
@@ -80,9 +83,10 @@ class ClusterConfigServerEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_relation_broken_event(self, event: RelationBrokenEvent):
+    def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
+        """During a relation broken event, the manager will cleanup the users."""
         try:
-            self.manager.on_relation_broken(event.relation)
+            self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -121,12 +125,18 @@ class ClusterMongosEventHandler(Object):
             self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
 
-    def _on_relation_created(self, event: RelationCreatedEvent):
-        self.manager.relation_created()
+    def _on_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Relation created event handler."""
+        self.manager.set_relation_created_status()
 
-    def _on_database_created(self, event: DatabaseCreatedEvent):
+    def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
+        """Database Created event handler.
+
+        When the database created event is received, we can proceed to store
+        credentials and share it to the client applications.
+        """
         try:
-            self.manager.on_database_created(event.username, event.password)
+            self.manager.share_credentials_to_clients(event.username, event.password)
         except (
             DeferrableFailedHookChecksError,
             WaitingForSecretsError,
@@ -135,9 +145,13 @@ class ClusterMongosEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_relation_changed(self, event: RelationChangedEvent):
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        """Relation changed event handler.
+
+        The manager will update the mongos configuration and restart it.
+        """
         try:
-            self.manager.relation_changed()
+            self.manager.update_mongos_and_restart()
         except (
             DeferrableError,
             DeferrableFailedHookChecksError,
@@ -147,9 +161,10 @@ class ClusterMongosEventHandler(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
-    def _on_relation_broken(self, event: RelationBrokenEvent):
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """On relation broken event, we cleanup the users and mongos instance."""
         try:
-            self.manager.relation_broken(event.relation)
+            self.manager.remove_users_and_cleanup_mongo(event.relation)
         except (DeferrableFailedHookChecksError, DeferrableError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
