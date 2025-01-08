@@ -467,7 +467,7 @@ class ShardManager(Object):
 
         if keyfile is None:
             logger.info("Waiting for secrets from config-server")
-            raise WaitingForSecretsError
+            raise WaitingForSecretsError("Missing keyfile")
 
         self.update_member_auth(keyfile, tls_ca)
 
@@ -484,7 +484,7 @@ class ShardManager(Object):
         operator_password = self.state.shard_state.operator_password
         backup_password = self.state.shard_state.backup_password
         if not operator_password or not backup_password:
-            raise WaitingForSecretsError
+            raise WaitingForSecretsError("Missing operator password or backup password")
 
         self.sync_cluster_passwords(operator_password, backup_password)
 
@@ -520,7 +520,7 @@ class ShardManager(Object):
         backup_password = self.state.shard_state.backup_password
 
         if not operator_password or not backup_password:
-            raise WaitingForSecretsError
+            raise WaitingForSecretsError("Missing operator password or backup password")
         self.sync_cluster_passwords(operator_password, backup_password)
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:

@@ -6,12 +6,16 @@ from ops.model import MaintenanceStatus, Relation
 from ops.testing import Harness
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
-from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    WaitingForCertificatesError,
+    WaitingForSecretsError,
 )
+from single_kernel_mongo.utils.mongo_connection import NotReadyError
+from single_kernel_mongo.utils.mongodb_users import BackupUser, OperatorUser
 
 from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
@@ -321,7 +325,9 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_shard_manager_synchronise_cluster_secrets(harness: Harness[MongoTestCharm], mocker):
+def test_shard_manager_synchronise_cluster_secrets_success(
+    harness: Harness[MongoTestCharm], mocker
+):
     manager = harness.charm.operator.shard_manager
 
     harness.set_leader(True)
@@ -356,3 +362,154 @@ def test_shard_manager_synchronise_cluster_secrets(harness: Harness[MongoTestCha
     mocked_sync.assert_called_with("test-operator", "test-backup")
 
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "true"
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_shard_manager_synchronise_cluster_secrets_no_keyfile(
+    harness: Harness[MongoTestCharm], mocker
+):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.db_initialised = True
+
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {
+            "operator-password": "test-operator",
+            "backup-password": "test-backup",
+        },
+    )
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(WaitingForSecretsError):
+        manager.synchronise_cluster_secrets(relation)
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_certs(
+    harness: Harness[MongoTestCharm], mocker
+):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.db_initialised = True
+
+    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
+
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {
+            "key-file": "feeddead",
+            "int-ca-secret": "deadbeef",
+            "operator-password": "test-operator",
+            "backup-password": "test-backup",
+        },
+    )
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(WaitingForCertificatesError):
+        manager.synchronise_cluster_secrets(relation)
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
+    harness: Harness[MongoTestCharm], mocker
+):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.db_initialised = True
+
+    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
+
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {
+            "key-file": "feeddead",
+            "operator-password": "test-operator",
+            "backup-password": "test-backup",
+        },
+    )
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(NotReadyError):
+        manager.synchronise_cluster_secrets(relation)
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_shard_manager_synchronise_cluster_secrets_missing_creds(
+    harness: Harness[MongoTestCharm], mocker
+):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.db_initialised = True
+
+    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {
+            "key-file": "feeddead",
+        },
+    )
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(WaitingForSecretsError):
+        manager.synchronise_cluster_secrets(relation)
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], mocker):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary", return_value="1.1.1.1"
+    )
+    mock_set_user_password = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password",
+    )
+    patch_config_and_restart = mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart",
+    )
+
+    manager.sync_cluster_passwords("test-operator", "test-backup")
+
+    mock_set_user_password.assert_any_call("operator", "test-operator")
+    mock_set_user_password.assert_any_call("backup", "test-backup")
+    patch_config_and_restart.assert_called()
+
+    assert manager.state.get_user_password(OperatorUser) == "test-operator"
+    assert manager.state.get_user_password(BackupUser) == "test-backup"
