@@ -321,6 +321,7 @@ class MongoManager(Object, StatusProvider):
         database = data_interface.fetch_my_relation_field(relation.id, "database")
         username = data_interface.fetch_my_relation_field(relation.id, "username")
         password = data_interface.fetch_my_relation_field(relation.id, "password")
+
         if not username or not password:
             data_interface.set_credentials(
                 relation.id,
