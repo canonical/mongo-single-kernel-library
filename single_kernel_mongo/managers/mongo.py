@@ -441,8 +441,6 @@ class MongoManager(Object, StatusProvider):
 
     def get_status(self) -> StatusBase:
         """Generates the status of a unit based on its status reported by mongod."""
-        if not self.mongod_ready():
-            return WaitingStatus("waiting for MongoDB to start")
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()

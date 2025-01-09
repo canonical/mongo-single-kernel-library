@@ -78,13 +78,13 @@ class ClusterProvider(Object):
                 "Processing mongos applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
 
-    def is_valid_mongos_integration(self):
+    def is_valid_mongos_integration(self) -> bool:
         """Returns True if the integration to mongos is valid."""
         # The integration is valid if and only if we are a config server or if
         # we don't have any cluster relation.
         return self.state.is_role(MongoDBRoles.CONFIG_SERVER) or not self.state.cluster_relations
 
-    def share_secret_to_mongos(self, relation: Relation):
+    def share_secret_to_mongos(self, relation: Relation) -> None:
         """Handles the database requested event.
 
         The first time secrets are written to relations should be on this event.
@@ -98,9 +98,7 @@ class ClusterProvider(Object):
             ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
         }
 
-        int_tls_ca = self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True)
-
-        if int_tls_ca:
+        if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
@@ -115,7 +113,7 @@ class ClusterProvider(Object):
 
         self.share_secret_to_mongos(relation)
 
-    def on_relation_broken(self, relation: Relation) -> None:
+    def cleanup_users(self, relation: Relation) -> None:
         """Handles the relation broken event.
 
         If the relation has not departed yet, we raise a DeferrableError to
@@ -142,7 +140,7 @@ class ClusterProvider(Object):
                 relation, relation_departing=True
             )
 
-    def update_config_server_db(self):
+    def update_config_server_db(self) -> None:
         """Updates the config server DB URI in the mongos relation."""
         self.assert_pass_hook_checks()
 
@@ -160,7 +158,7 @@ class ClusterProvider(Object):
         for relation in self.state.cluster_relations:
             if new_ca is None:
                 self.data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.INT_CA_SECRET]
+                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.data_interface.update_relation_data(
@@ -188,7 +186,7 @@ class ClusterRequirer(Object):
         self.relation_name = relation_name
         self.data_interface = self.state.cluster_requirer_data_interface
 
-    def assert_pass_hook_checks(self):
+    def assert_pass_hook_checks(self) -> None:
         """Runs pre-hook checks, raises if one fails."""
         mongos_has_tls, config_server_has_tls = self.tls_status()
         match (mongos_has_tls, config_server_has_tls):
@@ -211,12 +209,12 @@ class ClusterRequirer(Object):
                 "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
 
-    def relation_created(self) -> None:
+    def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
         self.charm.status_manager.to_waiting("Connecting to config-server")
 
-    def on_database_created(self, username: str | None, password: str | None):
+    def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
         """Database created event.
 
         Stores credentials in secrets and share it with clients.
@@ -236,7 +234,7 @@ class ClusterRequirer(Object):
         self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
         self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
 
-    def relation_changed(self) -> None:
+    def update_mongos_and_restart(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
         key_file_contents = self.state.cluster.keyfile
@@ -264,7 +262,7 @@ class ClusterRequirer(Object):
 
         self.dependent.share_connection_info()
 
-    def relation_broken(self, relation: Relation):
+    def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""
         self.dependent.assert_proceed_on_broken_event(relation)
         try:
@@ -279,7 +277,7 @@ class ClusterRequirer(Object):
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
 
-    def update_users(self):
+    def update_users(self) -> None:
         """Updates users after being initialised."""
         # VM Mongos Charm is not in charge of its users because it is a
         # subordinate charm so we delegate everything to the MongoDB config
@@ -295,7 +293,7 @@ class ClusterRequirer(Object):
         except PyMongoError:
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
-    def remove_users(self, relation: Relation):
+    def remove_users(self, relation: Relation) -> None:
         """Handles the removal of all client mongos-k8s users and the mongos-k8s admin user.
 
         Raises:
@@ -331,8 +329,7 @@ class ClusterRequirer(Object):
 
         Using the same CA is a requirement for sharded clusters.
         """
-        config_server_relation = self.state.mongos_cluster_relation
-        if not config_server_relation:
+        if not self.state.mongos_cluster_relation:
             return True
         config_server_tls_ca = self.state.cluster.internal_ca_secret
         mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
@@ -343,8 +340,7 @@ class ClusterRequirer(Object):
 
     def tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""
-        config_server_relation = self.state.mongos_cluster_relation
-        if config_server_relation:
+        if self.state.mongos_cluster_relation:
             mongos_has_tls = self.state.tls_relation is not None
             config_server_has_tls = self.state.cluster.internal_ca_secret is not None
             return mongos_has_tls, config_server_has_tls

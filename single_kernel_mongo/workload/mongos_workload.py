@@ -54,11 +54,9 @@ class MongosWorkload(WorkloadBase):
     def config_server_db(self) -> str | None:
         """The config server DB on the workload."""
         regex = re.compile(r"--configdb (\S+)")
-        env = self.get_env().get(self.env_var, None)
-        if not env:
+        if not (env := self.get_env().get(self.env_var, None)):
             return None
 
-        match = regex.search(env)
-        if match:
+        if match := regex.search(env):
             return match.group(1)
         return None
