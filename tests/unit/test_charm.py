@@ -37,6 +37,9 @@ def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_int
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
     )
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.start", side_effect=WorkloadServiceError
+    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")

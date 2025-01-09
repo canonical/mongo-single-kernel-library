@@ -205,7 +205,7 @@ class ClusterRequirer(Object):
                 "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
         if self.state.upgrade_in_progress:
-            raise DeferrableError(
+            raise DeferrableFailedHookChecksError(
                 "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
 
