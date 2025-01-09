@@ -20,7 +20,7 @@ from single_kernel_mongo.config.literals import KindEnum, MongoPorts, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
-from single_kernel_mongo.core.structured_config import ExposeExternal
+from single_kernel_mongo.core.structured_config import ExposeExternal, MongosCharmConfig
 from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
@@ -101,12 +101,17 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
 
     @property
-    def config(self):
+    def config(self) -> MongosCharmConfig:
         """Returns the actual config."""
         return self.charm.parsed_config
 
     @override
     def on_install(self) -> None:
+        """Handles the install event.
+
+        We ensure the workload (container or snap) is present before setting
+        the version and  setting the environment.
+        """
         if not self.workload.workload_present:
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
@@ -114,6 +119,11 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_start(self) -> None:
+        """For this case, we don't start any service.
+
+        Mongos charms need to be integrated to its config server before
+        starting the service since it needs the config server URL to do so.
+        """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
             raise ContainerNotReadyError
@@ -130,6 +140,11 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_config_changed(self) -> None:
+        """We check the expose-external value as it can be invalid.
+
+        And then, update external services, update TLS certificates and share
+        connection information with client if it changed.
+        """
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.UNKNOWN:
                 logger.error(
@@ -156,11 +171,17 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_leader_elected(self) -> None:
-        # Just forward the call, this is for simplicity and typing.
+        """Just forward the call, this is for simplicity and typing."""
         self.share_connection_info()
 
     @override
     def on_update_status(self) -> None:
+        """Many things happening here.
+
+        First, as always we ensure the expose external value is valid.
+        Then we ensure the integration to config server before doing anything else.
+        We proceed to update client connections if needed and renew certificates as well if needed.
+        """
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.UNKNOWN:
                 logger.error(
@@ -202,14 +223,17 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_relation_joined(self) -> None:
+        """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
     def on_relation_changed(self) -> None:
+        """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
+        """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
@@ -218,14 +242,18 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def start_charm_services(self) -> None:
+        """Star the charm services."""
+        self.mongos_config_manager.set_environment()
         self.workload.start()
 
     @override
     def stop_charm_services(self) -> None:
+        """Star the charm services."""
         self.workload.stop()
 
     @override
     def restart_charm_services(self) -> None:
+        """Restarts the charm with the new configuration."""
         self.workload.stop()
         if not self.state.cluster.config_server_uri:
             logger.error("Cannot start mongos without a config server db")
@@ -236,9 +264,11 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def is_relation_feasible(self, name: str) -> bool:
-        if name != RelationNames.MONGOS_PROXY:
-            return False
-        return True
+        """Checks if the relation is feasible.
+
+        In the mongos case, we only allow the mongos proxy client relation.
+        """
+        return name == RelationNames.MONGOS_PROXY
 
     def share_connection_info(self):
         """Shares the connection information of clients."""
@@ -310,11 +340,14 @@ class MongosOperator(OperatorProtocol, Object):
     def update_external_services(self):
         """Updates the kubernetes external service if necessary."""
         if self.substrate == Substrates.K8S:
-            if self.config.expose_external == ExposeExternal.NODEPORT:
-                service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
-                self.k8s.apply_service(service)
-            else:
-                self.k8s.delete_service()
+            match self.config.expose_external:
+                case ExposeExternal.NODEPORT:
+                    service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
+                    self.k8s.apply_service(service)
+                case ExposeExternal.NONE:
+                    self.k8s.delete_service()
+                case ExposeExternal.UNKNOWN:
+                    return
             self.state.app_peer_data.expose_external = self.config.expose_external
 
     def update_keyfile(self, keyfile_content: str) -> bool:
