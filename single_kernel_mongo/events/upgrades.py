@@ -32,7 +32,7 @@ class _PostUpgradeCheckMongoDB(EventBase):
 
 
 class UpgradeEventHandler(Object):
-    """Handler for ugprade related events."""
+    """Handler for upgrade related events."""
 
     post_app_upgrade_event = EventSource(_PostUpgradeCheckMongoDB)
     post_cluster_upgrade_event = EventSource(_PostUpgradeCheckMongoDB)
