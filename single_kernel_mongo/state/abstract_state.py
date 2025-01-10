@@ -51,7 +51,8 @@ class AbstractRelationState(Generic[PData]):
         self.relation_data.update(update_content)
 
         for field in delete_fields:
-            self.relation_data.pop(field, None)
+            if self.relation_data.get(field, None):
+                del self.relation_data[field]
 
     def get(self, key: str, default: str = "") -> str:
         """Gets a key."""
