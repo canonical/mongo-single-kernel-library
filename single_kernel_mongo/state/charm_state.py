@@ -352,6 +352,11 @@ class CharmState(Object):
         return self.is_role(MongoDBRoles.SHARD) or self.is_role(MongoDBRoles.CONFIG_SERVER)
 
     @property
+    def has_sharding_integration(self) -> bool:
+        """Has the sharding component a sharded deployment integration?"""
+        return (self.shard_relation is not None) or bool(self.config_server_relation)
+
+    @property
     def db_initialised(self) -> bool:
         """Is the DB initialised?"""
         return self.app_peer_data.db_initialised

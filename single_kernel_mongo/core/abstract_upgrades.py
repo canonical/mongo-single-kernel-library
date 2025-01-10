@@ -355,6 +355,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             logger.error("Cannot proceed with refresh. Service mongod is not running")
             return False
 
+        if self.state.is_sharding_component and not self.state.has_sharding_integration:
+            return True
+
         # It is possible that in a previous run of post-upgrade-check, that the unit was set to
         # unhealthy. In order to check if this unit has resolved its issue, we ignore the status
         # that was set in a previous check of cluster health. Otherwise, we are stuck in an
