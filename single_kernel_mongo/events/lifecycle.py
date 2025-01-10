@@ -146,7 +146,6 @@ class LifecycleEventsHandler(Object):
         """Relation joined event."""
         try:
             self.dependent.on_relation_joined()
-            self.charm.status_manager.process_and_share_statuses()
         except UpgradeInProgressError:
             event.defer()
             return
@@ -158,14 +157,13 @@ class LifecycleEventsHandler(Object):
         """Relation changed event."""
         try:
             self.dependent.on_relation_changed()
+            self.charm.status_manager.process_and_share_statuses()
         except UpgradeInProgressError:
             event.defer()
             return
         except NotReadyError:
             event.defer()
             return
-
-        self.charm.status_manager.process_and_share_statuses()
 
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
