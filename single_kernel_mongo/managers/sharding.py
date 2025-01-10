@@ -243,6 +243,9 @@ class ConfigServerManager(Object, StatusProvider):
         if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
             return BlockedStatus("Internal mongos is not running.")
 
+        if not self.state.config_server_relation:
+            return BlockedStatus("missing relation to shard(s)")
+
         if not self.cluster_password_synced():
             return WaitingStatus("Waiting to sync passwords across the cluster")
 
@@ -250,9 +253,6 @@ class ConfigServerManager(Object, StatusProvider):
         if shard_draining:
             draining = ",".join(shard_draining)
             return MaintenanceStatus(f"Draining shard {draining}")
-
-        if not self.state.config_server_relation:
-            return BlockedStatus("missing relation to shard(s)")
 
         unreachable_shards = self.get_unreachable_shards()
 
@@ -796,4 +796,4 @@ class ShardManager(Object, StatusProvider):
         if not self._is_shard_aware():
             return BlockedStatus("Shard is not yet shard aware")
 
-        return None
+        return ActiveStatus()

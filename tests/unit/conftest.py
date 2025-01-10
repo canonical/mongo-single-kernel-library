@@ -79,6 +79,7 @@ def mock_fs_interactions(mocker) -> None:
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.update_env")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
     mocker.patch("pathlib.Path.mkdir")
+    mocker.patch("builtins.open")
 
 
 @pytest.fixture

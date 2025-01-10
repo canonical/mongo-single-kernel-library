@@ -472,4 +472,4 @@ class MongoManager(Object, StatusProvider):
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return WaitingStatus("Waiting to reconnect to unit..")
+            return WaitingStatus("Waiting to reconnect to unit...")
