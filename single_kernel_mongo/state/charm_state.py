@@ -459,17 +459,24 @@ class CharmState(Object):
         return scaling_down
 
     def share_status_with_config_server(self, status: StatusBase):
-        """Shares this shard's status with the config server."""
+        """Shares this shard's status with the config server.
+
+        This is primarily useful for the cluster upgrades, since the
+        config-server will need to ensure all units are healthy.
+        """
         if not self.is_role(MongoDBRoles.SHARD):
             return
         if not self.shard_relation:
             return
         if isinstance(status, ActiveStatus):
             self.shard_state.status_ready_for_upgrade = True
+            return
         if not isinstance(status, BlockedStatus):
             self.shard_state.status_ready_for_upgrade = False
+            return
         if status.message and "is not up-to date with config-server" in status.message:
             self.shard_state.status_ready_for_upgrade = True
+            return
 
         self.shard_state.status_ready_for_upgrade = False
 

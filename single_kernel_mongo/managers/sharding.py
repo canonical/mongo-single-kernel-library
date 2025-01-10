@@ -706,6 +706,7 @@ class ShardManager(Object, StatusProvider):
 
     def _is_added_to_cluster(self) -> bool:
         """Returns true if the shard has been added to the clusted."""
+        # this information is required in order to check if we have been added
         if not self.state.config_server_name or not self.state.app_peer_data.mongos_hosts:
             return False
 
@@ -734,7 +735,7 @@ class ShardManager(Object, StatusProvider):
         with MongoConnection(config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
 
-    def skip_shard_status(self) -> bool:
+    def should_skip_shard_status(self) -> bool:
         """Returns true if the status check should be skipped."""
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             logger.info("Skipping shard status check, charm is running as a config-server")
@@ -766,7 +767,7 @@ class ShardManager(Object, StatusProvider):
 
     def get_status(self) -> StatusBase | None:  # noqa: C901
         """Returns the current status of the shard."""
-        if self.skip_shard_status():
+        if self.should_skip_shard_status():
             return None
 
         if self.state.is_role(MongoDBRoles.REPLICATION) and self.state.shard_relation:

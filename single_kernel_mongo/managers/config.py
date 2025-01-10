@@ -283,9 +283,12 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def role_parameter(self) -> list[str]:
         """The role parameter."""
-        role = self.state.app_peer_data.role
-        if role == MongoDBRoles.UNKNOWN:  # First install we don't have the role in databag yet.
-            role = self.state.config.role
+        # First install we don't have the role in databag yet.
+        role = (
+            self.state.config.role
+            if self.state.app_peer_data.role == MongoDBRoles.UNKNOWN
+            else self.state.app_peer_data.role
+        )
         match role:
             case MongoDBRoles.CONFIG_SERVER:
                 return ["--configsvr"]
