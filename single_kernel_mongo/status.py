@@ -46,6 +46,7 @@ class StatusManager(Object):
         self.charm = charm
         self.operator = charm.operator
         self.state = charm.operator.state
+        self.charm_kind = self.operator.name
 
     def set_and_share_status(self, status: StatusBase):
         """Sets the unit status."""
@@ -121,6 +122,9 @@ class StatusManager(Object):
         When a non-fatal error occurs while processing statuses, the error is processed and
         returned as a statuses.
         """
+        if self.charm_kind == KindEnum.MONGOS:
+            return
+
         # retrieve statuses of different services running on Charmed MongoDB
         deployment_mode = (
             "replica set" if self.state.is_role(MongoDBRoles.REPLICATION) else "cluster"

@@ -146,6 +146,7 @@ class LifecycleEventsHandler(Object):
         """Relation joined event."""
         try:
             self.dependent.on_relation_joined()
+            self.charm.status_manager.process_and_share_statuses()
         except UpgradeInProgressError:
             event.defer()
             return

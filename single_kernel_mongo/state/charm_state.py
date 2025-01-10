@@ -215,7 +215,7 @@ class CharmState(Object):
 
     def unit_peer_data_for(self, unit: Unit, relation: Relation) -> UnitPeerReplicaSet:
         """The provided unit peer relation data."""
-        data_interface = DataPeerOtherUnitData(
+        data_interface = DataPeerUnitData(
             model=self.model,
             unit=unit,
             relation_name=relation.name,

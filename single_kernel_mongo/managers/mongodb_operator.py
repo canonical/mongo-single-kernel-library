@@ -382,8 +382,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("waiting to reconfigure replica set")
             raise
 
-        self.charm.status_manager.process_and_share_statuses()
-
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
