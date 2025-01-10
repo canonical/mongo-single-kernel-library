@@ -518,14 +518,14 @@ class CharmState(Object):
     @property
     def config_server_data_interface(self) -> DatabaseProviderData:
         """The config server database interface."""
-        return DatabaseProviderData(self.model, RelationNames.CONFIG_SERVER)
+        return DatabaseProviderData(self.model, RelationNames.CONFIG_SERVER.value)
 
     @property
     def shard_state_interface(self) -> DatabaseRequirerData:
         """The shard database interface."""
         return DatabaseRequirerData(
             self.model,
-            relation_name=RelationNames.SHARDING,
+            relation_name=RelationNames.SHARDING.value,
             additional_secret_fields=SECRETS_FIELDS,
             database_name="unused",  # Needed for relation events
         )

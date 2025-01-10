@@ -98,8 +98,9 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
         """Returns true if the shard is ready for upgrade."""
         if not self.relation:
             return True
+        # We get directly the data in the unit because it's hidden otherwise
         return json.loads(
-            self.relation_data.get(
+            self.relation.data[self.component].get(
                 UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value, "false"
             )
         )
