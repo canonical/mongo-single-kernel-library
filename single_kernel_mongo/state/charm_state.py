@@ -468,6 +468,8 @@ class CharmState(Object):
             return
         if not self.shard_relation:
             return
+
+        # All following cases write in the databag shared with the config server.
         if isinstance(status, ActiveStatus):
             self.shard_state.status_ready_for_upgrade = True
             return
