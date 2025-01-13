@@ -9,7 +9,7 @@ import logging
 from typing import Generic, TypeVar
 
 from ops import ActionEvent
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus
 from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
@@ -206,25 +206,6 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         return f"Forcefully refreshed {self.charm.unit.name}"
 
     # HELPERS
-
-    def _set_upgrade_status(self):
-        if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
-        # Set/clear upgrade unit status if no other unit status - upgrade status for units should
-        # have the lowest priority.
-        if (
-            isinstance(self.charm.unit.status, ActiveStatus)
-            or (
-                isinstance(self.charm.unit.status, BlockedStatus)
-                and self.charm.unit.status.message.startswith(
-                    "Rollback with `juju refresh`. Pre-refresh check failed:"
-                )
-            )
-            or self.charm.unit.status == WAITING_POST_UPGRADE_STATUS
-        ):
-            self.charm.status_manager.set_and_share_status(
-                self._upgrade.get_unit_juju_status() or ActiveStatus()
-            )
 
 
 class MongoDBUpgradeManager(MongoUpgradeManager[T]):

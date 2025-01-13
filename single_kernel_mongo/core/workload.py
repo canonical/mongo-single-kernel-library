@@ -266,11 +266,14 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     def get_internal_revision(self) -> str:
         """Get the internal revision.
 
+        Note: This should be removed soon because we're moving away from `charm
+        version` + `internal revision` to `charm_version+git hash`.
+
         Returns:
             String of charm internal revision
         """
         try:
-            version = Path("charm_internal_version").read_text().strip()
+            version = Path("charm_version").read_text().strip()
         except:  # noqa: E722
             version = ""
         return version

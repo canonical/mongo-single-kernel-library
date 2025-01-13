@@ -664,6 +664,6 @@ class MongoConnection:
         return False
 
     def are_all_shards_aware(self) -> bool:
-        """Returns True if all shards are shard aware."""
+        """Returns True if all shards already in the cluster are shard aware."""
         sc_status = self.client.admin.command("listShards")
         return all(shard["state"] == SHARD_AWARE_STATE for shard in sc_status["shards"])

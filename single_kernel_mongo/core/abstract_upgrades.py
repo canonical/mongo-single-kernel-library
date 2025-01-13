@@ -19,13 +19,14 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
 from ops import Object
-from ops.model import BlockedStatus, MaintenanceStatus, StatusBase
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
     SNAP,
+    WAITING_POST_UPGRADE_STATUS,
     KindEnum,
     Substrates,
     UnitState,
@@ -158,7 +159,7 @@ class AbstractUpgrade(ABC):
         """Status shown during upgrade if unit is healthy."""
         raise NotImplementedError()
 
-    def get_unit_juju_status(self) -> StatusBase | None:
+    def get_upgrade_unit_status(self) -> StatusBase | None:
         """Unit upgrade status."""
         if self.state.upgrade_in_progress:
             return self._get_unit_healthy_status()
@@ -287,6 +288,25 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             )
         except PeerRelationNotReadyError:
             return None
+
+    def _set_upgrade_status(self):
+        if self.charm.unit.is_leader():
+            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
+        # Set/clear upgrade unit status if no other unit status - upgrade status for units should
+        # have the lowest priority.
+        if (
+            isinstance(self.charm.unit.status, ActiveStatus)
+            or (
+                isinstance(self.charm.unit.status, BlockedStatus)
+                and self.charm.unit.status.message.startswith(
+                    "Rollback with `juju refresh`. Pre-refresh check failed:"
+                )
+            )
+            or self.charm.unit.status == WAITING_POST_UPGRADE_STATUS
+        ):
+            self.charm.status_manager.set_and_share_status(
+                self._upgrade.get_upgrade_unit_status() or ActiveStatus()
+            )
 
     def on_upgrade_peer_relation_created(self):
         """Handle peer relation created event."""

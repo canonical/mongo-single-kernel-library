@@ -80,16 +80,16 @@ class UpgradeEventHandler(Object):
             logger.debug(f"Pre-refresh check failed: {e}")
             event.fail(str(e))
 
-    def _on_upgrade_peer_relation_created(self, _):
+    def _on_upgrade_peer_relation_created(self, _) -> None:
         self.manager.on_upgrade_peer_relation_created()
 
-    def _reconcile_upgrade(self, _):
+    def _reconcile_upgrade(self, _) -> None:
         self.manager._reconcile_upgrade(during_upgrade=True)
 
-    def _on_upgrade_charm(self, _):
+    def _on_upgrade_charm(self, _) -> None:
         self.manager.on_upgrade_charm()
 
-    def _on_resume_upgrade_action(self, event: ActionEvent):
+    def _on_resume_upgrade_action(self, event: ActionEvent) -> None:
         try:
             force: bool = event.params.get("force", False)
             message = self.manager.on_resume_upgrade_action(force=force)
@@ -98,7 +98,7 @@ class UpgradeEventHandler(Object):
             logger.debug(f"Resume refresh failed: {e}")
             event.fail(str(e))
 
-    def _on_force_upgrade_action(self, event: ActionEvent):
+    def _on_force_upgrade_action(self, event: ActionEvent) -> None:
         try:
             message = self.manager.on_force_upgrade_action(event)
             event.set_results({"result": message})
@@ -106,14 +106,18 @@ class UpgradeEventHandler(Object):
             logger.debug(f"Resume refresh failed: {e}")
             event.fail(str(e))
 
-    def _run_post_app_upgrade_task(self, event: _PostUpgradeCheckMongoDB):
+    def _run_post_app_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
         try:
             self.manager.run_post_app_upgrade_task()
         except DeferrableError as e:
             logger.info(ROLLBACK_INSTRUCTIONS)
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
 
-    def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB):
+    def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
+        """Runs after a sharded cluster has been upgraded.
+
+        It is necessary to check that the entire cluster is healthy.
+        """
         try:
             self.manager.run_post_cluster_upgrade_task()
         except DeferrableError as e:

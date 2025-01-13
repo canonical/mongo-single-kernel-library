@@ -97,7 +97,10 @@ class K8sManager:
         return self._get_revision(self.get_ttl_hash())
 
     def list_revisions(self) -> dict[str, str]:
-        """Returns a mapping of {unit name: Kubernetes controller revision hash."""
+        """Returns a mapping of {unit name: Kubernetes controller revision hash.
+
+        This is used for kubernetes upgrades to get the version of each container.
+        """
         return self._list_revisions(self.get_ttl_hash())
 
     def get_unit_service_name(self, pod_name: str = "") -> str:

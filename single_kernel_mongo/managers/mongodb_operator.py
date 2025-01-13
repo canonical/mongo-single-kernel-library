@@ -245,7 +245,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Storages not attached yet.")
             raise ContainerNotReadyError
 
-        self._configure_layers()
+        self._configure_workloads()
 
         try:
             logger.info("Starting MongoDB.")
@@ -275,9 +275,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             self._restart_related_services()
         except WorkloadServiceError:
+            logger.error("Could not restart the related services.")
             return
 
         if self.substrate == Substrates.K8S:
+            # K8S upgrades result in the start hook getting fired following this pattern
+            # https://juju.is/docs/sdk/upgrade-charm-event#heading--emission-sequence
             self.upgrade_manager._reconcile_upgrade()
 
         self._initialise_replica_set()
@@ -354,6 +357,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         Adds the unit as a replica to the MongoDB replica set.
         """
         if self.substrate == Substrates.K8S:
+            # K8S Upgrades requires to reconcile the upgrade on lifecycle event.
             self.upgrade_manager._reconcile_upgrade()
 
         # Changing the monitor or the backup password will lead to non-leader
@@ -741,7 +745,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return False
         return True
 
-    def _configure_layers(self) -> None:
+    def _configure_workloads(self) -> None:
         """Handle filesystem interactions for charm configuration."""
         # Configure the workloads
         self.config_manager.set_environment()
