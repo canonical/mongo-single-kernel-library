@@ -188,15 +188,14 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
 
     def on_force_upgrade_action(self: MongoUpgradeManager[T], event: ActionEvent) -> str:
         """Force upgrade action handler."""
-        # FIXME: Handle the mongos case !
         if not self._upgrade or not self.state.upgrade_in_progress:
             message = "No refresh in progress"
             raise ActionFailedError(message)
-        if not self._upgrade.upgrade_resumed:
-            message = f"Run `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}` before trying to force refresh"
-            raise ActionFailedError(message)
         if self._upgrade.unit_state != UnitState.OUTDATED:
             message = "Unit already refreshed"
+            raise ActionFailedError(message)
+        if self.dependent.name == KindEnum.MONGOD and not self._upgrade.upgrade_resumed:
+            message = f"Run `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}` before trying to force refresh"
             raise ActionFailedError(message)
         logger.debug("Forcing refresh")
         event.log(f"Forcefully refreshing {self.charm.unit.name}")
@@ -204,8 +203,6 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
         logger.debug("Forced refresh")
         return f"Forcefully refreshed {self.charm.unit.name}"
-
-    # HELPERS
 
 
 class MongoDBUpgradeManager(MongoUpgradeManager[T]):

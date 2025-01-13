@@ -9,11 +9,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from data_platform_helpers.version_check import NoVersionError, get_charm_revision
-from ops.model import ActiveStatus, BlockedStatus, StatusBase, WaitingStatus
+from ops.model import BlockedStatus, StatusBase, WaitingStatus
 
-from single_kernel_mongo.config.literals import UNHEALTHY_UPGRADE
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
 
 if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
@@ -90,51 +88,3 @@ class VersionChecker:
             return True
 
         return False
-
-    def is_current_unit_ready(self, ignore_unhealthy_upgrade: bool = False) -> bool:
-        """Returns True if the current unit status shows that the unit is ready.
-
-        Note: we allow the use of ignore_unhealthy_upgrade, to avoid infinite loops due to this
-        function returning False and preventing the status from being reset.
-        """
-        if isinstance(self.charm.unit.status, ActiveStatus):
-            return True
-
-        if ignore_unhealthy_upgrade and self.charm.unit.status == UNHEALTHY_UPGRADE:
-            return True
-
-        return self.is_status_related_to_mismatched_revision(
-            type(self.charm.unit.status).__name__.lower()
-        )
-
-    def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
-        """Returns True if all charm units status's show that they are ready for upgrade."""
-        goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
-        for unit_name, unit_state in goal_state["units"].items():  # type: ignore
-            if unit_name == unit_to_ignore:
-                continue
-            if unit_state["status"] == "active":
-                continue
-            if not self.is_status_related_to_mismatched_revision(unit_state["status"]):
-                return False
-
-        return True
-
-    def are_shards_status_ready_for_upgrade(self) -> bool:
-        """Returns True if all integrated shards status's show that they are ready for upgrade.
-
-        A shard is ready for upgrade if it is either in the waiting for upgrade status or active
-        status.
-        """
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            return False
-
-        for sharding_relation in self.state.config_server_relation:
-            for unit in sharding_relation.units:
-                unit_data = UnitShardingComponentState(
-                    sharding_relation, self.state.config_server_data_interface, unit
-                )
-                if not unit_data.status_ready_for_upgrade:
-                    return False
-
-        return True

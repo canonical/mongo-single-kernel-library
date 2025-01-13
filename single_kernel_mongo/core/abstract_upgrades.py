@@ -26,6 +26,7 @@ from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
     SNAP,
+    UNHEALTHY_UPGRADE,
     WAITING_POST_UPGRADE_STATUS,
     KindEnum,
     Substrates,
@@ -43,6 +44,7 @@ from single_kernel_mongo.exceptions import (
     PrecheckFailedError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongodb_users import OperatorUser
@@ -355,6 +357,56 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             logger.debug("Moving primary to unit: %s", unit_with_lowest_id)
             mongod.move_primary(new_primary_ip=unit_host)
 
+    def is_current_unit_ready(self, ignore_unhealthy_upgrade: bool = False) -> bool:
+        """Returns True if the current unit status shows that the unit is ready.
+
+        Note: we allow the use of ignore_unhealthy_upgrade, to avoid infinite loops due to this
+        function returning False and preventing the status from being reset.
+        """
+        if isinstance(self.charm.unit.status, ActiveStatus):
+            return True
+
+        if ignore_unhealthy_upgrade and self.charm.unit.status == UNHEALTHY_UPGRADE:
+            return True
+
+        return self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
+            type(self.charm.unit.status).__name__.lower()
+        )
+
+    def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
+        """Returns True if all charm units status's show that they are ready for upgrade."""
+        goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
+        for unit_name, unit_state in goal_state["units"].items():  # type: ignore
+            if unit_name == unit_to_ignore:
+                continue
+            if unit_state["status"] == "active":
+                continue
+            if not self.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
+                unit_state["status"]
+            ):
+                return False
+
+        return True
+
+    def are_shards_status_ready_for_upgrade(self) -> bool:
+        """Returns True if all integrated shards status's show that they are ready for upgrade.
+
+        A shard is ready for upgrade if it is either in the waiting for upgrade status or active
+        status.
+        """
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return False
+
+        for sharding_relation in self.state.config_server_relation:
+            for unit in sharding_relation.units:
+                unit_data = UnitShardingComponentState(
+                    sharding_relation, self.state.config_server_data_interface, unit
+                )
+                if not unit_data.status_ready_for_upgrade:
+                    return False
+
+        return True
+
     def wait_for_cluster_healthy(self: GenericMongoDBUpgradeManager[MongoDBOperator]) -> None:
         """Waits until the cluster is healthy after upgrading.
 
@@ -382,18 +434,16 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         # unhealthy. In order to check if this unit has resolved its issue, we ignore the status
         # that was set in a previous check of cluster health. Otherwise, we are stuck in an
         # infinite check of cluster health due to never being able to reset an unhealthy status.
-        if not self.dependent.cluster_version_checker.is_current_unit_ready(
+        if not self.is_current_unit_ready(
             ignore_unhealthy_upgrade=True
-        ) or not self.dependent.cluster_version_checker.are_all_units_ready_for_upgrade(
-            unit_to_ignore=self.charm.unit.name
-        ):
+        ) or not self.are_all_units_ready_for_upgrade(unit_to_ignore=self.charm.unit.name):
             logger.error(
                 "Cannot proceed with refresh. Status of charm units do not show active / waiting for refresh."
             )
             return False
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            if not self.dependent.cluster_version_checker.are_shards_status_ready_for_upgrade():
+            if not self.are_shards_status_ready_for_upgrade():
                 logger.error(
                     "Cannot proceed with refresh. Status of shard units do not show active / waiting for refresh."
                 )
