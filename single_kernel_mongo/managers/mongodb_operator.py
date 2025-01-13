@@ -25,6 +25,7 @@ from single_kernel_mongo.config.literals import (
     MongoPorts,
     Scope,
     Substrates,
+    UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
@@ -45,6 +46,7 @@ from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
+    FailedToElectNewPrimaryError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardingMigrationError,
@@ -66,6 +68,7 @@ from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardMana
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.utils.helpers import unit_number
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -290,10 +293,45 @@ class MongoDBOperator(OperatorProtocol, Object):
     def on_stop(self) -> None:  # pragma: nocover
         """Handler for the stop event.
 
-        Does nothing for now.
+        K8S Only, VM has nothing to do on this step.
+        On K8S:
+         * First: Raise partition to prevent other units from restarting if an
+         upgrade is in progress. If an upgrade is not in progress, the leader
+         unit will reset the partition to 0.
+         * Second: Sets the unit state to RESTARTING and step down from replicaset.
+
+        Note that with how Juju currently operates, we only have at most 30
+        seconds until SIGTERM command, so we are by no means guaranteed to have
+        stepped down before the pod is removed.
+        Upon restart, the upgrade will still resume because all hooks run the
+        `_reconcile_upgrade` handler.
         """
-        # TODO : Implement this when porting upgrades.
-        pass
+        if self.substrate == Substrates.VM:
+            return
+
+        # Raise partition to prevent other units from restarting if an upgrade is in progress.
+        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
+        current_unit_number = unit_number(self.state.unit_upgrade_peer_data)
+        if self.state.k8s_manager.get_partition() < current_unit_number:
+            self.state.k8s_manager.set_partition(value=current_unit_number)
+            logger.debug(f"Partition set to {current_unit_number} during stop event")
+
+        if not self.upgrade_manager._upgrade:
+            logger.debug("Upgrade Peer relation missing during stop event")
+            return
+
+        # We update the state to set up the unit as restarting
+        self.upgrade_manager._upgrade.unit_state = UnitState.RESTARTING
+
+        # According to the MongoDB documentation, before upgrading the primary, we must ensure a
+        # safe primary re-election.
+        try:
+            if self.charm.unit.name == self.primary:
+                logger.debug("Stepping down current primary, before upgrading service...")
+                self.upgrade_manager.step_down_primary_and_wait_reelection()
+        except FailedToElectNewPrimaryError:
+            logger.error("Failed to reelect primary before upgrading unit.")
+            return
 
     @override
     def on_config_changed(self) -> None:
