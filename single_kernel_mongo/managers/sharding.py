@@ -472,6 +472,10 @@ class ShardManager(Object, StatusProvider):
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
 
+        if not self.state.shard_state.has_received_credentials():
+            logger.debug("Waiting for config-server to write in the databag.")
+            return
+
         keyfile = self.state.shard_state.keyfile
         tls_ca = self.state.shard_state.internal_ca_secret
 

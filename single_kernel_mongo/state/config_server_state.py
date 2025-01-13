@@ -25,6 +25,10 @@ class AppShardingComponentKeys(str, Enum):
     INT_CA_SECRET = "int-ca-secret"
     STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
 
+    # We don't use those except to check if we've received credentials
+    USERNAME = "username"
+    PASSWORD = "password"
+
 
 SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
 
@@ -54,6 +58,15 @@ class AppShardingComponentState(AbstractRelationState[Data]):
     @mongos_hosts.setter
     def mongos_hosts(self, value: list[str]):
         self.update({AppShardingComponentKeys.HOST.value: json.dumps(sorted(value))})
+
+    def has_received_credentials(self) -> bool:
+        """Checks if the config-server has sent credentials."""
+        if not self.relation:
+            return False
+        return (
+            self.relation_data.get(AppShardingComponentKeys.USERNAME.value, None) is not None
+            and self.relation_data.get(AppShardingComponentKeys.PASSWORD.value, None) is not None
+        )
 
     @property
     def internal_ca_secret(self) -> str | None:
