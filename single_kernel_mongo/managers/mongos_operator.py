@@ -19,7 +19,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import (
     INCOMPATIBLE_UPGRADE,
     UNHEALTHY_UPGRADE,
-    KindEnum,
+    CharmKind,
     MongoPorts,
     Substrates,
 )
@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 class MongosOperator(OperatorProtocol, Object):
     """Operator for Mongos Related Charms."""
 
-    name = KindEnum.MONGOS
+    name = CharmKind.MONGOS
     workload: MongosWorkload
 
     def __init__(self, charm: AbstractMongoCharm):

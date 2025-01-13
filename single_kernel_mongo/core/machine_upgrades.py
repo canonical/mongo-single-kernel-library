@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
-from single_kernel_mongo.config.literals import SNAP, KindEnum, UnitState
+from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -142,7 +142,7 @@ class MachineUpgrade(AbstractUpgrade):
 
         Only applies to machine charm.
         """
-        if dependent.name == KindEnum.MONGOD:
+        if dependent.name == CharmKind.MONGOD:
             # According to the MongoDB documentation, before upgrading the
             # primary, we must ensure a safe primary re-election.
             try:

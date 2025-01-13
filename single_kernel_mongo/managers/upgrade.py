@@ -17,7 +17,7 @@ from single_kernel_mongo.config.literals import (
     INCOMPATIBLE_UPGRADE,
     UNHEALTHY_UPGRADE,
     WAITING_POST_UPGRADE_STATUS,
-    KindEnum,
+    CharmKind,
     Substrates,
     UnitState,
 )
@@ -56,7 +56,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
             # Run before checking `self._upgrade.is_compatible` in case incompatible upgrade was
             # forced & completed on all units.
-            if self.dependent.name == KindEnum.MONGOD:
+            if self.dependent.name == CharmKind.MONGOD:
                 # We can type ignore here because we know we are using a MongoD charm
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             self._upgrade.set_versions_in_app_databag()
@@ -133,18 +133,18 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 if not self.state.upgrade_in_progress:
                     logger.info("Charm refreshed. MongoDB version unchanged")
                 self.state.app_upgrade_peer_data.upgrade_resumed = False
-                if self.dependent.name == KindEnum.MONGOD:
+                if self.dependent.name == CharmKind.MONGOD:
                     self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
                 # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with
                 # `upgrade_resumed`
                 self._reconcile_upgrade()
         else:
-            if self.charm.unit.is_leader() and self.dependent.name == KindEnum.MONGOD:
+            if self.charm.unit.is_leader() and self.dependent.name == CharmKind.MONGOD:
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             try:
                 # Start services.
                 self.dependent.on_install()
-                if self.dependent.name == KindEnum.MONGOS:
+                if self.dependent.name == CharmKind.MONGOS:
                     self.dependent.on_start()
                     self.dependent.start_charm_services()
             except ContainerNotReadyError:
@@ -194,7 +194,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if self._upgrade.unit_state != UnitState.OUTDATED:
             message = "Unit already refreshed"
             raise ActionFailedError(message)
-        if self.dependent.name == KindEnum.MONGOD and not self._upgrade.upgrade_resumed:
+        if self.dependent.name == CharmKind.MONGOD and not self._upgrade.upgrade_resumed:
             message = f"Run `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}` before trying to force refresh"
             raise ActionFailedError(message)
         logger.debug("Forcing refresh")

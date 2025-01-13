@@ -18,7 +18,7 @@ from ops.model import (
 )
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
-from single_kernel_mongo.config.literals import KindEnum
+from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 if TYPE_CHECKING:
@@ -79,18 +79,25 @@ class StatusManager(Object):
 
     def get_statuses(self) -> StatusesDict:
         """Collects the statuses of all managers."""
-        mongodb_status = self.operator.mongo_manager.get_status()
-        statuses: StatusesDict = {
-            "mongodb": mongodb_status,
-            "shard": None,
-            "config-server": None,
-            "PBM": None,
-        }
-        if self.operator.name == KindEnum.MONGOD:
-            statuses["shard"] = self.operator.shard_manager.get_status()
-            statuses["config-server"] = self.operator.config_server_manager.get_status()
-            statuses["PBM"] = self.operator.backup_manager.get_status()
-        return statuses
+        if self.operator.name == CharmKind.MONGOD:
+            return StatusesDict(
+                {
+                    "mongodb": self.operator.mongo_manager.get_status(),
+                    "shard": self.operator.shard_manager.get_status(),
+                    "config-server": self.operator.config_server_manager.get_status(),
+                    "PBM": self.operator.backup_manager.get_status(),
+                }
+            )
+        return StatusesDict(
+            {
+                "mongodb": WaitingStatus("waiting for mongos to start")
+                if not self.operator.workload.active
+                else ActiveStatus(),
+                "shard": None,
+                "config-server": None,
+                "PBM": None,
+            }
+        )
 
     def prioritize_statuses(self, statuses: StatusesDict) -> StatusBase:
         """Prioritizes the statuses."""
@@ -122,9 +129,6 @@ class StatusManager(Object):
         When a non-fatal error occurs while processing statuses, the error is processed and
         returned as a statuses.
         """
-        if self.charm_kind == KindEnum.MONGOS:
-            return
-
         # retrieve statuses of different services running on Charmed MongoDB
         deployment_mode = (
             "replica set" if self.state.is_role(MongoDBRoles.REPLICATION) else "cluster"

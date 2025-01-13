@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent
 from ops.framework import EventBase, EventSource, Object
 
-from single_kernel_mongo.config.literals import KindEnum
+from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.abstract_upgrades import UpgradeActions
 from single_kernel_mongo.exceptions import ActionFailedError, DeferrableError
@@ -63,7 +63,7 @@ class UpgradeEventHandler(Object):
         )
         self.framework.observe(self.post_app_upgrade_event, self._run_post_app_upgrade_task)
 
-        if self.dependent.name == KindEnum.MONGOD:
+        if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
                 self.charm.on[UpgradeActions.RESUME_ACTION_NAME].action,
                 self._on_resume_upgrade_action,

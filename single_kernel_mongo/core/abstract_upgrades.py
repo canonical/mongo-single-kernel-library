@@ -28,7 +28,7 @@ from single_kernel_mongo.config.literals import (
     SNAP,
     UNHEALTHY_UPGRADE,
     WAITING_POST_UPGRADE_STATUS,
-    KindEnum,
+    CharmKind,
     Substrates,
     UnitState,
 )
@@ -228,7 +228,7 @@ class AbstractUpgrade(ABC):
         """
         logger.debug("Running pre-refresh checks")
 
-        if self.dependent.name == KindEnum.MONGOS:
+        if self.dependent.name == CharmKind.MONGOS:
             if not self.state.db_initialised:
                 return
             if not self.dependent.upgrade_manager.is_mongos_able_to_read_write():

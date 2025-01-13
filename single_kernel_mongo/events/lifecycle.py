@@ -39,7 +39,7 @@ from ops.charm import (
 )
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import KindEnum, Substrates
+from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
@@ -86,7 +86,7 @@ class LifecycleEventsHandler(Object):
             self.charm.on[rel_name.value].relation_departed, self.on_relation_departed
         )
 
-        if self.dependent.name == KindEnum.MONGOD:
+        if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
                 getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached
             )
@@ -168,7 +168,6 @@ class LifecycleEventsHandler(Object):
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
         self.dependent.on_relation_departed(departing_unit=event.departing_unit)
-        self.charm.status_manager.process_and_share_statuses()
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""

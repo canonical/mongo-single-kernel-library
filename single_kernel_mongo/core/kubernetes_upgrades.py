@@ -17,7 +17,7 @@ from lightkube.core.exceptions import ApiError
 from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
-from single_kernel_mongo.config.literals import KindEnum, UnitState
+from single_kernel_mongo.config.literals import CharmKind, UnitState
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -103,7 +103,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 or self.state.unit_workload_container_versions
                 != self.state.app_workload_container_version
             ):
-                if self.dependent.name == KindEnum.MONGOD:
+                if self.dependent.name == CharmKind.MONGOD:
                     if not from_event and upgrade_order_index == 1:
                         # User confirmation needed to resume upgrade (i.e. upgrade second unit)
                         return unit_number(units[0])
@@ -123,7 +123,7 @@ class KubernetesUpgrade(AbstractUpgrade):
         - confirm first upgraded unit is healthy and resume upgrade
         - force upgrade of next unit if 1 or more upgraded units are unhealthy
         """
-        if self.dependent.name == KindEnum.MONGOD:
+        if self.dependent.name == CharmKind.MONGOD:
             force = from_event and force
         else:
             force = from_event
