@@ -45,6 +45,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
+from single_kernel_mongo.utils.helpers import mongodb_only
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongodb_users import OperatorUser
@@ -336,11 +337,16 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         raise NotImplementedError()
 
     # BEGIN: Helpers
+    @mongodb_only
     def move_primary_to_last_upgrade_unit(self) -> None:
         """Moves the primary to last unit that gets upgraded (the unit with the lowest id).
 
         Raises FailedToMovePrimaryError
         """
+        # This should only ever run on mongos
+        if self.dependent.name == CharmKind.MONGOS:
+            logger.error("move_primary_to_last_upgrade_unit called on mongos charm. Please fix.")
+            return
         # no need to move primary in the scenario of one unit
         if len(self.state.units_upgrade_peer_data) < 2:
             return
@@ -357,6 +363,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             logger.debug("Moving primary to unit: %s", unit_with_lowest_id)
             mongod.move_primary(new_primary_ip=unit_host)
 
+    @mongodb_only
     def is_current_unit_ready(self, ignore_unhealthy_upgrade: bool = False) -> bool:
         """Returns True if the current unit status shows that the unit is ready.
 
@@ -373,6 +380,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             type(self.charm.unit.status).__name__.lower()
         )
 
+    @mongodb_only
     def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
         """Returns True if all charm units status's show that they are ready for upgrade."""
         goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
@@ -388,6 +396,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         return True
 
+    @mongodb_only
     def are_shards_status_ready_for_upgrade(self) -> bool:
         """Returns True if all integrated shards status's show that they are ready for upgrade.
 
@@ -407,6 +416,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         return True
 
+    @mongodb_only
     def wait_for_cluster_healthy(self: GenericMongoDBUpgradeManager[MongoDBOperator]) -> None:
         """Waits until the cluster is healthy after upgrading.
 
@@ -420,6 +430,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 if not self.is_cluster_healthy():
                     raise ClusterNotHealthyError()
 
+    @mongodb_only
     def is_cluster_healthy(self: GenericMongoDBUpgradeManager[MongoDBOperator]) -> bool:
         """Returns True if all nodes in the cluster/replica set are healthy."""
         # TODO: check mongos
@@ -458,6 +469,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             )
             return False
 
+    @mongodb_only
     def are_nodes_healthy(self) -> bool:
         """Returns true if all nodes in the MongoDB deployment are healthy."""
         if self.state.is_role(MongoDBRoles.REPLICATION):

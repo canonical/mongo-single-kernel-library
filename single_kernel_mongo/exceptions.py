@@ -7,6 +7,10 @@
 from ops.model import BlockedStatus, StatusBase
 
 
+class InvalidCharmKindError(Exception):
+    """Raised when calling a function on the wrong charm kind."""
+
+
 class DeployedWithoutTrustError(Exception):
     """Deployed without `juju deploy --trust` or `juju trust`.
 
