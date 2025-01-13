@@ -18,12 +18,12 @@ from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
-    KindEnum,
+    CharmKind,
     MongoPorts,
     Scope,
     Substrates,
 )
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -77,17 +77,17 @@ class CharmState(Object):
 
     This object represents the charm state, including the different relations
     the charm is bound to, and the model information.
-    It is parametrized by the substrate and the KindEnum.
+    It is parametrized by the substrate and the CharmKind.
 
     The substrate will allow to compute the right hosts.
-    The CharmKind allows selection of the right peer relation name and also the
+    The CharmSpec allows selection of the right peer relation name and also the
     generation of the correct mongo uri.
     The charm is passed as an argument to build the secret storage, and provide
     an access to the charm configuration.
     """
 
     def __init__(
-        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmKind
+        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmSpec
     ):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
@@ -127,7 +127,7 @@ class CharmState(Object):
         which is exposed for mongos charms, and one for replication which is
         exposed for mongodb charms.
         """
-        if self.charm_role.name == KindEnum.MONGOS:
+        if self.charm_role.name == CharmKind.MONGOS:
             return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])
 
@@ -343,7 +343,7 @@ class CharmState(Object):
         """
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
+            and self.charm_role.name == CharmKind.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
@@ -395,7 +395,7 @@ class CharmState(Object):
     @property
     def config_server_name(self) -> str | None:
         """Gets the config server name."""
-        if self.charm_role.name == KindEnum.MONGOS:
+        if self.charm_role.name == CharmKind.MONGOS:
             if self.mongos_cluster_relation:
                 return self.mongos_cluster_relation.app.name
             return None
@@ -562,7 +562,7 @@ class CharmState(Object):
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the mongos user."""
-        if self.charm_role.name == KindEnum.MONGOD:
+        if self.charm_role.name == CharmKind.MONGOD:
             return self.mongos_config_for_user(OperatorUser, self.app_hosts)
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
         password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
@@ -585,7 +585,7 @@ class CharmState(Object):
     @property
     def mongo_config(self) -> MongoConfiguration:
         """The mongo configuration to use by default for charm interactions."""
-        if self.charm_role.name == KindEnum.MONGOD:
+        if self.charm_role.name == CharmKind.MONGOD:
             return self.operator_config
         return self.mongos_config
 

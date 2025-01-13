@@ -10,7 +10,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
@@ -23,7 +23,7 @@ class MongosWorkload(WorkloadBase):
     env_var = "MONGOS_ARGS"
     snap_param = "mongos-args"
 
-    def __init__(self, role: CharmKind, container: Container | None) -> None:
+    def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
         self.paths = MongoPaths(self.role)
 

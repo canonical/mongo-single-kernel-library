@@ -5,13 +5,13 @@ from parameterized import parameterized
 from single_kernel_mongo.config.models import (
     K8S_MONGOD,
     VM_MONGOD,
-    CharmKind,
+    CharmSpec,
 )
 from single_kernel_mongo.core.workload import MongoPaths
 
 
 @parameterized.expand([[K8S_MONGOD], [VM_MONGOD]])
-def test_mongo_paths(role: CharmKind):
+def test_mongo_paths(role: CharmSpec):
     paths = MongoPaths(role)
 
     assert paths.config_file.parent == Path(role.paths["CONF"])

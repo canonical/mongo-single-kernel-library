@@ -21,7 +21,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     MAX_PASSWORD_LENGTH,
-    KindEnum,
+    CharmKind,
     MongoPorts,
     Scope,
     Substrates,
@@ -85,7 +85,7 @@ logger = logging.getLogger(__name__)
 class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
 
-    name = KindEnum.MONGOD
+    name = CharmKind.MONGOD
     workload: MongoDBWorkload
 
     def __init__(self, charm: AbstractMongoCharm):

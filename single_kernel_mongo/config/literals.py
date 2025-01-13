@@ -20,7 +20,7 @@ class Substrates(str, Enum):
     K8S = "k8s"
 
 
-class KindEnum(str, Enum):
+class CharmKind(str, Enum):
     """The two possible role names."""
 
     MONGOD = "mongod"

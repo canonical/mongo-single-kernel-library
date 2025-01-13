@@ -18,7 +18,7 @@ from ops.model import (
 )
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
-from single_kernel_mongo.config.literals import KindEnum
+from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ class StatusManager(Object):
 
     def get_statuses(self) -> StatusesDict:
         """Collects the statuses of all managers."""
-        if self.operator.name == KindEnum.MONGOD:
+        if self.operator.name == CharmKind.MONGOD:
             return StatusesDict(
                 {
                     "mongodb": self.operator.mongo_manager.get_status(),

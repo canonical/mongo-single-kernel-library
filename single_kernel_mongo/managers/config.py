@@ -15,11 +15,11 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import (
     LOCALHOST,
     PBM_RESTART_DELAY,
-    KindEnum,
+    CharmKind,
     MongoPorts,
     Substrates,
 )
-from single_kernel_mongo.config.models import AuditLogConfig, CharmKind, LogRotateConfig
+from single_kernel_mongo.config.models import AuditLogConfig, CharmSpec, LogRotateConfig
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -65,7 +65,7 @@ class BackupConfigManager(CommonConfigManager):
     def __init__(
         self,
         substrate: Substrates,
-        role: CharmKind,
+        role: CharmSpec,
         config: MongoConfigModel,
         state: CharmState,
         container: Container | None,
@@ -113,7 +113,7 @@ class LogRotateConfigManager(CommonConfigManager):
 
     def __init__(
         self,
-        role: CharmKind,
+        role: CharmSpec,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
@@ -149,7 +149,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     def __init__(
         self,
-        role: CharmKind,
+        role: CharmSpec,
         substrate: Substrates,
         config: MongoConfigModel,
         state: CharmState,
@@ -208,7 +208,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
     def binding_ips(self) -> list[str]:
         """The binding IP parameters."""
         if (
-            self.state.charm_role.name == KindEnum.MONGOS
+            self.state.charm_role.name == CharmKind.MONGOS
             and not self.state.app_peer_data.external_connectivity
         ):
             return [

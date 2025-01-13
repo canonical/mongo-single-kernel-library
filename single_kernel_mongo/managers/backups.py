@@ -35,7 +35,7 @@ from tenacity import (
 )
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -97,7 +97,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def __init__(
         self,
         charm: AbstractMongoCharm,
-        role: CharmKind,
+        role: CharmSpec,
         substrate: Substrates,
         state: CharmState,
         container: Container | None,
