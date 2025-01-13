@@ -14,7 +14,6 @@ from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
-    INCOMPATIBLE_UPGRADE,
     UNHEALTHY_UPGRADE,
     WAITING_POST_UPGRADE_STATUS,
     CharmKind,
@@ -22,8 +21,6 @@ from single_kernel_mongo.config.literals import (
     UnitState,
 )
 from single_kernel_mongo.core.abstract_upgrades import GenericMongoDBUpgradeManager, UpgradeActions
-from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
-from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -44,79 +41,6 @@ ROLLBACK_INSTRUCTIONS = "To rollback, `juju refresh` to the previous revision"
 
 class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
     """Upgrade manager for Mongo upgrades."""
-
-    def _reconcile_upgrade(self, during_upgrade: bool = False):
-        """Handle upgrade events."""
-        if not self._upgrade:
-            logger.debug("Peer relation not available")
-            return
-        if not self.state.app_upgrade_peer_data.versions:
-            logger.debug("Peer relation not ready")
-            return
-        if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
-            # Run before checking `self._upgrade.is_compatible` in case incompatible upgrade was
-            # forced & completed on all units.
-            if self.dependent.name == CharmKind.MONGOD:
-                # We can type ignore here because we know we are using a MongoD charm
-                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
-            self._upgrade.set_versions_in_app_databag()
-
-        if not self._upgrade.is_compatible:
-            self._set_upgrade_status()
-            return
-
-        if self._upgrade.unit_state is UnitState.OUTDATED:
-            self._on_vm_outdated()  # type: ignore
-            return
-
-        if self._upgrade.unit_state is UnitState.RESTARTING:  # Kubernetes only
-            self._on_kubernetes_restarting()  # type: ignore
-            return
-
-        if self.dependent.substrate == Substrates.K8S:
-            self._on_kubernetes_always(during_upgrade)  # type: ignore
-        self._set_upgrade_status()
-
-    def _on_kubernetes_always(self: MongoUpgradeManager[T], during_upgrade: bool):
-        assert self._upgrade
-        if (
-            not during_upgrade
-            and self.state.db_initialised
-            and self.dependent.mongo_manager.mongod_ready()
-        ):
-            self._upgrade.unit_state = UnitState.HEALTHY
-            self.charm.status_manager.to_active()
-        if self.charm.unit.is_leader():
-            self._upgrade.reconcile_partition()
-
-    def _on_vm_outdated(self: MongoUpgradeManager[T]):
-        assert isinstance(self._upgrade, MachineUpgrade)
-        try:
-            # This is the case only for VM which is OK
-            authorized = self._upgrade.authorized  # type: ignore
-        except PrecheckFailedError as exception:
-            self._set_upgrade_status()
-            self.charm.status_manager.set_and_share_status(exception.status)
-            logger.debug(f"Set unit status to {exception.status}")
-            logger.error(exception.status.message)
-            return
-        if authorized:
-            self._set_upgrade_status()
-            # We can type ignore because this branch is VM only
-            self._upgrade.upgrade_unit(dependent=self.dependent)
-        else:
-            self._set_upgrade_status()
-            logger.debug("Waiting to upgrade")
-            return
-
-    def _on_kubernetes_restarting(self: MongoUpgradeManager[T]):
-        assert isinstance(self._upgrade, KubernetesUpgrade)
-        if not self._upgrade.is_compatible:
-            logger.info(
-                f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
-            )
-            self.charm.status_manager.set_and_share_status(INCOMPATIBLE_UPGRADE)
-            return
 
     def on_upgrade_charm(self):
         """Upgrade event handler.
@@ -191,16 +115,25 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if not self._upgrade or not self.state.upgrade_in_progress:
             message = "No refresh in progress"
             raise ActionFailedError(message)
-        if self._upgrade.unit_state != UnitState.OUTDATED:
+
+        if self.substrate == Substrates.VM and self._upgrade.unit_state != UnitState.OUTDATED:
             message = "Unit already refreshed"
             raise ActionFailedError(message)
+
+        if self.substrate == Substrates.K8S and not self.charm.unit.is_leader():
+            message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader force-refresh-start`)"
+            raise ActionFailedError(message)
+
         if self.dependent.name == CharmKind.MONGOD and not self._upgrade.upgrade_resumed:
             message = f"Run `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}` before trying to force refresh"
             raise ActionFailedError(message)
+
         logger.debug("Forcing refresh")
         event.log(f"Forcefully refreshing {self.charm.unit.name}")
-        # This happens only on mongodb VM
-        self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
+        if self.substrate == Substrates.VM:
+            self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
+        else:
+            self._upgrade.reconcile_partition(from_event=True, force=True)
         logger.debug("Forced refresh")
         return f"Forcefully refreshed {self.charm.unit.name}"
 
