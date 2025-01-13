@@ -59,7 +59,7 @@ def charm_kind_only(func, charm_kind: CharmKind):
             raise InvalidCharmKindError(
                 f"{func} called on a non {charm_kind.value} charm. Please fix."
             )
-        func(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
 
     return wrapper
 
