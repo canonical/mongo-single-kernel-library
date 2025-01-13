@@ -647,23 +647,30 @@ class MongoDBOperator(OperatorProtocol, Object):
         # cluster nodes.
         self.mongo_manager.set_election_priority(priority=1)
 
-    def update_hosts(self):
+    def update_hosts(self) -> None:
         """Update the replica set hosts and remove any unremoved replica from the config."""
         if not self.state.db_initialised:
             return
         self.mongo_manager.process_unremoved_units()
         self.update_related_hosts()
 
-    def update_related_hosts(self):
+    def update_related_hosts(self) -> None:
         """Update the app relations that need to be made aware of the new set of hosts."""
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:
                 self.mongo_manager.update_app_relation_data(relation)
+            return
 
         # Update the mongos host in the sharded deployment
-        self.config_server_manager.update_mongos_hosts()
-        # Update the config server DB URI on the remote mongos
-        self.cluster_manager.update_config_server_db()
+        if self.state.is_role(MongoDBRoles.SHARD):
+            self.shard_manager.update_mongos_hosts()
+            return
+
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.config_server_manager.update_mongos_hosts()
+            # Update the config server DB URI on the remote mongos
+            self.cluster_manager.update_config_server_db()
+            return
 
     def open_ports(self) -> None:
         """Open ports on the workload.

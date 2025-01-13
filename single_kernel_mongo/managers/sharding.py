@@ -40,7 +40,10 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
-from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
+from single_kernel_mongo.utils.mongo_connection import (
+    MongoConnection,
+    NotReadyError,
+)
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
@@ -565,6 +568,11 @@ class ShardManager(Object, StatusProvider):
         self.dependent.restart_charm_services()
         if self.charm.unit.is_leader():
             self.state.app_peer_data.keyfile = keyfile
+
+    def update_mongos_hosts(self):
+        """Updates the hosts for mongos on the relation data."""
+        if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
+            self.state.app_peer_data.mongos_hosts = hosts
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""
