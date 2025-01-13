@@ -741,12 +741,11 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         with MongoConnection(mongos_config) as mongos:
             mongos.client.drop_database(db_name)
 
-    def clear_tmp_collection(
-        self, mongodb_config: MongoConfiguration, collection_name: str
-    ) -> None:
+    def clear_tmp_collection(self, mongo_config: MongoConfiguration, collection_name: str) -> None:
         """Clears the temporary collection."""
-        with MongoConnection(mongodb_config) as mongod:
-            mongod.client.admin.drop_collection(collection_name)
+        with MongoConnection(mongo_config) as mongo:
+            db = mongo.client[mongo_config.database]
+            db.drop_collection(collection_name)
 
     @retry(
         stop=stop_after_attempt(10),
