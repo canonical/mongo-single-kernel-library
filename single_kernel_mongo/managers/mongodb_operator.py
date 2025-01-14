@@ -446,7 +446,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 current_shards = [
                     relation.app.name for relation in self.state.config_server_relation
                 ]
-                early_removal_message = f"Cannot remoe config-server, still related to shards {', '.join(current_shards)}"
+                early_removal_message = f"Cannot remove config-server, still related to shards {', '.join(current_shards)}"
                 logger.error(early_removal_message)
                 raise EarlyRemovalOfConfigServerError(early_removal_message)
             if self.state.is_role(MongoDBRoles.SHARD) and self.state.shard_relation is not None:

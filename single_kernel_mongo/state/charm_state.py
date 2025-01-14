@@ -186,7 +186,7 @@ class CharmState(Object):
         data_interface = DataPeerOtherUnitData(
             model=self.model,
             unit=unit,
-            relation=relation,
+            relation_name=relation.name,
         )
         return UnitPeerReplicaSet(
             relation=relation,
