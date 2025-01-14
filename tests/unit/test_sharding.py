@@ -300,7 +300,7 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
     harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
     harness.update_relation_data(rel_id_bis, "shard1", {"database": "unused"})
 
-    assert manager.get_unreachable_shards() == ["shard0", "shard1"]
+    assert set(manager.get_unreachable_shards()) == {"shard0", "shard1"}
 
 
 ####################
