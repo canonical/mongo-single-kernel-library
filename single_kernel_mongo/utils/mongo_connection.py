@@ -385,7 +385,7 @@ class MongoConnection:
         logger.info("Adding shard %s", shard_name)
         self.client.admin.command("addShard", shard_url)
 
-    def pre_remove_shard_checks(self, shard_name: str):
+    def pre_remove_shard_checks(self, shard_name: str) -> None:
         """Performs a series of checks for removing a shard from the cluster.
 
         Raises:
@@ -446,7 +446,7 @@ class MongoConnection:
                 if balancer_state["mode"] == "off":
                     raise BalancerNotEnabledError("balancer is not enabled.")
 
-    def remove_shard(self, shard_name: str):
+    def remove_shard(self, shard_name: str) -> None:
         """Removes shard from the cluster.
 
         Raises:
@@ -462,7 +462,7 @@ class MongoConnection:
             logger.info("Waiting for all chunks to be drained from %s.", shard_name)
             raise NotDrainedError
 
-    def move_primary_after_draining_shard(self, shard_name: str):
+    def move_primary_after_draining_shard(self, shard_name: str) -> None:
         """Move primary after the shard was drained and removed from the cluster."""
         # MongoDB docs says to movePrimary only after all chunks have been drained from the shard.
         logger.info("All chunks drained from shard: %s", shard_name)
@@ -484,7 +484,7 @@ class MongoConnection:
             logger.info("Shard %s is still present in sharded cluster.", shard_name)
             raise NotDrainedError()
 
-    def _log_removal_info(self, removal_info, shard_name, remaining_chunks):
+    def _log_removal_info(self, removal_info, shard_name, remaining_chunks) -> None:
         """Logs removal information for a shard removal."""
         dbs_to_move = (
             removal_info["dbsToMove"]

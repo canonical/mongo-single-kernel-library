@@ -75,7 +75,7 @@ class ConfigServerManager(Object):
             self.model, relation_name=self.relation_name.value
         )
 
-    def prepare_sharding_config(self, relation: Relation):
+    def prepare_sharding_config(self, relation: Relation) -> None:
         """Handles the database requested event.
 
         It shares the different credentials and necessary files with the shard.
@@ -101,12 +101,11 @@ class ConfigServerManager(Object):
             relation.id, "unused", "unused"
         )  # Triggers the database created event
 
-    def reconcile_shards_for_relation(self, relation: Relation, is_leaving: bool = False):
+    def reconcile_shards_for_relation(self, relation: Relation, is_leaving: bool = False) -> None:
         """Handles adding and removing shards.
 
         Updating of shards is done automatically via MongoDB change-streams.
         """
-        logger.info("Running Relation Changed hook.")
         self.assert_pass_hook_checks(relation, is_leaving)
 
         if self.data_interface.fetch_relation_field(relation.id, "database") is None:
@@ -195,7 +194,7 @@ class ConfigServerManager(Object):
                 continue
             self.data_interface.update_relation_data(relation.id, {key: value})
 
-    def update_mongos_hosts(self):
+    def update_mongos_hosts(self) -> None:
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
@@ -262,7 +261,7 @@ class ConfigServerManager(Object):
 
         return ActiveStatus()
 
-    def add_shard(self, relation: Relation):
+    def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
         shard_name = relation.app.name
 
@@ -293,7 +292,7 @@ class ConfigServerManager(Object):
                 raise e
         self.charm.status_manager.to_active(None)
 
-    def remove_shards(self, relation: Relation):
+    def remove_shards(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
         shard_name = relation.app.name
 
@@ -610,7 +609,10 @@ class ShardManager(Object):
         self.state.set_user_password(user, new_password)
 
     def _should_request_new_certs(self) -> bool:
-        """Returns if the shard has already requested the certificates for internal-membership."""
+        """Returns if the shard has already requested the certificates for internal-membership.
+
+        Sharded components must have the same subject names in their certs.
+        """
         int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
         ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
         return {int_subject, ext_subject} != {self.state.config_server_name}
