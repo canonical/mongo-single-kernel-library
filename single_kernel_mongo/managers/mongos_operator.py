@@ -296,7 +296,7 @@ class MongosOperator(OperatorProtocol, Object):
                 for relation in self.state.client_relations:
                     self.mongo_manager.update_app_relation_data(relation)
 
-    def proxy_information_to_client_and_handle_connectivity(self, relation: Relation):
+    def update_proxy_connection(self, relation: Relation):
         """Shares credentials to the client and opens the port if necessary."""
         data_interface = DatabaseProviderData(self.model, relation.name)
         if not self.charm.unit.is_leader():
