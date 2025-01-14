@@ -308,13 +308,13 @@ class MongosOperator(OperatorProtocol, Object):
             return
         new_database_name = data_interface.fetch_relation_field(relation.id, "database")
         new_extra_user_roles: set[str] = set(
-            json.loads(
+            (
                 data_interface.fetch_relation_field(
                     relation.id,
                     "extra-user-roles",
                 )
-                or "[]"
-            )
+                or "default"
+            ).split(",")
         )
         external_connectivity = json.loads(
             data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
