@@ -58,9 +58,14 @@ class VMWorkload(WorkloadBase):
         return {self.env_var: self.mongod_snap.get(self.snap_param)}
 
     @override
-    def update_env(self, parameters: chain[str]) -> None:
-        content = " ".join(parameters)
-        self.mongod_snap.set({self.snap_param: content})
+    def update_env(self, parameters: chain[str]):
+        try:
+            content = " ".join(parameters)
+            if content != "":
+                self.mongod_snap.set({self.snap_param: content})
+        except snap.SnapError as e:
+            logger.exception(str(e))
+            raise WorkloadServiceError(str(e)) from e
 
     @override
     def stop(self) -> None:

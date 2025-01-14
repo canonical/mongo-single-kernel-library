@@ -424,7 +424,6 @@ def test_primary(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        new_callable=mocker.PropertyMock,
         return_value="1.1.1.1",
     )
     output = harness.run_action("get-primary")
@@ -448,7 +447,6 @@ def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        new_callable=mocker.PropertyMock,
         return_value=PEER_ADDR["private-address"],
     )
     rel = harness.charm.operator.state.peer_relation

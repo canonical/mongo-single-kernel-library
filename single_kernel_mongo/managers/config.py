@@ -14,6 +14,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     LOCALHOST,
+    PBM_RESTART_DELAY,
     KindEnum,
     MongoPorts,
     Substrates,
@@ -100,7 +101,7 @@ class BackupConfigManager(CommonConfigManager):
                 self.workload.stop()
                 self.set_environment()
                 # Avoid restart errors on PBM.
-                time.sleep(2)
+                time.sleep(PBM_RESTART_DELAY)
                 self.workload.start()
             except WorkloadServiceError as e:
                 logger.error(f"Failed to restart {self.workload.service}: {e}")
@@ -184,6 +185,8 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 class MongoConfigManager(CommonConfigManager, ABC):
     """The common configuration manager for both MongoDB and Mongos."""
 
+    auth: bool
+
     @override
     def build_parameters(self) -> list[list[str]]:
         return [
@@ -236,16 +239,15 @@ class MongoConfigManager(CommonConfigManager, ABC):
     @property
     def auth_parameter(self) -> list[str]:
         """The auth mode."""
+        cmd = ["--auth"] if self.auth else []
         if self.state.tls.internal_enabled and self.state.tls.external_enabled:
-            return [
-                "--auth",
+            return cmd + [
                 "--clusterAuthMode=x509",
                 "--tlsAllowInvalidCertificates",
                 f"--tlsClusterCAFile={self.workload.paths.int_ca_file}",
                 f"--tlsClusterFile={self.workload.paths.int_pem_file}",
             ]
-        return [
-            "--auth",
+        return cmd + [
             "--clusterAuthMode=keyFile",
             f"--keyFile={self.workload.paths.keyfile}",
         ]
@@ -271,6 +273,7 @@ class MongoDBConfigManager(MongoConfigManager):
         self.state = state
         self.workload = workload
         self.config = config
+        self.auth = True
 
     @property
     def db_path_argument(self) -> list[str]:
@@ -315,6 +318,7 @@ class MongosConfigManager(MongoConfigManager):
         self.state = state
         self.workload = workload
         self.config = config
+        self.auth = False
 
     @property
     def config_server_db_parameter(self) -> list[str]:

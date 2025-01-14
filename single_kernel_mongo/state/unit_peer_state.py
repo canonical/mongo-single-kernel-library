@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 """The peer unit relation databag."""
 
+import json
 from enum import Enum
 from functools import cached_property
 
@@ -99,3 +100,21 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         K8s-only.
         """
         return self.k8s.get_node_port(MongoPorts.MONGOS_PORT)
+
+    @property
+    def drained(self) -> bool:
+        """Returns True if the shard is drained.
+
+        We check the unit databag rather than the app databag since a draining
+        operation blocks all events from occurring. The unit databag allows us
+        to update and check our draining status in the same event as the
+        draining. Unlike the app databag which triggers requires a
+        RelationChangedEvent to propagate.
+        """
+        return json.loads(self.relation_data.get("drained", "true"))
+
+    @drained.setter
+    def drained(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError(f"drained value is not boolean but {value}")
+        self.update({"drained": json.dumps(value)})

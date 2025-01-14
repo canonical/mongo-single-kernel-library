@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -87,9 +87,9 @@ class TLSManager:
             sans=sans["sans_dns"],
             sans_ip=sans["sans_ip"],
         )
-        self.set_tls_secret(internal, SECRET_KEY_LABEL, key.decode("utf-8"))
-        self.set_tls_secret(internal, SECRET_CSR_LABEL, csr.decode("utf-8"))
-        self.set_tls_secret(internal, SECRET_CERT_LABEL, None)
+        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, key.decode("utf-8"))
+        self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr.decode("utf-8"))
+        self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
 
         label = "int" if internal else "ext"
 
@@ -103,8 +103,8 @@ class TLSManager:
             old_csr: The old certificate signing request.
             new_csr: the new_certificate signing request.
         """
-        key_str = self.get_tls_secret(internal, SECRET_KEY_LABEL)
-        old_csr_str = self.get_tls_secret(internal, SECRET_CSR_LABEL)
+        key_str = self.state.tls.get_secret(internal, SECRET_KEY_LABEL)
+        old_csr_str = self.state.tls.get_secret(internal, SECRET_CSR_LABEL)
         if not key_str or not old_csr_str:
             raise Exception("Trying to renew a non existent certificate. Please fix.")
 
@@ -120,7 +120,7 @@ class TLSManager:
         )
         logger.debug("Requesting a certificate renewal.")
 
-        self.set_tls_secret(internal, SECRET_CSR_LABEL, new_csr.decode("utf-8"))
+        self.state.tls.set_secret(internal, SECRET_CSR_LABEL, new_csr.decode("utf-8"))
         self.set_waiting_for_cert_to_update(waiting=True, internal=internal)
         return old_csr, new_csr
 
@@ -156,7 +156,7 @@ class TLSManager:
         if not self.state.tls.is_tls_enabled(internal=internal):
             return None
 
-        if not (pem_file := self.get_tls_secret(internal, SECRET_CERT_LABEL)):
+        if not (pem_file := self.state.tls.get_secret(internal, SECRET_CERT_LABEL)):
             logger.info("No PEM file but TLS enabled.")
             raise Exception("No PEM file but TLS enabled. Please, fix.")
         try:
@@ -183,12 +183,12 @@ class TLSManager:
             return None, None
         logging.debug(f"TLS *enabled* for {scope}, fetching data for CA and PEM files ")
 
-        ca = self.get_tls_secret(internal, SECRET_CA_LABEL)
-        chain = self.get_tls_secret(internal, SECRET_CHAIN_LABEL)
+        ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
+        chain = self.state.tls.get_secret(internal, SECRET_CHAIN_LABEL)
         ca_file = chain if chain else ca
 
-        key = self.get_tls_secret(internal, SECRET_KEY_LABEL)
-        cert = self.get_tls_secret(internal, SECRET_CERT_LABEL)
+        key = self.state.tls.get_secret(internal, SECRET_KEY_LABEL)
+        cert = self.state.tls.get_secret(internal, SECRET_CERT_LABEL)
         pem_file = key
         if cert:
             pem_file = key + "\n" + cert if key else cert
@@ -198,9 +198,9 @@ class TLSManager:
     def disable_certificates_for_unit(self):
         """Disables the certificates on relation broken."""
         for internal in [True, False]:
-            self.set_tls_secret(internal, SECRET_CA_LABEL, None)
-            self.set_tls_secret(internal, SECRET_CERT_LABEL, None)
-            self.set_tls_secret(internal, SECRET_CHAIN_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             # self.state.cluster.update_ca_secret(new_ca=None)
@@ -256,8 +256,8 @@ class TLSManager:
         ca: str | None,
     ):
         """Sets the certificates."""
-        int_csr = self.get_tls_secret(internal=True, label_name=SECRET_CSR_LABEL)
-        ext_csr = self.get_tls_secret(internal=False, label_name=SECRET_CSR_LABEL)
+        int_csr = self.state.tls.get_secret(internal=True, label_name=SECRET_CSR_LABEL)
+        ext_csr = self.state.tls.get_secret(internal=False, label_name=SECRET_CSR_LABEL)
         if ext_csr and certificate_signing_request.rstrip() == ext_csr.rstrip():
             logger.debug("The external TLS certificate available.")
             internal = False
@@ -267,19 +267,21 @@ class TLSManager:
         else:
             raise UnknownCertificateAvailableError
 
-        self.set_tls_secret(
+        self.state.tls.set_secret(
             internal,
             SECRET_CHAIN_LABEL,
             "\n".join(secret_chain) if secret_chain is not None else None,
         )
-        self.set_tls_secret(internal, SECRET_CERT_LABEL, certificate)
-        self.set_tls_secret(internal, SECRET_CA_LABEL, ca)
+        self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
+        self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
         self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
 
     def renew_expiring_certificate(self, certificate: str) -> tuple[bytes, bytes]:
         """Renew the expiring certificate."""
         for internal in (False, True):
-            charm_cert = self.get_tls_secret(internal=internal, label_name=SECRET_CERT_LABEL) or ""
+            charm_cert = (
+                self.state.tls.get_secret(internal=internal, label_name=SECRET_CERT_LABEL) or ""
+            )
             if certificate.rstrip() == charm_cert.rstrip():
                 logger.debug(
                     f"The {'internal' if internal else 'external'} TLS certificate is expiring."
@@ -306,10 +308,10 @@ class TLSManager:
 
     def is_waiting_for_both_certs(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
-        if not self.get_tls_secret(internal=True, label_name=SECRET_CERT_LABEL):
+        if not self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL):
             logger.debug("Waiting for internal certificate.")
             return True
-        if not self.get_tls_secret(internal=False, label_name=SECRET_CERT_LABEL):
+        if not self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL):
             logger.debug("Waiting for external certificate.")
             return True
 
@@ -326,18 +328,3 @@ class TLSManager:
             return self.state.config_server_name or self.charm.app.name
 
         return self.charm.app.name
-
-    def set_tls_secret(self, internal: bool, label_name: str, contents: str | None) -> None:
-        """Sets TLS secret, based on whether or not it is related to internal connections."""
-        scope = "int" if internal else "ext"
-        label_name = f"{scope}-{label_name}"
-        if not contents:
-            self.state.secrets.remove(Scope.UNIT, label_name)
-            return
-        self.state.secrets.set(label_name, contents, Scope.UNIT)
-
-    def get_tls_secret(self, internal: bool, label_name: str) -> str | None:
-        """Gets TLS secret, based on whether or not it is related to internal connections."""
-        scope = "int" if internal else "ext"
-        label_name = f"{scope}-{label_name}"
-        return self.state.secrets.get_for_key(Scope.UNIT, label_name)

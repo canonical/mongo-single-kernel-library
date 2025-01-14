@@ -52,3 +52,18 @@ class TLSState:
                 return self.internal_enabled
             case False:
                 return self.external_enabled
+
+    def set_secret(self, internal: bool, label_name: str, contents: str | None) -> None:
+        """Sets TLS secret, based on whether or not it is related to internal connections."""
+        scope = "int" if internal else "ext"
+        label_name = f"{scope}-{label_name}"
+        if not contents:
+            self.secrets.remove(Scope.UNIT, label_name)
+            return
+        self.secrets.set(label_name, contents, Scope.UNIT)
+
+    def get_secret(self, internal: bool, label_name: str) -> str | None:
+        """Gets TLS secret, based on whether or not it is related to internal connections."""
+        scope = "int" if internal else "ext"
+        label_name = f"{scope}-{label_name}"
+        return self.secrets.get_for_key(Scope.UNIT, label_name)
