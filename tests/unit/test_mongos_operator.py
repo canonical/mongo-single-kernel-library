@@ -19,7 +19,7 @@ from .mongos_test_charm.src.charm import MongosTestCharm
 def test_start_sets_status(mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions):
     mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
     mongos_harness.charm.on.start.emit()
-    assert mongos_harness.charm.unit.status == BlockedStatus("Missing relation to client-app.")
+    assert mongos_harness.charm.unit.status == BlockedStatus("Missing relation to config-server.")
 
     mocked_copy.assert_has_calls(
         [

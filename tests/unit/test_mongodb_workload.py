@@ -38,7 +38,7 @@ def test_mongodb_workload_init(monkeypatch):
                 "mongod": {
                     "override": "replace",
                     "summary": "mongod",
-                    "command": "/usr/bin/mongod ${MONGOD_ARGS}",
+                    "command": "sh -c '/usr/bin/mongod ${MONGOD_ARGS}'",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
@@ -69,7 +69,7 @@ def test_mongos_workload_init(monkeypatch):
                 "mongos": {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "/usr/bin/mongos ${MONGOS_ARGS}",
+                    "command": "sh -c '/usr/bin/mongos ${MONGOS_ARGS}'",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
@@ -97,7 +97,7 @@ def test_mongodb_exporter_workload_init(monkeypatch):
             "summary": "mongodb_exporter layer",
             "description": "Pebble config layer for mongodb_exporter",
             "services": {
-                "mongodb_exporter": {
+                "mongodb-exporter": {
                     "override": "replace",
                     "summary": "mongodb_exporter",
                     "command": "mongodb_exporter --collector.diagnosticdata --compatible-mode",
@@ -296,7 +296,9 @@ def test_run_bin_command(mocker):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     workload.run_bin_command("fail", [])
 
-    mock.assert_called_once_with(command=["/snap/bin/charmed-mongodb.mongosh", "fail"], env={})
+    mock.assert_called_once_with(
+        command=["/snap/bin/charmed-mongodb.mongosh", "fail"], env={}, input=None
+    )
 
 
 def test_logrotate_build_template(monkeypatch, tmp_path):

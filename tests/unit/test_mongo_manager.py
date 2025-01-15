@@ -87,12 +87,23 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     mock_create_user = mocker.patch(
-        "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
+        "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command"
     )
 
     getattr(harness.charm.operator.mongo_manager, "initialise_operator_user")()
     config = getattr(harness.charm.operator.state, "operator_config")
+    cmd = [
+        "--quiet",
+        "--eval",
+        '"db.createUser({'
+        f"  user: 'operator',"
+        "  pwd: passwordPrompt(),"
+        f"  roles: {OPERATOR_ROLE},"
+        "  mechanisms: ['SCRAM-SHA-256'],"
+        "  passwordDigestor: 'server',"
+        '})"',
+    ]
 
-    mock_create_user.assert_called_with(config.username, config.password, roles=OPERATOR_ROLE)
+    mock_create_user.assert_called_with("mongodb://localhost/admin", cmd, input=config.password)
 
     assert harness.charm.operator.state.app_peer_data.is_user_created(OperatorUser.username)
