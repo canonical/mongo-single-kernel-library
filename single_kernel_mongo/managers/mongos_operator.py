@@ -290,6 +290,10 @@ class MongosOperator(OperatorProtocol, Object):
             case Substrates.VM:
                 if not self.state.mongos_config.password or not self.state.mongos_config.username:
                     return
+                # We'll always have only one client relation as VM because
+                # we're a subordinate charm, so this loop will run at most once.
+                # For consistency however it's easier to "just" loop on the
+                # `client_relations` method.
                 for relation in self.state.client_relations:
                     self.mongo_manager.update_app_relation_data_for_config(
                         relation, self.state.mongos_config
