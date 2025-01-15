@@ -84,7 +84,7 @@ class ConfigServerManager(Object):
             ConfigServerKeys.operator_password.value: self.state.get_user_password(OperatorUser),
             ConfigServerKeys.backup_password.value: self.state.get_user_password(BackupUser),
             ConfigServerKeys.key_file.value: self.state.get_keyfile(),
-            ConfigServerKeys.host.value: json.dumps(sorted(self.state.app_hosts)),
+            ConfigServerKeys.host.value: json.dumps(sorted(self.state.internal_hosts)),
         }
 
         if int_tls_ca := self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL):
@@ -192,7 +192,7 @@ class ConfigServerManager(Object):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.host.value: sorted(self.state.app_hosts)}
+                relation.id, {ConfigServerKeys.host.value: sorted(self.state.internal_hosts)}
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
@@ -235,7 +235,7 @@ class ConfigServerManager(Object):
                 f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
             )
 
-        uri = f"mongodb://{','.join(self.state.app_hosts)}"
+        uri = f"mongodb://{','.join(self.state.internal_hosts)}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
             return BlockedStatus("Internal mongos is not running.")
 
@@ -270,7 +270,7 @@ class ConfigServerManager(Object):
         self.charm.status_manager.to_maintenance(f"Adding shard {shard_name} to config-server")
         config = self.state.mongos_config_for_user(
             OperatorUser,
-            self.state.app_hosts,
+            self.state.internal_hosts,
         )
         with MongoConnection(config) as mongo:
             try:
@@ -292,7 +292,7 @@ class ConfigServerManager(Object):
 
         config = self.state.mongos_config_for_user(
             OperatorUser,
-            self.state.app_hosts,
+            self.state.internal_hosts,
         )
         with MongoConnection(config) as mongo:
             try:
@@ -319,7 +319,7 @@ class ConfigServerManager(Object):
 
         config = self.state.mongos_config_for_user(
             OperatorUser,
-            self.state.app_hosts,
+            self.state.internal_hosts,
         )
         try:
             # check our ability to use connect to mongos
