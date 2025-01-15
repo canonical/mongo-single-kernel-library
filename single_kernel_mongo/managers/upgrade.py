@@ -89,6 +89,9 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if not self.charm.unit.is_leader():
             message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader {UpgradeActions.PRECHECK_ACTION_NAME.value}`)"
             raise ActionFailedError(message)
+        if not self._upgrade:
+            message = "No upgrade relation found."
+            raise ActionFailedError(message)
         if not self._upgrade or self.state.upgrade_in_progress:
             message = "Refresh already in progress"
             raise ActionFailedError(message)
