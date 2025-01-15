@@ -417,10 +417,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         Raises FailedToMovePrimaryError
         """
-        # This should only ever run on mongos
-        if self.dependent.name == CharmKind.MONGOS:
-            logger.error("move_primary_to_last_upgrade_unit called on mongos charm. Please fix.")
-            return
         # no need to move primary in the scenario of one unit
         if len(self.state.units_upgrade_peer_data) < 2:
             return

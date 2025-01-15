@@ -473,7 +473,7 @@ class ShardManager(Object, StatusProvider):
             raise
 
         if not self.state.shard_state.has_received_credentials():
-            logger.debug("Waiting for config-server to write in the databag.")
+            logger.debug("Waiting for config-server to share cluster secrets.")
             return
 
         keyfile = self.state.shard_state.keyfile

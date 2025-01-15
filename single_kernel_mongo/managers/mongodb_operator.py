@@ -661,11 +661,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.mongo_manager.update_app_relation_data(relation)
             return
 
-        # Update the mongos host in the sharded deployment
-        if self.state.is_role(MongoDBRoles.SHARD):
-            self.shard_manager.update_mongos_hosts()
-            return
-
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.config_server_manager.update_mongos_hosts()
             # Update the config server DB URI on the remote mongos
