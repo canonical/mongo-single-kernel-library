@@ -289,7 +289,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         self._initialise_replica_set()
-        self.charm.status_manager.process_and_share_statuses()
+        self.charm.status_manager.to_active()
 
     @override
     def on_stop(self) -> None:  # pragma: nocover
