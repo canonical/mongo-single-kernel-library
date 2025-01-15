@@ -568,7 +568,7 @@ class CharmState(Object):
     def generate_config_server_db(self) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
-        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.app_hosts)
+        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.internal_hosts)
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
@@ -732,7 +732,7 @@ class CharmState(Object):
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the mongos user."""
         if self.charm_role.name == CharmKind.MONGOD:
-            return self.mongos_config_for_user(OperatorUser, self.app_hosts)
+            return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
         password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
         database = self.app_peer_data.database

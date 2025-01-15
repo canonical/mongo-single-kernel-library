@@ -72,6 +72,7 @@ class DatabaseEventsHandler(Object):
         ):
             self.dependent.update_proxy_connection(event.relation)  # type: ignore[attr-defined]
             return
+
         try:
             if not self.pass_hook_checks(event):
                 logger.info(f"Skipping {type(event)}: Hook checks did not pass")
