@@ -77,8 +77,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
         Either from the app databag or from the default from config.
         """
-        databag_role: str | None = self.relation_data.get(AppPeerDataKeys.role.value)
-        if not databag_role:
+        if not (databag_role := self.relation_data.get(AppPeerDataKeys.role.value)):
             return MongoDBRoles.UNKNOWN
         if not self.relation:
             return self._role

@@ -140,10 +140,12 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_config_changed(self) -> None:
-        """We check the expose-external value as it can be invalid.
+        """Handle configurations for expose-external.
 
-        And then, update external services, update TLS certificates and share
-        connection information with client if it changed.
+        It is necessary to check that the option is valid, and if it has
+        changed we must update external services, update TLS certificates and
+        share connection information with client. This is because when we
+        change our connectivity we update the IP address of mongos.
         """
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.UNKNOWN:
@@ -154,7 +156,7 @@ class MongosOperator(OperatorProtocol, Object):
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
                 return
-            self.update_external_services()
+            self.update_k8s_external_services()
 
             self.tls_manager.update_tls_sans()
             self.share_connection_info()
@@ -171,7 +173,12 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def on_leader_elected(self) -> None:
-        """Just forward the call, this is for simplicity and typing."""
+        """Just forward the call, this is for simplicity and typing.
+
+        Leader elected events indicate that a unit may have been removed or
+        lost connectivity. In these cases the hosts can be updated and we must
+        share the most up to date information with the hosts.
+        """
         self.share_connection_info()
 
     @override
@@ -215,7 +222,9 @@ class MongosOperator(OperatorProtocol, Object):
         # in K8s mongos charms which are exposed externally it is possible for
         # the node port to change. This can invalidate our current
         # certificates. when this happens we do not receive any notifications
-        # from Juju so we must monitor it and update our SANS as necessary.
+        # from Juju so we must monitor it and request TLS integration to update
+        # our SANS as necessary.
+        # The connection info will be updated when we receive the new certificates.
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
 
@@ -242,7 +251,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def start_charm_services(self) -> None:
-        """Star the charm services."""
+        """Start the charm services."""
         self.mongos_config_manager.set_environment()
         self.workload.start()
 
@@ -293,6 +302,10 @@ class MongosOperator(OperatorProtocol, Object):
             case Substrates.VM:
                 if not self.state.mongos_config.password or not self.state.mongos_config.username:
                     return
+                # We'll always have only one client relation as VM because
+                # we're a subordinate charm, so this loop will run at most once.
+                # For consistency however it's easier to "just" loop on the
+                # `client_relations` method.
                 for relation in self.state.client_relations:
                     self.mongo_manager.update_app_relation_data_for_config(
                         relation, self.state.mongos_config
@@ -301,7 +314,7 @@ class MongosOperator(OperatorProtocol, Object):
                 for relation in self.state.client_relations:
                     self.mongo_manager.update_app_relation_data(relation)
 
-    def proxy_information_to_client_and_handle_connectivity(self, relation: Relation):
+    def update_proxy_connection(self, relation: Relation):
         """Shares credentials to the client and opens the port if necessary."""
         data_interface = DatabaseProviderData(self.model, relation.name)
         if not self.charm.unit.is_leader():
@@ -337,18 +350,24 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT)
 
     # BEGIN: Helpers
-    def update_external_services(self):
-        """Updates the kubernetes external service if necessary."""
-        if self.substrate == Substrates.K8S:
-            match self.config.expose_external:
-                case ExposeExternal.NODEPORT:
-                    service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
-                    self.k8s.apply_service(service)
-                case ExposeExternal.NONE:
-                    self.k8s.delete_service()
-                case ExposeExternal.UNKNOWN:
-                    return
-            self.state.app_peer_data.expose_external = self.config.expose_external
+    def update_k8s_external_services(self):
+        """Updates the kubernetes external service if necessary.
+
+        This function changes the kubernetes deployment so it's expected to do
+        nothing on VM charms.
+        """
+        if self.substrate == Substrates.VM:
+            # Nothing to do if we're a VM charm.
+            return
+        match self.config.expose_external:
+            case ExposeExternal.NODEPORT:
+                service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
+                self.k8s.apply_service(service)
+            case ExposeExternal.NONE:
+                self.k8s.delete_service()
+            case ExposeExternal.UNKNOWN:
+                return
+        self.state.app_peer_data.expose_external = self.config.expose_external
 
     def update_keyfile(self, keyfile_content: str) -> bool:
         """Updates the keyfile in the app databag and on the workload."""
