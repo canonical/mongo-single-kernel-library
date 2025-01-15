@@ -85,7 +85,7 @@ class ConfigServerManager(Object, StatusProvider):
             ConfigServerKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(OperatorUser),
             ConfigServerKeys.BACKUP_PASSWORD.value: self.state.get_user_password(BackupUser),
             ConfigServerKeys.KEY_FILE.value: self.state.get_keyfile(),
-            ConfigServerKeys.HOST.value: json.dumps(sorted(self.state.app_hosts)),
+            ConfigServerKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
         }
 
         if int_tls_ca := self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL):
@@ -185,7 +185,7 @@ class ConfigServerManager(Object, StatusProvider):
         """Sends new credentials for a new key value pair across all shards."""
         for relation in self.state.config_server_relation:
             if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-                logger.info("Database Requested event has not run yet for relation {relation.id}")
+                logger.info(f"Database Requested event has not run yet for relation {relation.id}")
                 continue
             self.data_interface.update_relation_data(relation.id, {key: value})
 
@@ -193,14 +193,14 @@ class ConfigServerManager(Object, StatusProvider):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.HOST.value: sorted(self.state.app_hosts)}
+                relation.id, {ConfigServerKeys.HOST.value: sorted(self.state.internal_hosts)}
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
         """Updates the new CA for all related shards."""
         for relation in self.state.config_server_relation:
             if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-                logger.info("Database Requested event has not run yet for relation {relation.id}")
+                logger.info(f"Database Requested event has not run yet for relation {relation.id}")
                 continue
             if new_ca is None:
                 self.data_interface.delete_relation_data(
@@ -236,7 +236,7 @@ class ConfigServerManager(Object, StatusProvider):
                 f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
             )
 
-        uri = f"mongodb://{','.join(self.state.app_hosts)}"
+        uri = f"mongodb://{','.join(self.state.internal_hosts)}"
         if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
             return BlockedStatus("Internal mongos is not running.")
 

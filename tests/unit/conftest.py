@@ -30,7 +30,7 @@ def tenacity_wait(mocker):
 @pytest.fixture(autouse=True)
 def get_charm_internal_revision(mocker):
     mocker.patch(
-        "single_kernel_mongo.core.workload.WorkloadProtocol.get_internal_revision", return_value="1"
+        "single_kernel_mongo.core.workload.WorkloadBase.get_internal_revision", return_value="1"
     )
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.get_charm_revision", return_value="1"
