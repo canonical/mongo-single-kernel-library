@@ -122,6 +122,7 @@ class KubernetesWorkload(WorkloadBase):
         command: list[str],  # type: ignore[override]
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         try:
             process = self.container.exec(
@@ -129,6 +130,7 @@ class KubernetesWorkload(WorkloadBase):
                 environment=env,
                 working_dir=working_dir,
                 combine_stderr=True,
+                stdin=input,
             )
             output, _ = process.wait_output()
             return output
@@ -147,11 +149,12 @@ class KubernetesWorkload(WorkloadBase):
         bin_keyword: str,
         bin_args: list[str] | None = None,
         environment: dict[str, str] | None = None,
+        input: str | None = None,
     ) -> str:
         bin_args = bin_args or []
         environment = environment or {}
         command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
-        return self.exec(command=command, env=environment or None)
+        return self.exec(command=command, env=environment or None, input=input)
 
     @override
     def active(self) -> bool:

@@ -207,6 +207,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         command: list[str] | str,
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         """Runs a command on the workload substrate."""
         ...
@@ -217,6 +218,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         bin_keyword: str,
         bin_args: list[str] = [],
         environment: dict[str, str] = {},
+        input: str | None = None,
     ) -> str:
         """Runs service bin command with desired args.
 
