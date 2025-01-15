@@ -55,7 +55,10 @@ class ExposeExternal(str, Enum):
 
     @classmethod
     def valid_roles(cls) -> set[str]:
-        """The valid roles for expose external."""
+        """The valid roles for expose external.
+
+        This is exposed as config on k8s routers only.
+        """
         return {cls.NODEPORT, cls.NONE}
 
 

@@ -242,11 +242,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handler on start."""
         if not self.workload.workload_present:
             logger.debug("mongod installation is not ready yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Mongo DB installation not ready yet")
 
         if any(not storage for storage in self.model.storages.values()):
             logger.debug("Storages not attached yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Missing storage")
 
         self._configure_workloads()
 
@@ -266,14 +266,19 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
             raise
 
-        if self.substrate == Substrates.K8S:
-            if not self.workload.exists(self.workload.paths.socket_path):
-                logger.debug("The mongod socket is not ready yet.")
-                raise WorkloadNotReadyError
+        # This seems unnecessary
+        # if self.substrate == Substrates.K8S:
+        #    if not self.workload.exists(self.workload.paths.socket_path):
+        #        logger.debug("The mongod socket is not ready yet.")
+        #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("waiting for MongoDB to start")
             raise WorkloadNotReadyError
+
+        self.charm.status_manager.to_active(None)
+
+        self._initialise_replica_set()
 
         try:
             self._restart_related_services()
@@ -285,9 +290,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             # K8S upgrades result in the start hook getting fired following this pattern
             # https://juju.is/docs/sdk/upgrade-charm-event#heading--emission-sequence
             self.upgrade_manager._reconcile_upgrade()
-
-        self._initialise_replica_set()
-        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_stop(self) -> None:  # pragma: nocover
@@ -509,7 +511,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 current_shards = [
                     relation.app.name for relation in self.state.config_server_relation
                 ]
-                early_removal_message = f"Cannot remoe config-server, still related to shards {', '.join(current_shards)}"
+                early_removal_message = f"Cannot remove config-server, still related to shards {', '.join(current_shards)}"
                 logger.error(early_removal_message)
                 raise EarlyRemovalOfConfigServerError(early_removal_message)
             if self.state.is_role(MongoDBRoles.SHARD) and self.state.shard_relation is not None:

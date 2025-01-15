@@ -36,7 +36,7 @@ class MongoDBExporterWorkload(WorkloadBase):
                 "summary": "mongodb_exporter layer",
                 "description": "Pebble config layer for mongodb_exporter",
                 "services": {
-                    self.layer_name: {
+                    self.service: {
                         "override": "replace",
                         "summary": "mongodb_exporter",
                         "command": "mongodb_exporter --collector.diagnosticdata --compatible-mode",

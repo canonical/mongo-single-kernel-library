@@ -388,7 +388,7 @@ class MongoConnection:
         logger.info("Adding shard %s", shard_name)
         self.client.admin.command("addShard", shard_url)
 
-    def pre_remove_checks(self, shard_name: str):
+    def pre_remove_shard_checks(self, shard_name: str) -> None:
         """Performs a series of checks for removing a shard from the cluster.
 
         Raises:
@@ -401,7 +401,7 @@ class MongoConnection:
 
         # It is necessary to call removeShard multiple times on a shard to guarantee removal.
         # Allow re-removal of shards that are currently draining.
-        if self.is_any_draining(ignore_shard=shard_name):
+        if self.is_any_shard_draining(ignore_shard=shard_name):
             cannot_remove_shard = (
                 f"cannot remove shard {shard_name} from cluster, another shard is draining"
             )
@@ -418,7 +418,7 @@ class MongoConnection:
         logger.info("Balancer process is not running, enabling it.")
         self.start_and_wait_for_balancer()
 
-    def is_any_draining(self, ignore_shard: str = "") -> bool:
+    def is_any_shard_draining(self, ignore_shard: str = "") -> bool:
         """Returns true if any shard members is draining.
 
         Checks if any members in sharded cluster are draining data.
@@ -440,7 +440,7 @@ class MongoConnection:
         Starting the balancer doesn't guarantee that is is running, wait until it starts up.
 
         Raises:
-            BalancerNotEnabledError
+            BalancerNotEnabledError, ConfigurationError, OperationFailure
         """
         self.client.admin.command("balancerStart")
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
@@ -449,7 +449,7 @@ class MongoConnection:
                 if balancer_state["mode"] == "off":
                     raise BalancerNotEnabledError("balancer is not enabled.")
 
-    def remove_shard(self, shard_name: str):
+    def remove_shard(self, shard_name: str) -> None:
         """Removes shard from the cluster.
 
         Raises:
@@ -465,12 +465,11 @@ class MongoConnection:
             logger.info("Waiting for all chunks to be drained from %s.", shard_name)
             raise NotDrainedError
 
-    def move_primary_after_draining_shard(self, shard_name: str):
+    def move_primary_after_draining_shard(self, shard_name: str) -> None:
         """Move primary after the shard was drained and removed from the cluster."""
         # MongoDB docs says to movePrimary only after all chunks have been drained from the shard.
         logger.info("All chunks drained from shard: %s", shard_name)
-        databases_using_shard_as_primary = self.get_databases_for_shard(shard_name)
-        if databases_using_shard_as_primary:
+        if databases_using_shard_as_primary := self.get_databases_for_shard(shard_name):
             logger.info(
                 "These databases: %s use Shard %s is a primary shard, moving primary.",
                 ", ".join(databases_using_shard_as_primary),
@@ -488,7 +487,7 @@ class MongoConnection:
             logger.info("Shard %s is still present in sharded cluster.", shard_name)
             raise NotDrainedError()
 
-    def _log_removal_info(self, removal_info, shard_name, remaining_chunks):
+    def _log_removal_info(self, removal_info, shard_name, remaining_chunks) -> None:
         """Logs removal information for a shard removal."""
         dbs_to_move = (
             removal_info["dbsToMove"]
@@ -539,6 +538,9 @@ class MongoConnection:
             NotEnoughSpaceError, ConfigurationError, OperationFailure
         """
         for database_name in databases_to_move:
+            # we try to find the shard that has the most available space and if
+            # it's still to small, we raise an error so the user can act
+            # accordingly.
             db_size = self.get_db_size_on_primary_shard(database_name, old_primary)
             new_shard, avail_space = self.get_shard_with_most_available_space(
                 shard_to_ignore=old_primary
@@ -605,7 +607,11 @@ class MongoConnection:
             raise FailedToMovePrimaryError
 
     def get_db_size_on_primary_shard(self, database_name: str, primary_shard: str) -> int:
-        """Returns the size of a DB on a given shard in bytes."""
+        """Returns the size of a DB on a given shard in bytes.
+
+        We need to find the amount of storage used because we cannot move
+        primary to a shard that doesn't have enough available space.
+        """
         database = self.client[database_name]
         db_stats = database.command("dbStats")
 

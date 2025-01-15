@@ -125,9 +125,11 @@ class ShardEventHandler(Object):
         )
 
     def _on_relation_created(self, event: RelationCreatedEvent):
+        """Prepare to add the shard."""
         self.manager.prepare_to_add_shard()
 
     def _on_database_created(self, event: DatabaseCreatedEvent):
+        """When we receive a database created event, we synchronize the cluster secrets locally."""
         try:
             self.manager.synchronise_cluster_secrets(event.relation)
         except (
@@ -141,6 +143,7 @@ class ShardEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _handle_changed_secrets(self, event: SecretChangedEvent):
+        """SecretChanged event handler, which is used to propagate the updated passwords."""
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
         except (NotReadyError, FailedToUpdateCredentialsError):
@@ -149,6 +152,7 @@ class ShardEventHandler(Object):
             logger.info("Missing secrets, ignoring")
 
     def _on_relation_broken(self, event: RelationBrokenEvent):
+        """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
             self.manager.drain_shard_from_cluster(event.relation)
         except DeferrableFailedHookChecksError as e:

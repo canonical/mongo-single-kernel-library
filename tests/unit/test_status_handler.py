@@ -8,6 +8,7 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.status import StatusesDict
 
 from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
@@ -418,3 +419,38 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
     )
 
     assert harness.charm.operator.shard_manager.get_status() == ActiveStatus()
+
+
+@pytest.mark.parametrize(
+    ("mongo_status", "shard_status", "config_server_status", "pbm_status", "expected_key"),
+    (
+        (BlockedStatus("error"), ActiveStatus(), ActiveStatus, ActiveStatus(), "mongodb"),
+        (ActiveStatus("Primary"), None, None, None, "mongodb"),
+        (ActiveStatus("Primary"), BlockedStatus("error"), None, None, "shard"),
+        (ActiveStatus("Primary"), None, BlockedStatus("error"), None, "config-server"),
+        (ActiveStatus("Primary"), ActiveStatus(), BlockedStatus("error"), None, "config-server"),
+        (ActiveStatus("Primary"), ActiveStatus(), None, BlockedStatus("error"), "PBM"),
+        (ActiveStatus("Primary"), ActiveStatus(), ActiveStatus(), BlockedStatus("error"), "PBM"),
+    ),
+)
+def test_status_handler_prioritize_status(
+    harness: Harness[MongoTestCharm],
+    mocker,
+    mongo_status,
+    shard_status,
+    config_server_status,
+    pbm_status,
+    expected_key,
+):
+    status_handler = harness.charm.status_manager
+
+    status = StatusesDict(
+        {
+            "mongodb": mongo_status,
+            "shard": shard_status,
+            "config-server": config_server_status,
+            "PBM": pbm_status,
+        }
+    )
+
+    assert status_handler.prioritize_statuses(status) == status[expected_key]  # type: ignore[literal-required]

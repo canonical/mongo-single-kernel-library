@@ -99,7 +99,7 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_start()
         except Exception as e:
-            logger.error(f"Deferring because of {e}")
+            logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             event.defer()
             return
 
