@@ -253,10 +253,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
             raise
 
-        if self.substrate == Substrates.K8S:
-            if not self.workload.exists(self.workload.paths.socket_path):
-                logger.debug("The mongod socket is not ready yet.")
-                raise WorkloadNotReadyError
+        # This seems unnecessary
+        # if self.substrate == Substrates.K8S:
+        #    if not self.workload.exists(self.workload.paths.socket_path):
+        #        logger.debug("The mongod socket is not ready yet.")
+        #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.to_waiting("waiting for MongoDB to start")
