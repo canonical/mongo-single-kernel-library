@@ -66,7 +66,7 @@ K8S_PATH = {
         "ENVIRONMENT": "/etc/environment",
         "CONF": "/etc/mongod",
         "DATA": "/var/lib/mongodb",
-        "LOGS": "var/log/mongodb",
+        "LOGS": "/var/log/mongodb",
         "ETC": "/etc",
         "VAR": "/var/",
         "BIN": "/usr/bin/",

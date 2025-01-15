@@ -40,7 +40,7 @@ class MongosWorkload(WorkloadBase):
                 self.service: {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "/usr/bin/mongos ${MONGOS_ARGS}",
+                    "command": "sh -c '/usr/bin/mongos ${MONGOS_ARGS}'",
                     "startup": "enabled",
                     "user": self.users.user,
                     "group": self.users.group,

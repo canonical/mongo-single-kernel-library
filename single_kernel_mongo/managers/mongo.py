@@ -126,8 +126,18 @@ class MongoManager(Object, StatusProvider):
         if self.state.app_peer_data.is_user_created(OperatorUser.username):
             return
         config = self.state.mongo_config
-        with MongoConnection(config, "localhost", direct=True) as direct_mongo:
-            direct_mongo.create_user(config.username, config.password, roles=OPERATOR_ROLE)
+        cmd = [
+            "--quiet",
+            "--eval",
+            '"db.createUser({'
+            f"  user: '{config.username}',"
+            "  pwd: passwordPrompt(),"
+            f"  roles: {OPERATOR_ROLE},"
+            "  mechanisms: ['SCRAM-SHA-256'],"
+            "  passwordDigestor: 'server',"
+            '})"',
+        ]
+        self.workload.run_bin_command("mongodb://localhost/admin", cmd, input=config.password)
         self.state.app_peer_data.set_user_created(OperatorUser.username)
 
     def initialise_user(self, user: MongoDBUser):

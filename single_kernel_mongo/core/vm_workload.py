@@ -126,6 +126,7 @@ class VMWorkload(WorkloadBase):
         command: list[str] | str,
         env: Mapping[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         try:
             output = subprocess.check_output(
@@ -135,6 +136,7 @@ class VMWorkload(WorkloadBase):
                 shell=isinstance(command, str),
                 env=env,
                 cwd=working_dir,
+                input=input,
             )
             logger.debug(f"{output=}")
             return output
@@ -153,13 +155,14 @@ class VMWorkload(WorkloadBase):
         bin_keyword: str,
         bin_args: list[str] = [],
         environment: dict[str, str] = {},
+        input: str | None = None,
     ) -> str:
         command = [
             f"{self.paths.binaries_path}/charmed-mongodb.{self.bin_cmd}",
             bin_keyword,
             *bin_args,
         ]
-        return self.exec(command=command, env=environment)
+        return self.exec(command=command, env=environment, input=input)
 
     @override
     @retry(
@@ -175,6 +178,12 @@ class VMWorkload(WorkloadBase):
             return False
 
     @override
+    @retry(
+        wait=wait_fixed(1),
+        stop=stop_after_attempt(5),
+        retry=retry_if_result(lambda result: result is False),
+        retry_error_callback=lambda _: False,
+    )
     def install(self) -> bool:
         """Loads the MongoDB snap from LP.
 

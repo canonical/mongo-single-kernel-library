@@ -192,7 +192,7 @@ class CharmState(Object):
         data_interface = DataPeerOtherUnitData(
             model=self.model,
             unit=unit,
-            relation=relation,
+            relation_name=relation.name,
         )
         return UnitPeerReplicaSet(
             relation=relation,
@@ -557,7 +557,7 @@ class CharmState(Object):
     @property
     def operator_config(self) -> MongoConfiguration:
         """Mongo Configuration for the operator user."""
-        return self.mongodb_config_for_user(OperatorUser, hosts=self.app_hosts)
+        return self.mongodb_config_for_user(OperatorUser, hosts=self.internal_hosts)
 
     @property
     def mongos_config(self) -> MongoConfiguration:

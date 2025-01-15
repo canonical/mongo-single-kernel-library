@@ -6,10 +6,10 @@
 
 import secrets
 import string
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from itertools import chain
 from pathlib import Path
-from typing import ClassVar, Protocol
+from typing import ClassVar
 
 from ops import Container
 from ops.pebble import Layer
@@ -97,7 +97,7 @@ class MongoPaths:
         }
 
 
-class WorkloadProtocol(Protocol):  # pragma: nocover
+class WorkloadBase(ABC):  # pragma: nocover
     """The protocol for workloads.
 
     A workload represents a service. This is a bit more generic than the usual spec,
@@ -107,6 +107,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     service and the possible configurations.
     """
 
+    role: CharmSpec
     substrate: ClassVar[str]
     paths: MongoPaths
     service: ClassVar[str]
@@ -117,6 +118,10 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
     env_var: ClassVar[str]
     snap_param: ClassVar[str]
     _env: str = ""
+
+    def __init__(self, role: CharmSpec, container: Container | None):
+        self.container = container
+        self.role = role
 
     @abstractmethod
     def install(self) -> bool:
@@ -207,6 +212,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         command: list[str] | str,
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         """Runs a command on the workload substrate."""
         ...
@@ -217,6 +223,7 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         bin_keyword: str,
         bin_args: list[str] = [],
         environment: dict[str, str] = {},
+        input: str | None = None,
     ) -> str:
         """Runs service bin command with desired args.
 
@@ -304,11 +311,3 @@ class WorkloadProtocol(Protocol):  # pragma: nocover
         """
         choices = string.ascii_letters + string.digits
         return "".join([secrets.choice(choices) for _ in range(1024)])
-
-
-class WorkloadBase(WorkloadProtocol):  # pragma: nocover
-    """Base interface for common workload operations."""
-
-    def __init__(self, role: CharmSpec, container: Container | None):
-        self.container = container
-        self.role = role
