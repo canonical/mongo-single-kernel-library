@@ -210,7 +210,9 @@ class MongosOperator(OperatorProtocol, Object):
         # in K8s mongos charms which are exposed externally it is possible for
         # the node port to change. This can invalidate our current
         # certificates. when this happens we do not receive any notifications
-        # from Juju so we must monitor it and update our SANS as necessary.
+        # from Juju so we must monitor it and request TLS integration to update
+        # our SANS as necessary.
+        # The connection info will be updated when we receive the new certificates.
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
 
