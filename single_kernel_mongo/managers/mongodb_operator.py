@@ -265,6 +265,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self.charm.status_manager.to_active(None)
 
+        self._initialise_replica_set()
+
         try:
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
@@ -277,7 +279,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("couldn't start pbm-agent")
             return
 
-        self._initialise_replica_set()
         self.charm.status_manager.to_active(None)
 
     @override
