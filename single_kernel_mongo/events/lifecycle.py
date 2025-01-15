@@ -99,7 +99,7 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_start()
         except Exception as e:
-            logger.error(f"Deferring because of {str(e)}")
+            logger.error(f"Deferring because of {str(type(e))}: {e.args}")
             event.defer()
             return
 

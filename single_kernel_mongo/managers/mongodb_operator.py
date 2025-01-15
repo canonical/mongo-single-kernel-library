@@ -214,11 +214,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handler on start."""
         if not self.workload.workload_present:
             logger.debug("mongod installation is not ready yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Mongo DB installation not ready yet")
 
         if any(not storage for storage in self.model.storages.values()):
             logger.debug("Storages not attached yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Missing storage")
 
         # Configure the workloads
         self.config_manager.set_environment()
