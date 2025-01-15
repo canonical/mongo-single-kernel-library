@@ -52,6 +52,9 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def stop(self) -> None:
+        # If we haven't defined the service yet, do nothing
+        if not self.service_exists:
+            return
         try:
             self.container.stop(self.service)
         except ChangeError as e:
@@ -70,6 +73,12 @@ class KubernetesWorkload(WorkloadBase):
     @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:
         self.container.make_dir(path, make_parents=make_parents)
+
+    @property
+    def service_exists(self) -> bool:
+        """Checks if the service is defined in the plan."""
+        current_service_config = self.container.get_plan().services
+        return self.service in current_service_config.keys()
 
     @override
     def exists(self, path: Path) -> bool:
