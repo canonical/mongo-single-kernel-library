@@ -22,6 +22,7 @@ class UnitPeerRelationKeys(str, Enum):
     PRIVATE_ADDRESS = "private-address"
     INGRESS_ADDRESS = "ingress-address"
     EGRESS_SUBNETS = "egress-subnets"
+    DRAINED = "drained"
 
 
 class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
@@ -111,10 +112,10 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         draining. Unlike the app databag which triggers requires a
         RelationChangedEvent to propagate.
         """
-        return json.loads(self.relation_data.get("drained", "false"))
+        return json.loads(self.relation_data.get(UnitPeerRelationKeys.DRAINED.value, "false"))
 
     @drained.setter
     def drained(self, value: bool):
         if not isinstance(value, bool):
             raise ValueError(f"drained value is not boolean but {value}")
-        self.update({"drained": json.dumps(value)})
+        self.update({UnitPeerRelationKeys.DRAINED.value: json.dumps(value)})
