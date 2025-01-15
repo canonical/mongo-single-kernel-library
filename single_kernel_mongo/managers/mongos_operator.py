@@ -151,7 +151,7 @@ class MongosOperator(OperatorProtocol, Object):
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
                 return
-            self.update_external_services()
+            self.update_k8s_external_services()
 
             self.tls_manager.update_tls_sans()
             self.share_connection_info()
@@ -332,7 +332,7 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT)
 
     # BEGIN: Helpers
-    def update_external_services(self):
+    def update_k8s_external_services(self):
         """Updates the kubernetes external service if necessary.
 
         This function changes the kubernetes deployment so it's expected to do
