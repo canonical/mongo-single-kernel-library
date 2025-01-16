@@ -454,7 +454,7 @@ class MongoManager(Object, StatusProvider):
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
-            unit_host = self.state.unit_peer_data.host
+            unit_host = self.state.unit_peer_data.internal_address
             if unit_host not in replset_status:
                 return WaitingStatus("Member being added.")
 
