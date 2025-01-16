@@ -525,7 +525,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # retries over a period of 10 minutes in an attempt to resolve race conditions it is
             # not possible to defer in storage detached.
-            logger.debug("Removing %s from replica set", self.state.unit_peer_data.host)
+            logger.debug("Removing %s from replica set", self.state.unit_peer_data.internal_address)
             for attempt in Retrying(
                 stop=stop_after_attempt(600),
                 wait=wait_fixed(1),
@@ -698,7 +698,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 return None
 
         for unit in self.state.units:
-            if primary_ip == unit.host:
+            if primary_ip == unit.internal_address:
                 return unit.name
         return None
 

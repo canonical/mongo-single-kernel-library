@@ -417,7 +417,7 @@ class MongoManager(Object, StatusProvider):
     def remove_replset_member(self) -> None:  # pragma: nocover
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:
-            mongo.remove_replset_member(self.state.unit_peer_data.host)
+            mongo.remove_replset_member(self.state.unit_peer_data.internal_address)
 
     def process_added_units(self) -> None:
         """Adds units to replica set."""
