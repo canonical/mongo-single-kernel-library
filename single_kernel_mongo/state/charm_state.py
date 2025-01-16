@@ -15,6 +15,7 @@ from urllib.parse import quote
 
 from ops import Object, Relation, Unit
 from ops.model import ActiveStatus, BlockedStatus, StatusBase
+from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
@@ -58,6 +59,7 @@ from single_kernel_mongo.state.unit_peer_state import (
 from single_kernel_mongo.state.upgrade_state import AppUpgradePeerData, UnitUpgradePeerData
 from single_kernel_mongo.utils.helpers import generate_relation_departed_key, unit_number
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
+from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
     MongoDBUser,
@@ -644,6 +646,27 @@ class CharmState(Object):
         if self.substrate == Substrates.K8S:
             return self.k8s_manager.get_partition() < unit_number(self.units_upgrade_peer_data[0])
         return self.app_upgrade_peer_data.upgrade_resumed
+
+    def is_shard_added_to_cluster(self) -> bool:
+        """Returns true if the shard has been added to the clusted."""
+        # this information is required in order to check if we have been added
+        if not self.config_server_name or not self.app_peer_data.mongos_hosts:
+            return False
+
+        try:
+            # check our ability to use connect to mongos
+            with MongoConnection(self.remote_mongos_config) as mongos:
+                members = mongos.get_shard_members()
+        except OperationFailure as e:
+            if e.code in [13, 18, 133]:
+                return False
+            raise
+        except ServerSelectionTimeoutError:
+            # Connection refused, - this occurs when internal membership is not in sync across the
+            # cluster (i.e. TLS + KeyFile).
+            return False
+
+        return self.app_peer_data.replica_set in members
 
     # BEGIN: Configuration accessors
 

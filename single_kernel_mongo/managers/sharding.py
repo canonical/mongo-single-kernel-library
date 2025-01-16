@@ -729,27 +729,6 @@ class ShardManager(Object, StatusProvider):
 
         return True
 
-    def _is_added_to_cluster(self) -> bool:
-        """Returns true if the shard has been added to the clusted."""
-        # this information is required in order to check if we have been added
-        if not self.state.config_server_name or not self.state.app_peer_data.mongos_hosts:
-            return False
-
-        try:
-            # check our ability to use connect to mongos
-            with MongoConnection(self.state.remote_mongos_config) as mongos:
-                members = mongos.get_shard_members()
-        except OperationFailure as e:
-            if e.code in [13, 18, 133]:
-                return False
-            raise
-        except ServerSelectionTimeoutError:
-            # Connection refused, - this occurs when internal membership is not in sync across the
-            # cluster (i.e. TLS + KeyFile).
-            return False
-
-        return self.state.app_peer_data.replica_set in members
-
     def _is_shard_aware(self) -> bool:
         with MongoConnection(self.state.remote_mongos_config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
@@ -812,7 +791,7 @@ class ShardManager(Object, StatusProvider):
         if status := self.get_tls_status():
             return status
 
-        if not self._is_added_to_cluster():
+        if not self.state.is_shard_added_to_cluster():
             return MaintenanceStatus("Adding shard to config-server")
 
         if not self._is_shard_aware():

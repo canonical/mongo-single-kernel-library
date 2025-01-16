@@ -91,6 +91,10 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("DB is not initialised.")
             return
 
+        if self.state.is_role(MongoDBRoles.SHARD) and not self.state.is_shard_added_to_cluster():
+            logger.info("Not starting PBM yet. Shard not added to config-server")
+            return
+
         if not self.state.get_user_password(BackupUser):
             logger.info("No password found.")
             return
