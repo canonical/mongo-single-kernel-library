@@ -281,7 +281,7 @@ class K8sManager:
             not partition.spec
             or not partition.spec.updateStrategy
             or not partition.spec.updateStrategy.rollingUpdate
-            or not partition.spec.updateStrategy.rollingUpdate.partition
+            or partition.spec.updateStrategy.rollingUpdate.partition is None
         ):
             raise Exception("Incomplete stateful set.")
         return partition.spec.updateStrategy.rollingUpdate.partition
