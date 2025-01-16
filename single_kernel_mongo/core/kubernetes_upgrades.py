@@ -38,6 +38,8 @@ class KubernetesUpgrade(AbstractUpgrade):
     """
 
     def __init__(self, dependent: OperatorProtocol, *args, **kwargs):
+        super().__init__(dependent, *args, **kwargs)
+
         self.k8s_manager = self.state.k8s_manager
         try:
             self.k8s_manager.get_partition()
@@ -45,7 +47,6 @@ class KubernetesUpgrade(AbstractUpgrade):
             if err.status.code == 403:
                 raise DeployedWithoutTrustError(app_name=dependent.charm.app.name)
             raise
-        super().__init__(dependent, *args, **kwargs)
 
     @override
     def _get_unit_healthy_status(self) -> StatusBase:
