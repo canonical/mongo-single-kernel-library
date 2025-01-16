@@ -370,7 +370,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         self._set_upgrade_status()
 
     def _on_kubernetes_always(self, during_upgrade: bool):
-        assert isinstance(self._upgrade, KubernetesUpgrade)
+        if not self._upgrade:
+            logger.debug("Peer relation not available")
+            return
         if (
             not during_upgrade
             and self.state.db_initialised
@@ -382,7 +384,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             self._upgrade.reconcile_partition()
 
     def _on_vm_outdated(self):
-        assert isinstance(self._upgrade, MachineUpgrade)
         try:
             # This is the case only for VM which is OK
             authorized = self._upgrade.authorized  # type: ignore
@@ -395,14 +396,13 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         if authorized:
             self._set_upgrade_status()
             # We can type ignore because this branch is VM only
-            self._upgrade.upgrade_unit(dependent=self.dependent)
+            self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
         else:
             self._set_upgrade_status()
             logger.debug("Waiting to upgrade")
             return
 
     def _on_kubernetes_restarting(self):
-        assert isinstance(self._upgrade, KubernetesUpgrade)
         if not self._upgrade.is_compatible:
             logger.info(
                 f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
