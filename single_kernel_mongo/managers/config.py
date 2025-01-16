@@ -14,7 +14,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     LOCALHOST,
-    PBM_RESTART_DELAY,
+    RESTART_DELAY,
     CharmKind,
     MongoPorts,
     Substrates,
@@ -105,7 +105,7 @@ class BackupConfigManager(CommonConfigManager):
                 self.workload.stop()
                 self.set_environment()
                 # Avoid restart errors on PBM.
-                time.sleep(PBM_RESTART_DELAY)
+                time.sleep(RESTART_DELAY)
                 self.workload.start()
             except WorkloadServiceError as e:
                 logger.error(f"Failed to restart {self.workload.service}: {e}")
