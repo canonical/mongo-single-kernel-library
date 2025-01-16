@@ -8,7 +8,7 @@ import json
 import logging
 import math
 import time
-from functools import cache, cached_property
+from functools import cache
 
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
@@ -55,7 +55,7 @@ class K8sManager:
         """
         return hash(json.dumps(self.__dict__, sort_keys=True))
 
-    @cached_property
+    @property
     def client(self) -> Client:
         """The Lightkube client."""
         return Client(  # pyright: ignore[reportArgumentType]
