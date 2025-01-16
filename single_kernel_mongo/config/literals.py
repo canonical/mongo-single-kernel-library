@@ -72,7 +72,7 @@ class Snap:
     revision: str = "123"
 
 
-SNAP = Snap(channel="6/edge/use-snap-config-for-services", revision="124")
+SNAP = Snap(channel="6/edge/use-snap-config-for-services", revision="126")
 
 T = TypeVar("T", bound=str | int)
 
