@@ -408,6 +408,6 @@ class MongosOperator(OperatorProtocol, Object):
 
         uri = f"mongodb://{host}"
 
-        return self.mongo_manager.mongod_ready(uri=uri, direct=False)
+        return self.mongo_manager.mongod_ready(uri=uri)
 
     # END: Helpers

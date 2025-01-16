@@ -212,7 +212,7 @@ class ClusterRequirer(Object):
     def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
-        self.charm.status_manager.to_waiting("Connecting to config-server")
+        self.charm.status_manager.to_waiting("Connecting to config-server...")
 
     def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
         """Database created event.
@@ -268,9 +268,11 @@ class ClusterRequirer(Object):
         """Proceeds on relation broken."""
         self.dependent.assert_proceed_on_broken_event(relation)
         try:
-            self.remove_users(relation)
+            self.remove_users_for_k8s_routers(relation)
         except PyMongoError:
             raise DeferrableError("Trouble removing router users")
+
+        self.workload.stop()
 
         if not self.charm.unit.is_leader():
             return
@@ -279,7 +281,7 @@ class ClusterRequirer(Object):
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.username.value)
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.password.value)
 
-    def update_users(self) -> None:
+    def update_users_for_k8s_routers(self) -> None:
         """Updates users after being initialised."""
         # VM Mongos Charm is not in charge of its users because it is a
         # subordinate charm so we delegate everything to the MongoDB config
@@ -295,7 +297,7 @@ class ClusterRequirer(Object):
         except PyMongoError:
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
-    def remove_users(self, relation: Relation) -> None:
+    def remove_users_for_k8s_routers(self, relation: Relation) -> None:
         """Handles the removal of all client mongos-k8s users and the mongos-k8s admin user.
 
         Raises:

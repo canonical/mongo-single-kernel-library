@@ -223,7 +223,7 @@ def test_cluster_requirer_set_relation_created_status(
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
 
     assert isinstance(mongos_harness.charm.unit.status, WaitingStatus)
-    assert mongos_harness.charm.unit.status.message == "Connecting to config-server"
+    assert mongos_harness.charm.unit.status.message == "Connecting to config-server..."
 
 
 def test_cluster_requirer_share_credentials_to_clients(
