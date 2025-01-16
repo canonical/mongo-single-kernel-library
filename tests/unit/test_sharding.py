@@ -31,7 +31,7 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm]):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -56,7 +56,7 @@ def test_config_server_database_requested_failed_db_not_initialised(
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = False
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -76,7 +76,7 @@ def test_config_server_database_requested_failed_role_invalid(
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -96,7 +96,7 @@ def test_config_server_database_requested_failed_not_leader(
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -118,7 +118,7 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
@@ -142,7 +142,7 @@ def test_config_server_update_credentials(harness: Harness[MongoTestCharm]):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -160,7 +160,7 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -178,7 +178,7 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocked_add_shard = mocker.patch(
@@ -204,7 +204,7 @@ def test_config_server_cluster_password_synced_success(harness: Harness[MongoTes
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
@@ -234,7 +234,7 @@ def test_config_server_cluster_password_synced_failure(
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
@@ -259,7 +259,7 @@ def test_config_server_cluster_password_synced_raises(harness: Harness[MongoTest
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
@@ -287,7 +287,7 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
@@ -314,7 +314,7 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
@@ -332,7 +332,7 @@ def test_shard_manager_synchronise_cluster_secrets_success(
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
     mocked_update_member_auth = mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.update_member_auth"
@@ -372,7 +372,7 @@ def test_shard_manager_synchronise_cluster_secrets_no_keyfile(
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
@@ -400,7 +400,7 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
@@ -433,7 +433,7 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
@@ -465,7 +465,7 @@ def test_shard_manager_synchronise_cluster_secrets_missing_creds(
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
@@ -493,7 +493,7 @@ def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], 
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary", return_value="1.1.1.1"

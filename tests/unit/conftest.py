@@ -35,6 +35,9 @@ def get_charm_internal_revision(mocker):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.get_charm_revision", return_value="1"
     )
+    mocker.patch(
+        "data_platform_helpers.version_check.CrossAppVersionChecker.set_version_on_related_app"
+    )
 
 
 @pytest.fixture(autouse=True)
