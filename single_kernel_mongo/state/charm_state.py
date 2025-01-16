@@ -458,7 +458,7 @@ class CharmState(Object):
         self.unit_peer_data.update({rel_departed_key: json.dumps(scaling_down)})
         return scaling_down
 
-    def share_status_with_config_server(self, status: StatusBase):
+    def share_status_with_config_server(self, status: StatusBase) -> None:
         """Shares this shard's status with the config server.
 
         This is primarily useful for the cluster upgrades, since the
@@ -561,7 +561,7 @@ class CharmState(Object):
 
     @property
     def mongos_config(self) -> MongoConfiguration:
-        """Mongos Configuration for the mongos user."""
+        """Mongos Configuration for the admin mongos user."""
         if self.charm_role.name == CharmKind.MONGOD:
             return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)

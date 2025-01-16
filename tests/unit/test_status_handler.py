@@ -1,5 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from dataclasses import asdict
+
 import pytest
 from ops import MaintenanceStatus
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
@@ -8,7 +10,7 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.status import StatusesDict
+from single_kernel_mongo.status import Statuses
 
 from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
@@ -427,10 +429,10 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
         (BlockedStatus("error"), ActiveStatus(), ActiveStatus, ActiveStatus(), "mongodb"),
         (ActiveStatus("Primary"), None, None, None, "mongodb"),
         (ActiveStatus("Primary"), BlockedStatus("error"), None, None, "shard"),
-        (ActiveStatus("Primary"), None, BlockedStatus("error"), None, "config-server"),
-        (ActiveStatus("Primary"), ActiveStatus(), BlockedStatus("error"), None, "config-server"),
-        (ActiveStatus("Primary"), ActiveStatus(), None, BlockedStatus("error"), "PBM"),
-        (ActiveStatus("Primary"), ActiveStatus(), ActiveStatus(), BlockedStatus("error"), "PBM"),
+        (ActiveStatus("Primary"), None, BlockedStatus("error"), None, "config_server"),
+        (ActiveStatus("Primary"), ActiveStatus(), BlockedStatus("error"), None, "config_server"),
+        (ActiveStatus("Primary"), ActiveStatus(), None, BlockedStatus("error"), "pbm"),
+        (ActiveStatus("Primary"), ActiveStatus(), ActiveStatus(), BlockedStatus("error"), "pbm"),
     ),
 )
 def test_status_handler_prioritize_status(
@@ -444,13 +446,11 @@ def test_status_handler_prioritize_status(
 ):
     status_handler = harness.charm.status_manager
 
-    status = StatusesDict(
-        {
-            "mongodb": mongo_status,
-            "shard": shard_status,
-            "config-server": config_server_status,
-            "PBM": pbm_status,
-        }
+    status = Statuses(
+        mongodb=mongo_status,
+        shard=shard_status,
+        config_server=config_server_status,
+        pbm=pbm_status,
     )
 
-    assert status_handler.prioritize_statuses(status) == status[expected_key]  # type: ignore[literal-required]
+    assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]

@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, 
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -236,8 +236,8 @@ class ConfigServerManager(Object, StatusProvider):
                 f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
             )
 
-        uri = f"mongodb://{','.join(self.state.internal_hosts)}"
-        if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
+        uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+        if not self.dependent.mongo_manager.mongod_ready(uri):
             return BlockedStatus("Internal mongos is not running.")
 
         if not self.state.config_server_relation:
@@ -724,6 +724,7 @@ class ShardManager(Object, StatusProvider):
         return self.state.app_peer_data.replica_set in members
 
     def _is_shard_aware(self) -> bool:
+        """Returns True if provided shard is shard aware."""
         config = self.state.mongos_config_for_user(
             OperatorUser, set(self.state.app_peer_data.mongos_hosts)
         )
