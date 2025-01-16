@@ -309,7 +309,7 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> list[str]:
-        return [f"--port {MongoPorts.MONGODB_PORT}"]
+        return [f"--port={MongoPorts.MONGODB_PORT}"]
 
     @override
     def build_parameters(self) -> list[list[str]]:
@@ -344,7 +344,7 @@ class MongosConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> list[str]:
-        return [f"--port {MongoPorts.MONGOS_PORT}"]
+        return [f"--port={MongoPorts.MONGOS_PORT}"]
 
     @override
     def build_parameters(self) -> list[list[str]]:
