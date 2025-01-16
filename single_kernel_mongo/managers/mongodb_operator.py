@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-from time import sleep
 from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.version_check import (
@@ -22,7 +21,6 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     MAX_PASSWORD_LENGTH,
-    RESTART_DELAY,
     CharmKind,
     MongoPorts,
     Scope,
@@ -731,7 +729,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         self.stop_charm_services()
-        sleep(RESTART_DELAY)
         self.config_manager.set_environment()
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.mongos_config_manager.set_environment()
