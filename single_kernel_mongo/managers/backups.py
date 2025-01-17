@@ -541,7 +541,7 @@ class BackupManager(Object, BackupConfigManager):
 
         return "\n".join(backups)
 
-    @cached_property
+    @property
     def pbm_status(self) -> str:
         """Runs the pbm status command."""
         return self.workload.run_bin_command(

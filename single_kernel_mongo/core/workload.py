@@ -212,6 +212,7 @@ class WorkloadBase(ABC):  # pragma: nocover
         command: list[str] | str,
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         """Runs a command on the workload substrate."""
         ...
@@ -222,6 +223,7 @@ class WorkloadBase(ABC):  # pragma: nocover
         bin_keyword: str,
         bin_args: list[str] = [],
         environment: dict[str, str] = {},
+        input: str | None = None,
     ) -> str:
         """Runs service bin command with desired args.
 
@@ -262,9 +264,6 @@ class WorkloadBase(ABC):  # pragma: nocover
         Returns:
             String of mongo version
         """
-        if not self.active():
-            return ""
-
         try:
             version = Path("workload_version").read_text().strip()
         except:  # noqa: E722

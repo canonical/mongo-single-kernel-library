@@ -37,6 +37,9 @@ def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_int
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
     )
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.start", side_effect=WorkloadServiceError
+    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
@@ -81,6 +84,7 @@ def test_start_success(harness, mocker, mock_fs_interactions):
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.get_env")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock(return_value=True),
@@ -108,6 +112,8 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock(return_value=True),
     )
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users")
     mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
         side_effect=WorkloadServiceError,
@@ -127,6 +133,11 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock(return_value=True),
+    )
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
     )
     mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart",

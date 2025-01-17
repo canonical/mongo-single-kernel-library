@@ -52,6 +52,9 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def stop(self) -> None:
+        # If we haven't defined the service yet, do nothing
+        if not self.service_exists:
+            return
         try:
             self.container.stop(self.service)
         except ChangeError as e:
@@ -70,6 +73,12 @@ class KubernetesWorkload(WorkloadBase):
     @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:
         self.container.make_dir(path, make_parents=make_parents)
+
+    @property
+    def service_exists(self) -> bool:
+        """Checks if the service is defined in the plan."""
+        current_service_config = self.container.get_plan().services
+        return self.service in current_service_config.keys()
 
     @override
     def exists(self, path: Path) -> bool:
@@ -122,6 +131,7 @@ class KubernetesWorkload(WorkloadBase):
         command: list[str],  # type: ignore[override]
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
+        input: str | None = None,
     ) -> str:
         try:
             process = self.container.exec(
@@ -129,6 +139,7 @@ class KubernetesWorkload(WorkloadBase):
                 environment=env,
                 working_dir=working_dir,
                 combine_stderr=True,
+                stdin=input,
             )
             output, _ = process.wait_output()
             return output
@@ -147,11 +158,12 @@ class KubernetesWorkload(WorkloadBase):
         bin_keyword: str,
         bin_args: list[str] | None = None,
         environment: dict[str, str] | None = None,
+        input: str | None = None,
     ) -> str:
         bin_args = bin_args or []
         environment = environment or {}
         command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
-        return self.exec(command=command, env=environment or None)
+        return self.exec(command=command, env=environment or None, input=input)
 
     @override
     def active(self) -> bool:

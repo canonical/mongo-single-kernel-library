@@ -10,20 +10,6 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 )
 
 
-class ClusterData(ProviderData, RequirerData):  # type: ignore[misc]
-    """Broker provider data model."""
-
-    SECRET_FIELDS = [
-        "username",
-        "password",
-        "tls",
-        "tls-ca",
-        "uris",
-        "key-file",
-        "int-ca-secret",
-    ]
-
-
 class ConfigServerData(ProviderData, RequirerData):  # type: ignore[misc]
     """Config Server data interface."""
 

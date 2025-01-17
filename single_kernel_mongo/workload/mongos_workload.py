@@ -4,6 +4,8 @@
 
 """MongoDB and Mongos workloads definition."""
 
+import re
+
 from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
@@ -38,7 +40,7 @@ class MongosWorkload(WorkloadBase):
                 self.service: {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "/usr/bin/mongos ${MONGOS_ARGS}",
+                    "command": "sh -c '/usr/bin/mongos ${MONGOS_ARGS}'",
                     "startup": "enabled",
                     "user": self.users.user,
                     "group": self.users.group,
@@ -47,3 +49,14 @@ class MongosWorkload(WorkloadBase):
             },
         }
         return Layer(layer_config)  # type: ignore
+
+    @property
+    def config_server_db(self) -> str | None:
+        """The config server DB on the workload."""
+        regex = re.compile(r"--configdb (\S+)")
+        if not (env := self.get_env().get(self.env_var, None)):
+            return None
+
+        if match := regex.search(env):
+            return match.group(1)
+        return None
