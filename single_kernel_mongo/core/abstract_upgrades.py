@@ -238,6 +238,7 @@ class AbstractUpgrade(ABC):
             return
 
         # TODO: if shard is getting upgraded but BOTH have same revision, then fail
+        # https://warthogs.atlassian.net/browse/DPE-6397
         try:
             self.dependent.upgrade_manager.wait_for_cluster_healthy()
         except RetryError:
