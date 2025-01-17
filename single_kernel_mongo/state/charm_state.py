@@ -200,6 +200,7 @@ class CharmState(Object):
             relation=self.peer_relation,
             data_interface=self.peer_app_interface,
             component=self.model.app,
+            substrate=self.substrate,
             role=self.config.role,
             model=self.model,
         )
