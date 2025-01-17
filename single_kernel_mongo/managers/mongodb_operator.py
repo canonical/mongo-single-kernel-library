@@ -293,6 +293,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked("couldn't start pbm-agent")
             return
 
+        self.charm.status_manager.to_active()
+
     @override
     def on_stop(self) -> None:  # pragma: nocover
         """Handler for the stop event.

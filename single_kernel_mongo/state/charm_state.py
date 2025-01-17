@@ -107,6 +107,7 @@ class CharmState(Object):
         )
         self.paths = MongoPaths(self.charm_role)
 
+    # BEGIN: Relations
     @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
