@@ -362,7 +362,7 @@ def test_shard_get_status_shard_not_added_to_cluster(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.sharding.ShardManager._is_added_to_cluster",
+        "single_kernel_mongo.state.charm_state.CharmState.is_shard_added_to_cluster",
         return_value=False,
     )
 
@@ -385,7 +385,7 @@ def test_shard_get_status_shard_not_aware(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.sharding.ShardManager._is_added_to_cluster",
+        "single_kernel_mongo.state.charm_state.CharmState.is_shard_added_to_cluster",
         return_value=True,
     )
     mocker.patch(
@@ -410,7 +410,7 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.sharding.ShardManager._is_added_to_cluster",
+        "single_kernel_mongo.state.charm_state.CharmState.is_shard_added_to_cluster",
         return_value=True,
     )
     mocker.patch(

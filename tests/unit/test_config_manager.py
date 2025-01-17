@@ -60,7 +60,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
 
     all_params = manager.build_parameters()
 
-    assert port_parameter == ["--port 27017"]
+    assert port_parameter == ["--port=27017"]
     assert replset_option == ["--replSet=deadbeef"]
     assert role_parameter == expected_parameter
     assert db_path_argument == [f"--dbpath={VM_PATH['mongod']['DATA']}"]
@@ -131,7 +131,7 @@ def test_mongos_config_manager(mocker):
 
     all_params = manager.build_parameters()
 
-    assert port_parameter == ["--port 27018"]
+    assert port_parameter == ["--port=27018"]
     assert binding_ips == [
         f"--bind_ip {VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
         "--filePermissions 0766",

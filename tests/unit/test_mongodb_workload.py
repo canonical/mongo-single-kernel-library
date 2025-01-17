@@ -22,7 +22,7 @@ def test_mongodb_workload_init(monkeypatch):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     def mock_snap(*arg, **kwargs):
-        return ""
+        return "test_var"
 
     monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
@@ -38,11 +38,11 @@ def test_mongodb_workload_init(monkeypatch):
                 "mongod": {
                     "override": "replace",
                     "summary": "mongod",
-                    "command": "sh -c '/usr/bin/mongod ${MONGOD_ARGS}'",
+                    "command": "/usr/bin/mongod test_var",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
-                    "environment": {"MONGOD_ARGS": ""},
+                    "environment": {"MONGOD_ARGS": "test_var"},
                 }
             },
         }
@@ -57,7 +57,7 @@ def test_mongos_workload_init(monkeypatch):
     assert workload.role == ROLES["vm"]["mongos"]
 
     def mock_snap(*arg, **kwargs):
-        return ""
+        return "test_var"
 
     monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
 
@@ -69,11 +69,11 @@ def test_mongos_workload_init(monkeypatch):
                 "mongos": {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "sh -c '/usr/bin/mongos ${MONGOS_ARGS}'",
+                    "command": "/usr/bin/mongos test_var",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
-                    "environment": {"MONGOS_ARGS": ""},
+                    "environment": {"MONGOS_ARGS": "test_var"},
                 }
             },
         }
