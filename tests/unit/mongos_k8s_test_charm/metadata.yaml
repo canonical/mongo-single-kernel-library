@@ -1,0 +1,47 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: test-mongos-k8s
+display-name: Test Kubernetes mongos
+description: |
+  Test Mongos charm for MongoDB single kernel. This charm
+  deploys and operates mongos as a router charm
+source: https://github.com/canonical/mongos-operator
+issues: https://github.com/canonical/mongos-operator/issues
+docs: https://discourse.charmhub.io/t/charmed-mongos-6-docs/12722
+website:
+  - https://github.com/canonical/mongos-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+summary: A mongos operator charm
+series:
+  - jammy
+
+assumes:
+  - k8s-api
+
+peers:
+  router-peers:
+    interface: mongos-peers
+  upgrade-version-a:
+    # Relation versioning scheme:
+    # DA056 - Upgrading in-place upgrade protocol
+    # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
+    interface: upgrade
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  mongos_proxy:
+    interface: mongos_client
+    scope: container
+    limit: 1
+  cluster:
+    interface: config-server
+    limit: 1
+
+resources:
+  mongodb-image:
+    type: oci-image
+    description: OCI image for mongodb
+    # TODO: Update sha whenever upstream rock changes
+    upstream-source: ghcr.io/canonical/charmed-mongodb@sha256:b4b3edb805b20de471da57802643bfadbf979f112d738bc540ab148d145ddcfe
