@@ -431,11 +431,11 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+                host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
             else:
                 host = self.state.formatted_socket_path
         else:
-            host = self.state.unit_peer_data.host + f":{MongoPorts.MONGOS_PORT}"
+            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
 
         uri = f"mongodb://{host}"
 
