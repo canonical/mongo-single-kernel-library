@@ -213,6 +213,7 @@ class MongoConfigManager(CommonConfigManager, ABC):
         """The binding IP parameters."""
         if (
             self.state.charm_role.name == CharmKind.MONGOS
+            and self.state.substrate == Substrates.VM
             and not self.state.app_peer_data.external_connectivity
         ):
             return [
