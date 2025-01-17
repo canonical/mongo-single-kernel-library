@@ -55,9 +55,9 @@ def charm_kind_only(func, charm_kind: CharmKind):
 
     def wrapper(self, *args, **kwargs):
         if self.dependent.name != charm_kind:
-            logger.error(f"{func} called on a non {charm_kind.value} charm. Please fix.")
+            logger.error(f"Unexpected {func} called on a non {charm_kind.value} charm.")
             raise InvalidCharmKindError(
-                f"{func} called on a non {charm_kind.value} charm. Please fix."
+                f"Unexpected {func} called on a non {charm_kind.value} charm."
             )
         return func(self, *args, **kwargs)
 
