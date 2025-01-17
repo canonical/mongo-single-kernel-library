@@ -85,11 +85,8 @@ class StatusManager(Object):
                 config_server=self.operator.config_server_manager.get_status(),
                 pbm=self.operator.backup_manager.get_status(),
             )
-        return Statuses(
-            mongodb=WaitingStatus("waiting for mongos to start")
-            if not self.operator.workload.active
-            else ActiveStatus(),
-        )
+        # Mongos case
+        return Statuses(mongodb=self.operator.get_status() or ActiveStatus())
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""

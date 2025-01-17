@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, final
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
-from ops.model import Relation, Unit
+from ops.model import BlockedStatus, Relation, StatusBase, Unit, WaitingStatus
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
@@ -198,37 +198,22 @@ class MongosOperator(OperatorProtocol, Object):
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
                 return
-        if not self.state.mongos_cluster_relation:
-            logger.info(
-                "Missing integration to config-server. mongos cannot run unless connected to config-server."
-            )
-            self.charm.status_manager.to_blocked("Missing relation to config-server.")
-            return
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
-            self.charm.status_manager.set_and_share_status(status)
-            return
+        if self.get_status() is None:
+            # In case any information was changed, we proceed to update the
+            # connection information on the client databag.
+            self.share_connection_info()
 
-        if not self.is_mongos_running():
-            logger.info("mongos has not started yet")
-            self.charm.status_manager.to_waiting("Waiting for mongos to start.")
-            return
+            # in K8s mongos charms which are exposed externally it is possible for
+            # the node port to change. This can invalidate our current
+            # certificates. when this happens we do not receive any notifications
+            # from Juju so we must monitor it and request TLS integration to update
+            # our SANS as necessary.
+            # The connection info will be updated when we receive the new certificates.
+            if self.substrate == Substrates.K8S:
+                self.tls_manager.update_tls_sans()
 
-        # In case any information was changed, we proceed to update the
-        # connection information on the client databag.
-        self.share_connection_info()
-
-        # in K8s mongos charms which are exposed externally it is possible for
-        # the node port to change. This can invalidate our current
-        # certificates. when this happens we do not receive any notifications
-        # from Juju so we must monitor it and request TLS integration to update
-        # our SANS as necessary.
-        # The connection info will be updated when we receive the new certificates.
-        if self.substrate == Substrates.K8S:
-            self.tls_manager.update_tls_sans()
-
-        self.charm.status_manager.to_active("")
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_relation_joined(self) -> None:
@@ -408,6 +393,24 @@ class MongosOperator(OperatorProtocol, Object):
 
         uri = f"mongodb://{host}"
 
-        return self.mongo_manager.mongod_ready(uri=uri, direct=False)
+        return self.mongo_manager.mongod_ready(uri=uri)
+
+    def get_status(self) -> StatusBase | None:
+        """Collects the status according to the current deployment."""
+        if not self.state.mongos_cluster_relation:
+            logger.info(
+                "Missing integration to config-server. mongos cannot run unless connected to config-server."
+            )
+            return BlockedStatus("Missing relation to config-server.")
+
+        if status := self.cluster_manager.get_tls_statuses():
+            logger.info(f"Invalid TLS integration: {status.message}")
+            return status
+
+        if not self.is_mongos_running():
+            logger.info("mongos has not started yet")
+            return WaitingStatus("Waiting for mongos to start.")
+
+        return None
 
     # END: Helpers

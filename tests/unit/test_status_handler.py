@@ -14,6 +14,7 @@ from single_kernel_mongo.status import Statuses
 
 from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
+from .mongos_test_charm.src.charm import MongosTestCharm
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -454,3 +455,89 @@ def test_status_handler_prioritize_status(
     )
 
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
+
+
+def test_mongos_get_status_no_relation(
+    mongos_harness: Harness[MongosTestCharm],
+):
+    mongos_operator = mongos_harness.charm.operator
+
+    expected_status = BlockedStatus("Missing relation to config-server.")
+    assert mongos_operator.get_status() == expected_status
+
+    mongos_harness.charm.status_manager.process_and_share_statuses()
+
+    assert mongos_operator.charm.unit.status == expected_status
+
+
+def test_mongos_get_status_tls_status(
+    mongos_harness: Harness[MongosTestCharm],
+    mocker,
+):
+    mongos_operator = mongos_harness.charm.operator
+
+    expected_status = BlockedStatus("mongos requires TLS to be enabled.")
+    mocker.patch(
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
+        return_value=expected_status,
+    )
+
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
+
+    assert mongos_operator.get_status() == expected_status
+
+    mongos_harness.charm.status_manager.process_and_share_statuses()
+
+    assert mongos_operator.charm.unit.status == expected_status
+
+
+def test_mongos_get_status_mongos_not_running(
+    mongos_harness: Harness[MongosTestCharm],
+    mocker,
+):
+    mongos_operator = mongos_harness.charm.operator
+
+    expected_status = WaitingStatus("Waiting for mongos to start.")
+    mocker.patch(
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.active",
+        return_value=False,
+    )
+
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
+
+    assert mongos_operator.get_status() == expected_status
+    mongos_harness.charm.status_manager.process_and_share_statuses()
+
+    assert mongos_operator.charm.unit.status == expected_status
+
+
+def test_mongos_get_status_all_good(
+    mongos_harness: Harness[MongosTestCharm],
+    mocker,
+):
+    mongos_operator = mongos_harness.charm.operator
+
+    expected_status = ActiveStatus()
+    mocker.patch(
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.active",
+        return_value=True,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
+
+    mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
+
+    assert mongos_operator.get_status() is None
+    mongos_harness.charm.status_manager.process_and_share_statuses()
+
+    assert mongos_operator.charm.unit.status == expected_status
