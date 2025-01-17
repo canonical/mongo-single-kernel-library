@@ -187,7 +187,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def list_finished_backups(self, pbm_status: dict) -> BackupListType:
         """Lists the finished backups from the status."""
         backup_list: BackupListType = BackupListType([])
-        backups = pbm_status.get("backups", {}).get("snapshot", [])
+        backups = (
+            pbm_status.get("backups", {}).get("snapshot") or []
+        )  # snapshot is list[str] | None so move default outside of get
         for backup in backups:
             backup_status = "finished"
             if backup["status"] == "error":
