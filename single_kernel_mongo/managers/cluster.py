@@ -258,6 +258,7 @@ class ClusterRequirer(Object):
                 raise DeferrableError
 
         self.charm.status_manager.to_active()
+
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
 
@@ -267,7 +268,7 @@ class ClusterRequirer(Object):
         """Proceeds on relation broken."""
         self.dependent.assert_proceed_on_broken_event(relation)
         try:
-            self.remove_users(relation)
+            self.remove_users_for_k8s_routers(relation)
         except PyMongoError:
             raise DeferrableError("Trouble removing router users")
 
@@ -278,7 +279,7 @@ class ClusterRequirer(Object):
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
 
-    def update_users(self) -> None:
+    def update_users_for_k8s_routers(self) -> None:
         """Updates users after being initialised."""
         # VM Mongos Charm is not in charge of its users because it is a
         # subordinate charm so we delegate everything to the MongoDB config
@@ -294,7 +295,7 @@ class ClusterRequirer(Object):
         except PyMongoError:
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
-    def remove_users(self, relation: Relation) -> None:
+    def remove_users_for_k8s_routers(self, relation: Relation) -> None:
         """Handles the removal of all client mongos-k8s users and the mongos-k8s admin user.
 
         Raises:

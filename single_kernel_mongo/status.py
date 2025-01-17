@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, field
 from logging import getLogger
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from ops.framework import Object
 from ops.model import (
@@ -27,15 +28,14 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-StatusesDict = TypedDict(
-    "StatusesDict",
-    {
-        "mongodb": StatusBase,
-        "shard": StatusBase | None,
-        "config-server": StatusBase | None,
-        "PBM": StatusBase | None,
-    },
-)
+@dataclass(frozen=True)
+class Statuses:
+    """Dataclass storing the statuses."""
+
+    mongodb: StatusBase
+    shard: StatusBase | None = field(default=None)
+    config_server: StatusBase | None = field(default=None)
+    pbm: StatusBase | None = field(default=None)
 
 
 class StatusManager(Object):
@@ -48,13 +48,13 @@ class StatusManager(Object):
         self.state = charm.operator.state
         self.charm_kind = self.operator.name
 
-    def set_and_share_status(self, status: StatusBase):
+    def set_and_share_status(self, status: StatusBase) -> None:
         """Sets the unit status."""
         self.charm.unit.status = status
         if self.state.is_role(MongoDBRoles.SHARD):
             self.state.share_status_with_config_server(status)
 
-    def to_active(self, message: str | None = None):
+    def to_active(self, message: str | None = None) -> None:
         """Sets status to active."""
         if message is None:
             self.set_and_share_status(ActiveStatus())
@@ -77,35 +77,25 @@ class StatusManager(Object):
         """Sets status to error."""
         self.set_and_share_status(ErrorStatus(message))
 
-    def get_statuses(self) -> StatusesDict:
+    def get_statuses(self) -> Statuses:
         """Collects the statuses of all managers."""
         if self.operator.name == CharmKind.MONGOD:
-            return StatusesDict(
-                {
-                    "mongodb": self.operator.mongo_manager.get_status(),
-                    "shard": self.operator.shard_manager.get_status(),
-                    "config-server": self.operator.config_server_manager.get_status(),
-                    "PBM": self.operator.backup_manager.get_status(),
-                }
+            return Statuses(
+                mongodb=self.operator.mongo_manager.get_status(),
+                shard=self.operator.shard_manager.get_status(),
+                config_server=self.operator.config_server_manager.get_status(),
+                pbm=self.operator.backup_manager.get_status(),
             )
-        return StatusesDict(
-            {
-                "mongodb": WaitingStatus("waiting for mongos to start")
-                if not self.operator.workload.active
-                else ActiveStatus(),
-                "shard": None,
-                "config-server": None,
-                "PBM": None,
-            }
-        )
+        # Mongos case
+        return Statuses(mongodb=self.operator.get_status() or ActiveStatus())
 
-    def prioritize_statuses(self, statuses: StatusesDict) -> StatusBase:
+    def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""
         mongodb_status, shard_status, config_server_status, pbm_status = (
-            statuses["mongodb"],
-            statuses["shard"],
-            statuses["config-server"],
-            statuses["PBM"],
+            statuses.mongodb,
+            statuses.shard,
+            statuses.config_server,
+            statuses.pbm,
         )
         if not isinstance(mongodb_status, ActiveStatus):
             return mongodb_status
@@ -153,7 +143,7 @@ class StatusManager(Object):
         main_status = self.prioritize_statuses(statuses)
 
         logger.info(f"{' Charm Statuses ':=^40}")
-        for key, value in statuses.items():
+        for key, value in asdict(statuses).items():
             if value:
                 logger.info(f"* {key}: {value}")
         logger.info(f"{' End of charm statuses ':=^40}")

@@ -291,6 +291,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             # https://juju.is/docs/sdk/upgrade-charm-event#heading--emission-sequence
             self.upgrade_manager._reconcile_upgrade()
 
+        self.charm.status_manager.to_active()
+
     @override
     def on_stop(self) -> None:  # pragma: nocover
         """Handler for the stop event.

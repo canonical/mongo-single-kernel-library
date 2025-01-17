@@ -76,7 +76,11 @@ class MongoManager(Object, StatusProvider):
                 self.charm.status_manager.to_blocked("Charm deployed without `trust`")
 
     def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
-        """Is MongoDB ready and running?"""
+        """Is MongoDB ready and running?
+
+        Pass direct=True, when checking if a *single replica* is ready.
+        Pass direct=False, when checking if the entire replica set is ready
+        """
         actual_uri = uri or "localhost"
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
