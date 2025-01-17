@@ -221,7 +221,6 @@ def test_list_backup_action_success(harness: Harness[MongoTestCharm], mocker):
 
     backup_formatted = backup_manager.list_backup_action()
 
-    expected_list = [("", "", "")]
     expected_list = [
         ("2024-11-25T-15:15:05Z", "logical", "in progress"),
         ("2024-11-25T-15:20:05Z", "backup", "finished"),
@@ -229,6 +228,29 @@ def test_list_backup_action_success(harness: Harness[MongoTestCharm], mocker):
         ("2024-11-25T-15:30:05Z", "restore", "failed: not found"),
         ("2024-11-25T-15:35:05Z", "backup", "in progress"),
     ]
+    assert backup_formatted == backup_manager._format_backup_list(expected_list)
+
+
+def test_list_backup_action_success_no_backups(harness: Harness[MongoTestCharm], mocker):
+    backup_manager = harness.charm.operator.backup_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    relation_id = harness.add_relation(
+        ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
+    )
+    harness.add_relation_unit(relation_id, "s3-integrator/0")
+    mock = mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.pbm_status",
+        new_callable=mocker.PropertyMock,
+    )
+    with open("tests/unit/data/list_backups_nothing.json") as fd:
+        pbm_status = fd.read()
+    mock.return_value = pbm_status
+
+    backup_formatted = backup_manager.list_backup_action()
+
+    expected_list: list[tuple[str, str, str]] = []
     assert backup_formatted == backup_manager._format_backup_list(expected_list)
 
 

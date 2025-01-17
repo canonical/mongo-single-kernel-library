@@ -209,7 +209,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         self, pbm_status: dict, backup_list: BackupListType
     ) -> BackupListType:
         """Lists all the backups with the one in progress from the status and finished list."""
-        running_backup = pbm_status["running"]
+        running_backup = pbm_status.get("running", {})
         if running_backup.get("type", None) == "backup":
             # backups are sorted in reverse order
             last_reported_backup = backup_list[0]
