@@ -216,4 +216,4 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @expose_external.setter
     def expose_external(self, value: ExposeExternal):
-        self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: value.value})
+        self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: f"{value}"})
