@@ -70,7 +70,9 @@ class LifecycleEventsHandler(Object):
         self.framework.observe(getattr(self.charm.on, "leader_elected"), self.on_leader_elected)
 
         if self.charm.substrate == Substrates.K8S:
-            self.framework.observe(getattr(self.charm.on, "mongod_pebble_ready"), self.on_start)
+            self.framework.observe(
+                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"), self.on_start
+            )
 
         self.framework.observe(getattr(self.charm.on, "config_changed"), self.on_config_changed)
         self.framework.observe(getattr(self.charm.on, "update_status"), self.on_update_status)
