@@ -35,4 +35,25 @@ class ClusterState(AbstractRelationState[Data]):
     @property
     def config_server_uri(self) -> str:
         """Is TLS enabled."""
-        return self.relation_data.get(ClusterStateKeys.config_server_db, "")
+        return self.relation_data.get(ClusterStateKeys.config_server_db.value, "")
+
+    @property
+    def database(self) -> str:
+        """Return database value in the databag."""
+        return self.relation_data.get(ClusterStateKeys.database.value, None)
+
+    @database.setter
+    def database(self, value: str):
+        self.update({ClusterStateKeys.database.value: value})
+
+    @property
+    def extra_user_roles(self) -> set[str]:
+        """Return extra user roles value in the databag."""
+        return set(  # type: ignore[return-value]
+            self.relation_data.get(ClusterStateKeys.extra_user_roles.value, "default").split(",")
+        )
+
+    @extra_user_roles.setter
+    def extra_user_roles(self, value: set[str]):
+        roles_str = ",".join(value)
+        self.update({ClusterStateKeys.extra_user_roles.value: roles_str})

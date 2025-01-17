@@ -1,0 +1,33 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: test-mongos
+display-name: mongos
+description: |
+  Test Mongos charm for MongoDB single kernel. This charm
+  deploys and operates mongos as a subordinate charm.
+source: https://github.com/canonical/mongos-operator
+issues: https://github.com/canonical/mongos-operator/issues
+docs: https://discourse.charmhub.io/t/charmed-mongos-6-docs/12722
+website:
+  - https://github.com/canonical/mongos-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+summary: A mongos operator charm
+series:
+  - jammy
+subordinate: true
+
+peers:
+  router-peers:
+    interface: mongos-peers
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  mongos_proxy:
+    interface: mongos_client
+    scope: container
+    limit: 1
+  cluster:
+    interface: config-server
+    limit: 1
