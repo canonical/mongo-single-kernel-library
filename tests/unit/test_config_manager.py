@@ -107,6 +107,7 @@ def test_mongos_config_manager(mocker):
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
+    mock_state.substrate = Substrates.VM
     mock_state.cluster = mocker.MagicMock(ClusterState)
     mock_state.cluster.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
