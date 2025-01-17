@@ -25,6 +25,22 @@ The layout is organised as so:
 * [abstract charm skeleton](./single_kernel_mongo/abstract_charm.py)
 * [exceptions](./single_kernel_mongo/exceptions.py)
 
+## Charm Structure
+
+This single kernel library aims at providing a clear and reliable structure, following the single responsibility principle. All the logic is expected to
+happen in this library and a charm should be no more than a few lines defining the substrate, the operator type and the config.
+
+```python3
+class MongoTestCharm(AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
+    config_type = MongoDBCharmConfig
+    operator_type = MongoDBOperator
+    substrate = Substrates.VM
+    peer_rel_name = PeerRelationNames.PEERS
+    name = "mongodb-test"
+```
+
+![A glance of the charm structure and interfaces](./resources/single-kernel-charm.svg)
+
 ## Contributing
 
 You can have longer explanations in [./CONTRIBUTING.md](./CONTRIBUTING.md) but for a quick start:
