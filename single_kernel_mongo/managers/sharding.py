@@ -350,6 +350,7 @@ class ConfigServerManager(Object, StatusProvider):
 
             # use a URI that is not dependent on the operator password, as we are not guaranteed
             # that the shard has received the password yet.
+            # To check if the shard is ready, we check the entire replica set for readiness
             uri = f"mongodb://{','.join(hosts)}"
             if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
                 unreachable_hosts.append(shard_name)
