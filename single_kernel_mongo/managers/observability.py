@@ -40,6 +40,7 @@ class ObservabilityManager(Object):
         state: CharmState,
         substrate: Substrates,
     ) -> None:
+        super().__init__(dependent, "logging")
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -52,13 +53,13 @@ class ObservabilityManager(Object):
                 logs_rules_dir=f"{OBSERVABILITY_CONFIG.logs_rules_dir}",
                 dashboard_dirs=[f"{OBSERVABILITY_CONFIG.grafana_dashboards}"],
                 log_slots=OBSERVABILITY_CONFIG.log_slots,
-                scrape_configs=self.vm_mongo_scrape_config,
+                scrape_configs=self.mongo_scrape_config,
             )
         else:
             self.metrics_endpoint = MetricsEndpointProvider(
                 self,
                 refresh_event=[self.charm.on.start, self.charm.on.update_status],
-                jobs=self.k8s_monitoring_jobs,
+                jobs=self.mongo_scrape_config,
                 alert_rules_path=f"{OBSERVABILITY_CONFIG.k8s_prometheus}",
             )
             self.grafana_dashboards = GrafanaDashboardProvider(
@@ -74,8 +75,9 @@ class ObservabilityManager(Object):
                 container_name=self.dependent.role.name,
             )
 
-    def vm_mongo_scrape_config(self):
-        """VM-only: Generates scrape config for the mongo metrics endpoint."""
+    @property
+    def mongo_scrape_config(self) -> list[dict[str, Any]]:
+        """Generates scrape config for the mongo metrics endpoint."""
         return [
             {
                 "metrics_path": "/metrics",
@@ -89,19 +91,5 @@ class ObservabilityManager(Object):
                         },
                     }
                 ],
-            }
-        ]
-
-    @property
-    def k8s_monitoring_jobs(self) -> list[dict[str, Any]]:
-        """K8s-only: Defines the labels and targets for metrics."""
-        return [
-            {
-                "static_configs": [
-                    {
-                        "targets": [f"*:{OBSERVABILITY_CONFIG.mongodb_exporter_port}"],
-                        "labels": {"cluster": self.state.config_server_name or self.charm.app.name},
-                    }
-                ]
             }
         ]
