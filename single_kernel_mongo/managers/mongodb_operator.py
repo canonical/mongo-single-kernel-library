@@ -21,6 +21,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     MAX_PASSWORD_LENGTH,
+    OS_REQUIREMENTS,
     CharmKind,
     MongoPorts,
     Scope,
@@ -55,6 +56,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.backups import BackupManager
 from single_kernel_mongo.managers.cluster import ClusterProvider
 from single_kernel_mongo.managers.config import (
@@ -170,6 +172,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
 
+        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
+
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
         self.backup_events = BackupEventsHandler(self)
@@ -231,6 +235,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handler on install."""
         if not self.workload.workload_present:
             raise ContainerNotReadyError
+
+        if self.substrate == Substrates.VM:
+            self._set_os_config()
 
         self.charm.unit.set_workload_version(self.workload.get_version())
 
@@ -688,6 +695,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise
+
+    def _set_os_config(self) -> None:
+        """Sets sysctl config for mongodb."""
+        try:
+            self.sysctl_config.configure(OS_REQUIREMENTS)
+        except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
+            # we allow events to continue in the case that we are not able to correctly configure
+            # sysctl config, since we can  still run the workload with wrong sysctl parameters
+            # even if it is not optimal.
+            logger.error(f"Error setting values on sysctl: {e.message}")
+            # containers share the kernel with the host system, and some sysctl parameters are
+            # set at kernel level.
+            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
 
     @property
     def primary(self) -> str | None:

@@ -96,6 +96,9 @@ class LifecycleEventsHandler(Object):
                 getattr(self.charm.on, "mongodb_storage_detaching"), self.on_storage_detaching
             )
 
+        if self.charm.substrate == Substrates.VM and self.dependent.name == CharmKind.MONGOD:
+            self.framework.observe(getattr(self.charm.on, "remove"), self.on_remove)
+
     def on_start(self, event: StartEvent):
         """Start event."""
         try:
@@ -180,3 +183,7 @@ class LifecycleEventsHandler(Object):
     def on_storage_detaching(self, event: StorageDetachingEvent):
         """Storage Detaching Event."""
         self.dependent.on_storage_detaching()
+
+    def on_remove(self, _):
+        """For MongoD VM, remove sysctl config."""
+        self.dependent.sysctl_config.remove()  # type: ignore[attr-defined]

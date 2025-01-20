@@ -117,3 +117,7 @@ INCOMPATIBLE_UPGRADE = BlockedStatus(
     "Refresh incompatible. Rollback to previous revision with `juju refresh`"
 )
 WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks")
+
+OS_REQUIREMENTS = {
+    "vm.max_map_count": "262144",
+}
