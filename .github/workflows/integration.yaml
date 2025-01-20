@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     name: Build rock
-    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v16
+    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v29.0.1
 
   integration:
     runs-on: [self-hosted, linux, X64, jammy, large]
@@ -31,10 +31,11 @@ jobs:
           provider: microk8s
           channel: "1.29-strict/stable"
           bootstrap-constraints: "cores=2 mem=2G"
-          juju-channel: 3.4/stable
+          juju-channel: 3.6/stable
           # This is needed until
           # https://bugs.launchpad.net/juju/+bug/1977582 is fixed
-          bootstrap-options: "--agent-version 3.4.4"
+          bootstrap-options: "--agent-version 3.6.1"
+          charmcraft-channel: "latest/candidate"
       - name: Install rockcraft
         run: |
           sudo snap install rockcraft --classic
@@ -53,7 +54,6 @@ jobs:
           pipx install poetry
           pipx install charmcraftcache
           pipx inject poetry poetry-plugin-export
-          poetry config warnings.export false
       - name: Integration Tests
         run: |
           sg snap_microk8s -c "tox -e ${{ matrix.env }}"
