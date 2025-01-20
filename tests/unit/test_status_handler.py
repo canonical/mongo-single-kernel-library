@@ -463,7 +463,7 @@ def test_mongos_get_status_no_relation(
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")
-    assert mongos_operator.get_status() == expected_status
+    assert mongos_operator.get_sanity_check_status() == expected_status
 
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
@@ -484,7 +484,7 @@ def test_mongos_get_status_tls_status(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
-    assert mongos_operator.get_status() == expected_status
+    assert mongos_operator.get_sanity_check_status() == expected_status
 
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
@@ -509,7 +509,7 @@ def test_mongos_get_status_mongos_not_running(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
-    assert mongos_operator.get_status() == expected_status
+    assert mongos_operator.get_sanity_check_status() == expected_status
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
     assert mongos_operator.charm.unit.status == expected_status
@@ -537,7 +537,7 @@ def test_mongos_get_status_all_good(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
-    assert mongos_operator.get_status() is None
+    assert mongos_operator.get_sanity_check_status() is None
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
     assert mongos_operator.charm.unit.status == expected_status

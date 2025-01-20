@@ -226,20 +226,20 @@ class MongosOperator(OperatorProtocol, Object):
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
                 return
 
-        if self.get_status() is None:
+        if self.get_sanity_check_status() is None:
             # In case any information was changed, we proceed to update the
             # connection information on the client databag.
             self.share_connection_info()
 
-            # in K8s mongos charms which are exposed externally it is possible for
-            # the node port to change. This can invalidate our current
-            # certificates. when this happens we do not receive any notifications
-            # from Juju so we must monitor it and request TLS integration to update
-            # our SANS as necessary.
-            # The connection info will be updated when we receive the new certificates.
-            if self.substrate == Substrates.K8S:
-                self.tls_manager.update_tls_sans()
-                self.upgrade_manager._reconcile_upgrade()
+        # in K8s mongos charms which are exposed externally it is possible for
+        # the node port to change. This can invalidate our current
+        # certificates. when this happens we do not receive any notifications
+        # from Juju so we must monitor it and request TLS integration to update
+        # our SANS as necessary.
+        # The connection info will be updated when we receive the new certificates.
+        if self.substrate == Substrates.K8S:
+            self.tls_manager.update_tls_sans()
+            self.upgrade_manager._reconcile_upgrade()
 
         if self.charm.unit.status in (UNHEALTHY_UPGRADE, INCOMPATIBLE_UPGRADE):
             return
@@ -441,8 +441,12 @@ class MongosOperator(OperatorProtocol, Object):
 
         return self.mongo_manager.mongod_ready(uri=uri)
 
-    def get_status(self) -> StatusBase | None:
-        """Collects the status according to the current deployment."""
+    def get_sanity_check_status(self) -> StatusBase | None:
+        """Retrieve statuses that directly relate to states of mongos.
+
+        Those status would prevent other more advanced mongos statuses from
+        being checked.
+        """
         if not self.state.mongos_cluster_relation:
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."

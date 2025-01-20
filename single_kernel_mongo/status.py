@@ -87,7 +87,7 @@ class StatusManager(Object):
                 pbm=self.operator.backup_manager.get_status(),
             )
         # Mongos case
-        return Statuses(mongodb=self.operator.get_status() or ActiveStatus())
+        return Statuses(mongodb=self.operator.get_sanity_check_status() or ActiveStatus())
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""
