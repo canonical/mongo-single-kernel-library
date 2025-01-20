@@ -98,3 +98,7 @@ SECRETS_UNIT: list[str] = []
 MAX_PASSWORD_LENGTH = 4096
 
 PBM_RESTART_DELAY = 5
+
+OS_REQUIREMENTS = {
+    "vm.max_map_count": "262144",
+}
