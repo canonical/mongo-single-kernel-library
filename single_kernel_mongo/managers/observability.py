@@ -59,7 +59,7 @@ class ObservabilityManager(Object):
             self.metrics_endpoint = MetricsEndpointProvider(
                 self,
                 refresh_event=[self.charm.on.start, self.charm.on.update_status],
-                jobs=self.mongo_scrape_config,
+                jobs=self.mongo_scrape_config(),
                 alert_rules_path=f"{OBSERVABILITY_CONFIG.k8s_prometheus}",
             )
             self.grafana_dashboards = GrafanaDashboardProvider(
@@ -75,7 +75,6 @@ class ObservabilityManager(Object):
                 container_name=self.dependent.role.name,
             )
 
-    @property
     def mongo_scrape_config(self) -> list[dict[str, Any]]:
         """Generates scrape config for the mongo metrics endpoint."""
         return [
