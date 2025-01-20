@@ -7,15 +7,16 @@ This file should contain the models that are used for the charm configuration.
 The models specify the dataclasses and roles used to configure and fully specify a charm.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib import resources as impresources
 from importlib.abc import Traversable
 from pathlib import Path
 
-from single_kernel_mongo import templates
+from single_kernel_mongo import observability_rules, templates
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 
 TEMPLATE_DIRECTORY = impresources.files(templates)
+OBSERVABILITY_DIRECTORY = impresources.files(observability_rules)
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,24 @@ class LogRotateConfig:
     log_rotate_template: Traversable = TEMPLATE_DIRECTORY / "logrotate.j2"
     rendered_template: Path = Path("/etc/logrotate.d/mongodb")
     log_status_dir: Path = Path("/var/lib/logrotate")
+
+
+@dataclass(frozen=True)
+class ObservabilityConfig:
+    """The config for the observability stack."""
+
+    mongodb_exporter_port: int = 9216
+    metrics_endpoints: list[dict[str, str]] = field(
+        default_factory=lambda: [{"path": "/metrics", "port": "9216"}]
+    )
+    metrics_rules_dir: Traversable = OBSERVABILITY_DIRECTORY / "vm_prometheus_alert_rules"
+    logs_rules_dir: Traversable = OBSERVABILITY_DIRECTORY / "loki"
+    k8s_prometheus: Traversable = OBSERVABILITY_DIRECTORY / "k8s_prometheus_alert_rules"
+    grafana_dashboards: Traversable = OBSERVABILITY_DIRECTORY / "grafana_dashboards"
+    log_slots: list[str] = field(default_factory=lambda: ["charmed-mongodb:logs"])
+
+
+OBSERVABILITY_CONFIG = ObservabilityConfig()
 
 
 @dataclass(frozen=True)
