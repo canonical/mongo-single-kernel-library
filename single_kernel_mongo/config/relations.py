@@ -41,5 +41,4 @@ class ExternalRequirerRelations(str, Enum):
 class ExternalProviderRelations(str, Enum):
     """The relations we provide to non mongo related charms."""
 
-    COS_AGENT = "cos-agent"
-    LOGGING = "logging"
+    LOGGING = "logging"  # This is used for mongodb k8s charms
