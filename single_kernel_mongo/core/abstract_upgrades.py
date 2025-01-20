@@ -117,8 +117,7 @@ class AbstractUpgrade(ABC):
     @property
     def is_compatible(self) -> bool:
         """Whether upgrade is supported from previous versions."""
-        previous_version_strs = self.state.app_upgrade_peer_data.versions
-        if not previous_version_strs:
+        if not (previous_version_strs := self.state.app_upgrade_peer_data.versions):
             logger.debug("`versions` missing from peer relation")
             return False
 
@@ -287,6 +286,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
     @property
     def _upgrade(self) -> KubernetesUpgrade | MachineUpgrade | None:
+        """Gets the correct upgrade backend if it exists."""
         try:
             return self.upgrade_backend(
                 self.dependent, self.dependent.workload, self.state, self.dependent.substrate
@@ -294,7 +294,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         except PeerRelationNotReadyError:
             return None
 
-    def _set_upgrade_status(self):
+    def _set_upgrade_status(self) -> None:
+        """Sets the upgrade status in the unit and app status."""
+        assert self._upgrade
         if self.charm.unit.is_leader():
             self.charm.app.status = self._upgrade.app_status or ActiveStatus()
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
@@ -313,7 +315,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 self._upgrade.get_upgrade_unit_status() or ActiveStatus()
             )
 
-    def on_upgrade_peer_relation_created(self):
+    def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
         assert self._upgrade
         if self.substrate == Substrates.VM:
@@ -338,7 +340,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Runs post-upgrade checks for after an application upgrade."""
         raise NotImplementedError()
 
-    def _reconcile_upgrade(self, during_upgrade: bool = False):
+    def _reconcile_upgrade(self, during_upgrade: bool = False) -> None:
         """Handle upgrade events."""
         if not self._upgrade:
             logger.debug("Peer relation not available")
@@ -370,7 +372,8 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             self._on_kubernetes_always(during_upgrade)  # type: ignore
         self._set_upgrade_status()
 
-    def _on_kubernetes_always(self, during_upgrade: bool):
+    def _on_kubernetes_always(self, during_upgrade: bool) -> None:
+        """Always run this as part of kubernetes reconcile_upgade call."""
         if not self._upgrade:
             logger.debug("Peer relation not available")
             return
@@ -384,7 +387,8 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 
-    def _on_vm_outdated(self):
+    def _on_vm_outdated(self) -> None:
+        """This is run on VMs if the current unit is outdated."""
         try:
             # This is the case only for VM which is OK
             authorized = self._upgrade.authorized  # type: ignore
@@ -403,7 +407,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             logger.debug("Waiting to upgrade")
             return
 
-    def _on_kubernetes_restarting(self):
+    def _on_kubernetes_restarting(self) -> None:
+        """This is run on k8s if the current unit is restarting."""
+        assert self._upgrade
         if not self._upgrade.is_compatible:
             logger.info(
                 f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
@@ -800,7 +806,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         collection_name,
         expected_write_value,
         db_name: str = "admin",
-    ):
+    ) -> bool:
         """Returns true if the expected write."""
         for replica_ip in mongodb_config.hosts:
             try:
@@ -836,7 +842,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 if new_primary == old_primary:
                     raise FailedToElectNewPrimaryError()
 
-    def are_pre_upgrade_operations_config_server_successful(self):
+    def are_pre_upgrade_operations_config_server_successful(self) -> bool:
         """Runs pre-upgrade operations for config-server and returns True if successful."""
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return False
@@ -899,7 +905,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         wait=wait_fixed(1),
         reraise=True,
     )
-    def turn_off_and_wait_for_balancer(self):
+    def turn_off_and_wait_for_balancer(self) -> None:
         """Sends the stop command to the balancer and wait for it to stop running."""
         with MongoConnection(self.state.mongos_config) as mongos:
             mongos.client.admin.command("balancerStop")

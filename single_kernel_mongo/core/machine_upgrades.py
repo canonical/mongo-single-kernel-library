@@ -49,10 +49,14 @@ class MachineUpgrade(AbstractUpgrade):
     def _get_unit_healthy_status(self) -> StatusBase:
         if self.state.unit_workload_container_version == self.state.app_workload_container_version:
             return ActiveStatus(
-                f'MongoDB {self._unit_workload_version} running; Snap revision {self.state.unit_workload_container_version}; Charm revision {self._current_versions["charm"]}'
+                f'MongoDB {self._unit_workload_version} running; '
+                f'Snap revision {self.state.unit_workload_container_version}; '
+                f'Charm revision {self._current_versions["charm"]}'
             )
         return ActiveStatus(
-            f'MongoDB {self._unit_workload_version} running; Snap revision {self.state.unit_workload_container_version} (outdated); Charm revision {self._current_versions["charm"]}'
+            f'MongoDB {self._unit_workload_version} running; '
+            f'Snap revision {self.state.unit_workload_container_version} (outdated); '
+            f'Charm revision {self._current_versions["charm"]}'
         )
 
     @property
@@ -60,7 +64,9 @@ class MachineUpgrade(AbstractUpgrade):
         """App upgrade status."""
         if not self.is_compatible:
             logger.info(
-                "Refresh incompatible. Rollback with `juju refresh`. If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start` action on each remaining unit"
+                "Refresh incompatible. Rollback with `juju refresh`. "
+                "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
+                "action on each remaining unit"
             )
             return BlockedStatus(
                 "Refresh incompatible. Rollback to previous revision with `juju refresh`"

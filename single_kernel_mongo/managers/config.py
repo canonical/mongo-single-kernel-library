@@ -210,7 +210,11 @@ class MongoConfigManager(CommonConfigManager, ABC):
 
     @property
     def binding_ips(self) -> list[str]:
-        """The binding IP parameters."""
+        """The binding IP parameters.
+
+        For VM Mongos we bind to the socked (if non-external), this gives us
+        one less network hop when communicating with the client.
+        """
         if (
             self.state.charm_role.name == CharmKind.MONGOS
             and self.state.substrate == Substrates.VM
