@@ -40,7 +40,7 @@ class ObservabilityManager(Object):
         state: CharmState,
         substrate: Substrates,
     ) -> None:
-        super().__init__(dependent, "logging")
+        super().__init__(dependent, ExternalProviderRelations.LOGGING.value)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
