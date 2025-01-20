@@ -41,6 +41,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import ConfigServerKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
@@ -124,7 +125,7 @@ class ConfigServerManager(Object, StatusProvider):
             )
             raise
         except OperationFailure as e:
-            if e.code == 20:
+            if e.code == MongoErrorCodes.ILLEGAL_OPERATION:
                 # TODO Future PR, allow removal of last shards that have no data. This will be
                 # tricky since we are not allowed to update the mongos config in this way.
                 logger.error(
@@ -276,7 +277,7 @@ class ConfigServerManager(Object, StatusProvider):
             try:
                 mongo.add_shard(shard_name, hosts)
             except OperationFailure as e:
-                if e.code == 18:
+                if e.code == MongoErrorCodes.AUTHENTICATION_FAILED:
                     logger.error(
                         f"{shard_name} shard does not have the same auth as the config server."
                     )
@@ -321,7 +322,10 @@ class ConfigServerManager(Object, StatusProvider):
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
         except OperationFailure as e:
-            if e.code in [13, 18]:  # Unauthorized, Auth Failed
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+            ):
                 return False
             logger.error(f"Invalid operation failure when checking if cluster password synced: {e}")
             raise
@@ -690,7 +694,11 @@ class ShardManager(Object, StatusProvider):
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
         except OperationFailure as e:
-            if e.code in [13, 18, 133]:
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+                MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE,
+            ):
                 return False
             raise
         except ServerSelectionTimeoutError:
@@ -714,7 +722,11 @@ class ShardManager(Object, StatusProvider):
             with MongoConnection(config) as mongos:
                 members = mongos.get_shard_members()
         except OperationFailure as e:
-            if e.code in [13, 18, 133]:
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+                MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE,
+            ):
                 return False
             raise
         except ServerSelectionTimeoutError:

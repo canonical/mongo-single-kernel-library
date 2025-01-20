@@ -28,6 +28,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,10 @@ class MongoConnection:
         try:
             self.client.admin.command("replSetInitiate", config)
         except OperationFailure as e:
-            if e.code not in (13, 23):  # Unauthorized, AlreadyInitialized
+            if e.code not in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.ALREADY_INITIALIZED,
+            ):
                 # Unauthorized error can be raised only if initial user were
                 #     created the step after this.
                 # AlreadyInitialized error can be raised only if this step
@@ -183,7 +187,7 @@ class MongoConnection:
         try:
             self.client.admin.command("createRole", role_name, privileges=[privileges], roles=roles)
         except OperationFailure as e:
-            if e.code == 51002:
+            if e.code == MongoErrorCodes.ROLE_ALREADY_EXISTS:
                 logger.info("Role already exists")
                 return
             logger.error("Cannot add role. error=%r", e)
