@@ -21,6 +21,7 @@ from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -127,9 +128,9 @@ class StatusManager(Object):
         try:
             statuses = self.get_statuses()
         except OperationFailure as e:
-            if e.code in [13, 18]:
+            if e.code in (MongoErrorCodes.UNAUTHORIZED, MongoErrorCodes.AUTHENTICATION_FAILED):
                 waiting_status = f"Waiting to sync passwords across the {deployment_mode}"
-            elif e.code == 133:
+            elif e.code == MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE:
                 waiting_status = f"Waiting to sync internal membership across the {deployment_mode}"
             else:
                 raise

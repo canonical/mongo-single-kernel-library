@@ -60,6 +60,7 @@ from single_kernel_mongo.state.upgrade_state import AppUpgradePeerData, UnitUpgr
 from single_kernel_mongo.utils.helpers import generate_relation_departed_key, unit_number
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
+from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
     MongoDBUser,
@@ -660,7 +661,11 @@ class CharmState(Object):
             with MongoConnection(self.remote_mongos_config) as mongos:
                 members = mongos.get_shard_members()
         except OperationFailure as e:
-            if e.code in [13, 18, 133]:
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+                MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE,
+            ):
                 return False
             raise
         except ServerSelectionTimeoutError:
