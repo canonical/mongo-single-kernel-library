@@ -13,7 +13,7 @@ from importlib.abc import Traversable
 from pathlib import Path
 
 from single_kernel_mongo import templates
-from single_kernel_mongo.config.literals import KindEnum, Substrates
+from single_kernel_mongo.config.literals import CharmKind, Substrates
 
 TEMPLATE_DIRECTORY = impresources.files(templates)
 
@@ -38,10 +38,10 @@ class AuditLogConfig:
 
 
 @dataclass(frozen=True)
-class CharmKind:
+class CharmSpec:
     """Defines a role for the charm."""
 
-    name: KindEnum
+    name: CharmKind
     substrate: Substrates
     paths: dict[str, str]
 
@@ -75,10 +75,10 @@ K8S_PATH = {
     }
 }
 
-VM_MONGOD = CharmKind(name=KindEnum.MONGOD, substrate=Substrates.VM, paths=VM_PATH["mongod"])
-K8S_MONGOD = CharmKind(name=KindEnum.MONGOD, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
-VM_MONGOS = CharmKind(name=KindEnum.MONGOS, substrate=Substrates.VM, paths=VM_PATH["mongod"])
-K8S_MONGOS = CharmKind(name=KindEnum.MONGOS, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
+VM_MONGOD = CharmSpec(name=CharmKind.MONGOD, substrate=Substrates.VM, paths=VM_PATH["mongod"])
+K8S_MONGOD = CharmSpec(name=CharmKind.MONGOD, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
+VM_MONGOS = CharmSpec(name=CharmKind.MONGOS, substrate=Substrates.VM, paths=VM_PATH["mongod"])
+K8S_MONGOS = CharmSpec(name=CharmKind.MONGOS, substrate=Substrates.K8S, paths=K8S_PATH["mongod"])
 
 ROLES = {
     "vm": {"mongod": VM_MONGOD, "mongos": VM_MONGOS},

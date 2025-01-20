@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, final
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
-from ops.model import Relation, Unit
+from ops.model import BlockedStatus, Relation, StatusBase, Unit, WaitingStatus
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import KindEnum, MongoPorts, Substrates
+from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 class MongosOperator(OperatorProtocol, Object):
     """Operator for Mongos Related Charms."""
 
-    name = KindEnum.MONGOS
+    name = CharmKind.MONGOS
     workload: MongosWorkload
 
     def __init__(self, charm: AbstractMongoCharm):
@@ -198,26 +198,11 @@ class MongosOperator(OperatorProtocol, Object):
                 )
                 self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
                 return
-        if not self.state.mongos_cluster_relation:
-            logger.info(
-                "Missing integration to config-server. mongos cannot run unless connected to config-server."
-            )
-            self.charm.status_manager.to_blocked("Missing relation to config-server.")
-            return
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
-            self.charm.status_manager.set_and_share_status(status)
-            return
-
-        if not self.is_mongos_running():
-            logger.info("mongos has not started yet")
-            self.charm.status_manager.to_waiting("Waiting for mongos to start.")
-            return
-
-        # In case any information was changed, we proceed to update the
-        # connection information on the client databag.
-        self.share_connection_info()
+        if self.get_sanity_check_status() is None:
+            # In case any information was changed, we proceed to update the
+            # connection information on the client databag.
+            self.share_connection_info()
 
         # in K8s mongos charms which are exposed externally it is possible for
         # the node port to change. This can invalidate our current
@@ -228,7 +213,7 @@ class MongosOperator(OperatorProtocol, Object):
         if self.substrate == Substrates.K8S:
             self.tls_manager.update_tls_sans()
 
-        self.charm.status_manager.to_active("")
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_relation_joined(self) -> None:
@@ -409,5 +394,27 @@ class MongosOperator(OperatorProtocol, Object):
         uri = f"mongodb://{host}"
 
         return self.mongo_manager.mongod_ready(uri=uri)
+
+    def get_sanity_check_status(self) -> StatusBase | None:
+        """Retrieve statuses that directly relate to states of mongos.
+
+        Those status would prevent other more advanced mongos statuses from
+        being checked.
+        """
+        if not self.state.mongos_cluster_relation:
+            logger.info(
+                "Missing integration to config-server. mongos cannot run unless connected to config-server."
+            )
+            return BlockedStatus("Missing relation to config-server.")
+
+        if status := self.cluster_manager.get_tls_statuses():
+            logger.info(f"Invalid TLS integration: {status.message}")
+            return status
+
+        if not self.is_mongos_running():
+            logger.info("mongos has not started yet")
+            return WaitingStatus("Waiting for mongos to start.")
+
+        return None
 
     # END: Helpers

@@ -28,6 +28,26 @@ def tenacity_wait(mocker):
 
 
 @pytest.fixture(autouse=True)
+def get_charm_internal_revision(mocker):
+    mocker.patch(
+        "single_kernel_mongo.core.workload.WorkloadBase.get_internal_revision", return_value="1"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.get_charm_revision", return_value="1"
+    )
+    mocker.patch(
+        "data_platform_helpers.version_check.CrossAppVersionChecker.set_version_on_related_app"
+    )
+
+
+@pytest.fixture(autouse=True)
+def mongod_ready(mocker):
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready", return_value=True
+    )
+
+
+@pytest.fixture(autouse=True)
 def mock_snap_cache(mocker):
     mocker.patch(
         "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapCache.__getitem__",
@@ -62,6 +82,7 @@ def mock_fs_interactions(mocker) -> None:
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.update_env")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
     mocker.patch("pathlib.Path.mkdir")
+    mocker.patch("builtins.open")
 
 
 @pytest.fixture

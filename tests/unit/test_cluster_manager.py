@@ -223,7 +223,7 @@ def test_cluster_requirer_set_relation_created_status(
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
 
     assert isinstance(mongos_harness.charm.unit.status, WaitingStatus)
-    assert mongos_harness.charm.unit.status.message == "Connecting to config-server..."
+    assert mongos_harness.charm.unit.status.message == "Connecting to config-server"
 
 
 def test_cluster_requirer_share_credentials_to_clients(
@@ -264,7 +264,6 @@ def test_cluster_requirer_update_mongos_and_restart(
     operator = mongos_harness.charm.operator
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},

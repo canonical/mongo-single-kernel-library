@@ -63,10 +63,12 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
     def __init__(self, *args):
         # Init the Juju object Object
         super().__init__(*args)
-        self.status_manager = StatusManager(self)
 
         # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)
+
+        # Status manager stores the operator locally
+        self.status_manager = StatusManager(self)
 
         # We will use the main workload of the Charm to install the snap.
         # A workload represents a service, and the main workload represents the

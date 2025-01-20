@@ -14,15 +14,16 @@ from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
 from ops import Object, Relation, Unit
+from ops.model import ActiveStatus, BlockedStatus, StatusBase
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
-    KindEnum,
+    CharmKind,
     MongoPorts,
     Scope,
     Substrates,
 )
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -76,17 +77,17 @@ class CharmState(Object):
 
     This object represents the charm state, including the different relations
     the charm is bound to, and the model information.
-    It is parametrized by the substrate and the KindEnum.
+    It is parametrized by the substrate and the CharmKind.
 
     The substrate will allow to compute the right hosts.
-    The CharmKind allows selection of the right peer relation name and also the
+    The CharmSpec allows selection of the right peer relation name and also the
     generation of the correct mongo uri.
     The charm is passed as an argument to build the secret storage, and provide
     an access to the charm configuration.
     """
 
     def __init__(
-        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmKind
+        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmSpec
     ):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
@@ -127,7 +128,7 @@ class CharmState(Object):
         which is exposed for mongos charms, and one for replication which is
         exposed for mongodb charms.
         """
-        if self.charm_role.name == KindEnum.MONGOS:
+        if self.charm_role.name == CharmKind.MONGOS:
             return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
         return set(self.model.relations[RelationNames.DATABASE.value])
 
@@ -239,9 +240,9 @@ class CharmState(Object):
             database_name=self.app_peer_data.database,
             extra_user_roles=",".join(sorted(self.app_peer_data.extra_user_roles)),
             additional_secret_fields=[
-                ClusterStateKeys.keyfile.value,
-                ClusterStateKeys.config_server_db.value,
-                ClusterStateKeys.int_ca_secret.value,
+                ClusterStateKeys.KEYFILE.value,
+                ClusterStateKeys.CONFIG_SERVER_DB.value,
+                ClusterStateKeys.INT_CA_SECRET.value,
             ],
         )
 
@@ -305,11 +306,11 @@ class CharmState(Object):
 
     def set_keyfile(self, keyfile_content: str) -> str:
         """Sets the keyfile content in the secret."""
-        return self.secrets.set(AppPeerDataKeys.keyfile.value, keyfile_content, Scope.APP).label
+        return self.secrets.set(AppPeerDataKeys.KEYFILE.value, keyfile_content, Scope.APP).label
 
     def get_keyfile(self) -> str | None:
         """Gets the keyfile content from the secret."""
-        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.keyfile.value)
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
 
     @property
     def planned_units(self) -> int:
@@ -343,7 +344,7 @@ class CharmState(Object):
         """
         if (
             self.substrate == Substrates.VM
-            and self.charm_role.name == KindEnum.MONGOS
+            and self.charm_role.name == CharmKind.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
@@ -395,7 +396,7 @@ class CharmState(Object):
     @property
     def config_server_name(self) -> str | None:
         """Gets the config server name."""
-        if self.charm_role.name == KindEnum.MONGOS:
+        if self.charm_role.name == CharmKind.MONGOS:
             if self.mongos_cluster_relation:
                 return self.mongos_cluster_relation.app.name
             return None
@@ -423,20 +424,20 @@ class CharmState(Object):
         for relation in self.cluster_relations:
             if new_ca is None:
                 self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.int_ca_secret]
+                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.int_ca_secret.value: new_ca}
+                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
                 )
         for relation in self.config_server_relation:
             if new_ca is None:
                 self.config_server_data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.int_ca_secret]
+                    relation.id, [ConfigServerKeys.INT_CA_SECRET.value]
                 )
             else:
                 self.config_server_data_interface.update_relation_data(
-                    relation.id, {ConfigServerKeys.int_ca_secret.value: new_ca}
+                    relation.id, {ConfigServerKeys.INT_CA_SECRET.value: new_ca}
                 )
 
     def is_scaling_down(self, rel_id: int) -> bool:
@@ -457,6 +458,30 @@ class CharmState(Object):
         scaling_down = departing_unit_name == self.unit_peer_data.name
         self.unit_peer_data.update({rel_departed_key: json.dumps(scaling_down)})
         return scaling_down
+
+    def share_status_with_config_server(self, status: StatusBase) -> None:
+        """Shares this shard's status with the config server.
+
+        This is primarily useful for the cluster upgrades, since the
+        config-server will need to ensure all units are healthy.
+        """
+        if not self.is_role(MongoDBRoles.SHARD):
+            return
+        if not self.shard_relation:
+            return
+
+        # All following cases write in the databag shared with the config server.
+        if isinstance(status, ActiveStatus):
+            self.shard_state.status_ready_for_upgrade = True
+            return
+        if not isinstance(status, BlockedStatus):
+            self.shard_state.status_ready_for_upgrade = False
+            return
+        if status.message and "is not up-to date with config-server" in status.message:
+            self.shard_state.status_ready_for_upgrade = True
+            return
+
+        self.shard_state.status_ready_for_upgrade = False
 
     # BEGIN: Configuration accessors
 
@@ -537,9 +562,11 @@ class CharmState(Object):
 
     @property
     def mongos_config(self) -> MongoConfiguration:
-        """Mongos Configuration for the mongos user."""
-        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.username.value)
-        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.password.value)
+        """Mongos Configuration for the admin mongos user."""
+        if self.charm_role.name == CharmKind.MONGOD:
+            return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
+        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
+        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
         database = self.app_peer_data.database
         if not username or not password:
             raise Exception("Missing credentials.")
@@ -559,7 +586,7 @@ class CharmState(Object):
     @property
     def mongo_config(self) -> MongoConfiguration:
         """The mongo configuration to use by default for charm interactions."""
-        if self.charm_role.name == KindEnum.MONGOD:
+        if self.charm_role.name == CharmKind.MONGOD:
             return self.operator_config
         return self.mongos_config
 

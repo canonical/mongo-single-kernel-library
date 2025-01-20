@@ -20,7 +20,7 @@ class Substrates(str, Enum):
     K8S = "k8s"
 
 
-class KindEnum(str, Enum):
+class CharmKind(str, Enum):
     """The two possible role names."""
 
     MONGOD = "mongod"
@@ -91,7 +91,7 @@ class VmUser(WorkloadUser[int]):
 
 
 CRON_FILE = Path("/etc/cron.d/mongodb")
-ENVIRONMENT_FILE = Path("/etc/environment")
+
 
 SECRETS_UNIT: list[str] = []
 

@@ -21,6 +21,7 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, Waiting
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MongoManager(Object):
+class MongoManager(Object, StatusProvider):
     """Manager for Mongo related operations."""
 
     def __init__(
@@ -77,7 +78,11 @@ class MongoManager(Object):
                 self.charm.status_manager.to_blocked("Charm deployed without `trust`")
 
     def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
-        """Is MongoDB ready and running?"""
+        """Is MongoDB ready and running?
+
+        Pass direct=True, when checking if a *single replica* is ready.
+        Pass direct=False, when checking if the entire replica set is ready
+        """
         actual_uri = uri or "localhost"
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
@@ -283,7 +288,7 @@ class MongoManager(Object):
 
         # Dropping the admin-user for mongos-k8s-router is done by mongos-k8s charm.
         if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            logger.info("K8s routers will drop themselves.")
+            logger.info("K8s routers will remove themselves.")
             managed_users.remove(username)
             self.state.app_peer_data.managed_users = managed_users
             return
@@ -481,4 +486,4 @@ class MongoManager(Object):
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return WaitingStatus("Waiting to reconnect to unit..")
+            return WaitingStatus("Waiting to reconnect to unit...")

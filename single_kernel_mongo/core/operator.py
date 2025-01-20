@@ -24,8 +24,8 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 
-from single_kernel_mongo.config.literals import KindEnum, Substrates
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -49,7 +49,7 @@ class OperatorProtocol(ABC, Object):
 
     A Charm Operator must define the following elements:
      * charm: The Charm it is bound to.
-     * name: The charm operator name, which is one value of the `KindEnum`
+     * name: The charm operator name, which is one value of the `CharmKind`
         enum. This is a class var defined in the operator.
      * tls_manager: The TLS manager for the mandatory tls events and handlers
      * state : The CharmState, object handling peer databag interactions, and model interactions.
@@ -58,9 +58,9 @@ class OperatorProtocol(ABC, Object):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[KindEnum]
+    name: ClassVar[CharmKind]
     substrate: Substrates
-    role: CharmKind
+    role: CharmSpec
     config_manager: CommonConfigManager
     tls_manager: TLSManager
     state: CharmState
@@ -152,7 +152,7 @@ class OperatorProtocol(ABC, Object):
         """Checks if the relation is feasible in this context."""
         ...
 
-    def assert_proceed_on_broken_event(self, relation: Relation):
+    def assert_proceed_on_broken_event(self, relation: Relation) -> None:
         """Runs some checks on broken relation event."""
         if not self.state.has_departed_run(relation.id):
             raise DeferrableFailedHookChecksError(
@@ -164,7 +164,7 @@ class OperatorProtocol(ABC, Object):
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
 
-    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent):
+    def check_relation_broken_or_scale_down(self, event: RelationDepartedEvent) -> None:
         """Checks relation departed event is the result of removed relation or scale down.
 
         Relation departed and relation broken events occur during scaling down or during relation

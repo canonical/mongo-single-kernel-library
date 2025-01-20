@@ -19,9 +19,10 @@ from single_kernel_mongo.state.abstract_state import AbstractRelationState
 class UnitPeerRelationKeys(str, Enum):
     """The peer relation model."""
 
-    private_address = "private-address"
-    ingress_address = "ingress-address"
-    egress_subnets = "egress-subnets"
+    PRIVATE_ADDRESS = "private-address"
+    INGRESS_ADDRESS = "ingress-address"
+    EGRESS_SUBNETS = "egress-subnets"
+    DRAINED = "drained"
 
 
 class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
@@ -65,7 +66,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         """The address for internal communication between brokers."""
         if self.substrate == Substrates.VM:
             return self.bind_address or str(
-                self.relation_data.get(UnitPeerRelationKeys.private_address.value)
+                self.relation_data.get(UnitPeerRelationKeys.PRIVATE_ADDRESS.value)
             )
 
         if self.substrate == Substrates.K8S:
@@ -111,10 +112,10 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         draining. Unlike the app databag which triggers requires a
         RelationChangedEvent to propagate.
         """
-        return json.loads(self.relation_data.get("drained", "true"))
+        return json.loads(self.relation_data.get(UnitPeerRelationKeys.DRAINED.value, "false"))
 
     @drained.setter
     def drained(self, value: bool):
         if not isinstance(value, bool):
             raise ValueError(f"drained value is not boolean but {value}")
-        self.update({"drained": json.dumps(value)})
+        self.update({UnitPeerRelationKeys.DRAINED.value: json.dumps(value)})

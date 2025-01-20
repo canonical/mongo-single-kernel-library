@@ -15,13 +15,13 @@ from ops import Container
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import WorkloadUser
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 
 
 class MongoPaths:
     """Object to store the common paths for a mongodb instance."""
 
-    def __init__(self, role: CharmKind):
+    def __init__(self, role: CharmSpec):
         self.conf_path = role.paths["CONF"]
         self.data_path = role.paths["DATA"]
         self.binaries_path = role.paths["BIN"]
@@ -107,7 +107,7 @@ class WorkloadBase(ABC):  # pragma: nocover
     service and the possible configurations.
     """
 
-    role: CharmKind
+    role: CharmSpec
     substrate: ClassVar[str]
     paths: MongoPaths
     service: ClassVar[str]
@@ -119,7 +119,7 @@ class WorkloadBase(ABC):  # pragma: nocover
     snap_param: ClassVar[str]
     _env: str = ""
 
-    def __init__(self, role: CharmKind, container: Container | None):
+    def __init__(self, role: CharmSpec, container: Container | None):
         self.container = container
         self.role = role
 
@@ -266,6 +266,18 @@ class WorkloadBase(ABC):  # pragma: nocover
         """
         try:
             version = Path("workload_version").read_text().strip()
+        except:  # noqa: E722
+            version = ""
+        return version
+
+    def get_internal_revision(self) -> str:
+        """Get the internal revision.
+
+        Returns:
+            String of charm internal revision
+        """
+        try:
+            version = Path("charm_internal_version").read_text().strip()
         except:  # noqa: E722
             version = ""
         return version

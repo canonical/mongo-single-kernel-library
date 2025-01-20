@@ -10,7 +10,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
-from single_kernel_mongo.config.models import CharmKind
+from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
 
@@ -33,7 +33,7 @@ class PBMWorkload(WorkloadBase):
     snap_param = "pbm-uri"
     paths: PBMPaths
 
-    def __init__(self, role: CharmKind, container: Container | None) -> None:
+    def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
         self.paths = PBMPaths(self.role)
 
