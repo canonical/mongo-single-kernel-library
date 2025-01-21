@@ -1,53 +1,59 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-[tool.poetry]
+[project]
 name = "mongo-charms-single-kernel"
 version = "0.0.1"
 description = "Shared and reusable code for Mongo-related charms"
-authors = ["Neha Oudin <neha@oudin.red>"]
 readme = "README.md"
 license = "Apache-2.0"
+authors = [
+    {name = "Neha Oudin", email = "neha@oudin.red"}
+]
+classifiers = [
+ "Development Status :: 3 - Alpha",
+ "Intended Audience :: Developers",
+ "Intended Audience :: System Administrators",
+ "Operating System :: POSIX :: Linux",
+]
+requires-python = "^3.10"
+
+dependencies = [
+    "poetry-core (>=2.0)",
+    "ops (~=2.15.0)",
+    "overrides (~=7.7.0)",
+    "cryptography (~=42.0.5)",  # tls_certificates lib v3
+    "jsonschema (~=4.22.0)",  # tls_certificates lib v3
+    "pydantic (~=2.9.0)",
+    "pydantic-settings",
+    "pyOpenSSL (~=24.2.1)",
+    "pyyaml (~=6.0.1)",
+    "tenacity (~=8.2.3)",
+    "pymongo",
+    "jinja2",
+    "lightkube",
+    "dacite (~=1.8.0)",
+    "data-platform-helpers (~=0.1.4)",
+]
+
+[project.urls]
+homepage = "https://github.com/canonical/mongo-single-kernel-library"
+repository = "https://github.com/canonical/mongo-single-kernel-library"
+"Bug Tracker" = "https://github.com/canonical/mongo-single-kernel-library/issues"
+"Matrix" = "https://matrix.to/#/#charmhub-data-platform:ubuntu.com"
+"Contribute" = "https://github.com/canonical/mongo-single-kernel-library/blob/main/CONTRIBUTING.md"
+
+[tool.poetry]
+requires-poetry = ">=2.0.0"
 package-mode = true
 packages = [
     {include = "single_kernel_mongo"},
 ]
 include = [".single_kernel_mongo/templates/"]
-homepage = "https://github.com/canonical/mongo-single-kernel-library"
-repository = "https://github.com/canonical/mongo-single-kernel-library"
-classifiers = [
- "Development Status :: 2 - Pre-Alpha",
- "Intended Audience :: Developers",
- "Intended Audience :: System Administrators",
- "Operating System :: POSIX :: Linux",
-]
-
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/canonical/mongo-single-kernel-library/issues"
-"Matrix" = "https://matrix.to/#/#charmhub-data-platform:ubuntu.com"
-"Contribute" = "https://github.com/canonical/mongo-single-kernel-library/blob/main/CONTRIBUTING.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-poetry-core = "<2.0"
-ops = "~2.15.0"
-overrides = "^7.7.0"
-cryptography = "^42.0.5"  # tls_certificates lib v3
-jsonschema = "^4.22.0"  # tls_certificates lib v3
-pydantic = "~2.9.0"
-pydantic-settings = "*"
-pyOpenSSL = "^24.2.1"
-pyyaml = "^6.0.1"
-tenacity = "^8.2.3"
-pymongo = "*"
-jinja2 = "*"
-lightkube = "*"
-dacite = "^1.8.0"
-data-platform-helpers = "^0.1.4"
 
 
 [build-system]
-requires = ["poetry-core<2.0"]
+requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.charm-libs.dependencies]
