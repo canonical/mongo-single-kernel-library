@@ -38,6 +38,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import Object
+from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -154,7 +155,7 @@ class LifecycleEventsHandler(Object):
         except UpgradeInProgressError:
             event.defer()
             return
-        except NotReadyError:
+        except (NotReadyError, PyMongoError):
             event.defer()
             return
 
@@ -166,7 +167,7 @@ class LifecycleEventsHandler(Object):
         except UpgradeInProgressError:
             event.defer()
             return
-        except NotReadyError:
+        except (NotReadyError, PyMongoError):
             event.defer()
             return
 
