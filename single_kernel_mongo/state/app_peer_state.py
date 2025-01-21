@@ -47,10 +47,11 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         relation: Relation | None,
         data_interface: DataPeerData,
         component: Application,
+        substrate: Substrates,
         role: MongoDBRoles,
         model: Model,
     ):
-        super().__init__(relation, data_interface, component)
+        super().__init__(relation, data_interface, component, substrate=substrate)
         self.data_interface = data_interface
         self._model = model
         self._role = role
@@ -181,7 +182,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def database(self) -> str:
         """Database tag for mongos."""
         if self.substrate == Substrates.K8S:
-            return f"{self.component.name}_{self._model}"
+            return f"{self.component.name}_{self._model.name}"
         return self.relation_data.get(AppPeerDataKeys.DATABASE.value, "mongos-database")
 
     @database.setter
@@ -216,4 +217,4 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @expose_external.setter
     def expose_external(self, value: ExposeExternal):
-        self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: value.value})
+        self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: f"{value}"})

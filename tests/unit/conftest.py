@@ -38,6 +38,10 @@ def get_charm_internal_revision(mocker):
     mocker.patch(
         "data_platform_helpers.version_check.CrossAppVersionChecker.set_version_on_related_app"
     )
+    mocker.patch(
+        "single_kernel_mongo.core.version_checker.VersionChecker.get_cluster_mismatched_revision_status",
+        return_value=None,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -74,6 +78,7 @@ def mock_fs_interactions(mocker) -> None:
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start")
@@ -82,6 +87,7 @@ def mock_fs_interactions(mocker) -> None:
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.update_env")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
     mocker.patch("pathlib.Path.mkdir")
+    mocker.patch("pathlib.Path.write_text")
     mocker.patch("builtins.open")
 
 

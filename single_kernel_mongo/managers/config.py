@@ -91,6 +91,10 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("DB is not initialised.")
             return
 
+        if self.state.is_role(MongoDBRoles.SHARD) and not self.state.is_shard_added_to_cluster():
+            logger.info("Not starting PBM yet. Shard not added to config-server")
+            return
+
         if not self.state.get_user_password(BackupUser):
             logger.info("No password found.")
             return
@@ -206,9 +210,14 @@ class MongoConfigManager(CommonConfigManager, ABC):
 
     @property
     def binding_ips(self) -> list[str]:
-        """The binding IP parameters."""
+        """The binding IP parameters.
+
+        For VM Mongos we bind to the socked (if non-external), this gives us
+        one less network hop when communicating with the client.
+        """
         if (
             self.state.charm_role.name == CharmKind.MONGOS
+            and self.state.substrate == Substrates.VM
             and not self.state.app_peer_data.external_connectivity
         ):
             return [
@@ -305,7 +314,7 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> list[str]:
-        return [f"--port {MongoPorts.MONGODB_PORT}"]
+        return [f"--port={MongoPorts.MONGODB_PORT}"]
 
     @override
     def build_parameters(self) -> list[list[str]]:
@@ -340,7 +349,7 @@ class MongosConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> list[str]:
-        return [f"--port {MongoPorts.MONGOS_PORT}"]
+        return [f"--port={MongoPorts.MONGOS_PORT}"]
 
     @override
     def build_parameters(self) -> list[list[str]]:

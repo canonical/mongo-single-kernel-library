@@ -38,7 +38,7 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import ConfigServerKeys
+from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
@@ -83,14 +83,18 @@ class ConfigServerManager(Object, StatusProvider):
                 f"Database Requested event has not run yet for relation {relation.id}"
             )
         relation_data = {
-            ConfigServerKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(OperatorUser),
-            ConfigServerKeys.BACKUP_PASSWORD.value: self.state.get_user_password(BackupUser),
-            ConfigServerKeys.KEY_FILE.value: self.state.get_keyfile(),
-            ConfigServerKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
+            AppShardingComponentKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(
+                OperatorUser
+            ),
+            AppShardingComponentKeys.BACKUP_PASSWORD.value: self.state.get_user_password(
+                BackupUser
+            ),
+            AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
+            AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
         }
 
         if int_tls_ca := self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL):
-            relation_data[ConfigServerKeys.INT_CA_SECRET.value] = int_tls_ca
+            relation_data[AppShardingComponentKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -150,11 +154,16 @@ class ConfigServerManager(Object, StatusProvider):
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        # TODO: revision checks.
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
         if not self.charm.unit.is_leader():
             raise NonDeferrableFailedHookChecksError
+        if (
+            revision_mismatch_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
         """Runs pre hooks checks and raises the appropriate error if it fails.
@@ -194,7 +203,12 @@ class ConfigServerManager(Object, StatusProvider):
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.HOST.value: sorted(self.state.internal_hosts)}
+                relation.id,
+                {
+                    AppShardingComponentKeys.HOST.value: json.dumps(
+                        sorted(self.state.internal_hosts)
+                    )
+                },
             )
 
     def update_ca_secret(self, new_ca: str | None) -> None:
@@ -205,11 +219,11 @@ class ConfigServerManager(Object, StatusProvider):
                 continue
             if new_ca is None:
                 self.data_interface.delete_relation_data(
-                    relation.id, [ConfigServerKeys.INT_CA_SECRET.value]
+                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
                 )
                 continue
             self.data_interface.update_relation_data(
-                relation.id, {ConfigServerKeys.INT_CA_SECRET.value: new_ca}
+                relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
             )
 
     def skip_config_server_status(self) -> bool:
@@ -220,6 +234,9 @@ class ConfigServerManager(Object, StatusProvider):
 
         if not self.state.db_initialised:
             logger.info("No status for shard to report, waiting for db to be initialised.")
+            return True
+
+        if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.config_server_relation:
             return True
 
         return False
@@ -285,7 +302,7 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
-        self.charm.status_manager.to_active(None)
+        self.charm.status_manager.to_active()
 
     def remove_shards(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
@@ -339,7 +356,7 @@ class ConfigServerManager(Object, StatusProvider):
     def get_unreachable_shards(self) -> list[str]:
         """Returns a list of unreable shard hosts."""
         unreachable_hosts: list[str] = []
-        if not self.model.relations[self.relation_name]:
+        if not self.state.config_server_relation:
             logger.info("shards are not reachable, none related to config-sever")
             return unreachable_hosts
 
@@ -388,7 +405,12 @@ class ShardManager(Object, StatusProvider):
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        # TODO: revision checks.
+        if (
+            revision_mismatch_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")
 
@@ -446,6 +468,10 @@ class ShardManager(Object, StatusProvider):
         except:
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
+
+        if not self.state.shard_state.has_received_credentials():
+            logger.debug("Waiting for config-server to share cluster secrets.")
+            return
 
         keyfile = self.state.shard_state.keyfile
         tls_ca = self.state.shard_state.internal_ca_secret
@@ -543,6 +569,11 @@ class ShardManager(Object, StatusProvider):
         self.dependent.restart_charm_services()
         if self.charm.unit.is_leader():
             self.state.app_peer_data.keyfile = keyfile
+
+    def update_mongos_hosts(self):
+        """Updates the hosts for mongos on the relation data."""
+        if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
+            self.state.app_peer_data.mongos_hosts = hosts
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""
@@ -684,11 +715,7 @@ class ShardManager(Object, StatusProvider):
 
         try:
             # check our ability to use connect to mongos
-            config = self.state.mongos_config_for_user(
-                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-            )
-
-            with MongoConnection(config) as mongos:
+            with MongoConnection(self.state.remote_mongos_config) as mongos:
                 mongos.get_shard_members()
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
@@ -708,40 +735,9 @@ class ShardManager(Object, StatusProvider):
 
         return True
 
-    def _is_added_to_cluster(self) -> bool:
-        """Returns true if the shard has been added to the clusted."""
-        # this information is required in order to check if we have been added
-        if not self.state.config_server_name or not self.state.app_peer_data.mongos_hosts:
-            return False
-
-        try:
-            config = self.state.mongos_config_for_user(
-                OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-            )
-            # check our ability to use connect to mongos
-            with MongoConnection(config) as mongos:
-                members = mongos.get_shard_members()
-        except OperationFailure as e:
-            if e.code in (
-                MongoErrorCodes.UNAUTHORIZED,
-                MongoErrorCodes.AUTHENTICATION_FAILED,
-                MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE,
-            ):
-                return False
-            raise
-        except ServerSelectionTimeoutError:
-            # Connection refused, - this occurs when internal membership is not in sync across the
-            # cluster (i.e. TLS + KeyFile).
-            return False
-
-        return self.state.app_peer_data.replica_set in members
-
     def _is_shard_aware(self) -> bool:
         """Returns True if provided shard is shard aware."""
-        config = self.state.mongos_config_for_user(
-            OperatorUser, set(self.state.app_peer_data.mongos_hosts)
-        )
-        with MongoConnection(config) as mongo:
+        with MongoConnection(self.state.remote_mongos_config) as mongo:
             return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
 
     def should_skip_shard_status(self) -> bool:
@@ -752,6 +748,9 @@ class ShardManager(Object, StatusProvider):
 
         if not self.state.db_initialised:
             logger.info("No status for shard to report, waiting for db to be initialised.")
+            return True
+
+        if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.shard_relation:
             return True
 
         return False
@@ -774,7 +773,7 @@ class ShardManager(Object, StatusProvider):
             return BlockedStatus("Shard CA and Config-Server CA don't match.")
         return None
 
-    def get_status(self) -> StatusBase | None:  # noqa: C901
+    def get_status(self) -> StatusBase | None:
         """Returns the current status of the shard."""
         if self.should_skip_shard_status():
             return None
@@ -799,7 +798,7 @@ class ShardManager(Object, StatusProvider):
         if status := self.get_tls_status():
             return status
 
-        if not self._is_added_to_cluster():
+        if not self.state.is_shard_added_to_cluster():
             return MaintenanceStatus("Adding shard to config-server")
 
         if not self._is_shard_aware():

@@ -8,14 +8,14 @@ import json
 from enum import Enum
 
 from ops import Application
-from ops.model import Relation
+from ops.model import Relation, Unit
 
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import Data
 from single_kernel_mongo.state.abstract_state import AbstractRelationState
 
 
-class ConfigServerKeys(str, Enum):
-    """Cluster State Model."""
+class AppShardingComponentKeys(str, Enum):
+    """Config Server State Model for the application."""
 
     DATABASE = "database"
     OPERATOR_PASSWORD = "operator-password"
@@ -25,14 +25,21 @@ class ConfigServerKeys(str, Enum):
     INT_CA_SECRET = "int-ca-secret"
     STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
 
+    # We don't use those except to check if we've received credentials
+    USERNAME = "username"
+    PASSWORD = "password"
+
 
 SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
 
 
-SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
+class UnitShardingComponentKeys(str, Enum):
+    """Config Server State Model for the unit."""
+
+    STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
 
 
-class ShardingComponentState(AbstractRelationState[Data]):
+class AppShardingComponentState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
 
     component: Application
@@ -46,49 +53,75 @@ class ShardingComponentState(AbstractRelationState[Data]):
         """The mongos hosts in the relation."""
         if not self.relation:
             return []
-        return json.loads(self.relation_data.get(ConfigServerKeys.HOST.value, "[]"))
+        return json.loads(self.relation_data.get(AppShardingComponentKeys.HOST.value, "[]"))
 
     @mongos_hosts.setter
     def mongos_hosts(self, value: list[str]):
-        self.update({ConfigServerKeys.HOST.value: json.dumps(sorted(value))})
+        self.update({AppShardingComponentKeys.HOST.value: json.dumps(sorted(value))})
+
+    def has_received_credentials(self) -> bool:
+        """Checks if the config-server has sent credentials."""
+        if not self.relation:
+            return False
+        return (
+            self.relation_data.get(AppShardingComponentKeys.USERNAME.value, None) is not None
+            and self.relation_data.get(AppShardingComponentKeys.PASSWORD.value, None) is not None
+        )
 
     @property
     def internal_ca_secret(self) -> str | None:
         """Returns the internal CA secret."""
         if not self.relation:
             return None
-        return self.relation_data.get(ConfigServerKeys.INT_CA_SECRET.value, None)
+        return self.relation_data.get(AppShardingComponentKeys.INT_CA_SECRET.value, None)
 
     @property
     def keyfile(self) -> str | None:
         """Returns the keyfile."""
         if not self.relation:
             return None
-        return self.relation_data.get(ConfigServerKeys.KEY_FILE.value, None)
+        return self.relation_data.get(AppShardingComponentKeys.KEY_FILE.value, None)
 
     @property
     def operator_password(self) -> str | None:
         """Returns the operator password."""
         if not self.relation:
             return None
-        return self.relation_data.get(ConfigServerKeys.OPERATOR_PASSWORD.value, None)
+        return self.relation_data.get(AppShardingComponentKeys.OPERATOR_PASSWORD.value, None)
 
     @property
     def backup_password(self) -> str | None:
         """Returns the operator password."""
         if not self.relation:
             return None
-        return self.relation_data.get(ConfigServerKeys.BACKUP_PASSWORD.value, None)
+        return self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
+
+
+class UnitShardingComponentState(AbstractRelationState[Data]):
+    """The stored state for the ConfigServer Relation."""
+
+    component: Unit
+
+    def __init__(self, relation: Relation | None, data_interface: Data, component: Unit):
+        super().__init__(relation, data_interface=data_interface, component=component)
+        self.data_interface = data_interface
 
     @property
     def status_ready_for_upgrade(self) -> bool:
         """Returns true if the shard is ready for upgrade."""
         if not self.relation:
             return True
+        # We get directly the data in the unit because it's hidden otherwise
         return json.loads(
-            self.relation_data.get(ConfigServerKeys.STATUS_READY_FOR_UPGRADE.value, "false")
+            self.relation.data[self.component].get(
+                UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value, "false"
+            )
         )
 
     @status_ready_for_upgrade.setter
     def status_ready_for_upgrade(self, value: bool):
-        self.update({ConfigServerKeys.STATUS_READY_FOR_UPGRADE.value: json.dumps(value)})
+        if not self.relation:
+            raise Exception("No databag to write in")
+        self.relation.data[self.component][
+            UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value
+        ] = json.dumps(value)

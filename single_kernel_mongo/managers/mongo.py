@@ -45,11 +45,9 @@ from single_kernel_mongo.utils.mongodb_users import (
     MonitorUser,
     OperatorUser,
 )
-from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
-from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.core.operator import OperatorProtocol
+    from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +58,7 @@ class MongoManager(Object, StatusProvider):
     def __init__(
         self,
         dependent: OperatorProtocol,
-        workload: MongoDBWorkload | MongosWorkload,
+        workload: MainWorkloadType,
         state: CharmState,
         substrate: Substrates,
     ) -> None:
@@ -423,7 +421,7 @@ class MongoManager(Object, StatusProvider):
     def remove_replset_member(self) -> None:  # pragma: nocover
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:
-            mongo.remove_replset_member(self.state.unit_peer_data.host)
+            mongo.remove_replset_member(self.state.unit_peer_data.internal_address)
 
     def process_added_units(self) -> None:
         """Adds units to replica set."""
@@ -460,7 +458,7 @@ class MongoManager(Object, StatusProvider):
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
-            unit_host = self.state.unit_peer_data.host
+            unit_host = self.state.unit_peer_data.internal_address
             if unit_host not in replset_status:
                 return WaitingStatus("Member being added.")
 

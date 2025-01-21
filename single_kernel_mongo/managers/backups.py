@@ -187,7 +187,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def list_finished_backups(self, pbm_status: dict) -> BackupListType:
         """Lists the finished backups from the status."""
         backup_list: BackupListType = BackupListType([])
-        backups = pbm_status.get("backups", {}).get("snapshot", [])
+        backups = (
+            pbm_status.get("backups", {}).get("snapshot") or []
+        )  # snapshot is list[str] | None so move default outside of get
         for backup in backups:
             backup_status = "finished"
             if backup["status"] == "error":
@@ -207,7 +209,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         self, pbm_status: dict, backup_list: BackupListType
     ) -> BackupListType:
         """Lists all the backups with the one in progress from the status and finished list."""
-        running_backup = pbm_status["running"]
+        running_backup = pbm_status.get("running", {})
         if running_backup.get("type", None) == "backup":
             # backups are sorted in reverse order
             last_reported_backup = backup_list[0]

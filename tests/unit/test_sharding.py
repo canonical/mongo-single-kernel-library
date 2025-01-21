@@ -26,7 +26,7 @@ from .mongodb_test_charm.src.charm import MongoTestCharm
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_config_server_database_requested(harness: Harness[MongoTestCharm]):
+def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock_fs_interactions):
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
@@ -51,7 +51,7 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm]):
 
 @patch_network_get(private_address="1.1.1.1")
 def test_config_server_database_requested_failed_db_not_initialised(
-    harness: Harness[MongoTestCharm],
+    harness: Harness[MongoTestCharm], mock_fs_interactions
 ):
     manager = harness.charm.operator.config_server_manager
 
@@ -71,7 +71,7 @@ def test_config_server_database_requested_failed_db_not_initialised(
 
 @patch_network_get(private_address="1.1.1.1")
 def test_config_server_database_requested_failed_role_invalid(
-    harness: Harness[MongoTestCharm],
+    harness: Harness[MongoTestCharm], mock_fs_interactions
 ):
     manager = harness.charm.operator.config_server_manager
 
@@ -91,7 +91,7 @@ def test_config_server_database_requested_failed_role_invalid(
 
 @patch_network_get(private_address="1.1.1.1")
 def test_config_server_database_requested_failed_not_leader(
-    harness: Harness[MongoTestCharm],
+    harness: Harness[MongoTestCharm], mock_fs_interactions
 ):
     manager = harness.charm.operator.config_server_manager
 
@@ -113,7 +113,7 @@ def test_config_server_database_requested_failed_not_leader(
 
 @patch_network_get(private_address="1.1.1.1")
 def test_config_server_database_requested_failed_wrong_pbm_status(
-    harness: Harness[MongoTestCharm], mocker
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     manager = harness.charm.operator.config_server_manager
 
@@ -351,6 +351,8 @@ def test_shard_manager_synchronise_cluster_secrets_success(
             "key-file": "deadbeef",
             "operator-password": "test-operator",
             "backup-password": "test-backup",
+            "username": "unused",
+            "password": "unused",
         },
     )
 
@@ -383,6 +385,8 @@ def test_shard_manager_synchronise_cluster_secrets_no_keyfile(
         {
             "operator-password": "test-operator",
             "backup-password": "test-backup",
+            "username": "unused",
+            "password": "unused",
         },
     )
 
@@ -416,6 +420,8 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
             "int-ca-secret": "deadbeef",
             "operator-password": "test-operator",
             "backup-password": "test-backup",
+            "username": "unused",
+            "password": "unused",
         },
     )
 
@@ -448,6 +454,8 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
             "key-file": "feeddead",
             "operator-password": "test-operator",
             "backup-password": "test-backup",
+            "username": "unused",
+            "password": "unused",
         },
     )
 
@@ -478,6 +486,8 @@ def test_shard_manager_synchronise_cluster_secrets_missing_creds(
         "config-server",
         {
             "key-file": "feeddead",
+            "username": "unused",
+            "password": "unused",
         },
     )
 

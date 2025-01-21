@@ -47,6 +47,7 @@ class StatusManager(Object):
         self.charm = charm
         self.operator = charm.operator
         self.state = charm.operator.state
+        self.charm_kind = self.operator.name
 
     def set_and_share_status(self, status: StatusBase) -> None:
         """Sets the unit status."""

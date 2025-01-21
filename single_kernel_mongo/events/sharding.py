@@ -108,7 +108,7 @@ class ShardEventHandler(Object):
             self.charm.on[self.relation_name].relation_created, self._on_relation_created
         )
         self.framework.observe(
-            self.database_require_events.on.database_created, self._on_database_created
+            self.charm.on[self.relation_name].relation_changed, self._on_database_created
         )
 
         self.framework.observe(

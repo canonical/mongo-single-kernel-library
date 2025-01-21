@@ -42,7 +42,6 @@ def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_int
     )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     harness.set_leader(True)
     harness.charm.on.start.emit()
     open_ports_mock.assert_not_called()
@@ -51,7 +50,6 @@ def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_int
 
 def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",

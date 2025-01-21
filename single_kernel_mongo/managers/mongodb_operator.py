@@ -26,12 +26,16 @@ from single_kernel_mongo.config.literals import (
     MongoPorts,
     Scope,
     Substrates,
+    UnitState,
 )
-from single_kernel_mongo.config.models import ROLES, LogRotateConfig
+from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
+from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
@@ -39,9 +43,11 @@ from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
+from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
+    FailedToElectNewPrimaryError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardingMigrationError,
@@ -63,7 +69,9 @@ from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
+from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.utils.helpers import unit_number
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -111,7 +119,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
 
-        self.version_checker = CrossAppVersionChecker(
+        self.cross_app_version_checker = CrossAppVersionChecker(
             self.charm,
             version=get_charm_revision(
                 self.charm.unit, local_version=self.workload.get_internal_revision()
@@ -121,6 +129,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 RelationNames.CONFIG_SERVER.value,
             ],
         )
+        self.cluster_version_checker = VersionChecker(self)
 
         # Managers
         self.backup_manager = BackupManager(
@@ -159,6 +168,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterProvider(
             self, self.state, self.substrate, RelationNames.CLUSTER
         )
+        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        self.upgrade_manager = MongoDBUpgradeManager(
+            self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
+        )
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
@@ -170,6 +183,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
+        self.upgrade_events = UpgradeEventHandler(self)
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
@@ -233,8 +247,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-        self.logrotate_config_manager.configure_and_restart()
-
     @override
     def on_start(self) -> None:
         """Handler on start."""
@@ -246,21 +258,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Storages not attached yet.")
             raise ContainerNotReadyError("Missing storage")
 
-        # Configure the workloads
-        self.config_manager.set_environment()
-        self.mongos_config_manager.set_environment()
-
-        # Instantiate the keyfile
-        self.instantiate_keyfile()
-
-        # Push TLS files if necessary
-        self.tls_manager.push_tls_files_to_workload()
-
-        # Update licenses
-        self.handle_licenses()
-
-        # Sets directory permissions
-        self.set_permissions()
+        self._configure_workloads()
 
         try:
             logger.info("Starting MongoDB.")
@@ -293,16 +291,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         self._initialise_replica_set()
 
         try:
-            self.mongodb_exporter_config_manager.configure_and_restart()
+            self._restart_related_services()
         except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
+            logger.error("Could not restart the related services.")
             return
 
-        try:
-            self.backup_manager.configure_and_restart()
-        except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
-            return
+        if self.substrate == Substrates.K8S:
+            # K8S upgrades result in the start hook getting fired following this pattern
+            # https://juju.is/docs/sdk/upgrade-charm-event#heading--emission-sequence
+            self.upgrade_manager._reconcile_upgrade()
 
         self.charm.status_manager.to_active()
 
@@ -310,10 +307,45 @@ class MongoDBOperator(OperatorProtocol, Object):
     def on_stop(self) -> None:  # pragma: nocover
         """Handler for the stop event.
 
-        Does nothing for now.
+        K8S Only, VM has nothing to do on this step.
+        On K8S:
+         * First: Raise partition to prevent other units from restarting if an
+         upgrade is in progress. If an upgrade is not in progress, the leader
+         unit will reset the partition to 0.
+         * Second: Sets the unit state to RESTARTING and step down from replicaset.
+
+        Note that with how Juju currently operates, we only have at most 30
+        seconds until SIGTERM command, so we are by no means guaranteed to have
+        stepped down before the pod is removed.
+        Upon restart, the upgrade will still resume because all hooks run the
+        `_reconcile_upgrade` handler.
         """
-        # TODO : Implement this when porting upgrades.
-        pass
+        if self.substrate == Substrates.VM:
+            return
+
+        # Raise partition to prevent other units from restarting if an upgrade is in progress.
+        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
+        current_unit_number = unit_number(self.state.unit_upgrade_peer_data)
+        if self.state.k8s_manager.get_partition() < current_unit_number:
+            self.state.k8s_manager.set_partition(value=current_unit_number)
+            logger.debug(f"Partition set to {current_unit_number} during stop event")
+
+        if not self.upgrade_manager._upgrade:
+            logger.debug("Upgrade Peer relation missing during stop event")
+            return
+
+        # We update the state to set up the unit as restarting
+        self.upgrade_manager._upgrade.unit_state = UnitState.RESTARTING
+
+        # According to the MongoDB documentation, before upgrading the primary, we must ensure a
+        # safe primary re-election.
+        try:
+            if self.charm.unit.name == self.primary:
+                logger.debug("Stepping down current primary, before upgrading service...")
+                self.upgrade_manager.step_down_primary_and_wait_reelection()
+        except FailedToElectNewPrimaryError:
+            logger.error("Failed to reelect primary before upgrading unit.")
+            return
 
     @override
     def on_config_changed(self) -> None:
@@ -376,10 +408,14 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
+        if self.substrate == Substrates.K8S:
+            # K8S Upgrades requires to reconcile the upgrade on lifecycle event.
+            self.upgrade_manager._reconcile_upgrade()
+
         # Changing the monitor or the backup password will lead to non-leader
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
-        # work
+        # work.
         self.mongodb_exporter_config_manager.configure_and_restart()
         self.backup_manager.configure_and_restart()
 
@@ -387,6 +423,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         # the replica set is initialised.
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
+
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Adding replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+            )
+            raise UpgradeInProgressError
 
         try:
             # Adds the newly added/updated units.
@@ -427,6 +469,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongodb_exporter_config_manager.configure_and_restart()
         self.backup_manager.configure_and_restart()
 
+        # Always process the statuses.
+        self.charm.status_manager.process_and_share_statuses()
+
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""
@@ -440,6 +485,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         self.update_hosts()
+        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_storage_attached(self) -> None:  # pragma: nocover
@@ -491,7 +537,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # retries over a period of 10 minutes in an attempt to resolve race conditions it is
             # not possible to defer in storage detached.
-            logger.debug("Removing %s from replica set", self.state.unit_peer_data.host)
+            logger.debug("Removing %s from replica set", self.state.unit_peer_data.internal_address)
             for attempt in Retrying(
                 stop=stop_after_attempt(600),
                 wait=wait_fixed(1),
@@ -511,15 +557,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def on_update_status(self) -> None:
         """Status update Handler."""
-        if not self.backup_manager.is_valid_s3_integration():
-            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
-            return
-        # TODO: Cluster Mismatch revision.
-        if not self.cluster_manager.is_valid_mongos_integration():
-            self.charm.status_manager.to_blocked(
-                "Relation to mongos not supported, config role must be config-server"
-            )
-        if not self.state.db_initialised:
+        if not self.pass_status_basic_checks():
             return
 
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -532,10 +570,17 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
             return
 
-        try:
-            self.perform_self_healing()
-        except ServerSelectionTimeoutError as e:
-            logger.info(f"Failed to perform self healing: {e}")
+        if self.substrate == Substrates.K8S:
+            self.upgrade_manager._reconcile_upgrade()
+
+        # It's useless to try to perform self healing if upgrade is in progress
+        # as the handlers would raise an UpgradeInProgressError anyway so
+        # better skip it when possible.
+        if not self.state.upgrade_in_progress:
+            try:
+                self.perform_self_healing()
+            except ServerSelectionTimeoutError as e:
+                logger.info(f"Failed to perform self healing: {e}")
 
         self.charm.status_manager.process_and_share_statuses()
 
@@ -561,6 +606,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 new_password,
             )
 
+        self.charm.status_manager.process_and_share_statuses()
         return new_password, secret_id
 
     def on_get_password_action(self, username: str) -> str:
@@ -615,18 +661,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         # cluster nodes.
         self.mongo_manager.set_election_priority(priority=1)
 
-    def update_hosts(self):
+    def update_hosts(self) -> None:
         """Update the replica set hosts and remove any unremoved replica from the config."""
         if not self.state.db_initialised:
             return
         self.mongo_manager.process_unremoved_units()
         self.update_related_hosts()
 
-    def update_related_hosts(self):
+    def update_related_hosts(self) -> None:
         """Update the app relations that need to be made aware of the new set of hosts."""
         if self.state.is_role(MongoDBRoles.REPLICATION):
             for relation in self.state.client_relations:
                 self.mongo_manager.update_app_relation_data(relation)
+            return
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             # Update the mongos host in the sharded deployment
@@ -676,7 +723,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 return None
 
         for unit in self.state.units:
-            if primary_ip == unit.host:
+            if primary_ip == unit.internal_address:
                 return unit.name
         return None
 
@@ -712,6 +759,40 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongos_config_manager.set_environment()
         self.start_charm_services()
 
+    def _restart_related_services(self) -> None:
+        """Restarts mongodb exporter and backup manager."""
+        try:
+            self.mongodb_exporter_config_manager.configure_and_restart()
+        except WorkloadServiceError:
+            self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
+            raise
+
+        try:
+            self.backup_manager.configure_and_restart()
+        except WorkloadServiceError:
+            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
+            raise
+
+    def pass_status_basic_checks(self) -> bool:
+        """Integration and initial checks for update-status events."""
+        if not self.backup_manager.is_valid_s3_integration():
+            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            return False
+        if (
+            revision_mismatch_status
+            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+            return False
+        if not self.cluster_manager.is_valid_mongos_integration():
+            self.charm.status_manager.to_blocked(
+                "Relation to mongos not supported, config role must be config-server"
+            )
+        if not self.state.db_initialised:
+            return False
+
+        return True
+
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
         """Checks if the relation is feasible in the current context."""
@@ -731,35 +812,33 @@ class MongoDBOperator(OperatorProtocol, Object):
             return False
         return True
 
+    def _configure_workloads(self) -> None:
+        """Handle filesystem interactions for charm configuration."""
+        # Configure the workloads
+        self.config_manager.set_environment()
+        self.mongos_config_manager.set_environment()
+
+        # Start logrotate
+        self.logrotate_config_manager.configure_and_restart()
+
+        # Instantiate the keyfile
+        self.instantiate_keyfile()
+
+        # Push TLS files if necessary
+        self.tls_manager.push_tls_files_to_workload()
+
+        # Update licenses
+        self.handle_licenses()
+
+        # Sets directory permissions
+        self.set_permissions()
+
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
             raise Exception("Waiting for leader unit to generate keyfile contents")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
-
-    def set_permissions(self) -> None:
-        """Ensure directories and make permissions.
-
-        We must ensure that the log status directory for LogRotate is existing.
-        We must also ensure that all data, log and log status directories have
-        the correct permissions.
-        """
-        self.workload.mkdir(LogRotateConfig.log_status_dir, make_parents=True)
-
-        for path in (
-            self.workload.paths.data_path,
-            self.workload.paths.logs_path,
-            LogRotateConfig.log_status_dir,
-        ):
-            self.workload.exec(
-                [
-                    "chown",
-                    "-R",
-                    f"{self.workload.users.user}:{self.workload.users.group}",
-                    f"{path}",
-                ]
-            )
 
     def _initialise_replica_set(self):
         """Helpful method to initialise the replica set and the users.
