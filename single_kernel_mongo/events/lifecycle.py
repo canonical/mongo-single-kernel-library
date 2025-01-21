@@ -175,7 +175,11 @@ class LifecycleEventsHandler(Object):
 
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
-        self.dependent.on_relation_departed(departing_unit=event.departing_unit)
+        try:
+            self.dependent.on_relation_departed(departing_unit=event.departing_unit)
+        except (NotReadyError, PyMongoError):
+            event.defer()
+            return
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""
