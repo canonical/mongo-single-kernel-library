@@ -288,7 +288,12 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self.charm.status_manager.to_active(None)
 
-        self._initialise_replica_set()
+        try:
+            self._initialise_replica_set()
+        except (NotReadyError, PyMongoError, WorkloadExecError) as e:
+            logger.error(f"Deferring on start: error={e}")
+            self.charm.status_manager.to_waiting("waiting to initialize replica set")
+            raise
 
         try:
             self._restart_related_services()
