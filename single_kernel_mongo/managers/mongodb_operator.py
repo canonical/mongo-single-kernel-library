@@ -66,6 +66,7 @@ from single_kernel_mongo.managers.config import (
     MongosConfigManager,
 )
 from single_kernel_mongo.managers.mongo import MongoManager
+from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
@@ -173,6 +174,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
+
+        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)

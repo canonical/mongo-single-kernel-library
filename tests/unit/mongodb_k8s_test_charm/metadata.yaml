@@ -36,12 +36,14 @@ containers:
 provides:
   database:
     interface: mongodb_client
-  cos-agent:
-    interface: cos_agent
   config-server:
     interface: shards
   cluster:
     interface: config-server
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
 
 peers:
   database-peers:
@@ -56,6 +58,10 @@ requires:
   s3-credentials:
     interface: s3
     limit: 1
+  logging:
+    interface: loki_push_api
+    limit: 1
+    optional: true
   certificates:
     interface: tls-certificates
     limit: 1
