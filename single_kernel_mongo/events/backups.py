@@ -208,6 +208,7 @@ class BackupEventsHandler(Object):
             NonDeferrableFailedHookChecksError,
             InvalidPBMStatusError,
             InvalidArgumentForActionError,
+            WorkloadExecError,
             RestoreError,
         ) as e:
             fail_action_with_error_log(logger, event, action, str(e))
