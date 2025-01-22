@@ -146,6 +146,10 @@ class TLSEventsHandler(Object):
             )
             event.defer()
             return
+        if not self.manager.state.db_initialised:
+            logger.info("Deferring %s: db is not initialised")
+            event.defer()
+            return
         if self.manager.state.upgrade_in_progress:
             logger.warning(
                 "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."

@@ -793,6 +793,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_manager.to_blocked(
                 "Relation to mongos not supported, config role must be config-server"
             )
+            return False
         if not self.state.db_initialised:
             return False
 
