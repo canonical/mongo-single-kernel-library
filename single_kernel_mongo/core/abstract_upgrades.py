@@ -466,7 +466,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 continue
             if unit_state["status"] == "active":
                 continue
-            if not self.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
+            if not self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
                 unit_state["status"]
             ):
                 return False
