@@ -812,6 +812,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
+            self.charm.status_manager.to_blocked(
+                "Sharding roles do not support database interface."
+            )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
             logger.error(
@@ -819,6 +822,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
+            self.charm.status_manager.to_blocked("sharding interface cannot be used by replicas.")
             return False
         return True
 
