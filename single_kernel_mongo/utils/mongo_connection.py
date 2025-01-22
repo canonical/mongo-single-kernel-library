@@ -266,7 +266,7 @@ class MongoConnection:
 
         # When we remove member, to avoid issues when majority members is removed, we need to
         # remove next member only when MongoDB forget the previous removed member.
-        if any(member.get("stateStr", "") == "REMOVED" for member in rs_status.get("members", [])):
+        if self.is_any_removing(rs_status):
             # removing from replicaset is fast operation, lets @retry(3 times with a 5sec timeout)
             # before giving up.
             raise NotReadyError
@@ -363,6 +363,17 @@ class MongoConnection:
         return any(
             member["stateStr"] in ["STARTUP", "STARTUP2", "ROLLBACK", "RECOVERING"]
             for member in rs_status["members"]
+        )
+
+    @staticmethod
+    def is_any_removing(rs_status: dict[str, Any]) -> bool:
+        """Returns true if any replica set member is removing itself.
+
+        Args:
+            rs_status: current state of replica set as reported by mongod.
+        """
+        return any(
+            member.get("stateStr", "") == "REMOVED" for member in rs_status.get("members", [])
         )
 
     def get_shard_members(self) -> set[str]:
