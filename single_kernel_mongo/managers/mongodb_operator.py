@@ -360,6 +360,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         unresponsive therefore causing a cluster failure, error the component. This prevents it
         from executing other hooks with a new role.
         """
+        if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
+            self.state.app_peer_data.role = self.config.role
+            return
+
         if self.state.is_role(self.config.role):
             return
         if self.state.upgrade_in_progress:
