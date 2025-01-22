@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 class Sans(TypedDict):
     """A Typed Dict for a Sans."""
 
-    sans_ip: list[str]
+    sans_ips: list[str]
     sans_dns: list[str]
 
 
@@ -86,7 +86,7 @@ class TLSManager:
             subject=self._get_subject_name(),
             organization=self._get_subject_name(),
             sans=sans["sans_dns"],
-            sans_ip=sans["sans_ip"],
+            sans_ip=sans["sans_ips"],
         )
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, key.decode("utf-8"))
         self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr.decode("utf-8"))
@@ -117,7 +117,7 @@ class TLSManager:
             subject=self._get_subject_name(),
             organization=self._get_subject_name(),
             sans=sans["sans_dns"],
-            sans_ip=sans["sans_ip"],
+            sans_ip=sans["sans_ips"],
         )
         logger.debug("Requesting a certificate renewal.")
 
@@ -140,14 +140,14 @@ class TLSManager:
                 "localhost",
                 f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
             ],
-            sans_ip=[str(self.state.bind_address)],
+            sans_ips=[str(self.state.bind_address)],
         )
 
         if (
             self.state.is_role(MongoDBRoles.MONGOS)
             and self.state.app_peer_data.external_connectivity
         ):
-            sans["sans_ip"].append(self.state.unit_peer_data.host)
+            sans["sans_ips"].append(self.state.unit_peer_data.host)
 
         return sans
 
@@ -163,13 +163,13 @@ class TLSManager:
         try:
             cert = x509.load_pem_x509_certificate(pem_file.encode(), default_backend())
             sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-            sans_ip = [str(san) for san in sans.get_values_for_type(x509.IPAddress)]
+            sans_ips = [str(san) for san in sans.get_values_for_type(x509.IPAddress)]
             sans_dns = [str(san) for san in sans.get_values_for_type(x509.DNSName)]
         except x509.ExtensionNotFound:
-            sans_ip = []
+            sans_ips = []
             sans_dns = []
 
-        return Sans(sans_ip=sorted(sans_ip), sans_dns=sorted(sans_dns))
+        return Sans(sans_ips=sorted(sans_ips), sans_dns=sorted(sans_dns))
 
     def get_tls_files(self, internal: bool) -> tuple[str | None, str | None]:
         """Prepare TLS files in special MongoDB way.
@@ -340,8 +340,8 @@ class TLSManager:
             if self.is_set_waiting_for_cert_to_update(internal):
                 continue
             current_sans = self.get_current_sans(internal)
-            current_sans_ip = set(current_sans["sans_ip"]) if current_sans else set()
-            expected_sans_ip = set(self.get_new_sans()["sans_ip"]) if current_sans else set()
+            current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
+            expected_sans_ip = set(self.get_new_sans()["sans_ips"]) if current_sans else set()
             sans_ip_changed = current_sans_ip ^ expected_sans_ip
 
             if not sans_ip_changed:

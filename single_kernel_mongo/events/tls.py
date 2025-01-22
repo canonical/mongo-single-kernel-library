@@ -147,7 +147,7 @@ class TLSEventsHandler(Object):
             event.defer()
             return
         if not self.manager.state.db_initialised:
-            logger.info("Deferring %s: db is not initialised")
+            logger.info(f"Deferring {str(type(event))}: db is not initialised")
             event.defer()
             return
         if self.manager.state.upgrade_in_progress:

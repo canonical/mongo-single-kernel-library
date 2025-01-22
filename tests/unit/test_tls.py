@@ -158,6 +158,8 @@ def test_external_certificate_available(
     manager.state.secrets.set("ext-cert-secret", "unit-cert-old", Scope.UNIT)
     manager.state.secrets.set("int-cert-secret", "app-cert", Scope.UNIT)
 
+    harness.charm.operator.state.db_initialised = True
+
     harness.charm.operator.tls_events.certs_client.on.certificate_available.emit(
         certificate_signing_request="csr-secret",
         chain=["unit-chain"],
@@ -202,6 +204,7 @@ def test_internal_certificate_available(
     manager.state.secrets.set("int-cert-secret", "int-cert-old", Scope.UNIT)
     manager.state.secrets.set("ext-cert-secret", "ext-cert", Scope.UNIT)
 
+    harness.charm.operator.state.db_initialised = True
     harness.charm.operator.tls_events.certs_client.on.certificate_available.emit(
         certificate_signing_request="int-csr",
         chain=["int-chain"],
