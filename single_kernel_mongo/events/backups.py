@@ -144,6 +144,7 @@ class BackupEventsHandler(Object):
             fail_action_with_error_log(
                 logger, event, action, "The action can be run only on leader unit."
             )
+            return
 
         try:
             self.assert_pass_sanity_checks()
