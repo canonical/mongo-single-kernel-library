@@ -111,6 +111,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             container=container,
         )
         self.charm = charm
+        self.substrate = substrate
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
             role=role, container=container
         )
@@ -334,10 +335,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
-        self.workload.write(
-            self.workload.paths.pbm_config,
-            "# this file is to be left empty. Changes in this file will be ignored.\n",
-        )
+        if self.substrate == Substrates.K8S:
+            self.workload.write(
+                self.workload.paths.pbm_config,
+                "# this file is to be left empty. Changes in this file will be ignored.\n",
+            )
         self.workload.run_bin_command(
             "config", ["--file", str(self.workload.paths.pbm_config)], environment=self.environment
         )
