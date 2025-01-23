@@ -19,63 +19,12 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v29.0.1
 
   publish:
-    needs: build
-    name: publish
-    runs-on: [self-hosted, linux, X64, jammy, large]
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Install required dependencies
-        run: |
-          # docker
-          sudo snap install docker
-          sudo addgroup --system docker; sudo adduser $USER docker
-          newgrp docker
-          sudo snap disable docker; sudo snap enable docker
-
-          # skopeo
-          sudo snap install --devmode --channel edge skopeo
-
-          # yq
-          sudo snap install yq
-
-      - name: Download rock package(s)
-        uses: actions/download-artifact@v4
-        with:
-          pattern: ${{ needs.build.outputs.artifact-prefix }}-*
-          merge-multiple: true
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USER }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Publish rock to Store
-        run: |
-          full_version="$(cat rockcraft.yaml | yq .version)"
-          version="${full_version%-*}"
-          base="$(cat rockcraft.yaml | yq .base)"
-          base="${base#*@}"
-
-          # push major version to edge
-          major_tag_version="${version%%.*}-${{ env.RELEASE }}"
-          sudo skopeo \
-              --insecure-policy \
-              copy \
-              oci-archive:charmed-mongodb_${full_version}_amd64.rock \
-              docker-daemon:ghcr.io/canonical/charmed-mongodb:${major_tag_version}
-          docker push ghcr.io/canonical/charmed-mongodb:${major_tag_version}
-
-          ### push full version to edge
-          tag_version="${version}-${base}_${{ env.RELEASE }}"
-          echo "Publishing charmed-mongodb:${tag_version}"
-          sudo skopeo \
-              --insecure-policy \
-              copy \
-              oci-archive:charmed-mongodb_${full_version}_amd64.rock \
-              docker-daemon:ghcr.io/canonical/charmed-mongodb:${tag_version}
-          docker push ghcr.io/canonical/charmed-mongodb:${tag_version}
+    name: Release rock
+    needs:
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_rock.yaml@v29.0.1
+    with:
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    permissions:
+      packages: write  # Needed to publish to GitHub Container Registry
+      contents: write  # Needed to create git tags
