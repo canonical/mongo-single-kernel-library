@@ -263,6 +263,9 @@ class ClusterRequirer(Object):
         except PyMongoError:
             raise DeferrableError("Trouble removing router users")
 
+        self.dependent.stop_charm_services()
+        logger.info("Stopped mongos daemon")
+
         if not self.charm.unit.is_leader():
             return
 
