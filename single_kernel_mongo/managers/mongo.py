@@ -236,6 +236,17 @@ class MongoManager(Object, StatusProvider):
             data_interface.set_database(relation.id, config.database)
             data_interface.set_credentials(relation.id, config.username, config.password)
 
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                return
+
+            data_interface.set_endpoints(relation.id, ",".join(config.hosts))
+            data_interface.set_uris(relation.id, config.uri)
+
+            if not self.state.is_role(MongoDBRoles.MONGOS):
+                data_interface.set_replset(
+                    relation.id, config.replset or self.state.app_peer_data.replica_set
+                )
+
         self.state.app_peer_data.managed_users = managed_users
 
     def update_user(self, relation: Relation) -> None:
