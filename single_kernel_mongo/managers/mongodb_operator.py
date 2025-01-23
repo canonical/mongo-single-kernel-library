@@ -589,7 +589,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             try:
                 self.perform_self_healing()
             except ServerSelectionTimeoutError as e:
-                logger.info(f"Failed to perform self healing: {e}")
+                logger.warning(f"Failed to perform self healing: {e}")
 
         self.charm.status_manager.process_and_share_statuses()
 
