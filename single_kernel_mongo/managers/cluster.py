@@ -153,18 +153,6 @@ class ClusterProvider(Object):
                 },
             )
 
-    def update_ca_secret(self, new_ca: str | None) -> None:
-        """Updates the new CA for all related mongos charms."""
-        for relation in self.state.cluster_relations:
-            if new_ca is None:
-                self.data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
-                )
-            else:
-                self.data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
-                )
-
 
 class ClusterRequirer(Object):
     """Manage relations between the config server and mongos router on the mongos side."""
@@ -261,6 +249,9 @@ class ClusterRequirer(Object):
 
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
+
+        # In the K8S case, create the user
+        self.update_users_for_k8s_routers()
 
         self.dependent.share_connection_info()
 

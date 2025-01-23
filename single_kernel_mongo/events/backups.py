@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops import MaintenanceStatus
+from ops import ActiveStatus, MaintenanceStatus
 from ops.charm import ActionEvent, RelationJoinedEvent
 from ops.framework import Object
 
@@ -84,7 +84,7 @@ class BackupEventsHandler(Object):
             )
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent):
+    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:
         action = "configure-pbm"
         if self.dependent.state.upgrade_in_progress:
             logger.warning(
@@ -136,9 +136,9 @@ class BackupEventsHandler(Object):
             self.charm.status_manager.to_blocked(self.manager.process_pbm_error(e.stdout))
             return
 
-        self.charm.status_manager.set_and_share_status(self.manager.get_status())
+        self.charm.status_manager.set_and_share_status(self.manager.get_status() or ActiveStatus())
 
-    def _on_create_backup_action(self, event: ActionEvent):
+    def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"
         if not self.charm.unit.is_leader():
             fail_action_with_error_log(
@@ -163,7 +163,7 @@ class BackupEventsHandler(Object):
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
-    def _on_list_backups_action(self, event: ActionEvent):
+    def _on_list_backups_action(self, event: ActionEvent) -> None:
         action = "list-backups"
         try:
             self.assert_pass_sanity_checks()
@@ -174,7 +174,7 @@ class BackupEventsHandler(Object):
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
-    def _on_restore_action(self, event: ActionEvent):
+    def _on_restore_action(self, event: ActionEvent) -> None:
         action = "restore"
 
         backup_id = str(event.params.get("backup-id", ""))

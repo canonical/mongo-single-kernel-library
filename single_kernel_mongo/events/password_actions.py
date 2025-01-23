@@ -4,6 +4,8 @@
 
 """Event handlers for password-related Juju Actions."""
 
+from __future__ import annotations
+
 import logging
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -33,7 +35,7 @@ class PasswordActionParameter(str, Enum):
 class PasswordActionEvents(Object):
     """Event handlers for password-related Juju Actions."""
 
-    def __init__(self, dependent: "MongoDBOperator"):
+    def __init__(self, dependent: MongoDBOperator):
         super().__init__(dependent, key="password_events")
         self.dependent = dependent
         self.charm: AbstractMongoCharm = dependent.charm
@@ -51,11 +53,6 @@ class PasswordActionEvents(Object):
         Set the password for a specific user, if no passwords are passed, generate them.
         """
         action = "set-password"
-        try:
-            self.dependent.assert_pass_password_checks()
-        except NonDeferrableFailedHookChecksError as e:
-            fail_action_with_error_log(logger, event, action, str(e))
-            return
         username = event.params.get(PasswordActionParameter.USERNAME, OperatorUser.username)
         password = event.params.get(PasswordActionParameter.PASSWORD)
         if username not in CharmUsers:
@@ -68,7 +65,7 @@ class PasswordActionEvents(Object):
             return
         try:
             passwd, secret_id = self.dependent.on_set_password_action(username, password)
-        except SetPasswordError as e:
+        except (NonDeferrableFailedHookChecksError, SetPasswordError) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 

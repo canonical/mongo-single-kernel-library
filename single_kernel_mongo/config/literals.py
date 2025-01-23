@@ -18,8 +18,8 @@ LOCALHOST = "127.0.0.1"
 class Substrates(str, Enum):
     """Possible substrates."""
 
-    VM = "vm"
     K8S = "k8s"
+    VM = "vm"
 
 
 class CharmKind(str, Enum):

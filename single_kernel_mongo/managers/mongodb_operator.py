@@ -345,7 +345,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # According to the MongoDB documentation, before upgrading the primary, we must ensure a
         # safe primary re-election.
         try:
-            if self.charm.unit.name == self.primary:
+            if self.charm.unit.name == self.primary_unit_name:
                 logger.debug("Stepping down current primary, before upgrading service...")
                 self.upgrade_manager.step_down_primary_and_wait_reelection()
         except FailedToElectNewPrimaryError:
@@ -502,16 +502,18 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         This should handle fixing the permissions for the data dir.
         """
-        if self.substrate == Substrates.VM:
-            self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
-            self.workload.exec(
-                [
-                    "chown",
-                    "-R",
-                    f"{self.workload.users.user}:{self.workload.users.group}",
-                    f"{self.workload.paths.common_path}",
-                ]
-            )
+        if self.substrate == Substrates.K8S:
+            return
+
+        self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
+        self.workload.exec(
+            [
+                "chown",
+                "-R",
+                f"{self.workload.users.user}:{self.workload.users.group}",
+                f"{self.workload.paths.common_path}",
+            ]
+        )
 
     @override
     def on_storage_detaching(self) -> None:
@@ -595,6 +597,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
         """Handler for the set password action."""
+        self.assert_pass_password_checks()
+
         user = get_user_from_username(username)
         new_password = password or self.workload.generate_password()
         if len(new_password) > MAX_PASSWORD_LENGTH:
@@ -722,7 +726,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.warning("sysctl params cannot be set. Is the machine running on a container?")
 
     @property
-    def primary(self) -> str | None:
+    def primary_unit_name(self) -> str | None:
         """Retrieves the primary unit with the primary replica."""
         with MongoConnection(self.state.mongo_config) as connection:
             try:
@@ -805,11 +809,11 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
-        """
-        Checks if the relation is feasible in the current context.
-        
-        TODO: in the future expand this to a handle other non-feasible relations (i.e. mongos-shard, shard-s3)
-        
+        """Checks if the relation is feasible in the current context.
+
+        TODO: in the future expand this to a handle other non-feasible
+        relations (i.e. mongos-shard, shard-s3)
+
         """
         if self.state.is_sharding_component and rel_name == RelationNames.DATABASE:
             logger.error(

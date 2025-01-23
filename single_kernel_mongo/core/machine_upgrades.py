@@ -152,7 +152,7 @@ class MachineUpgrade(AbstractUpgrade):
             # According to the MongoDB documentation, before upgrading the
             # primary, we must ensure a safe primary re-election.
             try:
-                if self.unit_name == dependent.primary:  # type: ignore
+                if self.unit_name == dependent.primary_unit_name:  # type: ignore
                     logger.debug("Stepping down current primary, before upgrading service...")
                     dependent.upgrade_manager.step_down_primary_and_wait_reelection()
             except FailedToElectNewPrimaryError:

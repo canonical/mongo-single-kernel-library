@@ -18,7 +18,7 @@ this operator.
   - test coverage
   - user experience for Juju administrators this charm.
 - Please help us out in ensuring easy to review branches by rebasing your pull
-  request branch onto the `main` branch. This also avoids merge commits and
+  request branch onto the `6/edge` branch. This also avoids merge commits and
   creates a linear Git commit history.
 
 ## Developing

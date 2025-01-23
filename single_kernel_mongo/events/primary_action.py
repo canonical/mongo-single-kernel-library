@@ -38,4 +38,4 @@ class PrimaryActionHandler(Object):
             fail_action_with_error_log(
                 logger, event, "get-primary", "Cannot get primary, DB is not initialised."
             )
-        event.set_results({"replica-set-primary": self.dependent.primary})
+        event.set_results({"replica-set-primary": self.dependent.primary_unit_name})

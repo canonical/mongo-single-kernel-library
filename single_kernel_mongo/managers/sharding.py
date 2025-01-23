@@ -579,7 +579,7 @@ class ShardManager(Object, StatusProvider):
         """Update shared cluster passwords."""
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
-                if self.dependent.primary is None:
+                if self.dependent.primary_unit_name is None:
                     logger.info(
                         "Replica set has not elected a primary after restarting, cannot update passwords."
                     )

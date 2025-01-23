@@ -832,13 +832,13 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             )
             return
 
-        old_primary = self.dependent.primary  # type: ignore
+        old_primary = self.dependent.primary_unit_name  # type: ignore
         with MongoConnection(self.state.mongo_config) as mongod:
             mongod.step_down_primary()
 
         for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(1), reraise=True):
             with attempt:
-                new_primary = self.dependent.primary  # type: ignore
+                new_primary = self.dependent.primary_unit_name  # type: ignore
                 if new_primary == old_primary:
                     raise FailedToElectNewPrimaryError()
 
