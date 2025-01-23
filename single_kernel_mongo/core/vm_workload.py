@@ -183,7 +183,7 @@ class VMWorkload(WorkloadBase):
         stop=stop_after_attempt(5),
         retry=retry_if_result(lambda result: result is False),
         retry_error_callback=lambda _: False,
-        reraise=True
+        reraise=True,
     )
     def install(self) -> bool:
         """Loads the MongoDB snap from LP.

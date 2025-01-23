@@ -46,7 +46,7 @@ class NotReadyError(PyMongoError):
 class MongoConnection:
     """In this class we create connection object to Mongo[s/db].
 
-    This class is meant for agnositc functions in mongos and mongodb.
+    This class is meant for agnostic functions in mongos and mongodb.
 
     Real connection is created on the first call to Mongo[s/db].
     Delayed connectivity allows to firstly check database readiness

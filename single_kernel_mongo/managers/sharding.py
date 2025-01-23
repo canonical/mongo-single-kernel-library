@@ -457,7 +457,7 @@ class ShardManager(Object, StatusProvider):
 
     def prepare_to_add_shard(self) -> None:
         """Sets status and flags in relation data relevant to sharding."""
-        # if re-using an old shard, re-set flags.
+        # if reusing an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
         self.charm.status_manager.to_maintenance("Adding shard to config-server")
 

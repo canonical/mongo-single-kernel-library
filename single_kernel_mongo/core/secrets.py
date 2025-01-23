@@ -38,7 +38,7 @@ def generate_secret_label(app_name: str, rel_name: str, scope: Scope) -> str:
 class CachedSecret:
     """Abstraction layer above direct Juju access with caching.
 
-    The data structure is precisely re-using/simulating Juju Secrets behavior, while
+    The data structure is precisely reusing/simulating Juju Secrets behavior, while
     also making sure not to fetch a secret multiple times within the same event scope.
     """
 
