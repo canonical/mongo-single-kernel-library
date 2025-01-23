@@ -270,6 +270,11 @@ class ClusterRequirer(Object):
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
         self.state.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
 
+        if self.substrate == Substrates.VM:
+            self.dependent.remove_connection_info()
+        else:
+            self.state.db_initialised = False
+
     def update_users_for_k8s_routers(self) -> None:
         """Updates users after being initialised."""
         # VM Mongos Charm is not in charge of its users because it is a

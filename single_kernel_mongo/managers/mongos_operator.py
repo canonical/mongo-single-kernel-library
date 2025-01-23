@@ -327,6 +327,17 @@ class MongosOperator(OperatorProtocol, Object):
                 )
             raise
 
+    def remove_connection_info(self) -> None:
+        """Deletes the information from the client databag."""
+        for relation in self.state.client_relations:
+            data_interface = DatabaseProviderData(
+                self.model,
+                relation.name,
+            )
+            data_interface.delete_relation_data(
+                relation.id, fields=["username", "password", "uris"]
+            )
+
     def _share_configuration(self):
         """Actually shares the configuration according to the substrate."""
         match self.substrate:
