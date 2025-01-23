@@ -315,6 +315,9 @@ class MongoManager(Object, StatusProvider):
         if not self.state.db_initialised:
             logger.info("Not updating client databag, db is not initialised")
             return
+        if self.state.is_role(MongoDBRoles.SHARD):
+            logger.debug("Not updating client databag, role is shard")
+            return
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             logger.debug("Not updating client databag, role is config-server")
             return
