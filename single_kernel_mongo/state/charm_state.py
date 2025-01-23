@@ -98,7 +98,7 @@ class CharmState(Object):
     ):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
-        self.config = charm.parsed_config
+        self.charm = charm
         self.substrate: Substrates = substrate
         self.secrets = SecretCache(charm)
         self.peer_relation_name = charm.peer_rel_name.value
@@ -124,6 +124,11 @@ class CharmState(Object):
             pod_name=self.pod_name,
             namespace=self.model.unit._backend.model_name,
         )
+
+    @property
+    def config(self) -> MongoConfigModel:
+        """Returns the charm config."""
+        return self.charm.parsed_config
 
     @property
     def pod_name(self) -> str:
