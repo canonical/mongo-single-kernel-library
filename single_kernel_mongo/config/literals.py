@@ -95,7 +95,7 @@ class KubernetesUser(WorkloadUser[str]):
 
 @dataclass(frozen=True)
 class VmUser(WorkloadUser[int]):
-    """The system users for vm workloads."""
+    """The system users for vm workloads, this user corresponds to the snap user."""
 
     user: int = 584788
     group: int = 0
