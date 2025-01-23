@@ -137,12 +137,9 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.share_credentials_to_clients(event.username, event.password)
-        except (
-            DeferrableFailedHookChecksError,
-            WaitingForSecretsError,
-        ) as e:
+        except (DeferrableFailedHookChecksError,) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+        except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -155,11 +152,13 @@ class ClusterMongosEventHandler(Object):
         except (
             DeferrableError,
             DeferrableFailedHookChecksError,
-            WaitingForSecretsError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+        except (NonDeferrableFailedHookChecksError, WaitingForSecretsError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except WaitingForSecretsError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            self.charm.status_manager.to_waiting("Waiting for secrets from config-server")
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""
