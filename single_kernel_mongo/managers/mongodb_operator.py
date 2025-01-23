@@ -805,7 +805,12 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
-        """Checks if the relation is feasible in the current context."""
+        """
+        Checks if the relation is feasible in the current context.
+        
+        TODO: in the future expand this to a handle other non-feasible relations (i.e. mongos-shard, shard-s3)
+        
+        """
         if self.state.is_sharding_component and rel_name == RelationNames.DATABASE:
             logger.error(
                 "Charm is in sharding role: %s. Does not support %s interface.",
