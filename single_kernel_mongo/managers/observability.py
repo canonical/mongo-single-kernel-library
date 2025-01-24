@@ -57,7 +57,7 @@ class ObservabilityManager(Object):
             )
         else:
             self.metrics_endpoint = MetricsEndpointProvider(
-                self,
+                self.charm,
                 refresh_event=[self.charm.on.start, self.charm.on.update_status],
                 jobs=self.mongo_scrape_config(),
                 alert_rules_path=f"{OBSERVABILITY_CONFIG.k8s_prometheus}",
