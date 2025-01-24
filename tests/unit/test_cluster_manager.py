@@ -507,7 +507,7 @@ def test_cluster_requirer_tls_status(
     ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
         (None, "deadbeef", BlockedStatus("mongos requires TLS to be enabled.")),
-        ("deadbeef", None, BlockedStatus("mongos has TLS enabled but config-server does not.")),
+        ("deadbeef", None, BlockedStatus("mongos has TLS enabled, but config-server does not.")),
         (None, None, None),
         ("deadbeef", "deadbeef", None),
         ("feeddead", "deadbeef", BlockedStatus("mongos CA and Config-Server CA don't match.")),

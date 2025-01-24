@@ -355,7 +355,7 @@ class ClusterRequirer(Object):
             case False, True:
                 return BlockedStatus("mongos requires TLS to be enabled.")
             case True, False:
-                return BlockedStatus("mongos has TLS enabled but config-server does not.")
+                return BlockedStatus("mongos has TLS enabled, but config-server does not.")
             case _:
                 pass
         if not self.is_ca_compatible():
