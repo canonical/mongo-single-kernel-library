@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""The Cluster state."""
+"""The Config Server / Shard state."""
 
 import json
 from enum import Enum

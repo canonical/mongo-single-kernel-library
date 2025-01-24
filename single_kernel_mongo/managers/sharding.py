@@ -211,21 +211,6 @@ class ConfigServerManager(Object, StatusProvider):
                 },
             )
 
-    def update_ca_secret(self, new_ca: str | None) -> None:
-        """Updates the new CA for all related shards."""
-        for relation in self.state.config_server_relation:
-            if self.data_interface.fetch_relation_field(relation.id, "database") is None:
-                logger.info(f"Database Requested event has not run yet for relation {relation.id}")
-                continue
-            if new_ca is None:
-                self.data_interface.delete_relation_data(
-                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
-                )
-                continue
-            self.data_interface.update_relation_data(
-                relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
-            )
-
     def skip_config_server_status(self) -> bool:
         """Returns true if the status check should be skipped."""
         if self.state.is_role(MongoDBRoles.SHARD):
