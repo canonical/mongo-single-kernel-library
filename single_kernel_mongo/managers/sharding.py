@@ -17,7 +17,12 @@ from typing import TYPE_CHECKING
 from ops import StatusBase
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
-from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import (
+    NotPrimaryError,
+    OperationFailure,
+    PyMongoError,
+    ServerSelectionTimeoutError,
+)
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
@@ -78,7 +83,7 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_hook_checks(relation)
 
-        if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+        if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
             raise DeferrableFailedHookChecksError(
                 f"Database Requested event has not run yet for relation {relation.id}"
             )
@@ -108,7 +113,7 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_hook_checks(relation, is_leaving)
 
-        if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+        if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
             logger.info("Waiting for secrets requested")
             return
 
@@ -119,15 +124,14 @@ class ConfigServerManager(Object, StatusProvider):
         try:
             logger.info("Adding/Removing shards not present in cluster.")
             if is_leaving:
-                self.remove_shards(relation)
+                self.remove_shard_from_relation(relation)
             else:
                 self.add_shard(relation)
         except NotDrainedError:
             # it is necessary to removeShard multiple times for the shard to be removed.
             logger.info(
-                "Shard is still present in the cluster after removal, will defer and remove again."
+                "Shard is still present in the cluster after removal, will remove again during update status events."
             )
-            raise
         except OperationFailure as e:
             if e.code == MongoErrorCodes.ILLEGAL_OPERATION:
                 # TODO Future PR, allow removal of last shards that have no data. This will be
@@ -185,7 +189,7 @@ class ConfigServerManager(Object, StatusProvider):
             )
             if not leaving:
                 raise DeferrableFailedHookChecksError("Upgrade is in progress")
-            if self.state.has_departed_run(relation.id):
+            if not self.state.has_departed_run(relation.id):
                 raise DeferrableFailedHookChecksError(
                     "must wait for relation departed hook to decide if relation should be removed"
                 )
@@ -194,7 +198,7 @@ class ConfigServerManager(Object, StatusProvider):
     def update_credentials(self, key: str, value: str) -> None:
         """Sends new credentials for a new key value pair across all shards."""
         for relation in self.state.config_server_relation:
-            if self.data_interface.fetch_relation_field(relation.id, "database") is None:
+            if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
                 continue
             self.data_interface.update_relation_data(relation.id, {key: value})
@@ -262,6 +266,14 @@ class ConfigServerManager(Object, StatusProvider):
 
         return ActiveStatus()
 
+    def add_shards(self):
+        """Add shards on all relations."""
+        with MongoConnection(self.state.mongos_config) as mongo:
+            cluster_shards = mongo.get_shard_members()
+        for relation in self.state.config_server_relation:
+            if relation.app.name not in cluster_shards:
+                self.add_shard(relation)
+
     def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
         shard_name = relation.app.name
@@ -284,15 +296,38 @@ class ConfigServerManager(Object, StatusProvider):
                         f"{shard_name} shard does not have the same auth as the config server."
                     )
                     raise ShardAuthError(shard_name)
+                logger.warning(f"Unhandled Operation Error: {e}")
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
         self.charm.status_manager.to_active()
 
-    def remove_shards(self, relation: Relation) -> None:
+    def remove_shards(self) -> None:
+        """During update-status, remove shards until they are removed completely."""
+        with MongoConnection(self.state.mongos_config) as mongo:
+            cluster_shards = mongo.get_shard_members()
+
+        relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+
+        for shard_name in cluster_shards - relation_shards:
+            try:
+                logger.info(f"Attempting to remove shard: {shard_name}")
+                self.remove_shard(shard_name)
+            except NotReadyError:
+                logger.info(f"Unable to remove shard: {shard_name}, another shard is draining")
+            except ShardNotInClusterError:
+                logger.info(
+                    "Shard to remove is not in sharded cluster. It has been successfully removed."
+                )
+
+    def remove_shard_from_relation(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
         shard_name = relation.app.name
 
+        self.remove_shard(shard_name)
+
+    def remove_shard(self, shard_name: str) -> None:
+        """Actually removes a shard based on the shard name."""
         with MongoConnection(self.state.mongos_config) as mongo:
             try:
                 self.charm.status_manager.to_maintenance(f"Draining shard {shard_name}")
@@ -304,7 +339,7 @@ class ConfigServerManager(Object, StatusProvider):
                 logger.info("Unable to remove shard: %s another shard is draining", shard_name)
                 # to guarantee that shard that the currently draining shard, gets re-processed,
                 # do not raise immediately, instead at the end of removal processing.
-                raise ShardNotInClusterError
+                raise
             except ShardNotInClusterError:
                 logger.info(
                     "Shard to remove is not in sharded cluster. It has been successfully removed."
@@ -384,12 +419,18 @@ class ShardManager(Object, StatusProvider):
         self.relation_name = relation_name
         self.data_requirer = self.state.shard_state_interface
 
-    def assert_pass_sanity_hook_checks(self) -> None:
+    def assert_pass_sanity_hook_checks(self, is_leaving: bool) -> None:
         """Returns True if all the sanity hook checks for sharding pass."""
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
+            )
+            if not is_leaving:
+                raise DeferrableFailedHookChecksError("Upgrade in progress")
         if (
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
@@ -401,26 +442,21 @@ class ShardManager(Object, StatusProvider):
 
     def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:
         """Runs the pre-hooks checks, returns True if all pass."""
-        self.assert_pass_sanity_hook_checks()
+        self.assert_pass_sanity_hook_checks(is_leaving=is_leaving)
 
         # Edge case for DPE-4998
         # TODO: Remove this when https://github.com/canonical/operator/issues/1306 is fixed.
         if relation.app is None:
             raise NonDeferrableFailedHookChecksError("Missing app information in event, skipping.")
 
-        mongos_hosts = self.state.shard_state.mongos_hosts
+        # We look in the relation databag because the shard state data
+        # interface returns nothing on relation broken event.
+        mongos_hosts = relation.data[relation.app].get(AppShardingComponentKeys.HOST.value)
 
         if is_leaving and not mongos_hosts:
             raise NonDeferrableFailedHookChecksError(
                 "Config-server never set up, no need to process broken event."
             )
-
-        if self.state.upgrade_in_progress:
-            logger.warning(
-                "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
-            )
-            if not is_leaving:
-                raise DeferrableFailedHookChecksError
 
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
@@ -454,8 +490,10 @@ class ShardManager(Object, StatusProvider):
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
 
-        if not self.state.shard_state.has_received_credentials():
-            logger.debug("Waiting for config-server to share cluster secrets.")
+        operator_password = self.state.shard_state.operator_password
+        backup_password = self.state.shard_state.backup_password
+        if not operator_password or not backup_password:
+            logger.info("Missing secrets, returning.")
             return
 
         keyfile = self.state.shard_state.keyfile
@@ -477,10 +515,12 @@ class ShardManager(Object, StatusProvider):
         if not self.charm.unit.is_leader():
             return
 
-        operator_password = self.state.shard_state.operator_password
-        backup_password = self.state.shard_state.backup_password
-        if not operator_password or not backup_password:
-            raise WaitingForSecretsError("Missing operator password or backup password")
+        # Fix the former charms state if needed.
+        if not self.data_requirer.fetch_my_relation_field(relation.id, "database"):
+            logger.info("Repairing missing database field in DB")
+            self.data_requirer.update_relation_data(
+                relation.id, {"database": self.data_requirer.database}
+            )
 
         self.sync_cluster_passwords(operator_password, backup_password)
 
@@ -542,8 +582,16 @@ class ShardManager(Object, StatusProvider):
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and tls_integrated and self._should_request_new_certs():
             logger.info("Cluster implements internal membership auth via certificates")
-            self.dependent.tls_manager.generate_certificate_request(param=None, internal=True)
-            self.dependent.tls_manager.generate_certificate_request(param=None, internal=False)
+            for internal in (True, False):
+                csr = self.dependent.tls_manager.generate_certificate_request(
+                    param=None, internal=internal
+                )
+                self.dependent.tls_events.certs_client.request_certificate_creation(
+                    certificate_signing_request=csr
+                )
+                self.dependent.tls_manager.set_waiting_for_cert_to_update(
+                    internal=internal, waiting=True
+                )
         else:
             logger.info("Cluster implements internal membership auth via keyFile")
 
@@ -553,7 +601,7 @@ class ShardManager(Object, StatusProvider):
         self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
         self.dependent.restart_charm_services()
         if self.charm.unit.is_leader():
-            self.state.app_peer_data.keyfile = keyfile
+            self.state.set_keyfile(keyfile)
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
@@ -580,8 +628,11 @@ class ShardManager(Object, StatusProvider):
                 "Failed to sync cluster passwords from config-server to shard. Deferring event and retrying."
             )
             raise FailedToUpdateCredentialsError
-        # after updating the password of the backup user, restart pbm with correct password
-        self.dependent.backup_manager.configure_and_restart()
+        try:
+            # after updating the password of the backup user, restart pbm with correct password
+            self.dependent.backup_manager.configure_and_restart()
+        except NotPrimaryError:
+            logger.info("Will retry to start pbm later.")
 
     def update_password(self, user: MongoDBUser, new_password: str) -> None:
         """Updates the password for the given user."""
@@ -591,6 +642,7 @@ class ShardManager(Object, StatusProvider):
         current_password = self.state.get_user_password(user)
 
         if new_password == current_password:
+            logger.info("Not updating password: password not changed.")
             return
 
         # updating operator password, usually comes after keyfile was updated, hence, the mongodb

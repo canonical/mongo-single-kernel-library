@@ -124,19 +124,6 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         self.update({AppPeerDataKeys.MANAGED_USERS_KEY.value: json.dumps(sorted(value))})
 
     @property
-    def keyfile(self) -> str:
-        """Gets the keyfile from the app databag."""
-        if not self.relation:
-            return ""
-
-        return self.relation_data.get(AppPeerDataKeys.KEYFILE.value, "")
-
-    @keyfile.setter
-    def keyfile(self, keyfile: str):
-        """Stores the keyfile in the app databag."""
-        self.update({AppPeerDataKeys.KEYFILE.value: keyfile})
-
-    @property
     def mongos_hosts(self) -> list[str]:
         """Gets the mongos hosts from the databag."""
         if not self.relation:

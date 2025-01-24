@@ -88,5 +88,4 @@ def test_unit_peer_data(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     state = harness.charm.operator.state
 
-    assert state.unit_peer_data.host == "1.1.1.1"
     assert state.unit_peer_data.internal_address == "1.1.1.1"

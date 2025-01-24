@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from functools import cached_property
 from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
@@ -31,7 +30,11 @@ from single_kernel_mongo.config.relations import (
     RelationNames,
 )
 from single_kernel_mongo.core.secrets import SecretCache
-from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
+from single_kernel_mongo.core.structured_config import (
+    ExposeExternal,
+    MongoConfigModel,
+    MongoDBRoles,
+)
 from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
@@ -304,6 +307,8 @@ class CharmState(Object):
 
     def peer_unit_data(self, unit: Unit) -> UnitPeerReplicaSet:
         """Returns the peer data for a peer unit."""
+        if unit.name == self.model.unit.name:
+            return self.unit_peer_data
         return UnitPeerReplicaSet(
             relation=self.peer_relation,
             data_interface=self.peer_units_data_interfaces[unit],
@@ -450,6 +455,13 @@ class CharmState(Object):
         """Sets the user password for a system user."""
         return self.secrets.set(user.password_key_name, content, Scope.APP).label
 
+    def get_user_credentials(self) -> tuple[str | None, str | None]:
+        """Retrieve the user credentials."""
+        return (
+            self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value),
+            self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value),
+        )
+
     def set_keyfile(self, keyfile_content: str) -> str:
         """Sets the keyfile content in the secret."""
         return self.secrets.set(AppPeerDataKeys.KEYFILE.value, keyfile_content, Scope.APP).label
@@ -463,7 +475,7 @@ class CharmState(Object):
         """Return the planned units for the charm."""
         return self.model.app.planned_units()
 
-    @cached_property
+    @property
     def peer_units_data_interfaces(self) -> dict[Unit, DataPeerOtherUnitData]:
         """The cluster peer relation."""
         return {
@@ -473,7 +485,7 @@ class CharmState(Object):
             for unit in self.peers_units
         }
 
-    @cached_property
+    @property
     def upgrade_units_data_interfaces(self) -> dict[Unit, DataPeerOtherUnitData]:
         """The cluster peer relation."""
         return {
@@ -493,34 +505,46 @@ class CharmState(Object):
         return quote(f"{self.paths.socket_path}", safe="")
 
     @property
-    def _socket_path(self) -> set[str] | None:
-        """If we prefer to use a socket, return it.
+    def app_hosts(self) -> set[str]:
+        """Retrieve the hosts associated with MongoDB application."""
+        if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
+            if self.config.expose_external == ExposeExternal.NODEPORT:
+                return {f"{unit.node_ip}" for unit in self.units}
+        return self.internal_hosts
 
-        Otherwise return None.
-        """
+    @property
+    def unit_host(self) -> str | None:
+        """The Unit host for mongos external clients."""
+        assert self.charm_role.name == CharmKind.MONGOS
+        if self.substrate == Substrates.K8S:
+            return f"{self.unit_peer_data.node_ip}"
+        return None
+
+    @property
+    def is_external_client(self) -> bool:
+        """The universal external connectivity for mongos charms."""
+        if self.charm_role.name == CharmKind.MONGOD:
+            return False
+        if self.substrate == Substrates.VM:
+            return self.app_peer_data.external_connectivity
+        return self.config.expose_external == ExposeExternal.NODEPORT
+
+    @property
+    def internal_hosts(self) -> set[str]:
+        """Internal hosts for internal access."""
         if (
             self.substrate == Substrates.VM
             and self.charm_role.name == CharmKind.MONGOS
             and not self.app_peer_data.external_connectivity
         ):
             return {self.formatted_socket_path}
-        return None
-
-    @property
-    def app_hosts(self) -> set[str]:
-        """Retrieve the hosts associated with MongoDB application."""
-        return self._socket_path or {unit.host for unit in self.units}
-
-    @property
-    def internal_hosts(self) -> set[str]:
-        """Internal hosts for internal access."""
-        return self._socket_path or {unit.internal_address for unit in self.units}
+        return {unit.internal_address for unit in self.units}
 
     @property
     def host_port(self) -> int:
         """Retrieve the port associated with MongoDB application."""
         if self.is_role(MongoDBRoles.MONGOS):
-            if self.app_peer_data.external_connectivity:
+            if self.is_external_client and self.substrate == Substrates.K8S:
                 return self.unit_peer_data.node_port
             return MongoPorts.MONGOS_PORT
         return MongoPorts.MONGODB_PORT
@@ -750,7 +774,7 @@ class CharmState(Object):
     @property
     def monitor_config(self) -> MongoConfiguration:
         """Mongo Configuration for the monitoring user."""
-        return self.mongodb_config_for_user(MonitorUser)
+        return self.mongodb_config_for_user(MonitorUser, hosts=self.internal_hosts)
 
     @property
     def operator_config(self) -> MongoConfiguration:
@@ -768,9 +792,15 @@ class CharmState(Object):
         """Mongos Configuration for the admin mongos user."""
         if self.charm_role.name == CharmKind.MONGOD:
             return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
-        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
-        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
+        username, password = self.get_user_credentials()
         database = self.app_peer_data.database
+        port: MongoPorts | None = MongoPorts.MONGOS_PORT
+        if (
+            self.charm_role.name == CharmKind.MONGOS
+            and self.substrate == Substrates.VM
+            and not self.app_peer_data.external_connectivity
+        ):
+            port = None
         if not username or not password:
             raise Exception("Missing credentials.")
 
@@ -780,7 +810,7 @@ class CharmState(Object):
             password=password,
             hosts=self.internal_hosts,
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
-            port=MongoPorts.MONGOS_PORT,
+            port=port,
             roles={RoleNames.ADMIN},
             tls_external=self.tls.external_enabled,
             tls_internal=self.tls.internal_enabled,

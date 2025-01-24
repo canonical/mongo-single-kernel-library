@@ -522,8 +522,8 @@ class MongoConnection:
         # when chunks have finished draining, remaining chunks is still in the removal info, but
         # marked as 0. If "remaining" is not present, in removal_info then the shard is not yet
         # draining
-        if "remaining" not in removal_info:
-            raise NotDrainedError()
+        if "remaining" not in removal_info.keys():
+            raise NotDrainedError
 
         return removal_info["remaining"]["chunks"] if "remaining" in removal_info else 0
 

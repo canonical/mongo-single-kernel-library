@@ -16,12 +16,14 @@ from ops.charm import (
     SecretChangedEvent,
 )
 from ops.framework import Object
-from pymongo.errors import ServerSelectionTimeoutError
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.exceptions import (
+    BalancerNotEnabledError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
+    NotDrainedError,
     ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
@@ -74,7 +76,15 @@ class ConfigServerEventHandler(Object):
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
-        except (DeferrableFailedHookChecksError, ServerSelectionTimeoutError, ShardAuthError) as e:
+        except (
+            DeferrableFailedHookChecksError,
+            ServerSelectionTimeoutError,
+            ShardAuthError,
+            NotDrainedError,
+            NotReadyError,
+            BalancerNotEnabledError,
+            PyMongoError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -137,6 +147,7 @@ class ShardEventHandler(Object):
             WaitingForSecretsError,
             WaitingForCertificatesError,
             NotReadyError,
+            FailedToUpdateCredentialsError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:

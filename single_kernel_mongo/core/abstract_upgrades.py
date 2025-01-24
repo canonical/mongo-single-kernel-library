@@ -173,7 +173,7 @@ class AbstractUpgrade(ABC):
         """App upgrade status."""
         if not self.state.upgrade_in_progress:
             return None
-        if not self.upgrade_resumed:
+        if self.dependent.name == CharmKind.MONGOD and not self.upgrade_resumed:
             # User confirmation needed to resume upgrade (i.e. upgrade second unit)
             # Statuses over 120 characters are truncated in `juju status` as of juju 3.1.6 and
             # 2.9.45
@@ -310,6 +310,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 )
             )
             or self.charm.unit.status == WAITING_POST_UPGRADE_STATUS
+            or "is not up-to date with" in self.charm.unit.status.message
         ):
             self.charm.status_manager.set_and_share_status(
                 self._upgrade.get_upgrade_unit_status() or ActiveStatus()
@@ -321,6 +322,10 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         if self.substrate == Substrates.VM:
             self.state.unit_workload_container_version = SNAP.revision
             logger.debug(f"Saved {SNAP.revision=} in unit databag after first install")
+        if self.dependent.name == CharmKind.MONGOD:
+            self.state.unit_upgrade_peer_data.current_revision = (
+                self.dependent.cross_app_version_checker.version  # type: ignore
+            )
         if self.charm.unit.is_leader():
             if not self.state.upgrade_in_progress:
                 # Save versions on initial start
@@ -351,12 +356,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
             # Run before checking `self._upgrade.is_compatible` in case incompatible upgrade was
             # forced & completed on all units.
-            if self.dependent.name == CharmKind.MONGOD:
-                # We can type ignore here because we know we are using a MongoD charm
-                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             self._upgrade.set_versions_in_app_databag()
 
-        if not self._upgrade.is_compatible:
+        if self.substrate == Substrates.VM and not self._upgrade.is_compatible:
             self._set_upgrade_status()
             return
 
@@ -365,8 +367,12 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             return
 
         if self._upgrade.unit_state is UnitState.RESTARTING:  # Kubernetes only
-            self._on_kubernetes_restarting()  # type: ignore
-            return
+            if not self._upgrade.is_compatible:
+                logger.info(
+                    f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
+                )
+                self.charm.status_manager.set_and_share_status(INCOMPATIBLE_UPGRADE)
+                return
 
         if self.dependent.substrate == Substrates.K8S:
             self._on_kubernetes_always(during_upgrade)  # type: ignore
@@ -402,20 +408,10 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             self._set_upgrade_status()
             # We can type ignore because this branch is VM only
             self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
+            # Refresh status after upgrade
         else:
-            self._set_upgrade_status()
             logger.debug("Waiting to upgrade")
-            return
-
-    def _on_kubernetes_restarting(self) -> None:
-        """This is run on k8s if the current unit is restarting."""
-        assert self._upgrade
-        if not self._upgrade.is_compatible:
-            logger.info(
-                f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
-            )
-            self.charm.status_manager.set_and_share_status(INCOMPATIBLE_UPGRADE)
-            return
+        self._set_upgrade_status()
 
     # BEGIN: Helpers
     @mongodb_only
@@ -430,7 +426,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         with MongoConnection(self.state.mongo_config) as mongod:
             unit_with_lowest_id = self.state.units_upgrade_peer_data[-1].unit
-            unit_host = self.state.peer_unit_data(unit_with_lowest_id).host
+            unit_host = self.state.peer_unit_data(unit_with_lowest_id).internal_address
             if mongod.primary() == unit_host:
                 logger.debug(
                     "Not moving Primary before refresh, primary is already on the last unit to refresh."
@@ -578,7 +574,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
     def are_shards_healthy(self, mongos_config: MongoConfiguration) -> bool:
         """Returns True if all shards in the cluster are healthy."""
         with MongoConnection(mongos_config) as mongos:
-            if mongos.is_any_draining():
+            if mongos.is_any_shard_draining():
                 logger.debug("Cluster is draining a shard, do not proceed with refresh.")
                 return False
 
@@ -635,9 +631,13 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         self: GenericMongoDBUpgradeManager[MongoDBOperator],
     ) -> bool:
         """Returns True if read and write is feasible for cluster."""
-        if self.state.is_role(MongoDBRoles.REPLICATION):
-            return self.is_replica_set_able_read_write()
-        return self.is_sharded_cluster_able_to_read_write()
+        try:
+            if self.state.is_role(MongoDBRoles.REPLICATION):
+                return self.is_replica_set_able_read_write()
+            return self.is_sharded_cluster_able_to_read_write()
+        except (ServerSelectionTimeoutError, OperationFailure):
+            logger.warning("Impossible to select server, will try again later")
+            return False
 
     def is_mongos_able_to_read_write(self: GenericMongoDBUpgradeManager[MongosOperator]) -> bool:
         """Returns True if read and write is feasible from mongos."""
@@ -826,7 +826,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
     def step_down_primary_and_wait_reelection(self) -> None:
         """Steps down the current primary and waits for a new one to be elected."""
-        if len(self.state.app_hosts) < 2:
+        if len(self.state.internal_hosts) < 2:
             logger.warning(
                 "No secondaries to become primary - upgrading primary without electing a new one, expect downtime."
             )

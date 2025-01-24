@@ -151,7 +151,7 @@ class BackupEventsHandler(Object):
             self.manager.assert_can_backup()
             backup_id = self.manager.create_backup_action()
             self.charm.status_manager.set_and_share_status(
-                MaintenanceStatus(f"backup started/running, backup id:'{backup_id}'")
+                MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
             )
             success_action_with_info_log(
                 logger,

@@ -51,8 +51,6 @@ class AppShardingComponentState(AbstractRelationState[Data]):
     @property
     def mongos_hosts(self) -> list[str]:
         """The mongos hosts in the relation."""
-        if not self.relation:
-            return []
         return json.loads(self.relation_data.get(AppShardingComponentKeys.HOST.value, "[]"))
 
     @mongos_hosts.setter
@@ -64,8 +62,10 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         if not self.relation:
             return False
         return (
-            self.relation_data.get(AppShardingComponentKeys.USERNAME.value, None) is not None
-            and self.relation_data.get(AppShardingComponentKeys.PASSWORD.value, None) is not None
+            self.relation_data.get(AppShardingComponentKeys.OPERATOR_PASSWORD.value, None)
+            is not None
+            and self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
+            is not None
         )
 
     @property

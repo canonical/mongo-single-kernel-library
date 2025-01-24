@@ -9,7 +9,7 @@ import re
 from functools import partial
 from logging import getLogger
 
-from single_kernel_mongo.config.literals import CharmKind
+from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.exceptions import InvalidCharmKindError
 from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
 
@@ -33,6 +33,13 @@ def parse_tls_file(raw_content: str) -> bytes:
 
 def generate_relation_departed_key(rel_id: int) -> str:  # noqa
     return f"relation_{rel_id}_departed"
+
+
+def get_pid_command(substrate: Substrates, log_dir: str) -> str:
+    """Gets the command that fetches the PID for logrotate template."""
+    if substrate == Substrates.K8S:
+        return f'pgrep -f "mongod.*--logpath={log_dir}/mongodb.log"'
+    return "systemctl show -p MainPID --value snap.charmed-mongodb.mongod.service"
 
 
 def hostname_from_hostport(host: str) -> str:

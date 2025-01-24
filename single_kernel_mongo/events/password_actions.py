@@ -63,6 +63,14 @@ class PasswordActionEvents(Object):
                 f"The action can be run only for users used by the charm: {', '.join(CharmUsers)} not {username}",
             )
             return
+        if password == "":
+            fail_action_with_error_log(
+                logger,
+                event,
+                action,
+                "The password cannot be empty",
+            )
+            return
         try:
             passwd, secret_id = self.dependent.on_set_password_action(username, password)
         except (NonDeferrableFailedHookChecksError, SetPasswordError) as e:

@@ -55,7 +55,7 @@ from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
+    from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator  # pragma: nocover
 
 BackupListType = NewType("BackupListType", list[tuple[str, str, str]])
 
@@ -96,21 +96,22 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def __init__(
         self,
-        charm: AbstractMongoCharm,
+        dependent: MongoDBOperator,
         role: CharmSpec,
         substrate: Substrates,
         state: CharmState,
         container: Container | None,
     ) -> None:
-        super().__init__(parent=charm, key="backup")
+        super().__init__(parent=dependent, key="backup")
         super(Object, self).__init__(
             role=role,
             substrate=substrate,
-            config=charm.parsed_config,
+            config=dependent.charm.parsed_config,
             state=state,
             container=container,
         )
-        self.charm = charm
+        self.dependent = dependent
+        self.charm = dependent.charm
         self.substrate = substrate
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
             role=role, container=container
@@ -268,6 +269,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         if not self.state.s3_relation:
             logger.info("No configuration for backups, not relation to s3-charm")
             return None
+        if not self.validate_s3_config():
+            logger.info(
+                "Relation to S3 charm exists but not all necessary configurations have been set."
+            )
+            return BlockedStatus("s3 configurations missing.")
         try:
             previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
@@ -287,6 +293,8 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
+        # Set environment before starting
+        self.set_environment()
         self.workload.start()
 
         # pbm has a flakely resync and it is necessary to wait for no actions to be running before
@@ -312,6 +320,37 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
         time.sleep(2)
         self._wait_pbm_status()
+
+    def validate_s3_config(self) -> bool:
+        """Validates that the S3 config is complete."""
+        if not self.state.s3_relation:
+            logger.info("No configuration for backups, no relation to S3 charm.")
+            return False
+
+        # TODO: Rework the S3 client location to make it easier to access that.
+        provided_configs = map_s3_config_to_pbm_config(
+            self.dependent.backup_events.s3_client.get_s3_connection_info()
+        )
+        if not provided_configs.get(
+            "storage.s3.credentials.access-key-id"
+        ) or not provided_configs.get("storage.s3.credentials.secret-access-key"):
+            logger.info("Missing s3 credentials")
+            return False
+
+        # note this is more of a sanity check - the s3 lib defaults this to the relation name
+        if not provided_configs.get("storage.s3.bucket"):
+            logger.info("Missing bucket")
+            return False
+
+        # since we cannot determine whether the user has an AWS or GCP bucket or Minio bucket
+        # send them an info
+        if not provided_configs.get("storage.s3.region"):
+            logger.info("Missing region - this is required for AWS and GCP")
+
+        if not provided_configs.get("storage.s3.endpointUrl"):
+            logger.info("Missing endpointUrl - this is required for MinIO and GCP")
+
+        return True
 
     def set_config_options(self, credentials: dict[str, str]) -> None:
         """Apply the configuration provided by S3 integrator.

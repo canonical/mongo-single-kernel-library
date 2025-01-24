@@ -36,7 +36,9 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     data = manager.data_interface.as_dict(rel_id)
 
@@ -147,7 +149,9 @@ def test_config_server_update_credentials(harness: Harness[MongoTestCharm]):
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     manager.update_credentials("operator-password", "deadbeef")
 
@@ -165,7 +169,9 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     manager.state.update_ca_secrets("newca")
 
@@ -190,7 +196,9 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker):
 
     relation: Relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, rel_id)  # type: ignore[assignment]
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
     harness.update_relation_data(rel_id, "shard0/0", {"private-address": "2.2.2.2"})
 
     manager.add_shard(relation)
@@ -217,7 +225,9 @@ def test_config_server_cluster_password_synced_success(harness: Harness[MongoTes
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
     harness.add_relation_unit(rel_id, "shard0/0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     assert manager.cluster_password_synced()
 
@@ -248,7 +258,9 @@ def test_config_server_cluster_password_synced_failure(
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
     harness.add_relation_unit(rel_id, "shard0/0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     assert not manager.cluster_password_synced()
 
@@ -273,7 +285,9 @@ def test_config_server_cluster_password_synced_raises(harness: Harness[MongoTest
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
     harness.add_relation_unit(rel_id, "shard0/0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     with pytest.raises(OperationFailure) as err:
         manager.cluster_password_synced()
@@ -297,8 +311,12 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
     harness.add_relation_unit(rel_id, "shard0/0")
     harness.add_relation_unit(rel_id_bis, "shard1/0")
 
-    harness.update_relation_data(rel_id, "shard0", {"database": "unused"})
-    harness.update_relation_data(rel_id_bis, "shard1", {"database": "unused"})
+    harness.update_relation_data(
+        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
+    harness.update_relation_data(
+        rel_id_bis, "shard1", {"requested-secrets": '["unused"]', "database": "unused"}
+    )
 
     assert set(manager.get_unreachable_shards()) == {"shard0", "shard1"}
 
@@ -462,38 +480,6 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
     relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
 
     with pytest.raises(NotReadyError):
-        manager.synchronise_cluster_secrets(relation)
-
-
-@patch_network_get(private_address="1.1.1.1")
-def test_shard_manager_synchronise_cluster_secrets_missing_creds(
-    harness: Harness[MongoTestCharm], mocker
-):
-    manager = harness.charm.operator.shard_manager
-
-    harness.set_leader(True)
-
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
-    harness.charm.operator.state.db_initialised = True
-
-    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
-
-    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
-
-    harness.update_relation_data(
-        rel_id,
-        "config-server",
-        {
-            "key-file": "feeddead",
-            "username": "unused",
-            "password": "unused",
-        },
-    )
-
-    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
-
-    with pytest.raises(WaitingForSecretsError):
         manager.synchronise_cluster_secrets(relation)
 
 

@@ -24,6 +24,7 @@ class UnitUpgradeRelationKeys(str, Enum):
 
     STATE = "state"
     SNAP_REVISION = "snap_revision"
+    CURRENT_REVISION = "current_revision"
 
 
 class AppUpgradeRelationKeys(str, Enum):
@@ -70,6 +71,15 @@ class UnitUpgradePeerData(AbstractRelationState[DataPeerUnitData]):
     @snap_revision.setter
     def snap_revision(self, value: str):
         self.update({UnitUpgradeRelationKeys.SNAP_REVISION.value: value})
+
+    @property
+    def current_revision(self) -> str:
+        """The revision of the charm that's running before the upgrade."""
+        return self.relation_data.get(UnitUpgradeRelationKeys.CURRENT_REVISION, "-1")
+
+    @current_revision.setter
+    def current_revision(self, value: str):
+        self.update({UnitUpgradeRelationKeys.CURRENT_REVISION.value: value})
 
 
 class AppUpgradePeerData(AbstractRelationState[DataPeerData]):

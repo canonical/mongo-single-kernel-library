@@ -239,7 +239,7 @@ class MongoManager(Object, StatusProvider):
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 return
 
-            data_interface.set_endpoints(relation.id, ",".join(config.hosts))
+            data_interface.set_endpoints(relation.id, ",".join(sorted(config.hosts)))
             data_interface.set_uris(relation.id, config.uri)
 
             if not self.state.is_role(MongoDBRoles.MONGOS):
@@ -361,7 +361,7 @@ class MongoManager(Object, StatusProvider):
         if config.hosts != set(endpoints.split(",")):
             data_interface.set_endpoints(
                 relation.id,
-                ",".join(config.hosts),
+                ",".join(sorted(config.hosts)),
             )
         if config.uri != uris:
             data_interface.set_uris(

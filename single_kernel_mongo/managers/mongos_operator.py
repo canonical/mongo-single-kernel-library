@@ -60,6 +60,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+INVALID_EXTERNAL_CONFIG = "Config option for expose-external not valid."
+
 
 @final
 class MongosOperator(OperatorProtocol, Object):
@@ -135,6 +137,13 @@ class MongosOperator(OperatorProtocol, Object):
             raise ContainerNotReadyError
         self.charm.unit.set_workload_version(self.workload.get_version())
 
+    def _configure_workloads(self) -> None:
+        self.tls_manager.push_tls_files_to_workload()
+        self.handle_licenses()
+        self.set_permissions()
+
+        self.mongos_config_manager.set_environment()
+
     @override
     def on_start(self) -> None:
         """For this case, we don't start any service.
@@ -146,14 +155,11 @@ class MongosOperator(OperatorProtocol, Object):
             logger.debug("mongos installation is not ready yet.")
             raise ContainerNotReadyError
 
-        self.tls_manager.push_tls_files_to_workload()
-        self.handle_licenses()
-        self.set_permissions()
+        self._configure_workloads()
 
         if self.substrate == Substrates.K8S:
             self.upgrade_manager._reconcile_upgrade()
 
-        self.mongos_config_manager.set_environment()
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
@@ -181,8 +187,9 @@ class MongosOperator(OperatorProtocol, Object):
                     self.charm.config["expose-external"],
                     "['nodeport', 'none']",
                 )
-                self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
+                self.charm.status_manager.to_blocked(INVALID_EXTERNAL_CONFIG)
                 return
+            self.charm.status_manager.clear_status(BlockedStatus(INVALID_EXTERNAL_CONFIG))
             self.update_k8s_external_services()
 
             self.tls_manager.update_tls_sans()
@@ -342,7 +349,9 @@ class MongosOperator(OperatorProtocol, Object):
         """Actually shares the configuration according to the substrate."""
         match self.substrate:
             case Substrates.VM:
-                if not self.state.mongos_config.password or not self.state.mongos_config.username:
+                # We can't build the config if those are missing so we get it beforehand.
+                username, password = self.state.get_user_credentials()
+                if not username or not password:
                     return
                 # We'll always have only one client relation as VM because
                 # we're a subordinate charm, so this loop will run at most once.
@@ -403,12 +412,14 @@ class MongosOperator(OperatorProtocol, Object):
             return
         match self.config.expose_external:
             case ExposeExternal.NODEPORT:
-                service = self.k8s.build_node_port_services(str(MongoPorts.MONGOS_PORT))
+                service = self.k8s.build_node_port_services(f"{MongoPorts.MONGOS_PORT}")
                 self.k8s.apply_service(service)
             case ExposeExternal.NONE:
                 self.k8s.delete_service()
             case ExposeExternal.UNKNOWN:
                 return
+        if not self.charm.unit.is_leader():
+            return
         self.state.app_peer_data.expose_external = self.config.expose_external
 
     def update_keyfile(self, keyfile_content: str) -> bool:

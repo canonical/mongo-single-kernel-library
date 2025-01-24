@@ -17,7 +17,7 @@ from lightkube.core.exceptions import ApiError
 from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
-from single_kernel_mongo.config.literals import CharmKind, UnitState
+from single_kernel_mongo.config.literals import INCOMPATIBLE_UPGRADE, CharmKind, UnitState
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -60,6 +60,18 @@ class KubernetesUpgrade(AbstractUpgrade):
         )
 
     @property
+    def app_status(self) -> StatusBase | None:
+        """App upgrade status."""
+        if not self.is_compatible:
+            logger.info(
+                "Refresh incompatible. Rollback with `juju refresh`. "
+                "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
+                "action on each remaining unit"
+            )
+            return INCOMPATIBLE_UPGRADE
+        return super().app_status
+
+    @property
     def partition(self) -> int:
         """Specifies which units should upgrade.
 
@@ -100,10 +112,10 @@ class KubernetesUpgrade(AbstractUpgrade):
             # Note: upgrade_order_index != unit number
             state = unit.unit_state
             if (
-                (not force and state is not UnitState.HEALTHY)
-                or self.state.unit_workload_container_versions
-                != self.state.app_workload_container_version
-            ):
+                not force and state is not UnitState.HEALTHY
+            ) or self.state.unit_workload_container_versions[
+                unit.name
+            ] != self.state.app_workload_container_version:
                 if self.dependent.name == CharmKind.MONGOD:
                     if not from_event and upgrade_order_index == 1:
                         # User confirmation needed to resume upgrade (i.e. upgrade second unit)
@@ -124,6 +136,7 @@ class KubernetesUpgrade(AbstractUpgrade):
         - confirm first upgraded unit is healthy and resume upgrade
         - force upgrade of next unit if 1 or more upgraded units are unhealthy
         """
+        message: str | None = None
         if self.dependent.name == CharmKind.MONGOD:
             force = from_event and force
         else:
@@ -166,8 +179,12 @@ class KubernetesUpgrade(AbstractUpgrade):
                 # is not ready). This is also applicable `if not force`,
                 # but is unlikely to happen since all units are healthy `if
                 # not force`.
-                message = f"Attempting to refresh unit {self.partition}."
+                message = f"Attempting to refresh unit {partition_}."
             else:
-                message = f"Refresh resumed. Unit {self.partition} is refreshing next."
-            return message
-        return None
+                message = f"Refresh resumed. Unit {partition_} is refreshing next."
+        if partition_ < self.partition:
+            self.partition = partition_
+            logger.debug(
+                f"Lowered partition to {partition_} {from_event=} {force=} {self.state.upgrade_in_progress=}"
+            )
+        return message

@@ -143,11 +143,9 @@ class TLSManager:
             sans_ips=[str(self.state.bind_address)],
         )
 
-        if (
-            self.state.is_role(MongoDBRoles.MONGOS)
-            and self.state.app_peer_data.external_connectivity
-        ):
-            sans["sans_ips"].append(self.state.unit_peer_data.host)
+        if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
+            if host := self.state.unit_host:
+                sans["sans_ips"].append(host)
 
         return sans
 
@@ -208,12 +206,17 @@ class TLSManager:
         self.charm.status_manager.to_maintenance("Disabling TLS")
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services()
-        self.charm.status_manager.process_and_share_statuses()
 
     def enable_certificates_for_unit(self):
         """Enables the new certificates for this unit."""
         self.delete_certificates_from_workload()
         self.push_tls_files_to_workload()
+
+        if not self.state.db_initialised and self.state.is_role(MongoDBRoles.MONGOS):
+            logger.info(
+                "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."
+            )
+            return
         self.charm.status_manager.to_maintenance("enabling TLS")
         try:
             self.dependent.restart_charm_services()
@@ -221,14 +224,14 @@ class TLSManager:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_manager.to_blocked("couldn't start MongoDB")
             return
-        self.charm.status_manager.process_and_share_statuses()
 
     def delete_certificates_from_workload(self):
         """Deletes the certificates from the workload."""
         logger.info("Deleting TLS certificates from filesystem")
 
         for file in self.workload.paths.tls_files:
-            self.workload.delete(file)
+            if self.workload.exists(file):
+                self.workload.delete(file)
 
     def push_tls_files_to_workload(self) -> None:
         """Pushes the TLS files on the workload."""
@@ -348,9 +351,12 @@ class TLSManager:
                 continue
 
             logger.info(
-                f'Mongos {self.charm.unit.name.split("/")[1]} updating certificate SANs - '
+                f"Mongos {self.charm.unit.name.split('/')[1]} updating certificate SANs - "
                 f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
                 f"NEW SANs = {expected_sans_ip - current_sans_ip}"
             )
 
-            self.generate_new_csr(internal)
+            old_csr, new_csr = self.generate_new_csr(internal)
+            self.dependent.tls_events.certs_client.request_certificate_renewal(
+                old_certificate_signing_request=old_csr, new_certificate_signing_request=new_csr
+            )

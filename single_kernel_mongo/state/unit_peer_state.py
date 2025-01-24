@@ -62,11 +62,13 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     @property
     def internal_address(self) -> str:
         """The address for internal communication between brokers."""
-        if not self.relation:
-            raise Exception("Missing relation")
         if self.substrate == Substrates.VM:
             # We directly access the value in the relation here because of external applications.
-            return self.bind_address or str(
+            if self.bind_address:
+                return self.bind_address
+            # It's a remote unit so we need the relation.
+            assert self.relation
+            return str(
                 self.relation.data[self.component].get(UnitPeerRelationKeys.PRIVATE_ADDRESS.value)
             )
 
@@ -74,13 +76,6 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
             return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
 
         return ""
-
-    @property
-    def host(self) -> str:
-        """Return the hostname of a unit."""
-        if self.substrate == Substrates.VM:
-            return self.internal_address
-        return self.node_ip or self.internal_address
 
     @property
     def name(self) -> str:

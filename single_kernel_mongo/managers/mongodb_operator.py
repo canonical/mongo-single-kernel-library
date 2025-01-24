@@ -133,7 +133,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Managers
         self.backup_manager = BackupManager(
-            self.charm,
+            self,
             self.role,
             self.substrate,
             self.state,
@@ -301,12 +301,12 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
+        self.charm.status_manager.to_active()
+
         if self.substrate == Substrates.K8S:
             # K8S upgrades result in the start hook getting fired following this pattern
             # https://juju.is/docs/sdk/upgrade-charm-event#heading--emission-sequence
             self.upgrade_manager._reconcile_upgrade()
-
-        self.charm.status_manager.to_active()
 
     @override
     def on_stop(self) -> None:  # pragma: nocover
@@ -456,15 +456,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         for backup tool on non-leader units to keep them working with MongoDB. The same workflow
         occurs on TLS certs change.
         """
-        if (
-            generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, Scope.APP)
-            == secret_label
-        ):
+        if generate_secret_label(self.charm.app.name, Scope.APP) == secret_label:
             scope = Scope.APP
-        elif (
-            generate_secret_label(self.charm.app.name, self.charm.peer_rel_name, Scope.UNIT)
-            == secret_label
-        ):
+        elif generate_secret_label(self.charm.app.name, Scope.UNIT) == secret_label:
             scope = Scope.UNIT
         else:
             logging.debug("Secret %s changed, but it's unknown", secret_id)
@@ -479,7 +473,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.backup_manager.configure_and_restart()
 
         # Always process the statuses.
-        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_relation_departed(self, departing_unit: Unit | None) -> None:
@@ -659,6 +652,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         reconfigure. Especially in the case that the leader's IP address changed, it will not
         receive a relation event.
         """
+        # All nodes should restart PBM and MongoDBExporter if it's not running
+        self.mongodb_exporter_config_manager.configure_and_restart()
+        self.backup_manager.configure_and_restart()
+
         if not self.charm.unit.is_leader():
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
             return
@@ -691,6 +688,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             # Update the mongos host in the sharded deployment
             self.config_server_manager.update_mongos_hosts()
+            # Try to add shards that failed to add earlier
+            self.config_server_manager.add_shards()
+            # Try to remove shards so it goes on getting processed.
+            self.config_server_manager.remove_shards()
             # Update the config server DB URI on the remote mongos
             self.cluster_manager.update_config_server_db()
 
@@ -788,6 +789,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def pass_status_basic_checks(self) -> bool:
         """Integration and initial checks for update-status events."""
+        if not self.state.is_sharding_component and self.state.has_sharding_integration:
+            self.charm.status_manager.to_blocked("sharding interface cannot be used by replicas")
+            return False
         if not self.backup_manager.is_valid_s3_integration():
             self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
             return False
@@ -831,7 +835,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.charm.status_manager.to_blocked("sharding interface cannot be used by replicas.")
+            self.charm.status_manager.to_blocked("sharding interface cannot be used by replicas")
             return False
         return True
 
@@ -873,6 +877,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         oversee the relation to create the associated users.
         At the very end, it sets the `db_initialised` flag to True.
         """
+        if self.state.db_initialised:
+            # The replica set should be initialised only once. Check should be
+            # external (e.g., check initialisation inside peer relation). We
+            # shouldn't rely on MongoDB response because the data directory
+            # can be corrupted.
+            return
         if not self.model.unit.is_leader():
             return
         self.mongo_manager.initialise_replica_set()

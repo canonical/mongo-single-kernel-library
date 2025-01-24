@@ -76,7 +76,7 @@ class MachineUpgrade(AbstractUpgrade):
     @property
     def _unit_workload_version(self) -> str | None:
         """Installed MongoDB version for this unit."""
-        return self._current_versions["workload_version"]
+        return self._current_versions["workload"]
 
     def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
@@ -128,7 +128,7 @@ class MachineUpgrade(AbstractUpgrade):
                         # (in case user forgot to run pre-upgrade-check action)
                         self.pre_upgrade_check()
                         logger.debug("Pre-refresh check after `juju refresh` successful")
-                elif index == 1:
+                elif index == 1 and self.dependent.name == CharmKind.MONGOD:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
                     logger.debug(f"Second unit authorized to refresh if {self.upgrade_resumed=}")
                     return self.upgrade_resumed
@@ -161,17 +161,21 @@ class MachineUpgrade(AbstractUpgrade):
                 logger.error("Failed to reelect primary before upgrading unit.")
                 return
 
-            logger.debug(f"Upgrading {self.authorized=}")
-            self.unit_state = UnitState.UPGRADING
-            dependent.workload.install()
-            self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
-            logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
+        logger.debug(f"Upgrading {self.unit_name=}")
+        self.unit_state = UnitState.UPGRADING
+        dependent.workload.install()
+        self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
+        logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
 
-            self.charm.unit.set_workload_version(self.workload.get_version())
+        self.charm.unit.set_workload_version(self.workload.get_version())
+        if dependent.name == CharmKind.MONGOD:
+            self.state.unit_upgrade_peer_data.current_revision = (
+                dependent.cross_app_version_checker.version  # type: ignore
+            )
 
-            # post upgrade check should be retried in case of failure, for this it is necessary to
-            # emit a separate event.
-            dependent.upgrade_events.post_app_upgrade_event.emit()
+        # post upgrade check should be retried in case of failure, for this it is necessary to
+        # emit a separate event.
+        dependent.upgrade_events.post_app_upgrade_event.emit()
 
     def save_snap_revision_after_first_install(self):
         """Set snap revision on first install."""

@@ -78,6 +78,15 @@ class StatusManager(Object):
         """Sets status to error."""
         self.set_and_share_status(ErrorStatus(message))
 
+    def clear_status(self, status: StatusBase) -> None:
+        """Clears a status if this is the provided status."""
+        if self.charm.unit.status != status:
+            logger.debug(
+                f"cannot clear status {status}, unit is in status {self.charm.unit.status}"
+            )
+            return
+        self.charm.unit.status = ActiveStatus()
+
     def get_statuses(self) -> Statuses:
         """Collects the statuses of all managers."""
         if self.operator.name == CharmKind.MONGOD:

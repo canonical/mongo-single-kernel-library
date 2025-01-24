@@ -146,7 +146,7 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     (
         "mongo_has_tls",
         "config_server_has_tls",
-        "is_ca_compatible",
+        "is_waiting_to_request_certs",
         "upgrade_in_progress",
         "expected_error",
     ),
@@ -168,14 +168,14 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
         (
             False,
             False,
-            False,
             True,
-            "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
+            True,
+            "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
         ),
         (
             False,
             False,
-            True,
+            False,
             True,
             "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state.",
         ),
@@ -185,7 +185,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
     mongo_has_tls,
-    is_ca_compatible,
+    is_waiting_to_request_certs,
     upgrade_in_progress,
     config_server_has_tls,
     expected_error,
@@ -200,8 +200,8 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
         return_value=(mongo_has_tls, config_server_has_tls),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_ca_compatible",
-        return_value=is_ca_compatible,
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
+        return_value=is_waiting_to_request_certs,
     )
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
@@ -297,7 +297,7 @@ def test_cluster_requirer_update_mongos_and_restart(
         )
         assert (
             data["uris"]
-            == "mongodb://operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock:27018/mongos-database?authSource=admin"
+            == "mongodb://operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/mongos-database?authSource=admin"
         )
 
 

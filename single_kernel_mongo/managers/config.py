@@ -51,7 +51,7 @@ class CommonConfigManager(ABC):
     def get_environment(self) -> str:
         """Gets the environment for the defined service."""
         env = self.workload.get_env()
-        return env[self.workload.env_var]
+        return env.get(self.workload.env_var, "")
 
     @abstractmethod
     def build_parameters(self) -> list[list[str]]:  # pragma: nocover

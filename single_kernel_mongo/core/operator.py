@@ -159,6 +159,11 @@ class OperatorProtocol(ABC, Object):
         """Checks if the relation is feasible in this context."""
         ...
 
+    @abstractmethod
+    def _configure_workloads(self) -> None:
+        """Configures the workload."""
+        ...
+
     def assert_proceed_on_broken_event(self, relation: Relation) -> None:
         """Runs some checks on broken relation event."""
         if not self.state.has_departed_run(relation.id):

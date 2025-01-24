@@ -188,9 +188,9 @@ class ClusterRequirer(Object):
                 )
             case _:
                 pass
-        if not self.is_ca_compatible():
+        if self.is_waiting_to_request_certs():
             raise DeferrableFailedHookChecksError(
-                "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
+                "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
         if self.state.upgrade_in_progress:
             raise DeferrableFailedHookChecksError(
@@ -338,6 +338,16 @@ class ClusterRequirer(Object):
             return True
 
         return config_server_tls_ca == mongos_tls_ca
+
+    def is_waiting_to_request_certs(self) -> bool:
+        """Returns True if mongos has been waiting for config server in order to request certs."""
+        if not self.state.tls_relation:
+            return False
+        mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
+
+        # our CA is none until certs have been requested. We cannot request certs until integrated
+        # to config-server.
+        return not mongos_tls_ca
 
     def tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""

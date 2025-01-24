@@ -302,13 +302,7 @@ class K8sManager:
             *app_name, unit_number = pod_name.split("-")
             return f'{"-".join(app_name)}/{unit_number}'
 
-        if any(
-            not pod.metadata or not pod.metadata.name or not pod.metadata or not pod.metadata.labels
-            for pod in pods
-        ):
-            raise Exception("Incomplete Pod description")
-
-        # We can type ignore because we checked the fields first but mypy doesn't understand it.
+        # We can type ignore here
         return {
             get_unit_name(pod.metadata.name): pod.metadata.labels["controller-revision-hash"]  # type: ignore
             for pod in pods

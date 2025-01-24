@@ -12,6 +12,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+from single_kernel_mongo.exceptions import WorkloadServiceError
 
 
 class PBMPaths(MongoPaths):
@@ -41,7 +42,8 @@ class PBMWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns the Pebble configuration layer for MongoDB Exporter."""
-        environment = self.get_env().get(self.env_var) or self._env
+        if self._env == "":
+            raise WorkloadServiceError("Impossible to create layer: missing parameter")
 
         return Layer(
             {
@@ -55,7 +57,7 @@ class PBMWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {self.env_var: environment},
+                        "environment": {self.env_var: self._env},
                     }
                 },
             }

@@ -163,15 +163,12 @@ class LifecycleEventsHandler(Object):
         """Relation changed event."""
         try:
             self.dependent.on_relation_changed()
-            self.charm.status_manager.process_and_share_statuses()
         except UpgradeInProgressError:
             event.defer()
             return
         except (NotReadyError, PyMongoError):
             event.defer()
             return
-
-        self.charm.status_manager.process_and_share_statuses()
 
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""

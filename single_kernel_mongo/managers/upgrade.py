@@ -53,36 +53,55 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         after setting the version across all relations.
         """
         if self.dependent.substrate == Substrates.VM:
-            if self.charm.unit.is_leader():
-                if not self.state.upgrade_in_progress:
-                    logger.info("Charm refreshed. MongoDB version unchanged")
-                self.state.app_upgrade_peer_data.upgrade_resumed = False
-                if self.dependent.name == CharmKind.MONGOD:
-                    self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
-                # Only call `_reconcile_upgrade` on leader unit to avoid race conditions with
-                # `upgrade_resumed`
-                self._reconcile_upgrade()
+            self._on_vm_upgrade()
         else:
-            if self.charm.unit.is_leader() and self.dependent.name == CharmKind.MONGOD:
-                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
-            try:
-                # Start services.
-                self.dependent.on_install()
-                if self.dependent.name == CharmKind.MONGOS:
-                    self.dependent.on_start()
-                    self.dependent.start_charm_services()
-            except ContainerNotReadyError:
-                self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
-                self._reconcile_upgrade(during_upgrade=True)
-                raise DeferrableError
+            self._on_kubernetes_upgrade()
 
-            self.charm.status_manager.set_and_share_status(WAITING_POST_UPGRADE_STATUS)
+    def _on_kubernetes_upgrade(self) -> None:
+        assert self._upgrade
+        if self.charm.unit.is_leader() and self.dependent.name == CharmKind.MONGOD:
+            self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
+        try:
+            # Start services.
+            self.dependent.on_install()
+            self.dependent._configure_workloads()
+            if self.dependent.name == CharmKind.MONGOS:
+                if keyfile := self.state.cluster.keyfile:
+                    self.dependent.update_keyfile(keyfile)  # type: ignore
+                    self.dependent.start_charm_services()
+            else:
+                self.dependent.start_charm_services()
+                self.state.unit_upgrade_peer_data.current_revision = (
+                    self.dependent.cross_app_version_checker.version  # type: ignore
+                )
+        except ContainerNotReadyError:
+            self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
+            self._reconcile_upgrade(during_upgrade=True)
+            raise DeferrableError
+
+        self.charm.status_manager.set_and_share_status(WAITING_POST_UPGRADE_STATUS)
 
         self._reconcile_upgrade(during_upgrade=True)
 
         if self._upgrade.is_compatible:
             # Post upgrade event verifies the success of the upgrade.
             self.dependent.upgrade_events.post_app_upgrade_event.emit()
+
+    def _on_vm_upgrade(self):
+        if self.charm.unit.is_leader():
+            if not self.state.upgrade_in_progress:
+                logger.info("Charm refreshed. MongoDB version unchanged")
+            if self.dependent.name == CharmKind.MONGOD:
+                self.state.app_upgrade_peer_data.upgrade_resumed = False
+                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
+
+        if self.dependent.name == CharmKind.MONGOD and self.charm.unit.is_leader():
+            # MONGODB: Only call `_reconcile_upgrade` on leader unit to
+            # avoid race conditions with `upgrade_resumed`
+            self._reconcile_upgrade()
+        elif self.dependent.name == CharmKind.MONGOS:
+            # All units call it on mongos
+            self._reconcile_upgrade()
 
     def on_pre_upgrade_check_action(self) -> None:
         """Pre upgrade checks."""

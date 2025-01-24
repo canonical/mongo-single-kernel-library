@@ -195,7 +195,7 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     )
     harness.set_leader(True)
     password = "deadbeef"
-    secret_label = "database-peers.test-mongodb.app"
+    secret_label = "test-mongodb.app"
     secret = harness.charm.operator.state.secrets.get(scope=Scope.APP)
     # breakpoint()
     content = secret.get_content()

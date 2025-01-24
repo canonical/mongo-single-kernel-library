@@ -21,10 +21,7 @@ from single_kernel_mongo.workload import (
 def test_mongodb_workload_init(monkeypatch):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
-    def mock_snap(*arg, **kwargs):
-        return "test_var"
-
-    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
+    workload._env = "test_var"
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGOD_ARGS"
     assert workload.role == ROLES["vm"]["mongod"]
@@ -56,10 +53,7 @@ def test_mongos_workload_init(monkeypatch):
     assert workload.env_var == "MONGOS_ARGS"
     assert workload.role == ROLES["vm"]["mongos"]
 
-    def mock_snap(*arg, **kwargs):
-        return "test_var"
-
-    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
+    workload._env = "test_var"
 
     assert workload.layer == Layer(
         {
@@ -83,11 +77,7 @@ def test_mongos_workload_init(monkeypatch):
 def test_mongodb_exporter_workload_init(monkeypatch):
     workload = VMMongoDBExporterWorkload(role=VM_MONGOD, container=None)
 
-    def mock_snap(*arg, **kwargs):
-        return ""
-
-    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
-
+    workload._env = "test"
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "MONGODB_URI"
     assert workload.role == ROLES["vm"]["mongod"]
@@ -104,7 +94,7 @@ def test_mongodb_exporter_workload_init(monkeypatch):
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
-                    "environment": {"MONGODB_URI": ""},
+                    "environment": {"MONGODB_URI": "test"},
                 }
             },
         }
@@ -114,11 +104,7 @@ def test_mongodb_exporter_workload_init(monkeypatch):
 def test_pbm_workload_init(monkeypatch):
     workload = VMPBMWorkload(role=ROLES["vm"]["mongod"], container=None)
 
-    def mock_snap(*arg, **kwargs):
-        return ""
-
-    monkeypatch.setattr(workload.mongod_snap, "get", mock_snap)
-
+    workload._env = "test"
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.paths.pbm_config == Path(
         "/var/snap/charmed-mongodb/current/etc/pbm/pbm_config.yaml"
@@ -138,7 +124,7 @@ def test_pbm_workload_init(monkeypatch):
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
-                    "environment": {"PBM_MONGODB_URI": ""},
+                    "environment": {"PBM_MONGODB_URI": "test"},
                 }
             },
         }

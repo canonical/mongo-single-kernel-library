@@ -96,6 +96,9 @@ def test_get_status_pbm_error(harness: Harness[MongoTestCharm], mocker, pbm_stat
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -121,6 +124,7 @@ def test_get_status_success(harness: Harness[MongoTestCharm], mocker):
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
 
+    mocker.patch("single_kernel_mongo.managers.backups.BackupManager.validate_s3_config")
     mock = mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.pbm_status",
         new_callable=mocker.PropertyMock,

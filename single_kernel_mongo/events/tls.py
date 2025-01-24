@@ -98,7 +98,7 @@ class TLSEventsHandler(Object):
         """Handler for relation joined."""
         if (
             self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and not self.manager.state.config_server_name is not None
+            and self.manager.state.config_server_name is None
         ):
             logger.info(
                 "mongos is not running (not integrated to config-server) deferring renewal of certificates."
@@ -130,7 +130,7 @@ class TLSEventsHandler(Object):
             )
         logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
         self.manager.disable_certificates_for_unit()
-        self.charm.status_manager.process_and_share_statuses()
+        self.charm.status_manager.to_active()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -139,14 +139,16 @@ class TLSEventsHandler(Object):
         """
         if (
             self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and not self.manager.state.config_server_name is not None
+            and self.manager.state.config_server_name is None
         ):
             logger.info(
                 "mongos is not running (not integrated to config-server) deferring renewal of certificates."
             )
             event.defer()
             return
-        if not self.manager.state.db_initialised:
+        if not self.manager.state.db_initialised and not self.dependent.state.is_role(
+            MongoDBRoles.MONGOS
+        ):
             logger.info(f"Deferring {str(type(event))}: db is not initialised")
             event.defer()
             return
@@ -169,10 +171,11 @@ class TLSEventsHandler(Object):
                 logger.info(
                     "Waiting for both internal and external TLS certificates available to avoid second restart."
                 )
+                event.defer()
                 return
 
             self.manager.enable_certificates_for_unit()
-            self.charm.status_manager.process_and_share_statuses()
+            self.charm.status_manager.to_active()
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return

@@ -3,7 +3,7 @@
 """The different workloads and their code for mongo charms."""
 
 from single_kernel_mongo.config.literals import Substrates
-from single_kernel_mongo.core.k8s_worload import KubernetesWorkload
+from single_kernel_mongo.core.k8s_workload import KubernetesWorkload
 from single_kernel_mongo.core.vm_workload import VMWorkload
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
