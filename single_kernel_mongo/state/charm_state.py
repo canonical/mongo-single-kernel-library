@@ -608,6 +608,9 @@ class CharmState(Object):
     # END: Helpers
     def update_ca_secrets(self, new_ca: str | None) -> None:
         """Updates the CA secret in the cluster and config-server relations."""
+        # Only the leader can update the databag
+        if not self.charm.unit.is_leader():
+            return
         if not self.is_role(MongoDBRoles.CONFIG_SERVER):
             return
         for relation in self.cluster_relations:
