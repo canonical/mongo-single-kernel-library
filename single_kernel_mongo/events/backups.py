@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ops import ActiveStatus, MaintenanceStatus
-from ops.charm import ActionEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
@@ -62,6 +62,13 @@ class BackupEventsHandler(Object):
         self.framework.observe(
             self.charm.on[self.relation_name.value].relation_joined,
             self._on_s3_relation_joined,
+        )
+        self.framework.observe(
+            self.charm.on[self.relation_name.value].relation_departed,
+            self.dependent.check_relation_broken_or_scale_down,
+        )
+        self.framework.observe(
+            self.charm.on[self.relation_name.value].relation_broken, self._on_s3_relation_broken
         )
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
@@ -137,6 +144,10 @@ class BackupEventsHandler(Object):
             return
 
         self.charm.status_manager.set_and_share_status(self.manager.get_status() or ActiveStatus())
+
+    def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
+        """Proceed on s3 relation broken."""
+        self.manager.on_relation_broken(event.relation)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"

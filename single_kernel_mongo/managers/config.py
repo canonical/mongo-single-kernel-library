@@ -82,7 +82,7 @@ class BackupConfigManager(CommonConfigManager):
             ]
         ]
 
-    def configure_and_restart(self):
+    def configure_and_restart(self, force: bool = False):
         """Sets up PBM with right configuration and restarts it."""
         if not self.workload.workload_present:
             logger.info("Workload is not present.")
@@ -99,7 +99,11 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("No password found.")
             return
 
-        if not self.workload.active() or self.get_environment() != self.state.backup_config.uri:
+        if (
+            not self.workload.active()
+            or self.get_environment() != self.state.backup_config.uri
+            or force
+        ):
             logger.info("Restarting the PBM agent.")
             try:
                 self.workload.stop()

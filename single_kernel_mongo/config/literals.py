@@ -121,3 +121,5 @@ WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks")
 OS_REQUIREMENTS = {
     "vm.max_map_count": "262144",
 }
+
+TRUST_STORE_CERTIFICATE_PATH = Path("/usr/local/share/ca-certificates/pbm.crt")

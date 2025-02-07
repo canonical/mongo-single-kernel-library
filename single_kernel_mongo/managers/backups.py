@@ -23,7 +23,14 @@ from typing import TYPE_CHECKING, NewType
 
 from ops import Container
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    Relation,
+    StatusBase,
+    WaitingStatus,
+)
 from tenacity import (
     Retrying,
     before_log,
@@ -34,7 +41,11 @@ from tenacity import (
     wait_fixed,
 )
 
-from single_kernel_mongo.config.literals import MongoPorts, Substrates
+from single_kernel_mongo.config.literals import (
+    TRUST_STORE_CERTIFICATE_PATH,
+    MongoPorts,
+    Substrates,
+)
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -133,6 +144,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Only replica sets and config_servers can integrate to s3-integrator.
         """
         return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
+
+    def on_relation_broken(self, relation: Relation) -> None:
+        """On relation broken event, we need to remove the certificate from the trust store."""
+        if self.state.is_scaling_down(relation.id):
+            logger.info("Relation broken event occurring due to scale down.")
+            return
+        self.remove_ca_cert_from_trust_store()
 
     @retry(
         stop=stop_after_attempt(BACKUP_RESTORE_MAX_ATTEMPTS),
@@ -358,6 +376,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Args:
             credentials: A dictionary provided by backup event handler.
         """
+        # Add certificate to trust store
+        self.save_ca_cert_to_trust_store(credentials)
+
         # Clear the current config file.
         self.clear_pbm_config_file()
 
@@ -633,6 +654,39 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             current_cluster_name,
         )
         return f"{current_cluster_name}={old_cluster_name}"
+
+    def remove_ca_cert_from_trust_store(self) -> None:
+        """Removes the certificate from the trust store."""
+        # Remove the file
+        self.workload.delete(TRUST_STORE_CERTIFICATE_PATH)
+        # Update CA certificates to remove the certificate from the trust store
+        self.workload.exec("update-ca-certificates")
+        # Restart the service
+        self.configure_and_restart(force=True)
+
+    def save_ca_cert_to_trust_store(
+        self, credentials: dict[str, str], restart_service: bool = True
+    ) -> None:
+        """Saves the certificate in the trust store.
+
+        Raises:
+            WorkloadExecError: In that case, we should let the charm go into error state.
+        """
+        cert_chain_list = credentials.get("tls-ca-chain", None)
+        ca_chain = "\n".join(cert_chain_list) if cert_chain_list else None
+        if not ca_chain:
+            return
+
+        # Write the file with the right permissions
+        self.workload.write(TRUST_STORE_CERTIFICATE_PATH, ca_chain)
+        self.workload.exec(["chown", "root:root", f"{TRUST_STORE_CERTIFICATE_PATH}"])
+        self.workload.exec(["chmod", "644", f"{TRUST_STORE_CERTIFICATE_PATH}"])
+
+        # Update ca certificates.
+        self.workload.exec("update-ca-certificates")
+
+        if restart_service:
+            self.configure_and_restart(force=True)
 
 
 def map_s3_config_to_pbm_config(credentials: dict[str, str]):
