@@ -54,6 +54,24 @@ jobs:
         run: |
           '${{ steps.install.outputs.executable }}' -color
 
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.7.0
+        with:
+          charm-path: ./single_kernel_mongo/
+          credentials: ${{ secrets.CHARMHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      pull-requests: write
+
   tox-lint:
     name: tox run -e lint
     runs-on: ubuntu-latest
