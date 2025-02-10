@@ -35,7 +35,7 @@ def generate_relation_departed_key(rel_id: int) -> str:  # noqa
     return f"relation_{rel_id}_departed"
 
 
-def get_pid_command(substrate: Substrates, log_dir: str) -> str:
+def get_logrotate_pid_command(substrate: Substrates, log_dir: str) -> str:
     """Gets the command that fetches the PID for logrotate template."""
     if substrate == Substrates.K8S:
         return f'pgrep -f "mongod.*--logpath={log_dir}/mongodb.log"'

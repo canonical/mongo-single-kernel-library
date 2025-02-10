@@ -303,7 +303,17 @@ class ConfigServerManager(Object, StatusProvider):
         self.charm.status_manager.to_active()
 
     def remove_shards(self) -> None:
-        """During update-status, remove shards until they are removed completely."""
+        """During update-status, remove shards until they are removed completely.
+
+        Attempts to remove shards from the sharded cluster that weren't removed
+        during the relation-broken event.
+
+        This is necessary, because removing a shard requires it to be drained
+        (which takes a long time) and the remove-shard command sometimes needs
+        to be ran several times (mongodb specific). We do not want to block the
+        config-server from running additional operations. Furthermore we cannot
+        defer relation-broken events.
+        """
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
 

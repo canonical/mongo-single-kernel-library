@@ -71,11 +71,8 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
             return str(
                 self.relation.data[self.component].get(UnitPeerRelationKeys.PRIVATE_ADDRESS.value)
             )
-
-        if self.substrate == Substrates.K8S:
-            return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
-
-        return ""
+        # K8s Case.
+        return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
 
     @property
     def name(self) -> str:

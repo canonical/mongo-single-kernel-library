@@ -12,7 +12,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
-from single_kernel_mongo.utils.helpers import get_pid_command
+from single_kernel_mongo.utils.helpers import get_logrotate_pid_command
 
 
 class LogRotateWorkload(WorkloadBase):
@@ -38,7 +38,9 @@ class LogRotateWorkload(WorkloadBase):
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
-            pid_command=get_pid_command(Substrates(self.substrate), log_dir=self.paths.logs_path),
+            pid_command=get_logrotate_pid_command(
+                Substrates(self.substrate), log_dir=self.paths.logs_path
+            ),
         )
 
         self.write(path=LogRotateConfig.rendered_template, content=rendered_template)
