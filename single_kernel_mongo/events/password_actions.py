@@ -63,7 +63,7 @@ class PasswordActionEvents(Object):
                 f"The action can be run only for users used by the charm: {', '.join(CharmUsers)} not {username}",
             )
             return
-        if password == "":
+        if isinstance(password, str) and password.strip() == "":
             fail_action_with_error_log(
                 logger,
                 event,
