@@ -177,7 +177,7 @@ class MongoConnection:
         """Drop user."""
         self.client.admin.command("dropUser", username)
 
-    def create_role(self, role_name: str, privileges: dict, roles: list = []):
+    def create_role(self, role_name: str, privileges: dict, roles: list | None = None) -> None:
         """Creates a new role.
 
         Args:
@@ -185,6 +185,8 @@ class MongoConnection:
             privileges: privileges to be associated with the role.
             roles: List of roles from which this role inherits privileges.
         """
+        if roles is None:
+            roles = []
         try:
             self.client.admin.command("createRole", role_name, privileges=[privileges], roles=roles)
         except OperationFailure as e:
@@ -517,17 +519,17 @@ class MongoConnection:
             ",".join(dbs_to_move),
         )
 
-    def _retrieve_remaining_chunks(self, removal_info) -> int:
+    def _retrieve_remaining_chunks(self, removal_info: dict[str, Any]) -> int:
         """Parses the remaining chunks to remove from removeShard command."""
         # when chunks have finished draining, remaining chunks is still in the removal info, but
         # marked as 0. If "remaining" is not present, in removal_info then the shard is not yet
         # draining
-        if "remaining" not in removal_info.keys():
+        if "remaining" not in removal_info:
             raise NotDrainedError
 
         return removal_info["remaining"]["chunks"] if "remaining" in removal_info else 0
 
-    def get_databases_for_shard(self, primary_shard) -> list[str] | None:
+    def get_databases_for_shard(self, primary_shard: str) -> list[str] | None:
         """Returns a list of databases using the given shard as a primary shard.
 
         In Sharded MongoDB clusters, mongos selects the primary shard when creating a new database
