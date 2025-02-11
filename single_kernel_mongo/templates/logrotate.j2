@@ -1,0 +1,17 @@
+{{logs_directory}}/*.log
+{
+    rotate {{max_rotations}}
+    size {{max_log_size}}
+    missingok
+    notifempty
+    create 0600 {{mongo_user}} {{mongo_user}}
+    compress
+    delaycompress
+    nomail
+    nocopytruncate
+    sharedscripts
+    postrotate
+        PID=$({{ pid_command }})
+        /bin/kill -SIGUSR1 $PID
+    endscript
+}
