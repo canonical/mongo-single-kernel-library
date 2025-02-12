@@ -26,10 +26,12 @@ jobs:
       - name: Compute matrix
         id: compute
         shell: bash
+        env:
+          COMMENT: ${{ github.event.comment.body }}
         run: |
-          matrix=python3 scripts/compute_matrix.py ${{ github.events.comment.body }}
+          matrix=python3 scripts/compute_matrix.py "$COMMENT"
           if [ "$matrix" = "[]" ]; then
-            echo "::error Invalid matcher '${{ github.events.comment.body }}'"
+            echo "::error Invalid matcher '$COMMENT'"
             exit 1
           fi
           echo "matrix='${matrix}'" >> "$GITHUB_OUTPUT"
@@ -49,7 +51,7 @@ jobs:
       - name: Build egg name
         if: success()
         run: |
-          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_sha }}" > $GITHUB_ENV
+          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_sha }}" > "$GITHUB_ENV"
       - name: Update python library and create PR on ${{ matrix.repository }}
         id: remoteupdater
         uses: Gu1nness/poetry-remote-update@main
