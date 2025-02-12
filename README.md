@@ -12,7 +12,7 @@ mongo charms:
 
 ## Code layout
 
-The source code can be found in [./single_kernel_mongo/](./single_kernel_mongo/)
+The source code can be found in [single_kernel_mongo/](./single_kernel_mongo/)
 The layout is organised as so:
 
 * [configurations](./single_kernel_mongo/config)
