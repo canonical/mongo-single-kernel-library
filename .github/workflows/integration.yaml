@@ -13,9 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
+      authorized: ${{ steps.auth_check.outputs.authorized }}
     if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
     timeout-minutes: 5
     steps:
+      - name: Check commenter
+        id: auth_check
+        uses: morfien101/actions-authorized-user@v3
+        with:
+          username: ${{ github.event.comment.author.login }}
+          org: "Canonical"
+          team: "data-ai-engineers"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -29,16 +38,17 @@ jobs:
         env:
           COMMENT: ${{ github.event.comment.body }}
         run: |
-          matrix=python3 scripts/compute_matrix.py "$COMMENT"
+          matrix=$(python3 scripts/split_matrix.py)
           if [ "$matrix" = "[]" ]; then
             echo "::error Invalid matcher '$COMMENT'"
             exit 1
           fi
-          echo "matrix='${matrix}'" >> "$GITHUB_OUTPUT"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
 
 
   trigger:
     needs: ["compute-matrix"]
+    if: ${{ needs.compute-matrix.outputs.authorized }}
     strategy:
       matrix:
         repository: ${{ fromJson(needs.compute-matrix.outputs.matrix) }}
@@ -51,7 +61,7 @@ jobs:
       - name: Build egg name
         if: success()
         run: |
-          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_sha }}" > "$GITHUB_ENV"
+          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_sha }}" >> "$GITHUB_ENV"
       - name: Update python library and create PR on ${{ matrix.repository }}
         id: remoteupdater
         uses: Gu1nness/poetry-remote-update@main

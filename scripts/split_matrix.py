@@ -2,8 +2,8 @@
 """Takes the PR comment and parses it into a list of jobs."""
 
 import json
+import os
 import re
-import sys
 
 PARSE_REGEX = re.compile(r"\/test(\/?[\d\w*]+)?(\/[\d\w]+)?")
 
@@ -52,4 +52,5 @@ def parse_comment(comment: str) -> list[str]:  # noqa: C901
 
 
 if __name__ == "__main__":
-    print(json.dumps(parse_comment(sys.argv[1])))
+    comment = os.environ["COMMENT"]
+    print(json.dumps(parse_comment(comment)))
