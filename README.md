@@ -119,6 +119,17 @@ If you find a bug in this rock or want to request a specific feature, here are t
 
 The Charmed MongoDB Operator is free software, distributed under the [Apache Software License, version 2.0](https://github.com/canonical/mongodb-operator/blob/main/LICENSE). It instals and operates Percona Server for MongoDB, which is licensed under the Server Side Public License (SSPL) version 1.
 
+
+## Project & Community
+
+Charmed MongoDB is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback.
+
+* Check our [Code of Conduct](https://ubuntu.com/community/ethos/code-of-conduct)
+* Raise software issues or feature requests in [GitHub](https://github.com/canonical/charmed-mongodb-rock/issues)
+* Report security issues through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). 
+* Meet the community and chat with us on [Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+* [Contribute](https://github.com/canonical/charmed-mongodb-rock/blob/main/CONTRIBUTING.md) to the code
+
 ## Trademark Notice
 
 "MongoDB" is a trademark or registered trademark of MongoDB, Inc. Other trademarks are property of their respective owners. Charmed MongoDB is not sponsored, endorsed, or affiliated with MongoDB, Inc.
