@@ -9,7 +9,7 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from ops.charm import ActionEvent, RelationCreatedEvent
+from ops.charm import ActionEvent, RelationCreatedEvent, UpgradeCharmEvent
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ModelError
 
@@ -93,8 +93,12 @@ class UpgradeEventHandler(Object):
     def _reconcile_upgrade(self, _) -> None:
         self.manager._reconcile_upgrade(during_upgrade=True)
 
-    def _on_upgrade_charm(self, _) -> None:
-        self.manager.on_upgrade_charm()
+    def _on_upgrade_charm(self, event: UpgradeCharmEvent) -> None:
+        try:
+            self.manager.on_upgrade_charm()
+        except DeferrableError as err:
+            logger.info(f"Deferring upgrade because of {err}")
+            event.defer()
 
     def _on_resume_upgrade_action(self, event: ActionEvent) -> None:
         try:
