@@ -1,0 +1,73 @@
+name: Trigger integration tests
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Compute matrix
+        id: compute
+        shell: bash
+        run: |
+          matrix=python3 scripts/compute_matrix.py ${{ github.events.comment.body }}
+          if [ "$matrix" = "[]" ]; then
+            echo "::error Invalid matcher '${{ github.events.comment.body }}'"
+            exit 1
+          fi
+          echo "matrix='${matrix}'" >> "$GITHUB_OUTPUT"
+
+
+  trigger:
+    needs: ["compute-matrix"]
+    strategy:
+      matrix:
+        repository: ${{ fromJson(needs.compute-matrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get PR branch
+        uses: xt0rted/pull-request-comment-branch@v3
+        id: comment-branch
+      - name: Build egg name
+        if: success()
+        run: |
+          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_sha }}" > $GITHUB_ENV
+      - name: Update python library and create PR on ${{ matrix.repository }}
+        id: remoteupdater
+        uses: Gu1nness/poetry-remote-update@main
+        with:
+          library: 'mongo-charms-single-kernel'
+          new_version: ${{ env.VERSION_URL }}
+          groups: '["main", "integration", "unit"]'
+          repository: 'Canonical/${{ matrix.repository }}'
+          branch: '6/edge'
+          python_version: 3.10
+          pat: secrets.PAT
+      - name: Convert PR's to ready to review.
+        if: success()
+        shell: bash
+        run: |
+          gh pr ready ${{ steps.remoteupdater.outputs.pull-request-url }}
+      - name: Comment on PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            * ${{ steps.remoteupdater.outputs.pull-request-operation }} [${{ matrix.repository }} PR](${{ steps.remoteupdater.outputs.pull-request-url }})
