@@ -61,7 +61,9 @@ jobs:
       - name: Build egg name
         if: success()
         run: |
-          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#{{ steps.comment-branch.outputs.head_ref }}" >> "$GITHUB_ENV"
+          HEAD_REF=${{ steps.comment-branch.outputs.head_ref }}
+          HEAD_REF=${HEAD_REF/\//-}
+          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#${HEAD_REF}" >> "$GITHUB_ENV"
       - name: Update python library and create PR on ${{ matrix.repository }}
         id: remoteupdater
         uses: Gu1nness/poetry-remote-update@main
