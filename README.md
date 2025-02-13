@@ -70,7 +70,7 @@ Use the following syntax:
 
 ```shell
 * /test to run on 4 charms.
-* /test/<mongod | mongos>/<vm | k8s> to run on a specific charm.
+* /test/<mongodb | mongos>/<vm | k8s> to run on a specific charm.
 * /test/*/<vm | k8s> to run for both charms on a specific substrate.
 ```
 
