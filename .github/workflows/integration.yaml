@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Check commenter
         id: auth_check
-        uses: morfien101/actions-authorized-user@v3
+        uses: morfien101/actions-authorized-user@4a3cfbf0bcb3cafe4a71710a278920c5d94bb38b
         with:
           username: ${{ github.event.comment.author.login }}
           org: "Canonical"
@@ -56,7 +56,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Get PR branch
-        uses: xt0rted/pull-request-comment-branch@v3
+        uses: xt0rted/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
         id: comment-branch
       - name: Build egg name
         if: success()
@@ -79,7 +79,7 @@ jobs:
         run: |
           gh pr ready ${{ steps.remoteupdater.outputs.pull-request-url }}
       - name: Comment on PR
-        uses: thollander/actions-comment-pull-request@v3
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b
         with:
           message: |
             * ${{ steps.remoteupdater.outputs.pull-request-operation }} [${{ matrix.repository }} PR](${{ steps.remoteupdater.outputs.pull-request-url }})
