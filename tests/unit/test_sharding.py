@@ -46,7 +46,7 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock
     assert data.get("password") == "unused"
     assert data.get("operator-password") is not None
     assert data.get("backup-password") is not None
-    assert data.get("host") == '["192.0.2.0"]'
+    assert data.get("host") == '["10.0.0.10"]'
 
 
 def test_config_server_database_requested_failed_db_not_initialised(
@@ -474,7 +474,7 @@ def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], 
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        return_value="192.0.2.0",
+        return_value="10.0.0.10",
     )
     mock_set_user_password = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password",

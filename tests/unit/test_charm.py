@@ -339,7 +339,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mock_conn.return_value = False
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members",
-        return_value={"192.0.2.0"},
+        return_value={"10.0.0.1"},
     )
     mocked_add_replset_member = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
@@ -427,7 +427,7 @@ def test_primary(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        return_value="192.0.2.0",
+        return_value="10.0.0.10",
     )
     output = harness.run_action("get-primary")
     assert output.results["replica-set-primary"] == "test-mongodb/0"

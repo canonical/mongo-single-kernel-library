@@ -108,7 +108,7 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
     data = manager.data_interface.as_dict(rel_id)
 
     assert len(data.get("key-file", "")) == 1024
-    assert data.get("config-server-db") == f"{harness.charm.app.name}/192.0.2.0:27017"
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/10.0.0.10:27017"
 
 
 def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):

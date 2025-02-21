@@ -17,7 +17,7 @@ def test_app_hosts(harness: Harness[MongoTestCharm], mocker):
     harness.add_relation_unit(rel_id, "test-mongodb/1")
     harness.update_relation_data(rel_id, "test-mongodb/1", PEER_ADDR)
     resulting_ips = harness.charm.operator.state.app_hosts
-    expected_ips = {"192.0.2.0", "127.4.5.6"}
+    expected_ips = {"10.0.0.10", "127.4.5.6"}
     assert expected_ips == resulting_ips
 
 
@@ -85,4 +85,4 @@ def test_unit_peer_data(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     state = harness.charm.operator.state
 
-    assert state.unit_peer_data.internal_address == "192.0.2.0"
+    assert state.unit_peer_data.internal_address == "10.0.0.10"

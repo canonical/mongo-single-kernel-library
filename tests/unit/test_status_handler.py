@@ -20,14 +20,14 @@ from .mongos_test_charm.src.charm import MongosTestCharm
     ("replset_status", "expected_status"),
     (
         ({}, WaitingStatus("Member being added.")),
-        ({"192.0.2.0": "PRIMARY"}, ActiveStatus("Primary")),
-        ({"192.0.2.0": "SECONDARY"}, ActiveStatus("")),
-        ({"192.0.2.0": "STARTUP"}, WaitingStatus("Member is syncing...")),
-        ({"192.0.2.0": "STARTUP2"}, WaitingStatus("Member is syncing...")),
-        ({"192.0.2.0": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
-        ({"192.0.2.0": "RECOVERING"}, WaitingStatus("Member is syncing...")),
-        ({"192.0.2.0": "REMOVED"}, WaitingStatus("Member is removing...")),
-        ({"192.0.2.0": "ERROR"}, BlockedStatus("ERROR")),
+        ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary")),
+        ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
+        ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "STARTUP2"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "RECOVERING"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "REMOVED"}, WaitingStatus("Member is removing...")),
+        ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
 def test_mongo_get_status_no_error(
