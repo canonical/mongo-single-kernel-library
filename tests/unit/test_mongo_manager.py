@@ -14,7 +14,6 @@ from single_kernel_mongo.utils.mongodb_users import (
     OperatorUser,
 )
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 
 
@@ -52,7 +51,6 @@ def test_set_user_pymongo_error(harness: Harness[MongoTestCharm], mocker):
     assert harness.charm.operator.state.get_user_password(OperatorUser) == old_password
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_initialise_replica_set_operation_failure(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     mocker.patch(
@@ -64,7 +62,6 @@ def test_initialise_replica_set_operation_failure(harness: Harness[MongoTestChar
 
 
 @pytest.mark.parametrize(("user"), (MonitorUser, BackupUser))
-@patch_network_get(private_address="1.1.1.1")
 def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     harness.set_leader(True)
     mock_create_role = mocker.patch(
@@ -83,7 +80,6 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     mock_create_user = mocker.patch(

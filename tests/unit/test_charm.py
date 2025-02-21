@@ -15,7 +15,6 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 
 PEER_ADDR = {"private-address": "127.4.5.6"}
@@ -330,7 +329,6 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     mock_on_relation_changed.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -341,7 +339,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mock_conn.return_value = False
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members",
-        return_value={"1.1.1.1"},
+        return_value={"192.0.2.0"},
     )
     mocked_add_replset_member = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
@@ -359,7 +357,6 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mocked_add_replset_member.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_departed_not_leader(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
@@ -390,7 +387,6 @@ def test_on_relation_departed_not_leader(
     update_host_mock.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -418,7 +414,6 @@ def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mo
     update_host_mock.assert_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
@@ -427,19 +422,17 @@ def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):
         harness.run_action("get-primary")
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        return_value="1.1.1.1",
+        return_value="192.0.2.0",
     )
     output = harness.run_action("get-primary")
     assert output.results["replica-set-primary"] == "test-mongodb/0"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",

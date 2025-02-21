@@ -12,24 +12,22 @@ from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.status import Statuses
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 from .mongos_test_charm.src.charm import MongosTestCharm
 
 
-@patch_network_get(private_address="1.1.1.1")
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
         ({}, WaitingStatus("Member being added.")),
-        ({"1.1.1.1": "PRIMARY"}, ActiveStatus("Primary")),
-        ({"1.1.1.1": "SECONDARY"}, ActiveStatus("")),
-        ({"1.1.1.1": "STARTUP"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "STARTUP2"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "RECOVERING"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "REMOVED"}, WaitingStatus("Member is removing...")),
-        ({"1.1.1.1": "ERROR"}, BlockedStatus("ERROR")),
+        ({"192.0.2.0": "PRIMARY"}, ActiveStatus("Primary")),
+        ({"192.0.2.0": "SECONDARY"}, ActiveStatus("")),
+        ({"192.0.2.0": "STARTUP"}, WaitingStatus("Member is syncing...")),
+        ({"192.0.2.0": "STARTUP2"}, WaitingStatus("Member is syncing...")),
+        ({"192.0.2.0": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
+        ({"192.0.2.0": "RECOVERING"}, WaitingStatus("Member is syncing...")),
+        ({"192.0.2.0": "REMOVED"}, WaitingStatus("Member is removing...")),
+        ({"192.0.2.0": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
 def test_mongo_get_status_no_error(
@@ -49,7 +47,6 @@ def test_mongo_get_status_no_error(
     assert status == expected_status
 
 
-@patch_network_get(private_address="1.1.1.1")
 @pytest.mark.parametrize(
     ("error", "expected_status"),
     (
