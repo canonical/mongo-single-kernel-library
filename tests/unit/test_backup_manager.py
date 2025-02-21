@@ -84,7 +84,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], mocker):
         ("status code: 301", "s3 configurations are incompatible."),
         ("Unknown message", "PBM error"),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/192.0.2.0:27018", "errors": "status code: 403"}], "rs": "test-mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "test-mongodb"}]}',
             "s3 credentials are incorrect.",
         ),
     ),

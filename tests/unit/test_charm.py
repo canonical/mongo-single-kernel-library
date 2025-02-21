@@ -339,7 +339,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mock_conn.return_value = False
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members",
-        return_value={"10.0.0.1"},
+        return_value={"10.0.0.10"},
     )
     mocked_add_replset_member = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
