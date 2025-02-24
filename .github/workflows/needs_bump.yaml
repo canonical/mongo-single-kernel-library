@@ -1,0 +1,28 @@
+name: Check if bump is needed
+
+on:
+  pull_request:
+    branches:
+      - 6/edge
+
+jobs:
+  needs_bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            single_kernel_mongo:
+              - 'single_kernel_mongo/**'
+              - 'pyproject.toml'
+              - 'poetry.lock'
+      - uses: rayepps/require-semver-bump@v1
+        if: steps.filter.outputs.single_kernel_mongo == 'true'
+        with:
+          file: pyproject.toml
+          pattern: >
+            version = [\\'\\"](.+?)[\\'\\"]
