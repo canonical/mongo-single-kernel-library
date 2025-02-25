@@ -1,0 +1,85 @@
+name: Trigger integration tests
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  compute-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+      authorized: ${{ steps.auth_check.outputs.authorized }}
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/test')
+    timeout-minutes: 5
+    steps:
+      - name: Check commenter
+        id: auth_check
+        uses: morfien101/actions-authorized-user@4a3cfbf0bcb3cafe4a71710a278920c5d94bb38b
+        with:
+          username: ${{ github.event.comment.author.login }}
+          org: "Canonical"
+          team: "data-ai-engineers"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Compute matrix
+        id: compute
+        shell: bash
+        env:
+          COMMENT: ${{ github.event.comment.body }}
+        run: |
+          matrix=$(python3 scripts/split_matrix.py)
+          if [ "$matrix" = "[]" ]; then
+            echo "::error Invalid matcher '$COMMENT'"
+            exit 1
+          fi
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+
+
+  trigger:
+    needs: ["compute-matrix"]
+    if: ${{ needs.compute-matrix.outputs.authorized }}
+    strategy:
+      matrix:
+        repository: ${{ fromJson(needs.compute-matrix.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Get PR branch
+        uses: xt0rted/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
+        id: comment-branch
+      - name: Build egg name
+        if: success()
+        run: |
+          echo "VERSION_URL=git+https://github.com/Canonical/mongo-single-kernel-library.git#${{ steps.comment-branch.outputs.head_ref }}" >> "$GITHUB_ENV"
+      - name: Update python library and create PR on ${{ matrix.repository }}
+        id: remoteupdater
+        uses: Gu1nness/poetry-remote-update@main
+        with:
+          library: 'mongo-charms-single-kernel'
+          new_version: ${{ env.VERSION_URL }}
+          groups: '["main", "integration", "unit"]'
+          repository: 'Canonical/${{ matrix.repository }}'
+          branch: '6/edge'
+          python_version: 3.10
+          pat: secrets.PAT
+      - name: Convert PR's to ready to review.
+        if: success()
+        shell: bash
+        run: |
+          gh pr ready ${{ steps.remoteupdater.outputs.pull-request-url }}
+      - name: Comment on PR
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b
+        with:
+          message: |
+            * ${{ steps.remoteupdater.outputs.pull-request-operation }} [${{ matrix.repository }} PR](${{ steps.remoteupdater.outputs.pull-request-url }})
