@@ -12,7 +12,7 @@ mongo charms:
 
 ## Code layout
 
-The source code can be found in [./single_kernel_mongo/](./single_kernel_mongo/)
+The source code can be found in [single_kernel_mongo/](./single_kernel_mongo/)
 The layout is organised as so:
 
 * [configurations](./single_kernel_mongo/config)
@@ -62,6 +62,19 @@ pre-commit install
 # Run it manually with
 pre-commit run --all-files
 ```
+
+Once a PR is opened, it's possible to trigger integration testing on the charms with a comment on the PR.
+This can be run only by members of the [Data and AI team](https://github.com/orgs/canonical/teams/data-ai-engineers)
+
+Use the following syntax:
+
+```shell
+* /test to run on 4 charms.
+* /test/<mongodb | mongos>/<vm | k8s> to run on a specific charm.
+* /test/*/<vm | k8s> to run for both charms on a specific substrate.
+```
+
+This will create a PR with an updated version of the library on the selected charms.
 
 ## Project and community
 
