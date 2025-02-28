@@ -67,4 +67,4 @@ class BackupStatuses:
     PBM_MISSING_CONFIGS = BlockedStatus("s3 configurations missing.")
     PBM_INCORRECT_CREDS = BlockedStatus("s3 credentials are incorrect.")
     PBM_INCOMPATIBLE_CONF = BlockedStatus("s3 configurations are incompatible.")
-    UNKNWONN_PBM_ERROR = BlockedStatus("Unknwon PBM error, check logs")
+    UNKNOWN_PBM_ERROR = BlockedStatus("Unknwon PBM error, check logs")

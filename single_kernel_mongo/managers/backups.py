@@ -323,7 +323,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             return processed_status
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
-            return BackupStatuses.UNKNWONN_PBM_ERROR
+            return BackupStatuses.UNKNOWN_PBM_ERROR
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
@@ -462,7 +462,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def process_pbm_error(self, pbm_status: str) -> StatusBase:
         """Look up PBM status for errors."""
         error_message: str
-        message = ""
+
         try:
             pbm_as_dict = json.loads(pbm_status)
             error_message = self.retrieve_error_message(pbm_as_dict)
@@ -470,13 +470,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             error_message = pbm_status
 
         if StatusCodeError.FORBIDDEN in error_message:
-            message = BackupStatuses.PBM_INCORRECT_CREDS
+            return BackupStatuses.PBM_INCORRECT_CREDS
         elif StatusCodeError.NOTFOUND in error_message:
-            message = BackupStatuses.PBM_INCOMPATIBLE_CONF
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF
         elif StatusCodeError.MOVED_PERMANENTLY in error_message:
-            message = BackupStatuses.PBM_INCOMPATIBLE_CONF
-
-        return BlockedStatus(message)
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF
 
     def process_pbm_status(self, pbm_status: str) -> StatusBase:
         """Processes the pbm status if there's no error."""
