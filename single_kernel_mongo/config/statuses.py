@@ -27,7 +27,7 @@ class CharmStatuses:
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed")
 
-    class MongoDB(str, Enum):
+    class MongoDB:
         """MongoDB related statuses.
 
         TODO: add the remaining statuses for mongodb charm.
@@ -45,7 +45,7 @@ class CharmStatuses:
             "Relation to s3-integrator is not supported, config role must be config-server."
         )
 
-    class Mongos(str, Enum):
+    class Mongos:
         """Mongos related statuses.
 
         TODO: add the remaining statuses for mongos charm.

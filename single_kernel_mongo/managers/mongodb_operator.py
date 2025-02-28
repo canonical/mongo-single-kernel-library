@@ -593,8 +593,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
-        if len(self.get_statuses()):
-            self.charm.status_manager.set_and_share_status(self.get_statuses()[0])
+        if charm_statuses := self.get_statuses():
+            self.charm.status_manager.set_and_share_status(charm_statuses[0])
             return
 
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -925,26 +925,26 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Returns the statuses of the charm manager.."""
         charm_statuses = []
 
-        if self.workload.present():
+        if not self.workload.workload_present:
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED)
         else:  # don't bother checking if started if not installed
-            if self.state.db_initialised:
-                charm_statuses.append(CharmStatuses.MONGODB_NOT_STARTED)
+            if not self.state.db_initialised:
+                charm_statuses.append(CharmStatuses.MongoDB.MONGODB_NOT_STARTED)
 
-            if self.mongodb_exporter_config_manager.workload.active():
-                charm_statuses.append(CharmStatuses.EXPORTER_NOT_STARTED)
+            if not self.mongodb_exporter_config_manager.workload.active():
+                charm_statuses.append(CharmStatuses.MongoDB.EXPORTER_NOT_STARTED)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            charm_statuses.append(CharmStatuses.SHARDING_ON_REPLICA)
+            charm_statuses.append(CharmStatuses.MongoDB.SHARDING_ON_REPLICA)
         elif (  # don't bother checking revision mismatch on sharding interface if replica
             revision_mismatch_status := self.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
             charm_statuses.append(revision_mismatch_status)
 
         if not self.cluster_manager.is_valid_mongos_integration():
-            charm_statuses.append(CharmStatuses.UNSUPPORTED_MONGOS_REL)
+            charm_statuses.append(CharmStatuses.MongoDB.UNSUPPORTED_MONGOS_REL)
 
         if not self.backup_manager.is_valid_s3_integration():
-            charm_statuses.append(CharmStatuses.INVALID_S3_INTEGRATION_STATUS)
+            charm_statuses.append(CharmStatuses.MongoDB.INVALID_S3_INTEGRATION_STATUS)
 
         return charm_statuses

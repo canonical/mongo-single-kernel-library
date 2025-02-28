@@ -68,16 +68,25 @@ class LifecycleEventsHandler(Object):
         self.framework.observe(getattr(self.charm.on, "install"), self.on_install)
         self.framework.observe(getattr(self.charm.on, "start"), self.on_start)
         self.framework.observe(getattr(self.charm.on, "stop"), self.on_stop)
-        self.framework.observe(getattr(self.charm.on, "leader_elected"), self.on_leader_elected)
+        self.framework.observe(
+            getattr(self.charm.on, "leader_elected"), self.on_leader_elected
+        )
 
         if self.charm.substrate == Substrates.K8S:
             self.framework.observe(
-                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"), self.on_start
+                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"),
+                self.on_start,
             )
 
-        self.framework.observe(getattr(self.charm.on, "config_changed"), self.on_config_changed)
-        self.framework.observe(getattr(self.charm.on, "update_status"), self.on_update_status)
-        self.framework.observe(getattr(self.charm.on, "secret_changed"), self.on_secret_changed)
+        self.framework.observe(
+            getattr(self.charm.on, "config_changed"), self.on_config_changed
+        )
+        self.framework.observe(
+            getattr(self.charm.on, "update_status"), self.on_update_status
+        )
+        self.framework.observe(
+            getattr(self.charm.on, "secret_changed"), self.on_secret_changed
+        )
 
         self.framework.observe(
             self.charm.on[rel_name.value].relation_joined, self.on_relation_joined
@@ -91,13 +100,18 @@ class LifecycleEventsHandler(Object):
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached
+                getattr(self.charm.on, "mongodb_storage_attached"),
+                self.on_storage_attached,
             )
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_detaching"), self.on_storage_detaching
+                getattr(self.charm.on, "mongodb_storage_detaching"),
+                self.on_storage_detaching,
             )
 
-        if self.charm.substrate == Substrates.VM and self.dependent.name == CharmKind.MONGOD:
+        if (
+            self.charm.substrate == Substrates.VM
+            and self.dependent.name == CharmKind.MONGOD
+        ):
             self.framework.observe(getattr(self.charm.on, "remove"), self.on_remove)
 
     def on_start(self, event: StartEvent):
@@ -136,10 +150,7 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        try:
-            self.dependent.on_update_status()
-        except Exception:
-            return
+        self.dependent.on_update_status()
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
