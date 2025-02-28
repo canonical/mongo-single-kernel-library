@@ -189,6 +189,7 @@ class ConfigServerManager(Object, StatusProvider):
             )
             if not leaving:
                 raise DeferrableFailedHookChecksError("Upgrade is in progress")
+        if leaving:
             if not self.state.has_departed_run(relation.id):
                 raise DeferrableFailedHookChecksError(
                     "must wait for relation departed hook to decide if relation should be removed"
