@@ -896,7 +896,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def get_statuses(self) -> list[StatusBase]:
         """Returns the statuses of the charm manager.."""
-        charm_statuses = []
+        charm_statuses: list[StatusBase] = []
 
         if not self.workload.workload_present:
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED)
