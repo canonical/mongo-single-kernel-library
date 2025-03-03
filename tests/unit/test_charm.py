@@ -149,11 +149,15 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.unit.status == BlockedStatus("couldn't start pbm-agent")
 
 
-def test_on_config_changed(harness):
+def test_on_config_changed_invalid_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_ldap_user_to_dn_mapping(harness):
+    pass
 
 
 def test_on_config_changed_upgrade_in_progress(harness, mocker):

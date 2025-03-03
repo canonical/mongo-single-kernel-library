@@ -34,7 +34,7 @@ from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import LdapUserToDnMapping, MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
@@ -48,6 +48,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
+    InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
     ShardingMigrationError,
@@ -363,6 +364,20 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             self.state.app_peer_data.role = self.config.role
             return
+
+        if self.config.ldap_user_to_dn_mapping and not LdapUserToDnMapping.validate_strings(
+            self.config.ldap_user_to_dn_mapping
+        ):
+            raise InvalidLdapUserToDnMappingError("Invalid LdapUserToDnMapping, please revert.")
+
+        if self.charm.unit.is_leader():
+            # Store in the databag so we never miss it.
+            self.state.app_peer_data.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
+            # TODO: Send this to mongos as well.
+
+            self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
+
+            # TODO: Invalidate the cache and restart with those parameters if needed.
 
         if self.state.is_role(self.config.role):
             return

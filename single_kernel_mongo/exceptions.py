@@ -243,3 +243,7 @@ class ActionFailedError(Exception):
 
 class UnhealthyUpgradeError(Exception):
     """Raised when the upgrade is unhealthy during an post upgrade check."""
+
+
+class InvalidLdapUserToDnMappingError(Exception):
+    """Raised when the LdapUserToDnMapping is invalid."""
