@@ -48,6 +48,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
+    InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
@@ -72,7 +73,7 @@ from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardMana
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import unit_number
+from single_kernel_mongo.utils.helpers import unit_number, validate_ldap_options
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -369,6 +370,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.config.ldap_user_to_dn_mapping
         ):
             raise InvalidLdapUserToDnMappingError("Invalid LdapUserToDnMapping, please revert.")
+
+        if self.config.ldap_query_template and not validate_ldap_options(
+            self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
+        ):
+            raise InvalidLdapQueryTemplateError(
+                "Invalid LDAP Query template, please update your config."
+            )
 
         if self.charm.unit.is_leader():
             # Store in the databag so we never miss it.

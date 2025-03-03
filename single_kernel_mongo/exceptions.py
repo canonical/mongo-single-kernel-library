@@ -247,3 +247,7 @@ class UnhealthyUpgradeError(Exception):
 
 class InvalidLdapUserToDnMappingError(Exception):
     """Raised when the LdapUserToDnMapping is invalid."""
+
+
+class InvalidLdapQueryTemplateError(Exception):
+    """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""

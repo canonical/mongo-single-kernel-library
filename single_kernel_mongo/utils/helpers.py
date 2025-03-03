@@ -57,6 +57,24 @@ def unit_number(unit: UnitUpgradePeerData) -> int:
     return int(unit.component.name.split("/")[-1])
 
 
+def validate_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
+    """Validates the combination of the two LDAP options.
+
+    Rules are the following:
+     * if ldap_user_to_dn_mapping is empty then ldap_query_template MUST
+     contain the placeholder `{PROVIDED_USER}`.
+     * if ldap_user_to_dn_mapping is not empty then ldap_query_template MUST
+     contain the placeholder `{USER}`.
+
+    More information in the [official documentation](https://docs.percona.com/percona-server-for-mongodb/6.0/ldap-setup.html#active-directory-configuration).
+    """
+    if not ldap_user_to_dn_mapping and "{PROVIDED_USER}" not in ldap_query_template:
+        return False
+    if ldap_user_to_dn_mapping and "{USER}" not in ldap_query_template:
+        return False
+    return True
+
+
 def charm_kind_only(func, charm_kind: CharmKind):
     """Helpful decorator to ensure the charm kind."""
 
