@@ -30,6 +30,7 @@ from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
@@ -324,6 +325,10 @@ class ClusterRequirer(Object):
             user_secrets.remove_all_revisions()
             user_secrets.get_content(refresh=True)
             relation.data[self.charm.app].clear()
+
+        # Also remove the local user.
+        with MongoConnection(self.state.mongo_config) as mongo:
+            mongo.drop_user(mongo.config.username)
 
     def is_ca_compatible(self) -> bool:
         """Returns true if both the mongos and the config-server use the same CA.
