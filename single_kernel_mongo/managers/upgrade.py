@@ -91,6 +91,9 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         if self.charm.unit.is_leader():
             if not self.state.upgrade_in_progress:
                 logger.info("Charm refreshed. MongoDB version unchanged")
+                self.state.unit_upgrade_peer_data.current_revision = (
+                    self.dependent.cross_app_version_checker.version  # type: ignore
+                )
             if self.dependent.name == CharmKind.MONGOD:
                 self.state.app_upgrade_peer_data.upgrade_resumed = False
                 self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
