@@ -295,11 +295,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             logger.info(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
-            return BackupStatuses.PBM_MISSING_CONFIGS
+            return BackupStatuses.PBM_MISSING_CONFIGS.value
 
         # PBM requires all configuration to be set in order to run.
         if not self.workload.active():
-            return BackupStatuses.PBM_NOT_STARTED
+            return BackupStatuses.PBM_NOT_STARTED.value
 
         try:
             previous_status = self.charm.unit.status
@@ -316,7 +316,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             return processed_status
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
-            return BackupStatuses.UNKNOWN_PBM_ERROR
+            return BackupStatuses.UNKNOWN_PBM_ERROR.value
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
@@ -463,15 +463,15 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             error_message = pbm_status
 
         if StatusCodeError.FORBIDDEN in error_message:
-            return BackupStatuses.PBM_INCORRECT_CREDS
+            return BackupStatuses.PBM_INCORRECT_CREDS.value
         if StatusCodeError.NOTFOUND in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
         if StatusCodeError.MOVED_PERMANENTLY in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
 
         if error_message:
             logger.info("PBM error: %s", error_message)
-            return BackupStatuses.UNKNOWN_PBM_ERROR
+            return BackupStatuses.UNKNOWN_PBM_ERROR.value
 
         return None
 

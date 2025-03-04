@@ -13,12 +13,13 @@ progress. However the idea that all statuses belong in one file holds true regar
 """
 
 from dataclasses import dataclass
+from enum import Enum
 
 from ops.model import BlockedStatus, WaitingStatus
 
 
 @dataclass(frozen=True)
-class CharmStatuses:
+class CharmStatuses(Enum):
     """Charm Statuses.
 
     TODO: add remaining statuses related to the two charms.
@@ -26,7 +27,7 @@ class CharmStatuses:
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed")
 
-    class MongoDB:
+    class MongoDB(Enum):
         """MongoDB related statuses.
 
         TODO: add the remaining statuses for mongodb charm.
@@ -42,7 +43,7 @@ class CharmStatuses:
             "Relation to s3-integrator is not supported, config role must be config-server."
         )
 
-    class Mongos:
+    class Mongos(Enum):
         """Mongos related statuses.
 
         TODO: add the remaining statuses for mongos charm.
@@ -51,8 +52,7 @@ class CharmStatuses:
         ...
 
 
-@dataclass(frozen=True)
-class BackupStatuses:
+class BackupStatuses(Enum):
     """Backup manager related statuses.
 
     TODO: add the remaining statuses for backup manager.
