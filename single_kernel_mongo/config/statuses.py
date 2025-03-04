@@ -12,13 +12,37 @@ Note: The structure of this file is subject to change, as the implementation spe
 progress. However the idea that all statuses belong in one file holds true regardless of the spec.
 """
 
-from dataclasses import dataclass
 from enum import Enum
 
 from ops.model import BlockedStatus, WaitingStatus
 
 
-@dataclass(frozen=True)
+class MongoDB(Enum):
+    """MongoDB related statuses.
+
+    TODO: add the remaining statuses for mongodb charm.
+    """
+
+    MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
+    EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
+    SHARDING_ON_REPLICA = BlockedStatus("sharding interface cannot be used by replicas")
+    UNSUPPORTED_MONGOS_REL = BlockedStatus(
+        "Relation to mongos not supported, config role must be config-server"
+    )
+    INVALID_S3_INTEGRATION_STATUS = BlockedStatus(
+        "Relation to s3-integrator is not supported, config role must be config-server."
+    )
+
+
+class Mongos(Enum):
+    """Mongos related statuses.
+
+    TODO: add the remaining statuses for mongos charm.
+    """
+
+    ...
+
+
 class CharmStatuses(Enum):
     """Charm Statuses.
 
@@ -26,30 +50,8 @@ class CharmStatuses(Enum):
     """
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed")
-
-    class MongoDB(Enum):
-        """MongoDB related statuses.
-
-        TODO: add the remaining statuses for mongodb charm.
-        """
-
-        MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
-        EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
-        SHARDING_ON_REPLICA = BlockedStatus("sharding interface cannot be used by replicas")
-        UNSUPPORTED_MONGOS_REL = BlockedStatus(
-            "Relation to mongos not supported, config role must be config-server"
-        )
-        INVALID_S3_INTEGRATION_STATUS = BlockedStatus(
-            "Relation to s3-integrator is not supported, config role must be config-server."
-        )
-
-    class Mongos(Enum):
-        """Mongos related statuses.
-
-        TODO: add the remaining statuses for mongos charm.
-        """
-
-        ...
+    mongodb = MongoDB
+    mongos = Mongos
 
 
 class BackupStatuses(Enum):
