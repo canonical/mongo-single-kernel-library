@@ -34,7 +34,7 @@ from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
-from single_kernel_mongo.core.structured_config import LdapUserToDnMapping, MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
@@ -73,7 +73,11 @@ from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardMana
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import unit_number, validate_ldap_options
+from single_kernel_mongo.utils.helpers import (
+    unit_number,
+    validate_ldap_options,
+    validate_ldapusertodnmapping,
+)
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -364,12 +368,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             self.state.app_peer_data.role = self.config.role
-            return
 
-        if self.config.ldap_user_to_dn_mapping and not LdapUserToDnMapping.validate_strings(
+        if self.config.ldap_user_to_dn_mapping and not validate_ldapusertodnmapping(
             self.config.ldap_user_to_dn_mapping
         ):
-            raise InvalidLdapUserToDnMappingError("Invalid LdapUserToDnMapping, please revert.")
+            raise InvalidLdapUserToDnMappingError(
+                "Invalid LdapUserToDnMapping, please update your config."
+            )
 
         if self.config.ldap_query_template and not validate_ldap_options(
             self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
