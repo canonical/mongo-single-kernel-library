@@ -52,5 +52,5 @@ def parse_comment(comment: str) -> list[str]:  # noqa: C901
 
 
 if __name__ == "__main__":
-    comment = os.environ["COMMENT"]
+    comment = os.environ["COMMENT"].strip()
     print(json.dumps(parse_comment(comment)))
