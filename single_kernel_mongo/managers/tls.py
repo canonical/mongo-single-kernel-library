@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-
+from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -94,7 +94,9 @@ class TLSManager:
 
         label = "int" if internal else "ext"
 
-        self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
+        self.state.unit_peer_data.update(
+            {f"{label}_certs_subject": self._get_subject_name()}
+        )
         return csr
 
     def generate_new_csr(self, internal: bool) -> tuple[bytes, bytes]:
@@ -160,7 +162,9 @@ class TLSManager:
             raise Exception("No PEM file but TLS enabled. Please, fix.")
         try:
             cert = x509.load_pem_x509_certificate(pem_file.encode(), default_backend())
-            sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+            sans = cert.extensions.get_extension_for_class(
+                x509.SubjectAlternativeName
+            ).value
             sans_ips = [str(san) for san in sans.get_values_for_type(x509.IPAddress)]
             sans_dns = [str(san) for san in sans.get_values_for_type(x509.DNSName)]
         except x509.ExtensionNotFound:
@@ -203,7 +207,7 @@ class TLSManager:
 
         self.state.update_ca_secrets(new_ca=None)
 
-        self.charm.status_manager.to_maintenance("Disabling TLS")
+        self.charm.status_manager.set_and_share_status(TLSStatuses.DISABLING_TLS.value)
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services()
 
@@ -217,11 +221,14 @@ class TLSManager:
                 "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."
             )
             return
-        self.charm.status_manager.to_maintenance("enabling TLS")
+        self.charm.status_manager.set_and_share_status(TLSStatuses.ENABLING_TLS.value)
         try:
             self.dependent.restart_charm_services()
         except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            # TODO should we defer or just error
+            logger.error(
+                "An exception occurred when starting mongod agent, error: %s.", str(e)
+            )
             self.charm.status_manager.to_blocked("couldn't start MongoDB")
             return
 
@@ -278,7 +285,10 @@ class TLSManager:
         """Renew the expiring certificate."""
         for internal in (False, True):
             charm_cert = (
-                self.state.tls.get_secret(internal=internal, label_name=SECRET_CERT_LABEL) or ""
+                self.state.tls.get_secret(
+                    internal=internal, label_name=SECRET_CERT_LABEL
+                )
+                or ""
             )
             if certificate.rstrip() == charm_cert.rstrip():
                 logger.debug(
@@ -344,7 +354,9 @@ class TLSManager:
                 continue
             current_sans = self.get_current_sans(internal)
             current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
-            expected_sans_ip = set(self.get_new_sans()["sans_ips"]) if current_sans else set()
+            expected_sans_ip = (
+                set(self.get_new_sans()["sans_ips"]) if current_sans else set()
+            )
             sans_ip_changed = current_sans_ip ^ expected_sans_ip
 
             if not sans_ip_changed:
@@ -358,5 +370,6 @@ class TLSManager:
 
             old_csr, new_csr = self.generate_new_csr(internal)
             self.dependent.tls_events.certs_client.request_certificate_renewal(
-                old_certificate_signing_request=old_csr, new_certificate_signing_request=new_csr
+                old_certificate_signing_request=old_csr,
+                new_certificate_signing_request=new_csr,
             )

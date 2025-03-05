@@ -30,7 +30,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatus, ShardStatus
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -174,14 +174,18 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterProvider(
             self, self.state, self.substrate, RelationNames.CLUSTER
         )
-        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        upgrade_backend = (
+            MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        )
         self.upgrade_manager = MongoDBUpgradeManager(
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
-        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
+        self.observability_manager = ObservabilityManager(
+            self, self.state, self.substrate
+        )
 
         # Event Handlers
         self.password_actions = PasswordActionEvents(self)
@@ -266,21 +270,19 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self._configure_workloads()
 
-        try:
-            logger.info("Starting MongoDB.")
-            self.charm.status_manager.to_maintenance("starting MongoDB")
-            self.start_charm_services()
-        except WorkloadServiceError as e:
-            logger.error(f"An exception occurred when starting mongod agent, error: {e}.")
-            self.charm.status_manager.to_blocked("couldn't start MongoDB")
-            return
+        logger.info("Starting MongoDB.")
+        self.charm.status_manager.set_and_share_status(
+            CharmStatuses.mongodb.value.STARTING_MONGODB.value
+        )
 
-        # Open ports:
-        try:
-            self.open_ports()
-        except WorkloadExecError:
-            self.charm.status_manager.to_blocked("failed to open TCP port for MongoDB")
-            raise
+        for attempt in Retrying(
+            stop=stop_after_attempt(120),
+            wait=wait_fixed(1),
+            reraise=True,
+        ):
+            with attempt:
+                self.start_charm_services()
+                self.open_ports()
 
         # This seems unnecessary
         # if self.substrate == Substrates.K8S:
@@ -289,16 +291,22 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.charm.status_manager.to_waiting("waiting for MongoDB to start")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+            )
             raise WorkloadNotReadyError
 
-        self.charm.status_manager.to_active(None)
+        self.charm.status_manager.set_and_share_status(
+            CharmStatuses.mongodb.value.ACTIVE_IDLE.value
+        )
 
         try:
             self._initialise_replica_set()
         except (NotReadyError, PyMongoError, WorkloadExecError) as e:
             logger.error(f"Deferring on start: error={e}")
-            self.charm.status_manager.to_waiting("waiting to initialize replica set")
+            self.charm.status_manager.set_and_share_status(
+                MongodStatus.WAITING_REPL_SET_INIT.value
+            )
             raise
 
         try:
@@ -307,7 +315,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
-        self.charm.status_manager.to_active()
+        self.charm.status_manager.set_and_share_status(
+            CharmStatuses.mongodb.value.ACTIVE_IDLE.value
+        )
 
         if self.substrate == Substrates.K8S:
             # K8S upgrades result in the start hook getting fired following this pattern
@@ -352,7 +362,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # safe primary re-election.
         try:
             if self.charm.unit.name == self.primary_unit_name:
-                logger.debug("Stepping down current primary, before upgrading service...")
+                logger.debug(
+                    "Stepping down current primary, before upgrading service..."
+                )
                 self.upgrade_manager.step_down_primary_and_wait_reelection()
         except FailedToElectNewPrimaryError:
             logger.error("Failed to reelect primary before upgrading unit.")
@@ -366,7 +378,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         unresponsive therefore causing a cluster failure, error the component. This prevents it
         from executing other hooks with a new role.
         """
-        if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
+        if self.state.is_role(
+            MongoDBRoles.UNKNOWN
+        ):  # We haven't run the leader elected event yet.
             self.state.app_peer_data.role = self.config.role
             return
 
@@ -450,7 +464,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongo_manager.process_added_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
-            self.charm.status_manager.to_waiting("waiting to reconfigure replica set")
+            self.charm.status_manager.set_and_share_status(
+                MongodStatus.WAITING_RECONFIG.value
+            )
             raise
 
     @override
@@ -529,16 +545,24 @@ class MongoDBOperator(OperatorProtocol, Object):
         # A single replica cannot step down as primary and we cannot reconfigure the replica set to
         # have 0 members.
         if self.is_removing_last_replica:
-            if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.state.config_server_relation:
+            if (
+                self.state.is_role(MongoDBRoles.CONFIG_SERVER)
+                and self.state.config_server_relation
+            ):
                 current_shards = [
                     relation.app.name for relation in self.state.config_server_relation
                 ]
                 early_removal_message = f"Cannot remove config-server, still related to shards {', '.join(current_shards)}"
                 logger.error(early_removal_message)
                 raise EarlyRemovalOfConfigServerError(early_removal_message)
-            if self.state.is_role(MongoDBRoles.SHARD) and self.state.shard_relation is not None:
+            if (
+                self.state.is_role(MongoDBRoles.SHARD)
+                and self.state.shard_relation is not None
+            ):
                 logger.info("Wait for shard to drain before detaching storage.")
-                self.charm.status_manager.to_maintenance("Draining shard from cluster")
+                self.charm.status_manager.set_and_share_status(
+                    ShardStatus.DRAINING_SHARD.value
+                )
                 mongos_hosts = self.state.shard_state.mongos_hosts
                 self.shard_manager.wait_for_draining(mongos_hosts)
                 logger.info("Shard successfully drained storage.")
@@ -583,11 +607,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.SHARD):
             shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
             if config_server_has_tls and not shard_has_tls:
-                self.charm.status_manager.to_blocked("Shard requires TLS to be enabled")
+                self.charm.status_manager.set_and_share_status(
+                    ShardStatus.REQUIRES_TLS.value
+                )
                 return
 
         if not self.mongo_manager.mongod_ready():
-            self.charm.status_manager.to_waiting("Waiting for MongoDB to start")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+            )
             return
 
         if self.substrate == Substrates.K8S:
@@ -604,7 +632,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self.charm.status_manager.process_and_share_statuses()
 
-    def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
+    def on_set_password_action(
+        self, username: str, password: str | None = None
+    ) -> tuple[str, str]:
         """Handler for the set password action."""
         self.assert_pass_password_checks()
 
@@ -622,7 +652,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
-        if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if user in (OperatorUser, BackupUser) and self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             self.config_server_manager.update_credentials(
                 user.password_key_name,
                 new_password,
@@ -673,7 +705,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.backup_manager.configure_and_restart()
 
         if not self.charm.unit.is_leader():
-            logger.debug("Only the leader can perform reconfigurations to the replica set.")
+            logger.debug(
+                "Only the leader can perform reconfigurations to the replica set."
+            )
             return
 
         # remove any IPs that are no longer juju hosts & update app data.
@@ -740,7 +774,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error(f"Error setting values on sysctl: {e.message}")
             # containers share the kernel with the host system, and some sysctl parameters are
             # set at kernel level.
-            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
+            logger.warning(
+                "sysctl params cannot be set. Is the machine running on a container?"
+            )
 
     @property
     def primary_unit_name(self) -> str | None:
@@ -794,13 +830,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start mongodb exporter")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.EXPORTER_NOT_STARTED.value
+            )
             raise
 
         try:
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.charm.status_manager.to_blocked("couldn't start pbm-agent")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.PBM_NOT_STARTED.value
+            )
             raise
 
     @override
@@ -817,8 +857,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.charm.status_manager.to_blocked(
-                "Sharding roles do not support database interface."
+
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.DB_REl_ON_SHARD.value
             )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
@@ -827,7 +868,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.charm.status_manager.to_blocked("sharding interface cannot be used by replicas")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.SHARDING_ON_REPLICA.value
+            )
             return False
         return True
 
@@ -899,26 +942,33 @@ class MongoDBOperator(OperatorProtocol, Object):
         charm_statuses: list[StatusBase] = []
 
         if not self.workload.workload_present:
-            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED)
+            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
         else:  # don't bother checking if started if not installed
             if not self.state.db_initialised:
-                charm_statuses.append(CharmStatuses.MongoDB.MONGODB_NOT_STARTED)
+                charm_statuses.append(
+                    CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+                )
 
             if not self.mongodb_exporter_config_manager.workload.active():
-                charm_statuses.append(CharmStatuses.MongoDB.EXPORTER_NOT_STARTED)
+                charm_statuses.append(
+                    CharmStatuses.mongodb.value.EXPORTER_NOT_STARTED.value
+                )
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            charm_statuses.append(CharmStatuses.MongoDB.SHARDING_ON_REPLICA)
+            charm_statuses.append(CharmStatuses.mongodb.value.SHARDING_ON_REPLICA.value)
         elif (  # don't bother checking revision mismatch on sharding interface if replica
-            revision_mismatch_status
-            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
+            revision_mismatch_status := self.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
             charm_statuses.append(revision_mismatch_status)
 
         if not self.cluster_manager.is_valid_mongos_integration():
-            charm_statuses.append(CharmStatuses.MongoDB.UNSUPPORTED_MONGOS_REL)
+            charm_statuses.append(
+                CharmStatuses.mongodb.value.UNSUPPORTED_MONGOS_REL.value
+            )
 
         if not self.backup_manager.is_valid_s3_integration():
-            charm_statuses.append(CharmStatuses.MongoDB.INVALID_S3_INTEGRATION_STATUS)
+            charm_statuses.append(
+                CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value
+            )
 
         return charm_statuses

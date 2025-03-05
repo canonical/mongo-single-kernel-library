@@ -13,10 +13,15 @@ from ops.charm import ActionEvent, RelationCreatedEvent, UpgradeCharmEvent
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ModelError
 
-from single_kernel_mongo.config.literals import UNHEALTHY_UPGRADE, CharmKind
+from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.abstract_upgrades import UpgradeActions
-from single_kernel_mongo.exceptions import ActionFailedError, DeferrableError, UnhealthyUpgradeError
+from single_kernel_mongo.exceptions import (
+    ActionFailedError,
+    DeferrableError,
+    UnhealthyUpgradeError,
+)
 from single_kernel_mongo.managers.upgrade import ROLLBACK_INSTRUCTIONS
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
@@ -62,7 +67,9 @@ class UpgradeEventHandler(Object):
             self.charm.on[UpgradeActions.FORCE_REFRESH_START].action,
             self._on_force_upgrade_action,
         )
-        self.framework.observe(self.post_app_upgrade_event, self._run_post_app_upgrade_task)
+        self.framework.observe(
+            self.post_app_upgrade_event, self._run_post_app_upgrade_task
+        )
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
@@ -122,10 +129,14 @@ class UpgradeEventHandler(Object):
             self.manager.run_post_app_upgrade_task()
         except DeferrableError as e:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
+            defer_event_with_info_log(
+                logger, event, "post cluster upgrade checks", str(e)
+            )
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
+            self.charm.status_manager.set_and_share_status(
+                UpgradeStatus.UNHEALTHY_UPGRADE.value
+            )
             event.defer()
 
     def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
@@ -137,8 +148,12 @@ class UpgradeEventHandler(Object):
             self.manager.run_post_cluster_upgrade_task()
         except DeferrableError as e:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
+            defer_event_with_info_log(
+                logger, event, "post cluster upgrade checks", str(e)
+            )
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
+            self.charm.status_manager.set_and_share_status(
+                UpgradeStatus.UNHEALTHY_UPGRADE.value
+            )
             event.defer()

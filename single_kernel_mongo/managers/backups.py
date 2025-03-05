@@ -146,7 +146,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
         Only replica sets and config_servers can integrate to s3-integrator.
         """
-        return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
+        return (self.state.s3_relation is None) or (
+            not self.state.is_role(MongoDBRoles.SHARD)
+        )
 
     def on_relation_broken(self, relation: Relation) -> None:
         """On relation broken event, we need to remove the certificate from the trust store."""
@@ -255,7 +257,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         reraise=True,
         before_sleep=_backup_restore_retry_before_sleep,
     )
-    def restore_backup(self, backup_id: str, remapping_pattern: str | None = None) -> None:
+    def restore_backup(
+        self, backup_id: str, remapping_pattern: str | None = None
+    ) -> None:
         """Try to restore cluster a backup specified by backup id.
 
         If PBM is resyncing, the function will retry to create backup
@@ -266,7 +270,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         """
         try:
             remapping_pattern = remapping_pattern or self._remap_replicaset(backup_id)
-            remapping_args = ["--replset-remapping", remapping_pattern] if remapping_pattern else []
+            remapping_args = (
+                ["--replset-remapping", remapping_pattern] if remapping_pattern else []
+            )
             self.workload.run_bin_command(
                 "restore",
                 [backup_id] + remapping_args,
@@ -295,11 +301,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             logger.info(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
-            return BackupStatuses.PBM_MISSING_CONFIGS
+            return BackupStatuses.PBM_MISSING_CONFIGS.value
 
         # PBM requires all configuration to be set in order to run.
         if not self.workload.active():
-            return BackupStatuses.PBM_NOT_STARTED
+            return BackupStatuses.PBM_NOT_STARTED.value
 
         try:
             previous_status = self.charm.unit.status
@@ -316,7 +322,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             return processed_status
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
-            return BackupStatuses.UNKNOWN_PBM_ERROR
+            return BackupStatuses.UNKNOWN_PBM_ERROR.value
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
@@ -344,7 +350,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
         # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
         # 2 seconds for pbm_agent to receive the resync command before verifying.
-        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
+        self.workload.run_bin_command(
+            "config", ["--force-resync"], environment=self.environment
+        )
         time.sleep(2)
         self._wait_pbm_status()
 
@@ -431,9 +439,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                     break
 
             for host_info in cluster["nodes"]:
-                replica_info = (
-                    f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
-                )
+                replica_info = f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
                 if host_info["host"] == replica_info:
                     break
 
@@ -463,15 +469,15 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             error_message = pbm_status
 
         if StatusCodeError.FORBIDDEN in error_message:
-            return BackupStatuses.PBM_INCORRECT_CREDS
+            return BackupStatuses.PBM_INCORRECT_CREDS.value
         if StatusCodeError.NOTFOUND in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
         if StatusCodeError.MOVED_PERMANENTLY in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF
+            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
 
         if error_message:
             logger.info("PBM error: %s", error_message)
-            return BackupStatuses.UNKNOWN_PBM_ERROR
+            return BackupStatuses.UNKNOWN_PBM_ERROR.value
 
         return None
 
@@ -481,13 +487,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         current_op = pbm_as_dict.get("running", {})
         match current_op:
             case {"type": "backup", "name": backup_id}:
-                return MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
+                return BackupStatuses.backup_running(backup_id)
             case {"type": "restore", "name": backup_id}:
-                return MaintenanceStatus(f"restore started/running, backup id: '{backup_id}'")
+                return BackupStatuses.restore_running(backup_id)
             case {"type": "resync"}:
-                return WaitingStatus("waiting to sync s3 configurations.")
+                return BackupStatuses.PBM_WAITING_TO_SYNC.value
             case _:
-                return ActiveStatus("")
+                return BackupStatuses.PBM_ACTIVE_IDLE.value
 
     def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
@@ -499,7 +505,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         pbm_status = self.get_status()
         match pbm_status:
             case MaintenanceStatus():
-                raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
+                raise InvalidPBMStatusError(
+                    "Please wait for current backup/restore to finish."
+                )
             case WaitingStatus():
                 raise InvalidPBMStatusError(
                     "Sync-ing configurations needs more time, must wait before listing backups."
@@ -574,11 +582,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                 # since this process takes several minutes we should let the user know
                 # immediately.
                 self.charm.status_manager.set_and_share_status(
-                    WaitingStatus("waiting to sync s3 configurations.")
+                    BackupStatuses.PBM_WAITING_TO_SYNC.value
                 )
                 raise ResyncError
         except WorkloadExecError as e:
-            self.charm.status_manager.set_and_share_status(self.process_pbm_error(e.stdout))
+            self.charm.status_manager.set_and_share_status(
+                self.process_pbm_error(e.stdout)
+            )
 
     def _get_backup_restore_operation_result(
         self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
@@ -614,7 +624,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def _format_backup_list(self, backup_list: list[tuple[str, str, str]]) -> str:
         """Formats provided list of backups as a table."""
-        backups = ["{:<21s} | {:<12s} | {:s}".format("backup-id", "backup-type", "backup-status")]
+        backups = [
+            "{:<21s} | {:<12s} | {:s}".format(
+                "backup-id", "backup-type", "backup-status"
+            )
+        ]
 
         backups.append("-" * len(backups[0]))
         for backup_id, backup_type, backup_status in backup_list:
@@ -636,9 +650,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         backup_error_status = self.get_backup_error_status(backup_id)
 
         # When a charm is running as a Replica set it can generate its own remapping arguments
-        return self._is_backup_from_different_cluster(backup_error_status) and self.state.is_role(
-            MongoDBRoles.CONFIG_SERVER
-        )
+        return self._is_backup_from_different_cluster(
+            backup_error_status
+        ) and self.state.is_role(MongoDBRoles.CONFIG_SERVER)
 
     def _remap_replicaset(self, backup_id: str) -> str | None:
         """Returns options for remapping a replica set during a cluster migration restore.

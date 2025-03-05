@@ -112,11 +112,6 @@ PBM_RESTART_DELAY = 5
 
 FEATURE_VERSION_6 = "6.0"
 
-UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after refresh.")
-INCOMPATIBLE_UPGRADE = BlockedStatus(
-    "Refresh incompatible. Rollback to previous revision with `juju refresh`"
-)
-WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks")
 
 OS_REQUIREMENTS = {
     "vm.max_map_count": "262144",

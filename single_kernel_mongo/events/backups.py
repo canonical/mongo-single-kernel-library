@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops import ActiveStatus, MaintenanceStatus
+from single_kernel_mongo.config.statuses import CharmStatuses, BackupStatuses
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
@@ -43,10 +43,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-INVALID_S3_INTEGRATION_STATUS = (
-    "Relation to s3-integrator is not supported, config role must be config-server."
-)
-
 
 class BackupEventsHandler(Object):
     """Event Handler for managing backups and S3 integration."""
@@ -68,13 +64,18 @@ class BackupEventsHandler(Object):
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name.value].relation_broken, self._on_s3_relation_broken
+            self.charm.on[self.relation_name.value].relation_broken,
+            self._on_s3_relation_broken,
         )
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
-        self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
-        self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
+        self.framework.observe(
+            self.charm.on.create_backup_action, self._on_create_backup_action
+        )
+        self.framework.observe(
+            self.charm.on.list_backups_action, self._on_list_backups_action
+        )
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
     def _on_s3_relation_joined(self, event: RelationJoinedEvent) -> None:
@@ -89,7 +90,9 @@ class BackupEventsHandler(Object):
             logger.info(
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
-            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value
+            )
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:
         action = "configure-pbm"
@@ -103,11 +106,16 @@ class BackupEventsHandler(Object):
             logger.debug(
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
-            self.charm.status_manager.to_blocked(INVALID_S3_INTEGRATION_STATUS)
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value
+            )
             return
         if not self.manager.workload.active():
             defer_event_with_info_log(
-                logger, event, action, "Set PBM configurations, pbm-agent service not found."
+                logger,
+                event,
+                action,
+                "Set PBM configurations, pbm-agent service not found.",
             )
             return
 
@@ -118,20 +126,29 @@ class BackupEventsHandler(Object):
             self.manager.set_config_options(credentials=credentials)
             self.manager.resync_config_options()
         except SetPBMConfigError:
-            self.charm.status_manager.to_blocked("couldn't configure s3 backup options.")
+            logger.error("Failed to configure s3 backup options")
+            self.charm.status_manager.set_and_share_status(
+                BackupStatuses.CANT_CONFIGURE
+            )
+            event.defer()
             return
         except WorkloadServiceError as e:
-            self.charm.status_manager.to_blocked("couldn't start pbm")
-            logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
-            return
+            logger.error(
+                "An exception occurred when starting pbm agent, error: %s.", str(e)
+            )
+            raise
         except ResyncError:
-            self.charm.status_manager.to_waiting("waiting to sync s3 configurations.")
+            self.charm.status_manager.set_and_share_status(
+                BackupStatuses.PBM_WAITING_TO_SYNC
+            )
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
             )
             return
         except PBMBusyError:
-            self.charm.status_manager.to_waiting("waiting to sync s3 configurations.")
+            self.charm.status_manager.set_and_share_status(
+                BackupStatuses.PBM_WAITING_TO_SYNC
+            )
             defer_event_with_info_log(
                 logger,
                 event,
@@ -140,10 +157,14 @@ class BackupEventsHandler(Object):
             )
             return
         except WorkloadExecError as e:
-            self.charm.status_manager.to_blocked(self.manager.process_pbm_error(e.stdout))
+            self.charm.status_manager.to_blocked(
+                self.manager.process_pbm_error(e.stdout)
+            )
             return
 
-        self.charm.status_manager.set_and_share_status(self.manager.get_status() or ActiveStatus())
+        self.charm.status_manager.set_and_share_status(
+            self.manager.get_status() or BackupStatuses.PBM_ACTIVE_IDLE
+        )
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
@@ -162,7 +183,7 @@ class BackupEventsHandler(Object):
             self.manager.assert_can_backup()
             backup_id = self.manager.create_backup_action()
             self.charm.status_manager.set_and_share_status(
-                MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
+                BackupStatuses.backup_running(backup_id)
             )
             success_action_with_info_log(
                 logger,
@@ -170,7 +191,11 @@ class BackupEventsHandler(Object):
                 action,
                 {"backup-status": f"backup started. backup id: {backup_id}"},
             )
-        except (NonDeferrableFailedHookChecksError, InvalidPBMStatusError, Exception) as e:
+        except (
+            NonDeferrableFailedHookChecksError,
+            InvalidPBMStatusError,
+            Exception,
+        ) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
@@ -180,8 +205,14 @@ class BackupEventsHandler(Object):
             self.assert_pass_sanity_checks()
             self.manager.assert_can_list_backup()
             formatted_list = self.manager.list_backup_action()
-            success_action_with_info_log(logger, event, action, {"backups": formatted_list})
-        except (NonDeferrableFailedHookChecksError, InvalidPBMStatusError, ListBackupError) as e:
+            success_action_with_info_log(
+                logger, event, action, {"backups": formatted_list}
+            )
+        except (
+            NonDeferrableFailedHookChecksError,
+            InvalidPBMStatusError,
+            ListBackupError,
+        ) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
@@ -199,7 +230,10 @@ class BackupEventsHandler(Object):
 
         if self.dependent.state.upgrade_in_progress:
             fail_action_with_error_log(
-                logger, event, action, "Restoring a backup is not supported during an upgrade."
+                logger,
+                event,
+                action,
+                "Restoring a backup is not supported during an upgrade.",
             )
             return
 
@@ -209,9 +243,11 @@ class BackupEventsHandler(Object):
                 backup_id,
                 remapping_pattern,
             )
-            self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
+            self.manager.restore_backup(
+                backup_id=backup_id, remapping_pattern=remapping_pattern
+            )
             self.charm.status_manager.set_and_share_status(
-                MaintenanceStatus(f"restore started/running, backup id:'{backup_id}'")
+                BackupStatuses.restore_running(backup_id)
             )
             success_action_with_info_log(
                 logger, event, action, {"restore-status": "restore started"}

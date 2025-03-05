@@ -9,8 +9,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from data_platform_helpers.version_check import NoVersionError, get_charm_revision
-from ops.model import BlockedStatus, StatusBase, WaitingStatus
+from ops.model import StatusBase
 
+from single_kernel_mongo.config.statuses import ShardStatus, ConfigServerStatus
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 if TYPE_CHECKING:
@@ -34,10 +35,13 @@ class VersionChecker:
         # check for invalid versions in sharding integrations, i.e. a shard running on
         # revision  88 and a config-server running on revision 110
         current_charms_version = get_charm_revision(
-            self.charm.unit, local_version=self.dependent.workload.get_internal_revision()
+            self.charm.unit,
+            local_version=self.dependent.workload.get_internal_revision(),
         )
         local_identifier = (
-            "-locally built" if self.version_checker.is_local_charm(self.charm.app.name) else ""
+            "-locally built"
+            if self.version_checker.is_local_charm(self.charm.app.name)
+            else ""
         )
         try:
             # This part needs some explanation: If we are running this during
@@ -46,7 +50,9 @@ class VersionChecker:
             # we use the current revision that stores the revision of the
             # former charm until the charm is fully upgraded.
             old_version = self.version_checker.version
-            self.version_checker.version = self.state.unit_upgrade_peer_data.current_revision
+            self.version_checker.version = (
+                self.state.unit_upgrade_peer_data.current_revision
+            )
             if self.version_checker.are_related_apps_valid():
                 return None
         except NoVersionError as e:
@@ -54,9 +60,10 @@ class VersionChecker:
             # do not, it is because they are from an earlier charm revision, i.e. pre-revison X.
             logger.debug(e)
             if self.state.is_role(MongoDBRoles.SHARD):
-                return BlockedStatus(
-                    f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server."
+                return ShardStatus.older_version_shard_needs_upgrade(
+                    current_charms_version, local_identifier
                 )
+
         finally:
             # Always restore the former version.
             self.version_checker.version = old_version
@@ -70,13 +77,16 @@ class VersionChecker:
                 if self.version_checker.is_local_charm(self.state.config_server_name)
                 else ""
             )
-            return BlockedStatus(
-                f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
+            return ShardStatus.shard_needs_upgrade(
+                current_charms_version,
+                local_identifier,
+                config_server_revision,
+                remote_local_identifier,
             )
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            return WaitingStatus(
-                f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
+            return ConfigServerStatus.waiting_for_shard_upgrade(
+                current_charms_version, local_identifier
             )
 
         return None

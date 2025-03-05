@@ -17,7 +17,8 @@ from lightkube.core.exceptions import ApiError
 from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
-from single_kernel_mongo.config.literals import INCOMPATIBLE_UPGRADE, CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.literals import CharmKind, UnitState
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -68,7 +69,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return INCOMPATIBLE_UPGRADE
+            return UpgradeStatus.INCOMPATIBLE_UPGRADE
         return super().app_status
 
     @property
@@ -123,7 +124,9 @@ class KubernetesUpgrade(AbstractUpgrade):
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:  # noqa: C901
+    def reconcile_partition(
+        self, *, from_event: bool = False, force: bool = False
+    ) -> str | None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may

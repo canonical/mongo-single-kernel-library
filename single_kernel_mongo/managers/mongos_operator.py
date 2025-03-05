@@ -12,13 +12,12 @@ from typing import TYPE_CHECKING, final
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation, StatusBase, Unit, WaitingStatus
+from ops.model import Relation, StatusBase, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
+from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatus
 from single_kernel_mongo.config.literals import (
-    INCOMPATIBLE_UPGRADE,
-    UNHEALTHY_UPGRADE,
     CharmKind,
     MongoPorts,
     Substrates,
@@ -60,8 +59,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-INVALID_EXTERNAL_CONFIG = "Config option for expose-external not valid."
-
 
 @final
 class MongosOperator(OperatorProtocol, Object):
@@ -82,7 +79,9 @@ class MongosOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
+            self.charm.unit.get_container(self.name)
+            if self.substrate == Substrates.K8S
+            else None
         )
 
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
@@ -108,7 +107,9 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
-        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        upgrade_backend = (
+            MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        )
         self.upgrade_manager = MongosUpgradeManager(
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
@@ -164,7 +165,9 @@ class MongosOperator(OperatorProtocol, Object):
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
-            self.charm.status_manager.to_blocked("Missing relation to config-server.")
+            self.charm.status_manager.set_and_share_status(
+                 CharmStatuses.mongos.value.MISSING_CONFIG_SERVER.value
+            )
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
@@ -187,9 +190,15 @@ class MongosOperator(OperatorProtocol, Object):
                     self.charm.config["expose-external"],
                     "['nodeport', 'none']",
                 )
-                self.charm.status_manager.to_blocked(INVALID_EXTERNAL_CONFIG)
+
+                self.charm.status_manager.set_and_share_status(
+                     CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                )
                 return
-            self.charm.status_manager.clear_status(BlockedStatus(INVALID_EXTERNAL_CONFIG))
+
+            self.charm.status_manager.clear_status(
+                 CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+            )
             self.update_k8s_external_services()
 
             self.tls_manager.update_tls_sans()
@@ -230,7 +239,9 @@ class MongosOperator(OperatorProtocol, Object):
                     self.charm.config["expose-external"],
                     "['nodeport', 'none']",
                 )
-                self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
+                self.charm.status_manager.clear_status(
+                     CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                )
                 return
 
         if self.get_sanity_check_status() is None:
@@ -248,7 +259,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.tls_manager.update_tls_sans()
             self.upgrade_manager._reconcile_upgrade()
 
-        if self.charm.unit.status in (UNHEALTHY_UPGRADE, INCOMPATIBLE_UPGRADE):
+        if self.charm.unit.status in (
+            UpgradeStatus.UNHEALTHY_UPGRADE,
+            UpgradeStatus.INCOMPATIBLE_UPGRADE,
+        ):
             return
 
         self.charm.status_manager.process_and_share_statuses()
@@ -381,7 +395,9 @@ class MongosOperator(OperatorProtocol, Object):
             ).split(",")
         )
         external_connectivity = json.loads(
-            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            data_interface.fetch_relation_field(
+                relation.id, "external-node-connectivity"
+            )
             or "false"
         )
 
@@ -453,11 +469,17 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+                host = (
+                    self.state.unit_peer_data.internal_address
+                    + f":{MongoPorts.MONGOS_PORT}"
+                )
             else:
                 host = self.state.formatted_socket_path
         else:
-            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+            host = (
+                self.state.unit_peer_data.internal_address
+                + f":{MongoPorts.MONGOS_PORT}"
+            )
 
         uri = f"mongodb://{host}"
 
@@ -473,7 +495,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            return BlockedStatus("Missing relation to config-server.")
+            return  CharmStatuses.mongos.value.NEED_CONF_SERVER.value
 
         if status := self.cluster_manager.get_tls_statuses():
             logger.info(f"Invalid TLS integration: {status.message}")
@@ -481,7 +503,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
-            return WaitingStatus("Waiting for mongos to start.")
+            return CharmStatuses.MONGOS_NOT_STARTED.value
 
         return None
 
