@@ -21,8 +21,8 @@ from .mongos_test_charm.src.charm import MongosTestCharm
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added.")),
-        ({"1.1.1.1": "PRIMARY"}, ActiveStatus("Primary")),
+        ({}, WaitingStatus("Member being added...")),
+        ({"1.1.1.1": "PRIMARY"}, ActiveStatus("Primary.")),
         ({"1.1.1.1": "SECONDARY"}, ActiveStatus("")),
         ({"1.1.1.1": "STARTUP"}, WaitingStatus("Member is syncing...")),
         ({"1.1.1.1": "STARTUP2"}, WaitingStatus("Member is syncing...")),
@@ -53,7 +53,10 @@ def test_mongo_get_status_no_error(
 @pytest.mark.parametrize(
     ("error", "expected_status"),
     (
-        (ServerSelectionTimeoutError, WaitingStatus("Waiting for primary re-election.")),
+        (
+            ServerSelectionTimeoutError,
+            WaitingStatus("Waiting for primary re-election..."),
+        ),
         (AutoReconnect, WaitingStatus("Waiting to reconnect to unit...")),
     ),
 )
@@ -84,7 +87,7 @@ def test_config_server_get_status_invalid_integration(
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
     assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "sharding interface cannot be used by replicas"
+        "Sharding interface cannot be used by replicas."
     )
 
 
@@ -135,7 +138,10 @@ def test_config_server_get_status_internal_mongos_not_running(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=False,
+    )
 
     assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
         "Internal mongos is not running."
@@ -151,10 +157,13 @@ def test_config_server_get_status_password_not_synced(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
 
     assert harness.charm.operator.config_server_manager.get_status() == WaitingStatus(
-        "Waiting to sync passwords across the cluster"
+        "Waiting to sync passwords across the cluster..."
     )
 
 
@@ -167,7 +176,10 @@ def test_config_server_get_status_shard_draining(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
         return_value=["shard0"],
@@ -177,8 +189,9 @@ def test_config_server_get_status_shard_draining(
         return_value=True,
     )
 
-    assert harness.charm.operator.config_server_manager.get_status() == MaintenanceStatus(
-        "Draining shard shard0"
+    assert (
+        harness.charm.operator.config_server_manager.get_status()
+        == MaintenanceStatus("Draining shard shard0")
     )
 
 
@@ -191,7 +204,10 @@ def test_config_server_get_status_unreachable_shards(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
         return_value=[],
@@ -206,18 +222,23 @@ def test_config_server_get_status_unreachable_shards(
     )
 
     assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "shards shard0 are unreachable."
+        "Shards: shard0 are unreachable."
     )
 
 
-def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_config_server_all_active(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
         return_value=[],
@@ -264,7 +285,7 @@ def test_shard_get_status_charm_is_replication(
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
     assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Sharding interface cannot be used by replicas"
+        "Sharding interface cannot be used by replicas."
     )
 
 
@@ -306,7 +327,7 @@ def test_shard_get_status_charm_missing_relation_drained(
     harness.charm.operator.state.unit_peer_data.drained = True
 
     assert harness.charm.operator.shard_manager.get_status() == ActiveStatus(
-        "Shard drained from cluster, ready for removal"
+        "Shard drained from cluster, ready for removal."
     )
 
 
@@ -325,7 +346,7 @@ def test_shard_get_status_cluster_password_not_synced(
     )
 
     assert harness.charm.operator.shard_manager.get_status() == WaitingStatus(
-        "Waiting to sync passwords across the cluster"
+        "Waiting to sync passwords across the cluster..."
     )
 
 
@@ -370,7 +391,7 @@ def test_shard_get_status_shard_not_added_to_cluster(
     )
 
     assert harness.charm.operator.shard_manager.get_status() == MaintenanceStatus(
-        "Adding shard to config-server"
+        "Adding shard to config-server."
     )
 
 
@@ -397,11 +418,13 @@ def test_shard_get_status_shard_not_aware(
     )
 
     assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Shard is not yet shard aware"
+        "Shard is not yet shard aware."
     )
 
 
-def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_shard_get_status_all_ok(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
@@ -425,15 +448,39 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
 
 
 @pytest.mark.parametrize(
-    ("mongo_status", "shard_status", "config_server_status", "pbm_status", "expected_key"),
     (
-        (BlockedStatus("error"), ActiveStatus(), ActiveStatus, ActiveStatus(), "mongodb"),
-        (ActiveStatus("Primary"), None, None, None, "mongodb"),
-        (ActiveStatus("Primary"), BlockedStatus("error"), None, None, "shard"),
-        (ActiveStatus("Primary"), None, BlockedStatus("error"), None, "config_server"),
-        (ActiveStatus("Primary"), ActiveStatus(), BlockedStatus("error"), None, "config_server"),
-        (ActiveStatus("Primary"), ActiveStatus(), None, BlockedStatus("error"), "pbm"),
-        (ActiveStatus("Primary"), ActiveStatus(), ActiveStatus(), BlockedStatus("error"), "pbm"),
+        "mongo_status",
+        "shard_status",
+        "config_server_status",
+        "pbm_status",
+        "expected_key",
+    ),
+    (
+        (
+            BlockedStatus("error"),
+            ActiveStatus(),
+            ActiveStatus,
+            ActiveStatus(),
+            "mongodb",
+        ),
+        (ActiveStatus("Primary."), None, None, None, "mongodb"),
+        (ActiveStatus("Primary."), BlockedStatus("error"), None, None, "shard"),
+        (ActiveStatus("Primary."), None, BlockedStatus("error"), None, "config_server"),
+        (
+            ActiveStatus("Primary."),
+            ActiveStatus(),
+            BlockedStatus("error"),
+            None,
+            "config_server",
+        ),
+        (ActiveStatus("Primary."), ActiveStatus(), None, BlockedStatus("error"), "pbm"),
+        (
+            ActiveStatus("Primary."),
+            ActiveStatus(),
+            ActiveStatus(),
+            BlockedStatus("error"),
+            "pbm",
+        ),
     ),
 )
 def test_status_handler_prioritize_status(
@@ -497,7 +544,7 @@ def test_mongos_get_status_mongos_not_running(
 ):
     mongos_operator = mongos_harness.charm.operator
 
-    expected_status = WaitingStatus("Waiting for mongos to start.")
+    expected_status = WaitingStatus("Waiting to start mongos...")
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
         return_value=None,

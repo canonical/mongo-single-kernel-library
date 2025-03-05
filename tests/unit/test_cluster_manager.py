@@ -5,7 +5,10 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    RelationNames,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -24,7 +27,9 @@ from .mongos_test_charm.src.charm import MongosTestCharm
 #################
 
 
-def test_assert_pass_hook_checks_fail_db_not_initialised(harness: Harness[MongoTestCharm]):
+def test_assert_pass_hook_checks_fail_db_not_initialised(
+    harness: Harness[MongoTestCharm],
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -37,7 +42,9 @@ def test_assert_pass_hook_checks_fail_db_not_initialised(harness: Harness[MongoT
     assert err.value.args[0] == "DB is not initialised"
 
 
-def test_assert_pass_hook_checks_fail_invalid_mongos_integration(harness: Harness[MongoTestCharm]):
+def test_assert_pass_hook_checks_fail_invalid_mongos_integration(
+    harness: Harness[MongoTestCharm],
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -70,7 +77,9 @@ def test_assert_pass_hook_checks_fail_not_leader(harness: Harness[MongoTestCharm
     assert err.value.args[0] == "Not leader"
 
 
-def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[MongoTestCharm], mocker):
+def test_assert_pass_hook_checks_fail_upgrade_in_progress(
+    harness: Harness[MongoTestCharm], mocker
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -130,7 +139,9 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     harness.add_relation_unit(rel_id, "test-mongos/0")
     harness.update_relation_data(rel_id, "test-mongos", {"database": "test_mongos"})
 
-    harness.charm.operator.state.unit_peer_data.update({f"relation_{rel_id}_departed": "false"})
+    harness.charm.operator.state.unit_peer_data.update(
+        {f"relation_{rel_id}_departed": "false"}
+    )
 
     manager.cleanup_users(relation)
 
@@ -223,7 +234,7 @@ def test_cluster_requirer_set_relation_created_status(
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
 
     assert isinstance(mongos_harness.charm.unit.status, WaitingStatus)
-    assert mongos_harness.charm.unit.status.message == "Connecting to config-server"
+    assert mongos_harness.charm.unit.status.message == "Connecting to config-server..."
 
 
 def test_cluster_requirer_share_credentials_to_clients(
@@ -269,8 +280,12 @@ def test_cluster_requirer_update_mongos_and_restart(
         return_value={"MONGOS_ARGS": "unused"},
     )
 
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
-    rel_id_proxy = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "test-application")
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
+    rel_id_proxy = mongos_harness.add_relation(
+        RelationNames.MONGOS_PROXY.value, "test-application"
+    )
 
     mongos_harness.add_relation_unit(rel_id_cluster, "test-mongodb/0")
     mongos_harness.add_relation_unit(rel_id_proxy, "test-application/0")
@@ -306,17 +321,25 @@ def test_cluster_requirer_update_mongos_and_restart(
     ("databag"), (({"key-file": "deadbeef"}), ({"config-server-db": "deadbeef"}), ({}))
 )
 def test_cluster_requirer_update_mongos_and_restart_fail_missing_data(
-    mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker, databag: dict[str, str]
+    mongos_harness: Harness[MongosTestCharm],
+    mock_fs_interactions,
+    mocker,
+    databag: dict[str, str],
 ):
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "test-mongodb",
@@ -335,13 +358,20 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=False,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
     mongos_harness.add_relation_unit(rel_id_cluster, "test-mongodb/0")
     mongos_harness.update_relation_data(
         rel_id_cluster,
@@ -354,7 +384,9 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status
-    assert mongos_harness.charm.unit.status == WaitingStatus("Waiting for mongos to start")
+    assert mongos_harness.charm.unit.status == WaitingStatus(
+        "Waiting to start mongos..."
+    )
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -364,13 +396,20 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
     relation_cluster: Relation = mongos_harness.model.get_relation(
         RelationNames.CLUSTER.value, rel_id_cluster
     )  # type: ignore[assignment]
@@ -415,18 +454,27 @@ def test_cluster_requirer_is_ca_compatible(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
 
     # Create the cluster relation
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
 
     # Create the TLS relation
-    mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    mongos_harness.add_relation(
+        ExternalRequirerRelations.TLS.value, "self-signed-certificates"
+    )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -471,19 +519,28 @@ def test_cluster_requirer_tls_status(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
 
     # Create the cluster relation
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
 
     # Create the TLS relation if it should have one
     if mongos_has_tls:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.TLS.value, "self-signed-certificates"
+        )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -507,10 +564,18 @@ def test_cluster_requirer_tls_status(
     ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
         (None, "deadbeef", BlockedStatus("mongos requires TLS to be enabled.")),
-        ("deadbeef", None, BlockedStatus("mongos has TLS enabled, but config-server does not.")),
+        (
+            "deadbeef",
+            None,
+            BlockedStatus("mongos has TLS enabled, but config-server does not."),
+        ),
         (None, None, None),
         ("deadbeef", "deadbeef", None),
-        ("feeddead", "deadbeef", BlockedStatus("mongos CA and Config-Server CA don't match.")),
+        (
+            "feeddead",
+            "deadbeef",
+            BlockedStatus("mongos CA and Config-Server CA don't match."),
+        ),
     ),
 )
 def test_cluster_requirer_get_tls_statuses(
@@ -524,19 +589,28 @@ def test_cluster_requirer_get_tls_statuses(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
 
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
         return_value={"MONGOS_ARGS": "unused"},
     )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+    mocker.patch(
+        "single_kernel_mongo.managers.config.CommonConfigManager.set_environment"
+    )
 
     # Create the cluster relation
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    rel_id_cluster = mongos_harness.add_relation(
+        RelationNames.CLUSTER.value, "test-mongodb"
+    )
 
     # Create the TLS relation if it should have one
     if mongos_ca_secret:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.TLS.value, "self-signed-certificates"
+        )
         # Local certificate
         manager.state.tls.set_secret(
             internal=True, label_name=SECRET_CA_LABEL, contents=mongos_ca_secret
