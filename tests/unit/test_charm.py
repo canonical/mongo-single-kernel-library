@@ -235,7 +235,11 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
     )
-    harness.update_config({"role": "shard"})
+    harness.update_config(
+        {
+            "ldap-query-template": "{PROVIDED_USER}",
+        }
+    )
 
     mocked_defer.assert_called()
 

@@ -74,9 +74,9 @@ from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongoDBUpgradeManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import (
+    is_valid_ldap_options,
+    is_valid_ldapusertodnmapping,
     unit_number,
-    validate_ldap_options,
-    validate_ldapusertodnmapping,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
@@ -369,19 +369,35 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             self.state.app_peer_data.role = self.config.role
 
-        if self.config.ldap_user_to_dn_mapping and not validate_ldapusertodnmapping(
+        if self.config.ldap_user_to_dn_mapping and not is_valid_ldapusertodnmapping(
             self.config.ldap_user_to_dn_mapping
         ):
+            logger.info("Please refer to the config option description.")
             raise InvalidLdapUserToDnMappingError(
                 "Invalid LdapUserToDnMapping, please update your config."
             )
 
-        if self.config.ldap_query_template and not validate_ldap_options(
+        if self.config.ldap_query_template and not is_valid_ldap_options(
             self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
         ):
+            logger.info("Please refer to the config option description.")
             raise InvalidLdapQueryTemplateError(
                 "Invalid LDAP Query template, please update your config."
             )
+
+        if not self.state.is_role(self.config.role):
+            logger.error(
+                f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
+            )
+            raise ShardingMigrationError(
+                f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
+            )
+
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
 
         if self.charm.unit.is_leader():
             # Store in the databag so we never miss it.
@@ -391,21 +407,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
 
             # TODO: Invalidate the cache and restart with those parameters if needed.
-
-        if self.state.is_role(self.config.role):
-            return
-        if self.state.upgrade_in_progress:
-            logger.warning(
-                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            raise UpgradeInProgressError
-
-        logger.error(
-            f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
-        )
-        raise ShardingMigrationError(
-            f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
-        )
 
     @override
     def on_leader_elected(self) -> None:

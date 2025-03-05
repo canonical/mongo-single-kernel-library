@@ -60,16 +60,17 @@ def unit_number(unit: UnitUpgradePeerData) -> int:
     return int(unit.component.name.split("/")[-1])
 
 
-def validate_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
+def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
     """Validates the mapping, returning a boolean."""
     try:
         LdapUserToDnMapping.validate_json(ldap_user_to_dn_mapping)
         return True
     except ValidationError:
+        logger.error("Invalid LDAP User to DN Mapping", exc_info=True)
         return False
 
 
-def validate_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
+def is_valid_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
     """Validates the combination of the two LDAP options.
 
     Rules are the following:
@@ -81,8 +82,10 @@ def validate_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str
     More information in the [official documentation](https://docs.percona.com/percona-server-for-mongodb/6.0/ldap-setup.html#active-directory-configuration).
     """
     if not ldap_user_to_dn_mapping and "{PROVIDED_USER}" not in ldap_query_template:
+        logger.error("Invalid ldapQueryTemplate: should contain `{PROVIDED_USER}`")
         return False
     if ldap_user_to_dn_mapping and "{USER}" not in ldap_query_template:
+        logger.error("Invalid ldapQueryTemplate: should contain `{USER}`")
         return False
     return True
 
