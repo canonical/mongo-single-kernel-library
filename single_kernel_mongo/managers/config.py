@@ -66,7 +66,11 @@ class CommonConfigManager(ABC):
 
 
 class FileBasedConfigManager(CommonConfigManager):
-    """A generic file based config manager."""
+    """A generic file based config manager.
+
+    This is used by services that require to set arguments in the config file.
+    It currently supports yaml but more supports could be provided using mixins in the future.
+    """
 
     file: Path
 
