@@ -369,18 +369,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             self.state.app_peer_data.role = self.config.role
 
-        if self.config.ldap_user_to_dn_mapping and not is_valid_ldapusertodnmapping(
-            self.config.ldap_user_to_dn_mapping
-        ):
-            logger.info("Please refer to the config option description.")
+        if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
+            logger.error("Invalid LDAP Config - Please refer to the config option description.")
             raise InvalidLdapUserToDnMappingError(
                 "Invalid LdapUserToDnMapping, please update your config."
             )
 
-        if self.config.ldap_query_template and not is_valid_ldap_options(
+        if not is_valid_ldap_options(
             self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
         ):
-            logger.info("Please refer to the config option description.")
+            logger.info("Invalid LDAP Config - Please refer to the config option description.")
             raise InvalidLdapQueryTemplateError(
                 "Invalid LDAP Query template, please update your config."
             )

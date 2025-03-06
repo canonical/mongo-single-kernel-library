@@ -62,6 +62,8 @@ def unit_number(unit: UnitUpgradePeerData) -> int:
 
 def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
     """Validates the mapping, returning a boolean."""
+    if not ldap_user_to_dn_mapping:
+        return True
     try:
         LdapUserToDnMapping.validate_json(ldap_user_to_dn_mapping)
         return True
@@ -81,6 +83,8 @@ def is_valid_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str
 
     More information in the [official documentation](https://docs.percona.com/percona-server-for-mongodb/6.0/ldap-setup.html#active-directory-configuration).
     """
+    if not ldap_query_template:
+        return True
     if not ldap_user_to_dn_mapping and "{PROVIDED_USER}" not in ldap_query_template:
         logger.error("Invalid ldapQueryTemplate: should contain `{PROVIDED_USER}`")
         return False
