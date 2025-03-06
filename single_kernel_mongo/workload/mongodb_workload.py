@@ -40,7 +40,7 @@ class MongoDBWorkload(WorkloadBase):
                     self.service: {
                         "override": "replace",
                         "summary": "mongod",
-                        "command": f"/usr/bin/mongod {self._env}",
+                        "command": "/bin/start-mongod.sh",
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,

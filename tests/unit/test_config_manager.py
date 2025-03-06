@@ -1,4 +1,8 @@
+from pathlib import Path
+from typing import Any
+
 import pytest
+from yaml import safe_dump
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS, VM_PATH
@@ -21,14 +25,14 @@ from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 @pytest.mark.parametrize(
     "role,expected_parameter",
     (
-        (MongoDBRoles.CONFIG_SERVER, ["--configsvr"]),
-        (MongoDBRoles.SHARD, ["--shardsvr"]),
-        (MongoDBRoles.REPLICATION, []),
+        (MongoDBRoles.CONFIG_SERVER, {"sharding": {"clusterRole": "configsvr"}}),
+        (MongoDBRoles.SHARD, {"sharding": {"clusterRole": "shardsvr"}}),
+        (MongoDBRoles.REPLICATION, {}),
     ),
 )
-def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: list):
+def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: dict[str, Any]):
     mock = mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.set",
+        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
     )
 
     mock_state = mocker.MagicMock(CharmState)
@@ -58,51 +62,75 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     auth_parameter = manager.auth_parameter
     tls_parameters = manager.tls_parameters
 
-    all_params = manager.build_parameters()
+    all_params = manager.build_config()
 
-    assert port_parameter == ["--port=27017"]
-    assert replset_option == ["--replSet=deadbeef"]
+    assert port_parameter == {"net": {"port": "27017"}}
+    assert replset_option == {"replication": {"replSetName": "deadbeef"}}
     assert role_parameter == expected_parameter
-    assert db_path_argument == [f"--dbpath={VM_PATH['mongod']['DATA']}"]
-    assert binding_ips == ["--bind_ip_all"]
-    assert log_options == [
-        "--setParameter processUmask=037",
-        "--logRotate reopen",
-        "--logappend",
-        f"--logpath={VM_PATH['mongod']['LOGS']}/mongodb.log",
-    ]
-    assert audit_options == [
-        "--auditDestination=file",
-        "--auditFormat=JSON",
-        f"--auditPath={VM_PATH['mongod']['LOGS']}/audit.log",
-    ]
-    assert auth_parameter == [
-        "--auth",
-        "--clusterAuthMode=keyFile",
-        f"--keyFile={VM_PATH['mongod']['CONF']}/keyFile",
-    ]
-    assert tls_parameters == []
+    assert db_path_argument == {"storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}"}}
+    assert binding_ips == {"net": {"bindIpAll": True}}
+    assert log_options == {
+        "setParameter": {"processUmask": "037"},
+        "systemLog": {
+            "logRotate": "reopen",
+            "logAppend": True,
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+        },
+    }
 
-    assert all_params == [
-        binding_ips,
-        port_parameter,
-        auth_parameter,
-        tls_parameters,
-        log_options,
-        audit_options,
-        replset_option,
-        role_parameter,
-        db_path_argument,
-    ]
+    assert audit_options == {
+        "auditLog": {
+            "destination": "file",
+            "format": "JSON",
+            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+        }
+    }
+
+    assert auth_parameter == {
+        "security": {
+            "authorization": "enabled",
+            "clusterAuthMode": "keyFile",
+            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
+        }
+    }
+    assert tls_parameters == {}
+
+    assert (
+        all_params
+        == {
+            "net": {"bindIpAll": True, "port": "27017"},
+            "security": {
+                "authorization": "enabled",
+                "clusterAuthMode": "keyFile",
+                "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
+            },
+            "setParameter": {"processUmask": "037"},
+            "systemLog": {
+                "logRotate": "reopen",
+                "logAppend": True,
+                "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            },
+            "auditLog": {
+                "destination": "file",
+                "format": "JSON",
+                "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+            },
+            "replication": {"replSetName": "deadbeef"},
+            "storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}"},
+        }
+        | expected_parameter
+    )
+
     manager.set_environment()
 
-    expected = " ".join([item for params in all_params for item in params])
-    mock.assert_called_once_with({"mongod-args": expected})
+    mock.assert_called_once_with(
+        Path(f"{VM_PATH['mongod']['CONF']}/mongod.conf"), safe_dump(all_params)
+    )
 
 
 def test_mongos_config_manager(mocker):
     mock = mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.set",
+        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
     )
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
@@ -130,43 +158,71 @@ def test_mongos_config_manager(mocker):
     tls_parameters = manager.tls_parameters
     config_server_db_parameter = manager.config_server_db_parameter
 
-    all_params = manager.build_parameters()
+    all_params = manager.build_config()
 
-    assert port_parameter == ["--port=27018"]
-    assert binding_ips == [
-        f"--bind_ip {VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
-        "--filePermissions 0766",
-    ]
-    assert log_options == [
-        "--setParameter processUmask=037",
-        "--logRotate reopen",
-        "--logappend",
-        f"--logpath={VM_PATH['mongod']['LOGS']}/mongodb.log",
-    ]
-    assert audit_options == [
-        "--auditDestination=file",
-        "--auditFormat=JSON",
-        f"--auditPath={VM_PATH['mongod']['LOGS']}/audit.log",
-    ]
-    assert auth_parameter == [
-        "--clusterAuthMode=keyFile",
-        f"--keyFile={VM_PATH['mongod']['CONF']}/keyFile",
-    ]
-    assert tls_parameters == []
-    assert config_server_db_parameter == ["--configdb mongodb://config-server-url"]
+    assert port_parameter == {"net": {"port": "27018"}}
+    assert binding_ips == {
+        "net": {
+            "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
+            "unixDomainSocket": {
+                "filePermissions": "0766",
+            },
+        }
+    }
+    assert log_options == {
+        "setParameter": {"processUmask": "037"},
+        "systemLog": {
+            "logRotate": "reopen",
+            "logAppend": True,
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+        },
+    }
 
-    assert all_params == [
-        binding_ips,
-        port_parameter,
-        auth_parameter,
-        tls_parameters,
-        log_options,
-        audit_options,
-        config_server_db_parameter,
-    ]
+    assert audit_options == {
+        "auditLog": {
+            "destination": "file",
+            "format": "JSON",
+            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+        }
+    }
+    assert auth_parameter == {
+        "security": {
+            "clusterAuthMode": "keyFile",
+            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
+        }
+    }
+    assert tls_parameters == {}
+    assert config_server_db_parameter == {"sharding": {"configDB": "mongodb://config-server-url"}}
+
+    assert all_params == {
+        "net": {
+            "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
+            "unixDomainSocket": {
+                "filePermissions": "0766",
+            },
+            "port": "27018",
+        },
+        "security": {
+            "clusterAuthMode": "keyFile",
+            "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
+        },
+        "setParameter": {"processUmask": "037"},
+        "systemLog": {
+            "logRotate": "reopen",
+            "logAppend": True,
+            "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+        },
+        "auditLog": {
+            "destination": "file",
+            "format": "JSON",
+            "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
+        },
+        "sharding": {"configDB": "mongodb://config-server-url"},
+    }
     manager.set_environment()
-    expected_params = " ".join(item for param in all_params for item in param)
-    mock.assert_called_once_with({"mongos-args": expected_params})
+    mock.assert_called_once_with(
+        Path(f"{VM_PATH['mongod']['CONF']}/mongos.conf"), safe_dump(all_params)
+    )
 
 
 def test_mongodb_config_manager_tls_enabled(mocker):
@@ -186,19 +242,29 @@ def test_mongodb_config_manager_tls_enabled(mocker):
         workload,
     )
 
-    assert manager.auth_parameter == [
-        "--auth",
-        "--clusterAuthMode=x509",
-        "--tlsAllowInvalidCertificates",
-        f"--tlsClusterCAFile={VM_PATH['mongod']['CONF']}/internal-ca.crt",
-        f"--tlsClusterFile={VM_PATH['mongod']['CONF']}/internal-cert.pem",
-    ]
-    assert manager.tls_parameters == [
-        f"--tlsCAFile={VM_PATH['mongod']['CONF']}/external-ca.crt",
-        f"--tlsCertificateKeyFile={VM_PATH['mongod']['CONF']}/external-cert.pem",
-        "--tlsMode=preferTLS",
-        "--tlsDisabledProtocols=TLS1_0,TLS1_1",
-    ]
+    assert manager.auth_parameter == {
+        "security": {
+            "authorization": "enabled",
+            "clusterAuthMode": "x509",
+        },
+        "net": {
+            "tls": {
+                "allowInvalidCertificates": True,
+                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
+                "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+            }
+        },
+    }
+    assert manager.tls_parameters == {
+        "net": {
+            "tls": {
+                "CAFile": f"{VM_PATH['mongod']['CONF']}/external-ca.crt",
+                "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
+                "mode": "preferTLS",
+                "disabledProtocols": "TLS1_0,TLS1_1",
+            }
+        },
+    }
 
 
 def test_mongos_default_config_server(mocker):
@@ -218,4 +284,6 @@ def test_mongos_default_config_server(mocker):
         workload,
         mock_state,
     )
-    assert manager.config_server_db_parameter == ["--configdb deadbeef/127.0.0.1:27017"]
+    assert manager.config_server_db_parameter == {
+        "sharding": {"configDB": "deadbeef/127.0.0.1:27017"}
+    }

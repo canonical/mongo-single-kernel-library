@@ -42,7 +42,7 @@ class MongosWorkload(WorkloadBase):
                 self.service: {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": f"/usr/bin/mongos {self._env}",
+                    "command": "/bin/start-mongos.sh",
                     "startup": "enabled",
                     "user": self.users.user,
                     "group": self.users.group,

@@ -7,10 +7,16 @@
 import logging
 import time
 from abc import ABC, abstractmethod
+from copy import deepcopy
+from functools import reduce
 from itertools import chain
+from pathlib import Path
+from typing import Any
 
+from deepmerge import always_merger
 from ops import Container
 from typing_extensions import override
+from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import (
     LOCALHOST,
@@ -57,6 +63,26 @@ class CommonConfigManager(ABC):
     def build_parameters(self) -> list[list[str]]:  # pragma: nocover
         """Builds the parameters list."""
         ...
+
+
+class FileBasedConfigManager(CommonConfigManager):
+    """A generic file based config manager."""
+
+    file: Path
+
+    @abstractmethod
+    def build_config(self) -> dict[str, Any]:
+        """Builds the config dict."""
+
+    def set_environment(self):
+        """Write update parameters in the file."""
+        data = "\n".join(self.workload.read(self.file))
+        current_content = safe_load(data)
+
+        new_content = always_merger.merge(deepcopy(current_content), self.build_config())
+
+        if new_content != current_content:
+            self.workload.write(self.file, safe_dump(new_content))
 
 
 class BackupConfigManager(CommonConfigManager):
@@ -190,30 +216,37 @@ class MongoDBExporterConfigManager(CommonConfigManager):
                 raise
 
 
-class MongoConfigManager(CommonConfigManager, ABC):
+class MongoConfigManager(FileBasedConfigManager, ABC):
     """The common configuration manager for both MongoDB and Mongos."""
 
     auth: bool
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [
-            self.binding_ips,
-            self.port_parameter,
-            self.auth_parameter,
-            self.tls_parameters,
-            self.log_options,
-            self.audit_options,
-        ]
+        return [[]]
+
+    @override
+    def build_config(self) -> dict[str, Any]:
+        return reduce(
+            always_merger.merge,
+            [
+                self.binding_ips,
+                self.port_parameter,
+                self.auth_parameter,
+                self.tls_parameters,
+                self.log_options,
+                self.audit_options,
+            ],
+        )
 
     @property
     @abstractmethod
-    def port_parameter(self) -> list[str]:
+    def port_parameter(self) -> dict[str, Any]:
         """The port parameter."""
         ...
 
     @property
-    def binding_ips(self) -> list[str]:
+    def binding_ips(self) -> dict[str, Any]:
         """The binding IP parameters.
 
         For VM Mongos we bind to the socked (if non-external), this gives us
@@ -224,59 +257,82 @@ class MongoConfigManager(CommonConfigManager, ABC):
             and self.state.substrate == Substrates.VM
             and not self.state.app_peer_data.external_connectivity
         ):
-            return [
-                f"--bind_ip {self.workload.paths.socket_path}",
-                "--filePermissions 0766",
-            ]
-        return ["--bind_ip_all"]
+            return {
+                "net": {
+                    "bindIp": f"{self.workload.paths.socket_path}",
+                    "unixDomainSocket": {
+                        "filePermissions": "0766",
+                    },
+                },
+            }
+        return {"net": {"bindIpAll": True}}
 
     @property
-    def log_options(self) -> list[str]:
+    def log_options(self) -> dict[str, Any]:
         """The arguments for the logging option."""
-        return [
-            "--setParameter processUmask=037",  # Required for log files permissions
-            "--logRotate reopen",
-            "--logappend",
-            f"--logpath={self.workload.paths.log_file}",
-        ]
+        return {
+            "setParameter": {"processUmask": "037"},
+            "systemLog": {
+                "logRotate": "reopen",
+                "logAppend": True,
+                "path": f"{self.workload.paths.log_file}",
+            },
+        }
 
     @property
-    def audit_options(self) -> list[str]:
+    def audit_options(self) -> dict[str, Any]:
         """The argument for the audit log options."""
-        return [
-            f"--auditDestination={AuditLogConfig.destination}",
-            f"--auditFormat={AuditLogConfig.format}",
-            f"--auditPath={self.workload.paths.audit_file}",
-        ]
+        return {
+            "auditLog": {
+                "destination": AuditLogConfig.destination,
+                "format": AuditLogConfig.format,
+                "path": f"{self.workload.paths.audit_file}",
+            }
+        }
 
     @property
-    def auth_parameter(self) -> list[str]:
+    def auth_parameter(self) -> dict[str, Any]:
         """The auth mode."""
-        cmd = ["--auth"] if self.auth else []
+        cmd = {"security": {"authorization": "enabled"}} if self.auth else {}
         if self.state.tls.internal_enabled and self.state.tls.external_enabled:
-            return cmd + [
-                "--clusterAuthMode=x509",
-                "--tlsAllowInvalidCertificates",
-                f"--tlsClusterCAFile={self.workload.paths.int_ca_file}",
-                f"--tlsClusterFile={self.workload.paths.int_pem_file}",
-            ]
-        return cmd + [
-            "--clusterAuthMode=keyFile",
-            f"--keyFile={self.workload.paths.keyfile}",
-        ]
+            return always_merger.merge(
+                cmd,
+                {
+                    "security": {"clusterAuthMode": "x509"},
+                    "net": {
+                        "tls": {
+                            "allowInvalidCertificates": True,
+                            "clusterCAFile": f"{self.workload.paths.int_ca_file}",
+                            "clusterFile": f"{self.workload.paths.int_pem_file}",
+                        }
+                    },
+                },
+            )
+        return always_merger.merge(
+            cmd,
+            {
+                "security": {
+                    "clusterAuthMode": "keyFile",
+                    "keyFile": f"{self.workload.paths.keyfile}",
+                }
+            },
+        )
 
     @property
-    def tls_parameters(self) -> list[str]:
+    def tls_parameters(self) -> dict[str, Any]:
         """The TLS external parameters."""
         if self.state.tls.external_enabled:
-            return [
-                f"--tlsCAFile={self.workload.paths.ext_ca_file}",
-                f"--tlsCertificateKeyFile={self.workload.paths.ext_pem_file}",
-                # allow non-TLS configure_and_restartions
-                "--tlsMode=preferTLS",
-                "--tlsDisabledProtocols=TLS1_0,TLS1_1",
-            ]
-        return []
+            return {
+                "net": {
+                    "tls": {
+                        "CAFile": f"{self.workload.paths.ext_ca_file}",
+                        "certificateKeyFile": f"{self.workload.paths.ext_pem_file}",
+                        "mode": "preferTLS",
+                        "disabledProtocols": "TLS1_0,TLS1_1",
+                    }
+                },
+            }
+        return {}
 
 
 class MongoDBConfigManager(MongoConfigManager):
@@ -286,15 +342,16 @@ class MongoDBConfigManager(MongoConfigManager):
         self.state = state
         self.workload = workload
         self.config = config
+        self.file = self.workload.paths.config_file
         self.auth = True
 
     @property
-    def db_path_argument(self) -> list[str]:
+    def db_path_argument(self) -> dict[str, Any]:
         """The full path of the data directory."""
-        return [f"--dbpath={self.workload.paths.data_path}"]
+        return {"storage": {"dbPath": f"{self.workload.paths.data_path}"}}
 
     @property
-    def role_parameter(self) -> list[str]:
+    def role_parameter(self) -> dict[str, Any]:
         """The role parameter."""
         # First install we don't have the role in databag yet.
         role = (
@@ -304,30 +361,29 @@ class MongoDBConfigManager(MongoConfigManager):
         )
         match role:
             case MongoDBRoles.CONFIG_SERVER:
-                return ["--configsvr"]
+                return {"sharding": {"clusterRole": "configsvr"}}
             case MongoDBRoles.SHARD:
-                return ["--shardsvr"]
+                return {"sharding": {"clusterRole": "shardsvr"}}
             case _:
-                return []
+                return {}
 
     @property
-    def replset_option(self) -> list[str]:
+    def replset_option(self) -> dict[str, Any]:
         """The replSet configuration option."""
-        return [f"--replSet={self.state.app_peer_data.replica_set}"]
+        return {"replication": {"replSetName": self.state.app_peer_data.replica_set}}
 
     @property
     @override
-    def port_parameter(self) -> list[str]:
-        return [f"--port={MongoPorts.MONGODB_PORT}"]
+    def port_parameter(self) -> dict[str, Any]:
+        return {"net": {"port": f"{MongoPorts.MONGODB_PORT}"}}
 
     @override
-    def build_parameters(self) -> list[list[str]]:
-        base = super().build_parameters()
-        return base + [
-            self.replset_option,
-            self.role_parameter,
-            self.db_path_argument,
-        ]
+    def build_config(self) -> dict[str, Any]:
+        base = super().build_config()
+        return reduce(
+            always_merger.merge,
+            [base, self.replset_option, self.role_parameter, self.db_path_argument],
+        )
 
 
 class MongosConfigManager(MongoConfigManager):
@@ -338,26 +394,27 @@ class MongosConfigManager(MongoConfigManager):
         self.workload = workload
         self.config = config
         self.auth = False
+        self.file = self.workload.paths.config_file
 
     @property
-    def config_server_db_parameter(self) -> list[str]:
+    def config_server_db_parameter(self) -> dict[str, Any]:
         """The config server DB parameter."""
         # In case we are integrated with a config-server, we need to provide
         # it's URI to mongos so it can configure_and_restart to it.
         if uri := self.state.cluster.config_server_uri:
-            return [f"--configdb {uri}"]
-        return [
-            f"--configdb {self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"
-        ]
+            return {"sharding": {"configDB": uri}}
+        return {
+            "sharding": {
+                "configDB": f"{self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"
+            }
+        }
 
     @property
     @override
-    def port_parameter(self) -> list[str]:
-        return [f"--port={MongoPorts.MONGOS_PORT}"]
+    def port_parameter(self) -> dict[str, Any]:
+        return {"net": {"port": f"{MongoPorts.MONGOS_PORT}"}}
 
     @override
-    def build_parameters(self) -> list[list[str]]:
-        base = super().build_parameters()
-        return base + [
-            self.config_server_db_parameter,
-        ]
+    def build_config(self) -> dict[str, Any]:
+        base = super().build_config()
+        return always_merger.merge(base, self.config_server_db_parameter)
