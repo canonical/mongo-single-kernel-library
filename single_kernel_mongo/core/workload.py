@@ -14,7 +14,7 @@ from typing import ClassVar
 from ops import Container
 from ops.pebble import Layer
 
-from single_kernel_mongo.config.literals import CharmKind, WorkloadUser
+from single_kernel_mongo.config.literals import WorkloadUser
 from single_kernel_mongo.config.models import CharmSpec
 
 
@@ -45,9 +45,12 @@ class MongoPaths:
     @property
     def config_file(self) -> Path:
         """The main mongod config file."""
-        if self._role.name == CharmKind.MONGOS:
-            return Path(f"{self.conf_path}/mongos.conf")
         return Path(f"{self.conf_path}/mongod.conf")
+
+    @property
+    def mongos_config_file(self) -> Path:
+        """The main mongod config file."""
+        return Path(f"{self.conf_path}/mongos.conf")
 
     @property
     def socket_path(self) -> Path:

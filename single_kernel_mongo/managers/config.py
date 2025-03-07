@@ -398,7 +398,7 @@ class MongosConfigManager(MongoConfigManager):
         self.workload = workload
         self.config = config
         self.auth = False
-        self.file = self.workload.paths.config_file
+        self.file = self.workload.paths.mongos_config_file
 
     @property
     def config_server_db_parameter(self) -> dict[str, Any]:
