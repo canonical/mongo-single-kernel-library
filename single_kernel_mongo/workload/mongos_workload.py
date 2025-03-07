@@ -12,7 +12,6 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
-from single_kernel_mongo.exceptions import WorkloadServiceError
 
 
 class MongosWorkload(WorkloadBase):
@@ -32,9 +31,6 @@ class MongosWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns a Pebble configuration layer for Mongos."""
-        if self._env == "":
-            raise WorkloadServiceError("Impossible to create layer: missing parameter")
-
         layer_config = {
             "summary": "mongos layer",
             "description": "Pebble config layer for mongos router",
@@ -42,7 +38,7 @@ class MongosWorkload(WorkloadBase):
                 self.service: {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "/bin/start-mongos.sh",
+                    "command": "/bin/bash /bin/start-mongos.sh",
                     "startup": "enabled",
                     "user": self.users.user,
                     "group": self.users.group,
