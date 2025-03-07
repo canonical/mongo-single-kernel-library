@@ -128,6 +128,21 @@ jobs:
         run: |
           pipx install tox poetry
           pipx inject poetry poetry-plugin-export
+      - name: Set up environment
+        run: |
+          sudo snap install lxd
+          # shellcheck disable=SC2078
+          # (shellcheck sees it as constant, but GitHub Actions expression is not constant between workflow runs)
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+
+          sudo snap install charmcraft --classic
+          pipx install charmcraftcache
       - name: Set up python environment
         uses: actions/setup-python@v5
         with:
