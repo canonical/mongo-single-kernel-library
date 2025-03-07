@@ -10,8 +10,7 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificat
     generate_private_key,
 )
 from single_kernel_mongo.state.tls_state import SECRET_CSR_LABEL, SECRET_KEY_LABEL
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
 def test_tls_relation_joined(harness: Harness[MongoTestCharm]):

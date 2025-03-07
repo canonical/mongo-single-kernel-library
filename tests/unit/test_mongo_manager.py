@@ -13,9 +13,9 @@ from single_kernel_mongo.utils.mongodb_users import (
     MonitorUser,
     OperatorUser,
 )
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 from .helpers import patch_network_get
-from .mongodb_test_charm.src.charm import MongoTestCharm
 
 
 def test_set_user_password(harness: Harness[MongoTestCharm], mocker):

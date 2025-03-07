@@ -14,10 +14,10 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
 from .helpers import patch_network_get
-from .mongodb_test_charm.src.charm import MongoTestCharm
-from .mongos_test_charm.src.charm import MongosTestCharm
 
 #################
 # Mongo DB Side #

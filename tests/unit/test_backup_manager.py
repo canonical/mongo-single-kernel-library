@@ -17,9 +17,9 @@ from single_kernel_mongo.exceptions import (
     ResyncError,
     WorkloadExecError,
 )
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 from .helpers import patch_network_get
-from .mongodb_test_charm.src.charm import MongoTestCharm
 
 
 def test_valid_s3_integration(harness: Harness[MongoTestCharm]):

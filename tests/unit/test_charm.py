@@ -16,9 +16,9 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 from .helpers import patch_network_get
-from .mongodb_test_charm.src.charm import MongoTestCharm
 
 PEER_ADDR = {"private-address": "127.4.5.6"}
 

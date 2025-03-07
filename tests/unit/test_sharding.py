@@ -16,9 +16,9 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import BackupUser, OperatorUser
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 from .helpers import patch_network_get
-from .mongodb_test_charm.src.charm import MongoTestCharm
 
 ############################
 # Config Server Side tests #
