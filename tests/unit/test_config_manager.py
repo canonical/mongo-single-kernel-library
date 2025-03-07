@@ -64,7 +64,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
 
     all_params = manager.build_config()
 
-    assert port_parameter == {"net": {"port": "27017"}}
+    assert port_parameter == {"net": {"port": 27017}}
     assert replset_option == {"replication": {"replSetName": "deadbeef"}}
     assert role_parameter == expected_parameter
     assert db_path_argument == {"storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}"}}
@@ -75,6 +75,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "logRotate": "reopen",
             "logAppend": True,
             "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            "destination": "file",
         },
     }
 
@@ -98,7 +99,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     assert (
         all_params
         == {
-            "net": {"bindIpAll": True, "port": "27017"},
+            "net": {"bindIpAll": True, "port": 27017},
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
@@ -109,6 +110,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
                 "logRotate": "reopen",
                 "logAppend": True,
                 "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+                "destination": "file",
             },
             "auditLog": {
                 "destination": "file",
@@ -160,7 +162,7 @@ def test_mongos_config_manager(mocker):
 
     all_params = manager.build_config()
 
-    assert port_parameter == {"net": {"port": "27018"}}
+    assert port_parameter == {"net": {"port": 27018}}
     assert binding_ips == {
         "net": {
             "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
@@ -175,6 +177,7 @@ def test_mongos_config_manager(mocker):
             "logRotate": "reopen",
             "logAppend": True,
             "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            "destination": "file",
         },
     }
 
@@ -200,7 +203,7 @@ def test_mongos_config_manager(mocker):
             "unixDomainSocket": {
                 "filePermissions": "0766",
             },
-            "port": "27018",
+            "port": 27018,
         },
         "security": {
             "clusterAuthMode": "keyFile",
@@ -211,6 +214,7 @@ def test_mongos_config_manager(mocker):
             "logRotate": "reopen",
             "logAppend": True,
             "path": f"{VM_PATH['mongod']['LOGS']}/mongodb.log",
+            "destination": "file",
         },
         "auditLog": {
             "destination": "file",
