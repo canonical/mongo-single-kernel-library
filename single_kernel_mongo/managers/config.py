@@ -280,6 +280,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 "logRotate": "reopen",
                 "logAppend": True,
                 "path": f"{self.workload.paths.log_file}",
+                "destination": "file",
             },
         }
 
@@ -379,7 +380,7 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> dict[str, Any]:
-        return {"net": {"port": f"{MongoPorts.MONGODB_PORT}"}}
+        return {"net": {"port": MongoPorts.MONGODB_PORT.value}}
 
     @override
     def build_config(self) -> dict[str, Any]:
@@ -416,7 +417,7 @@ class MongosConfigManager(MongoConfigManager):
     @property
     @override
     def port_parameter(self) -> dict[str, Any]:
-        return {"net": {"port": f"{MongoPorts.MONGOS_PORT}"}}
+        return {"net": {"port": MongoPorts.MONGOS_PORT.value}}
 
     @override
     def build_config(self) -> dict[str, Any]:
