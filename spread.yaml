@@ -111,6 +111,7 @@ path: /root/spread_project
 
 kill-timeout: 3h
 environment:
+  PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
   CONCIERGE_JUJU_CHANNEL/juju36: 3.6/stable
 prepare: |
   snap refresh --hold
@@ -126,7 +127,6 @@ prepare: |
     concierge prepare --trace -p microk8s
   fi
 
-  pipx ensurepath
   pipx install tox
   pipx install poetry
 prepare-each: |
