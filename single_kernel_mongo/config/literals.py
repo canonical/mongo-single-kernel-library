@@ -122,4 +122,11 @@ OS_REQUIREMENTS = {
     "vm.max_map_count": "262144",
 }
 
-TRUST_STORE_CERTIFICATE_PATH = Path("/usr/local/share/ca-certificates/pbm.crt")
+TRUST_STORE_PATH = Path("/usr/local/share/ca-certificates")
+
+
+class TrustStoreFiles(str, Enum):
+    """The different files we store in the trust store."""
+
+    PBM = "pbm.crt"
+    LDAP = "ldap.crt"

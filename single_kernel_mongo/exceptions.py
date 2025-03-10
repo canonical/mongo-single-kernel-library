@@ -243,3 +243,11 @@ class ActionFailedError(Exception):
 
 class UnhealthyUpgradeError(Exception):
     """Raised when the upgrade is unhealthy during an post upgrade check."""
+
+
+class WaitingForLdapDataError(DeferrableError):
+    """Raised when the charm hasn't received data from ldap yet."""
+
+
+class LDAPSNotEnabledError(Exception):
+    """Raised when the charm hasn't received ldaps urls.."""

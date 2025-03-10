@@ -37,6 +37,7 @@ class Statuses:
     shard: StatusBase | None = field(default=None)
     config_server: StatusBase | None = field(default=None)
     pbm: StatusBase | None = field(default=None)
+    ldap: StatusBase | None = field(default=None)
 
 
 class StatusManager(Object):
@@ -101,11 +102,12 @@ class StatusManager(Object):
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""
-        mongodb_status, shard_status, config_server_status, pbm_status = (
+        mongodb_status, shard_status, config_server_status, pbm_status, ldap_status = (
             statuses.mongodb,
             statuses.shard,
             statuses.config_server,
             statuses.pbm,
+            statuses.ldap,
         )
         if not isinstance(mongodb_status, ActiveStatus):
             return mongodb_status
@@ -115,6 +117,9 @@ class StatusManager(Object):
 
         if config_server_status and not isinstance(config_server_status, ActiveStatus):
             return config_server_status
+
+        if ldap_status and not isinstance(ldap_status, ActiveStatus):
+            return ldap_status
 
         if pbm_status and not isinstance(pbm_status, ActiveStatus):
             return pbm_status

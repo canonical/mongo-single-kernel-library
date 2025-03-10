@@ -57,7 +57,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         self._role = role
 
     @override
-    def update(self, items: dict[str, str]) -> None:
+    def update(self, items: dict[str, str | None]) -> None:
         """Overridden update to allow for same interface, but writing to local app bag."""
         if not self.relation:
             return

@@ -29,7 +29,7 @@ from single_kernel_mongo.config.literals import (
     UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
-from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -65,6 +65,7 @@ from single_kernel_mongo.managers.config import (
     MongoDBExporterConfigManager,
     MongosConfigManager,
 )
+from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
@@ -173,6 +174,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
 
+        # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
+        self.ldap_manager = LDAPManager(
+            self,
+            self.state,
+            self.substrate,
+            ExternalRequirerRelations.LDAP,
+            ExternalRequirerRelations.LDAP_CERT,
+        )
+
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
@@ -187,6 +197,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
+        # TODO: Write ldap peer data event handlers.
 
     @property
     def config(self):

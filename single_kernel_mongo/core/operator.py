@@ -24,7 +24,12 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 
-from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
+    CharmKind,
+    Substrates,
+    TrustStoreFiles,
+)
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -248,3 +253,27 @@ class OperatorProtocol(ABC, Object):
                     f"{path}",
                 ]
             )
+
+    def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: str) -> None:
+        """Saves the certificate in the trust store.
+
+        Raises:
+            WorkloadExecError: In that case, we should let the charm go into error state.
+        """
+        # Write the file with the right permissions
+        full_path = TRUST_STORE_PATH / file.value
+        self.workload.write(full_path, chain)
+        self.workload.exec(["chown", "root:root", f"{full_path}"])
+        self.workload.exec(["chmod", "644", f"{full_path}"])
+
+        # Update ca certificates.
+        self.workload.exec("update-ca-certificates")
+
+    def remove_ca_cert_from_trust_store(self, file: str):
+        """Removes the certificate from the trust store."""
+        # Remove the file
+        self.workload.delete(TRUST_STORE_PATH / file)
+        # Update CA certificates to remove the certificate from the trust store
+        self.workload.exec("update-ca-certificates")
+        # Restart the service
+        self.restart_charm_services()
