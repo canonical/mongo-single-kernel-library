@@ -73,11 +73,6 @@ jobs:
           print(output)
           with open(os.environ["GITHUB_OUTPUT"], "a") as file:
               file.write(output)
-      - name: Setup Upterm #TODO: Remove this when it works.
-        if: ${{ (failure() && steps.collect-jobs.outcome == 'failure') && github.event_name != 'schedule' }}
-        uses: lhotari/action-upterm@v1
-        with:
-          limit-access-to-actor: true
       - name: Generate Allure default test results
         if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
         run: tox run -e integration -- tests/integration --allure-default-dir=allure-default-results

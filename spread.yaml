@@ -16,7 +16,7 @@ backends:
       ssh_pwauth: true
       users:
         - default
-        - name: runner
+        - name: spread
           plain_text_passwd: $SPREAD_PASSWORD
           lock_passwd: false
           sudo: ALL=(ALL) NOPASSWD:ALL
@@ -31,7 +31,7 @@ backends:
         -d root,size="${DISK}GiB"
 
       # Wait for the runner user
-      while ! lxc exec "${VM_NAME}" -- id -u runner &>/dev/null; do sleep 0.5; done
+      while ! lxc exec "${VM_NAME}" -- id -u spread &>/dev/null; do sleep 0.5; done
 
       # Set the instance address for spread
       ADDRESS "$(lxc ls -f csv | grep "${VM_NAME}" | cut -d"," -f3 | cut -d" " -f1)"
@@ -44,7 +44,7 @@ backends:
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
       - ubuntu-22.04:
-          username: runner
+          username: spread
     prepare: |
       systemctl disable --now unattended-upgrades.service
       systemctl mask unattended-upgrades.service
@@ -70,25 +70,29 @@ backends:
     type: adhoc
     # Only run on CI
     manual: true
-    # HACK: spread requires runners to be accessible via SSH
-    # Configure local sshd & instruct spread to connect to the same machine spread is running on
-    # (spread cannot provision GitHub Actions runners, so we provision a GitHub Actions runner for
-    # each spread job & select a single job when running spread)
-    # Derived from https://github.com/jnsgruk/zinc-k8s-operator/blob/a21eae8399eb3b9df4ddb934b837af25ef831976/spread.yaml#L47
     allocate: |
-      sudo tee /etc/ssh/sshd_config.d/10-spread-github-ci.conf << 'EOF'
-      PasswordAuthentication yes
-      PermitEmptyPasswords yes
-      EOF
+      sudo sed -i "s|#PasswordAuthentication yes|PasswordAuthentication yes|g" /etc/ssh/sshd_config
+      sudo sed -i "s|KbdInteractiveAuthentication no|KbdInteractiveAuthentication yes|g" /etc/ssh/sshd_config
+      sudo rm -f /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+      sudo systemctl daemon-reload
+      sudo systemctl restart ssh
 
-      ADDRESS localhost
+      sudo useradd spread -s /bin/bash -m || true
+      echo "spread:$SPREAD_PASSWORD" | sudo chpasswd || true
+      echo 'spread ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-spread-user || true
+
+      ADDRESS "127.0.0.1"
+    discard: |
+      sudo userdel -f -r spread || true
+      sudo rm -f /etc/sudoers.d/99-spread-user
+
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
       CI: '$(HOST: echo $CI)'
     systems:
       - ubuntu-22.04:
-          username: runner
+          username: spread
 
 suites:
   tests/spread/mongodb/:
