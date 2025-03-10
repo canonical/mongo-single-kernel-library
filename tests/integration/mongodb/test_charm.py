@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 MEDIAN_REELECTION_TIME = 12
 
 
-@pytest.mark.runner(["self-hosted", "linux", "X64", "jammy", "large"])
 @pytest.mark.skipif(
     os.environ.get("PYTEST_SKIP_DEPLOY", False),
     reason="skipping deploy, model expected to be provided.",
@@ -38,7 +37,7 @@ async def test_build_and_deploy(
     if app_name:
         return await check_or_scale_app(ops_test, app_name, len(UNIT_IDS))
 
-    if substrate == "vm":
+    if substrate == "lxd":
         await ops_test.model.deploy(
             mongodb_charm,
             num_units=len(UNIT_IDS),

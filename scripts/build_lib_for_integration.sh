@@ -24,6 +24,7 @@ fi
 
 for directory in "${TEST_CHARMS[@]}"; do
     cp -r "$DIST" "$directory"
+    cp "${directory}/requirements.txt" "${directory}/requirements.txt.backup"
     echo "mongo-charms-single-kernel @ file:/root/project/${WHL_PATH}" > "${directory}/requirements.txt"
     poetry export --without-hashes >> "${directory}/requirements.txt"
 
@@ -35,4 +36,5 @@ for directory in "${TEST_CHARMS[@]}"; do
     charmcraft -v pack
     mv charm_version.backup charm_version
     popd
+    mv "${directory}/requirements.txt.backup" "${directory}/requirements.txt"
 done
