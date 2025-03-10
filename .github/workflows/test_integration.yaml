@@ -134,11 +134,6 @@ jobs:
         # https://github.com/canonical/charmcraft/issues/2105 and
         # https://github.com/canonical/charmcraft/issues/2130 fixed
         run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
-      - name: Setup Upterm
-        if: ${{ (failure() && steps.spread.outcome == 'failure') && github.event_name != 'schedule' }}
-        uses: lhotari/action-upterm@v1
-        with:
-          limit-access-to-actor: true
 
       - name: Upload Allure results
         timeout-minutes: 3
