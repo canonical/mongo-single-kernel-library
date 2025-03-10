@@ -23,20 +23,6 @@ def substrate(request):
 
 
 @pytest.fixture
-def mongodb_charm(substrate) -> str:
-    if substrate == "microk8s":
-        return "./test-mongodb-k8s_ubuntu@22.04-amd64.charm"
-    return "./test-mongodb_ubuntu@22.04-amd64.charm"
-
-
-@pytest.fixture
-def mongos_charm(substrate) -> str:
-    if substrate == "microk8s":
-        return "./test-mongos-k8s_ubuntu@22.04-amd64.charm"
-    return "./test-mongos_ubuntu@22.04-amd64.charm"
-
-
-@pytest.fixture
 def mongod_base_path(substrate) -> Path:
     if substrate == "microk8s":
         return Path("tests/charms/mongodb_k8s_test_charm")
@@ -48,6 +34,20 @@ def mongos_base_path(substrate) -> Path:
     if substrate == "microk8s":
         return Path("tests/charms/mongos_k8s_test_charm")
     return Path("tests/charms/mongos_test_charm")
+
+
+@pytest.fixture
+def mongodb_charm(substrate, mongod_base_path) -> str:
+    if substrate == "microk8s":
+        return f"./{mongod_base_path}/test-mongodb-k8s_ubuntu@22.04-amd64.charm"
+    return f"./{mongod_base_path}/test-mongodb_ubuntu@22.04-amd64.charm"
+
+
+@pytest.fixture
+def mongos_charm(substrate, mongos_base_path) -> str:
+    if substrate == "microk8s":
+        return f"./{mongos_base_path}/test-mongos-k8s_ubuntu@22.04-amd64.charm"
+    return f"./{mongos_base_path}/test-mongos_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
