@@ -255,3 +255,11 @@ class InvalidLdapQueryTemplateError(Exception):
 
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
+
+
+class WaitingForLdapDataError(DeferrableError):
+    """Raised when the charm hasn't received data from ldap yet."""
+
+
+class LDAPSNotEnabledError(Exception):
+    """Raised when the charm hasn't received ldaps urls.."""

@@ -95,6 +95,7 @@ def mock_fs_interactions(mocker) -> None:
 def harness() -> Harness[MongoTestCharm]:
     harness = Harness(MongoTestCharm, meta=METADATA, actions=ACTIONS, config=CONFIG)
     harness.add_relation("database-peers", "database-peers")
+    harness.add_relation("ldap-peers", "ldap-peers")
     harness.begin()
     with harness.hooks_disabled():
         harness.add_storage(storage_name="mongodb", count=1, attach=True)

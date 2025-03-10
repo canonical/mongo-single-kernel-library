@@ -27,6 +27,7 @@ from single_kernel_mongo.config.literals import (
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
+    PeerRelationNames,
     RelationNames,
 )
 from single_kernel_mongo.core.secrets import SecretCache
@@ -55,6 +56,7 @@ from single_kernel_mongo.state.config_server_state import (
     AppShardingComponentState,
     UnitShardingComponentState,
 )
+from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
@@ -115,6 +117,11 @@ class CharmState(Object):
             relation_name=self.peer_relation_name,
             additional_secret_fields=SECRETS_UNIT,
         )
+        self.ldap_peer_interface = DataPeerData(
+            self.model,
+            PeerRelationNames.LDAP_PEERS.value,
+        )
+
         self.upgrade_app_interface = DataPeerData(
             self.model, relation_name=RelationNames.UPGRADE_VERSION.value
         )
@@ -197,6 +204,16 @@ class CharmState(Object):
     def s3_relation(self) -> Relation | None:
         """The S3 relation if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS.value)
+
+    @property
+    def ldap_relation(self) -> Relation | None:
+        """The LDAP relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.LDAP.value)
+
+    @property
+    def ldap_cert_relation(self) -> Relation | None:
+        """The certificate transfer relation for LDAP if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.LDAP_CERT.value)
 
     # END: Relations
 
@@ -353,6 +370,16 @@ class CharmState(Object):
     def tls(self) -> TLSState:
         """A view of the TLS status from the local unit databag."""
         return TLSState(relation=self.peer_relation, secrets=self.secrets)
+
+    @property
+    def ldap(self) -> LdapState:
+        """A view of the TLS status from the local unit databag."""
+        return LdapState(
+            self.charm,
+            relation=self.peer_relation,
+            data_interface=self.ldap_peer_interface,
+            component=self.model.app,
+        )
 
     # END: State Accessors
 
