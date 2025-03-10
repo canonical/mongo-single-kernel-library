@@ -38,13 +38,17 @@ jobs:
           import json
           import os
           import subprocess
-          spread_jobs = (
-              subprocess.run(
-              ["charmcraft", "test", "--list", "github-ci:tests/spread/${{ inputs.charm }}/"], capture_output=True, check=True, text=True
-              )
-              .stdout.strip()
-              .split("\n")
-          )
+          try:
+            spread_jobs = (
+                subprocess.run(
+                ["charmcraft", "test", "--list", "github-ci:tests/spread/${{ inputs.charm }}/"], capture_output=True, check=True, text=True
+                )
+                .stdout.strip()
+                .split("\n")
+            )
+          except subprocess.CalledProcessError as err:
+            print(f"Error: {err.stderr}")
+            raise
           jobs = []
           for job in spread_jobs:
               # Example `job`: "github-ci:ubuntu-22.04:tests/spread/test_charm.py"
