@@ -76,12 +76,12 @@ class SingleLdapUserToDnMapping(BaseModel):
 
     match: str
     substitution: str | None = None
-    ldapQuery: str | None = None  # noqa: N815
+    ldap_query: str | None = Field(default=None, alias="ldapQuery")  # noqa: N815
 
     @model_validator(mode="after")
     def verify_subst_or_ldapquery(self) -> Self:
         """Ensures that only one of substitution or ldapQuery is present."""
-        if self.substitution and self.ldapQuery or (not self.substitution and not self.ldapQuery):
+        if self.substitution and self.ldap_query or (not self.substitution and not self.ldap_query):
             raise ValueError("substitution and ldapQuery are mutually exclusive")
         return self
 
