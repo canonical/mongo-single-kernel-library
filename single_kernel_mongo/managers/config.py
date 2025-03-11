@@ -7,7 +7,6 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from functools import reduce
 from itertools import chain
 from pathlib import Path
@@ -83,7 +82,7 @@ class FileBasedConfigManager(CommonConfigManager):
         data = "\n".join(self.workload.read(self.file))
         current_content = safe_load(data)
 
-        new_content = always_merger.merge(deepcopy(current_content), self.build_config())
+        new_content = self.build_config()
 
         if new_content != current_content:
             self.workload.write(self.file, safe_dump(new_content))
