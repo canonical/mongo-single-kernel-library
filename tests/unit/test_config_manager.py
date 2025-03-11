@@ -67,7 +67,12 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     assert port_parameter == {"net": {"port": 27017}}
     assert replset_option == {"replication": {"replSetName": "deadbeef"}}
     assert role_parameter == expected_parameter
-    assert db_path_argument == {"storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}"}}
+    assert db_path_argument == {
+        "storage": {
+            "dbPath": f"{VM_PATH['mongod']['DATA']}",
+            "journal": {"enabled": True},
+        }
+    }
     assert binding_ips == {"net": {"bindIpAll": True}}
     assert log_options == {
         "setParameter": {"processUmask": "037"},
@@ -118,7 +123,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
                 "path": f"{VM_PATH['mongod']['LOGS']}/audit.log",
             },
             "replication": {"replSetName": "deadbeef"},
-            "storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}"},
+            "storage": {"dbPath": f"{VM_PATH['mongod']['DATA']}", "journal": {"enabled": True}},
         }
         | expected_parameter
     )
