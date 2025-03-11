@@ -183,5 +183,80 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
     )
 
 
-def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mock_fs_interactions):
-    pass
+def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+
+    ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    harness.update_relation_data(
+        ldap_relation_id,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_di": "secret-id",
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": '["ldaps://ldap.glauth.com"]',
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+
+    relation: Relation = harness.charm.operator.state.ldap_relation
+
+    harness.charm.operator.ldap_manager.on_ldap_ready(relation)
+
+    mock_restart.assert_not_called()
+
+    harness.charm.operator.ldap_manager.on_ldap_unavailable()
+
+    mock_restart.assert_called()
+
+    ldap_state = harness.charm.operator.state.ldap
+
+    assert ldap_state.bind_user is None
+    assert ldap_state.bind_password is None
+    assert ldap_state.ldaps_urls is None
+
+
+def test_on_certificate_removed_clean_certs(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+    mock_remove_ca_cert = mocker.patch(
+        "single_kernel_mongo.core.operator.OperatorProtocol.remove_ca_cert_from_trust_store"
+    )
+    ldap_cert_relation_id = harness.add_relation(
+        ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
+    )
+    harness.update_relation_data(
+        ldap_cert_relation_id,
+        "glauth-k8s",
+        {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
+    )
+    harness.charm.operator.ldap_manager.on_certificate_available(
+        "beefdead", "deadbeef", ["feeddead"]
+    )
+
+    mock_restart.assert_not_called()
+
+    harness.charm.operator.ldap_manager.on_certificate_removed()
+
+    mock_restart.assert_called()
+    mock_remove_ca_cert.assert_called()
+
+    ldap_state = harness.charm.operator.state.ldap
+
+    assert ldap_state.ca is None
+    assert ldap_state.certificate is None
+    assert ldap_state.chain is None
