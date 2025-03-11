@@ -22,7 +22,6 @@ class MongoPaths:
     """Object to store the common paths for a mongodb instance."""
 
     def __init__(self, role: CharmSpec):
-        self._role = role
         self.conf_path = role.paths["CONF"]
         self.data_path = role.paths["DATA"]
         self.binaries_path = role.paths["BIN"]
