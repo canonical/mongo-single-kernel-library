@@ -399,10 +399,14 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.charm.unit.is_leader():
             # Store in the databag so we never miss it.
-            self.state.app_peer_data.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
+            if self.config.ldap_user_to_dn_mapping:
+                self.state.app_peer_data.ldap_user_to_dn_mapping = (
+                    self.config.ldap_user_to_dn_mapping
+                )
             # TODO: Send this to mongos as well.
 
-            self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
+            if self.config.ldap_query_template:
+                self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
 
             # TODO: Invalidate the cache and restart with those parameters if needed.
 
