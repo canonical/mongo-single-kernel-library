@@ -352,7 +352,12 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     def db_path_argument(self) -> dict[str, Any]:
         """The full path of the data directory."""
-        return {"storage": {"dbPath": f"{self.workload.paths.data_path}"}}
+        return {
+            "storage": {
+                "dbPath": f"{self.workload.paths.data_path}",
+                "journal": {"enabled": True},
+            }
+        }
 
     @property
     def role_parameter(self) -> dict[str, Any]:
