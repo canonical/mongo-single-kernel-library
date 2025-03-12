@@ -105,8 +105,9 @@ class MongoManager(Object, StatusProvider):
 
     def initialise_replica_set(self) -> None:
         """Initialises the replica set."""
+        # We build a config with a single host, the others will be added afterwards.
         with MongoConnection(self.state.mongo_config, "localhost", direct=True) as direct_mongo:
-            direct_mongo.init_replset()
+            direct_mongo.init_replset(host=self.state.unit_peer_data.internal_address)
 
     def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
