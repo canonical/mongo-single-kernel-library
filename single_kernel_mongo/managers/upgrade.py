@@ -88,6 +88,10 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.dependent.upgrade_events.post_app_upgrade_event.emit()
 
     def _on_vm_upgrade(self):
+        if not self.state.upgrade_in_progress and self.dependent.name == CharmKind.MONGOD:
+            self.state.unit_upgrade_peer_data.current_revision = (
+                self.dependent.cross_app_version_checker.version  # type: ignore
+            )
         if self.charm.unit.is_leader():
             if not self.state.upgrade_in_progress:
                 logger.info("Charm refreshed. MongoDB version unchanged")
