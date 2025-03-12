@@ -17,7 +17,7 @@ from enum import Enum
 from ops.model import BlockedStatus, WaitingStatus
 
 
-class MongoDB(Enum):
+class MongoDBStatuses(Enum):
     """MongoDB related statuses.
 
     TODO: add the remaining statuses for mongodb charm.
@@ -34,7 +34,7 @@ class MongoDB(Enum):
     )
 
 
-class Mongos(Enum):
+class MongosStatuses(Enum):
     """Mongos related statuses.
 
     TODO: add the remaining statuses for mongos charm.
@@ -50,8 +50,8 @@ class CharmStatuses(Enum):
     """
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed")
-    mongodb = MongoDB
-    mongos = Mongos
+    mongodb = MongoDBStatuses
+    mongos = MongosStatuses
 
 
 class BackupStatuses(Enum):

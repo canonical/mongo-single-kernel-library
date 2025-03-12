@@ -899,16 +899,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         charm_statuses: list[StatusBase] = []
 
         if not self.workload.workload_present:
-            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED)
+            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
         else:  # don't bother checking if started if not installed
             if not self.state.db_initialised:
-                charm_statuses.append(CharmStatuses.mongodb.MONGODB_NOT_STARTED)
+                charm_statuses.append(CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value)
 
             if not self.mongodb_exporter_config_manager.workload.active():
-                charm_statuses.append(CharmStatuses.mongodb.EXPORTER_NOT_STARTED)
+                charm_statuses.append(CharmStatuses.mongodb.value.EXPORTER_NOT_STARTED.value)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            charm_statuses.append(CharmStatuses.mongodb.SHARDING_ON_REPLICA)
+            charm_statuses.append(CharmStatuses.mongodb.value.SHARDING_ON_REPLICA.value)
         elif (  # don't bother checking revision mismatch on sharding interface if replica
             revision_mismatch_status
             := self.cluster_version_checker.get_cluster_mismatched_revision_status()
@@ -916,9 +916,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm_statuses.append(revision_mismatch_status)
 
         if not self.cluster_manager.is_valid_mongos_integration():
-            charm_statuses.append(CharmStatuses.mongodb.UNSUPPORTED_MONGOS_REL)
+            charm_statuses.append(CharmStatuses.mongodb.value.UNSUPPORTED_MONGOS_REL.value)
 
         if not self.backup_manager.is_valid_s3_integration():
-            charm_statuses.append(CharmStatuses.mongodb.INVALID_S3_INTEGRATION_STATUS)
+            charm_statuses.append(CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value)
 
         return charm_statuses
