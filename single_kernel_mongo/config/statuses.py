@@ -13,21 +13,18 @@ progress. However the idea that all statuses belong in one file holds true regar
 """
 
 from enum import Enum
-from typing import List
+
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
-    WaitingStatus,
     StatusBase,
+    WaitingStatus,
 )
 
 
 class MongoDB(Enum):
-    """MongoDB related statuses.
-
-    TODO: add the remaining statuses for mongodb charm.
-    """
+    """MongoDB related statuses."""
 
     # STATE statuses:
     MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
@@ -47,7 +44,7 @@ class MongoDB(Enum):
     ACTIVE_IDLE = ActiveStatus("")
 
     # RUNNING statuses:
-    STARTING_MONGODB = MaintenanceStatus("starting MongoDB.")
+    STARTING_MONGODB = MaintenanceStatus("Starting MongoDB.")
 
 
 class Mongos(Enum):
@@ -72,10 +69,7 @@ class Mongos(Enum):
 
 
 class CharmStatuses(Enum):
-    """Charm Statuses.
-
-    TODO: add remaining statuses related to the two charms.
-    """
+    """Charm Statuses."""
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
     MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
@@ -110,10 +104,12 @@ class BackupStatuses(Enum):
 
     @staticmethod
     def backup_running(backup_id: str) -> StatusBase:
+        """Returns backup starting status based on id."""
         return MaintenanceStatus(f"Backup started/running, backup id: '{backup_id}'")
 
     @staticmethod
     def restore_running(backup_id: str) -> StatusBase:
+        """Returns restore starting status based on id."""
         return MaintenanceStatus(f"Restore started/running, backup id: '{backup_id}'")
 
 
@@ -128,10 +124,12 @@ class ConfigServerStatus(Enum):
 
     @staticmethod
     def draining_shard(shard: str) -> StatusBase:
+        """Returns draining shard status based on shard."""
         return MaintenanceStatus(f"Draining shard {shard}")
 
     @staticmethod
-    def unreachable_shards(unreachable_shards: List[str]) -> StatusBase:
+    def unreachable_shards(unreachable_shards: list[str]) -> StatusBase:
+        """Returns unreachable shard status based on list."""
         unreachable = ", ".join(unreachable_shards)
         return BlockedStatus(f"Shards: {unreachable} are unreachable.")
 
@@ -139,6 +137,7 @@ class ConfigServerStatus(Enum):
     def waiting_for_shard_upgrade(
         current_charms_version: str, local_identifier: str
     ) -> StatusBase:
+        """Returns waiting for shard upgrade status."""
         return WaitingStatus(
             f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
         )
@@ -170,6 +169,7 @@ class ShardStatus(Enum):
         config_server_revision: str,
         remote_local_identifier: str,
     ) -> StatusBase:
+        """Returns needs shard upgrade status."""
         return BlockedStatus(
             f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
         )
@@ -178,6 +178,7 @@ class ShardStatus(Enum):
         current_charms_version: str,
         local_identifier: str,
     ) -> StatusBase:
+        """Returns needs shard upgrade status."""
         return BlockedStatus(
             f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server."
         )

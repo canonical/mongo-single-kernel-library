@@ -13,9 +13,9 @@ from ops.charm import ActionEvent, RelationCreatedEvent, UpgradeCharmEvent
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ModelError
 
-from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.core.abstract_upgrades import UpgradeActions
 from single_kernel_mongo.exceptions import (
     ActionFailedError,

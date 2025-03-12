@@ -11,13 +11,13 @@ from typing import Generic, TypeVar
 from ops import ActionEvent
 from tenacity import RetryError
 
-from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
     CharmKind,
     Substrates,
     UnitState,
 )
+from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.core.abstract_upgrades import (
     GenericMongoDBUpgradeManager,
     UpgradeActions,

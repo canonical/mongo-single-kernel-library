@@ -17,8 +17,8 @@ from lightkube.core.exceptions import ApiError
 from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
-from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.config.literals import CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )

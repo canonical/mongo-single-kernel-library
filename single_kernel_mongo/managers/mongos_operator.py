@@ -16,7 +16,6 @@ from ops.model import Relation, StatusBase, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatus
 from single_kernel_mongo.config.literals import (
     CharmKind,
     MongoPorts,
@@ -25,6 +24,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatus
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol

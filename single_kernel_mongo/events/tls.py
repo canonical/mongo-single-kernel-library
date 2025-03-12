@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (

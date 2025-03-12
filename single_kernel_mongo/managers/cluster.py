@@ -9,14 +9,13 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from ops import BlockedStatus
 from ops.framework import Object
 from ops.model import Relation, StatusBase
 from pymongo.errors import PyMongoError
 
-from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,

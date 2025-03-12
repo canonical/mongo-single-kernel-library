@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from single_kernel_mongo.config.statuses import CharmStatuses, BackupStatuses
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.statuses import BackupStatuses, CharmStatuses
 from single_kernel_mongo.exceptions import (
     InvalidArgumentForActionError,
     InvalidPBMStatusError,

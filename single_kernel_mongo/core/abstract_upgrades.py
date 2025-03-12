@@ -23,7 +23,6 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
     SNAP,
@@ -32,6 +31,7 @@ from single_kernel_mongo.config.literals import (
     UnitState,
 )
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (

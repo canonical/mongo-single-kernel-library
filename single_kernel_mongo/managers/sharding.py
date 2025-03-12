@@ -9,13 +9,6 @@ shards.
 
 from __future__ import annotations
 
-from single_kernel_mongo.config.statuses import (
-    CharmStatuses,
-    ConfigServerStatus,
-    ShardStatus,
-)
-
-
 import json
 import time
 from logging import getLogger
@@ -37,6 +30,11 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
+    ConfigServerStatus,
+    ShardStatus,
+)
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (

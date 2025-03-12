@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
@@ -25,7 +26,6 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
     DatabaseRequirerEventHandlers,
 )
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
-from single_kernel_mongo.config.statuses import CharmStatuses
 
 if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator

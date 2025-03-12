@@ -16,8 +16,9 @@ from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from single_kernel_mongo.config.statuses import TLSStatuses
+
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (

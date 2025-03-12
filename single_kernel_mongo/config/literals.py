@@ -10,8 +10,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Generic, TypeVar
 
-from ops.model import BlockedStatus, WaitingStatus
-
 LOCALHOST = "127.0.0.1"
 
 

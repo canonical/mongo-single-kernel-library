@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from data_platform_helpers.version_check import NoVersionError, get_charm_revision
 from ops.model import StatusBase
 
-from single_kernel_mongo.config.statuses import ShardStatus, ConfigServerStatus
+from single_kernel_mongo.config.statuses import ConfigServerStatus, ShardStatus
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 if TYPE_CHECKING:
