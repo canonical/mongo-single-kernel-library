@@ -226,6 +226,13 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
 
     @override
     def build_parameters(self) -> list[list[str]]:
+        """We aim to pass most config options inside the config file instead of as parameters.
+
+        In earlier charm versions we pass parameters, however for
+        security reasons in LDAP params we have now decided to set these in the
+        config file.
+        We return an empty list of lists so that we don't break interfaces.
+        """
         return [[]]
 
     @override
