@@ -1,3 +1,8 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+# This file defines the spread backends and configuration.
+# This is used by the CI to run the tests, but can also be used locally.
+
 project: mongo-charms-single-kernel
 
 backends:
@@ -70,6 +75,11 @@ backends:
     type: adhoc
     # Only run on CI
     manual: true
+    # HACK: spread requires runners to be accessible via SSH
+    # Configure local sshd & instruct spread to connect to the same machine spread is running on
+    # (spread cannot provision GitHub Actions runners, so we provision a GitHub Actions runner for
+    # each spread job & select a single job when running spread)
+    # Derived from https://github.com/jnsgruk/zinc-k8s-operator/blob/a21eae8399eb3b9df4ddb934b837af25ef831976/spread.yaml#L47
     allocate: |
       sudo sed -i "s|#PasswordAuthentication yes|PasswordAuthentication yes|g" /etc/ssh/sshd_config
       sudo sed -i "s|KbdInteractiveAuthentication no|KbdInteractiveAuthentication yes|g" /etc/ssh/sshd_config
