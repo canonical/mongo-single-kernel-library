@@ -79,9 +79,7 @@ class MongosOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(self.name)
-            if self.substrate == Substrates.K8S
-            else None
+            self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
         )
 
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
@@ -107,9 +105,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
-        upgrade_backend = (
-            MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
-        )
+        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
         self.upgrade_manager = MongosUpgradeManager(
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
@@ -154,6 +150,7 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
+            print("RAISE")
             raise ContainerNotReadyError
 
         self._configure_workloads()
@@ -164,9 +161,13 @@ class MongosOperator(OperatorProtocol, Object):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
+        print("ending")
         if not self.state.mongos_cluster_relation:
+            print("setting")
+            print(CharmStatuses.mongos.value.NEED_CONF_SERVER.value)
+            print("----")
             self.charm.status_manager.set_and_share_status(
-                 CharmStatuses.mongos.value.MISSING_CONFIG_SERVER.value
+                CharmStatuses.mongos.value.NEED_CONF_SERVER.value
             )
 
     @override
@@ -192,12 +193,12 @@ class MongosOperator(OperatorProtocol, Object):
                 )
 
                 self.charm.status_manager.set_and_share_status(
-                     CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                    CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
                 )
                 return
 
             self.charm.status_manager.clear_status(
-                 CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
             )
             self.update_k8s_external_services()
 
@@ -240,7 +241,7 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
                 self.charm.status_manager.clear_status(
-                     CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                    CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
                 )
                 return
 
@@ -395,9 +396,7 @@ class MongosOperator(OperatorProtocol, Object):
             ).split(",")
         )
         external_connectivity = json.loads(
-            data_interface.fetch_relation_field(
-                relation.id, "external-node-connectivity"
-            )
+            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
             or "false"
         )
 
@@ -469,17 +468,11 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                host = (
-                    self.state.unit_peer_data.internal_address
-                    + f":{MongoPorts.MONGOS_PORT}"
-                )
+                host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
             else:
                 host = self.state.formatted_socket_path
         else:
-            host = (
-                self.state.unit_peer_data.internal_address
-                + f":{MongoPorts.MONGOS_PORT}"
-            )
+            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
 
         uri = f"mongodb://{host}"
 
@@ -495,7 +488,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            return  CharmStatuses.mongos.value.NEED_CONF_SERVER.value
+            return CharmStatuses.mongos.value.NEED_CONF_SERVER.value
 
         if status := self.cluster_manager.get_tls_statuses():
             logger.info(f"Invalid TLS integration: {status.message}")

@@ -39,9 +39,7 @@ class VersionChecker:
             local_version=self.dependent.workload.get_internal_revision(),
         )
         local_identifier = (
-            "-locally built"
-            if self.version_checker.is_local_charm(self.charm.app.name)
-            else ""
+            "-locally built" if self.version_checker.is_local_charm(self.charm.app.name) else ""
         )
         try:
             # This part needs some explanation: If we are running this during
@@ -50,9 +48,7 @@ class VersionChecker:
             # we use the current revision that stores the revision of the
             # former charm until the charm is fully upgraded.
             old_version = self.version_checker.version
-            self.version_checker.version = (
-                self.state.unit_upgrade_peer_data.current_revision
-            )
+            self.version_checker.version = self.state.unit_upgrade_peer_data.current_revision
             if self.version_checker.are_related_apps_valid():
                 return None
         except NoVersionError as e:

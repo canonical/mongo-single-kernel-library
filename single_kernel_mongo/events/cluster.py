@@ -42,9 +42,7 @@ class ClusterConfigServerEventHandler(Object):
         self.charm = self.dependent.charm
         self.manager = self.dependent.cluster_manager
         self.relation_name = self.manager.relation_name
-        super().__init__(
-            parent=self.manager, key=dependent.cluster_manager.relation_name
-        )
+        super().__init__(parent=self.manager, key=dependent.cluster_manager.relation_name)
 
         self.database_provider_events = DatabaseProviderEventHandlers(
             self.charm, self.manager.data_interface
@@ -106,9 +104,7 @@ class ClusterMongosEventHandler(Object):
         self.charm = self.dependent.charm
         self.manager = self.dependent.cluster_manager
         self.relation_name = self.manager.relation_name
-        super().__init__(
-            parent=self.manager, key=dependent.cluster_manager.relation_name
-        )
+        super().__init__(parent=self.manager, key=dependent.cluster_manager.relation_name)
 
         self.database_requirer_events = DatabaseRequirerEventHandlers(
             self.charm, self.manager.data_interface
@@ -167,7 +163,7 @@ class ClusterMongosEventHandler(Object):
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             self.charm.status_manager.set_and_share_status(
-                 CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value
+                CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value
             )
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:

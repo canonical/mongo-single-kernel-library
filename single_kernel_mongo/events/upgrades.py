@@ -67,9 +67,7 @@ class UpgradeEventHandler(Object):
             self.charm.on[UpgradeActions.FORCE_REFRESH_START].action,
             self._on_force_upgrade_action,
         )
-        self.framework.observe(
-            self.post_app_upgrade_event, self._run_post_app_upgrade_task
-        )
+        self.framework.observe(self.post_app_upgrade_event, self._run_post_app_upgrade_task)
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
@@ -129,14 +127,10 @@ class UpgradeEventHandler(Object):
             self.manager.run_post_app_upgrade_task()
         except DeferrableError as e:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            defer_event_with_info_log(
-                logger, event, "post cluster upgrade checks", str(e)
-            )
+            defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UNHEALTHY_UPGRADE.value
-            )
+            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
             event.defer()
 
     def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
@@ -148,12 +142,8 @@ class UpgradeEventHandler(Object):
             self.manager.run_post_cluster_upgrade_task()
         except DeferrableError as e:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            defer_event_with_info_log(
-                logger, event, "post cluster upgrade checks", str(e)
-            )
+            defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UNHEALTHY_UPGRADE.value
-            )
+            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
             event.defer()

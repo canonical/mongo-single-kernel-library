@@ -70,12 +70,8 @@ class BackupEventsHandler(Object):
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
-        self.framework.observe(
-            self.charm.on.create_backup_action, self._on_create_backup_action
-        )
-        self.framework.observe(
-            self.charm.on.list_backups_action, self._on_list_backups_action
-        )
+        self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
+        self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
     def _on_s3_relation_joined(self, event: RelationJoinedEvent) -> None:
@@ -127,28 +123,20 @@ class BackupEventsHandler(Object):
             self.manager.resync_config_options()
         except SetPBMConfigError:
             logger.error("Failed to configure s3 backup options")
-            self.charm.status_manager.set_and_share_status(
-                BackupStatuses.CANT_CONFIGURE
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.CANT_CONFIGURE)
             event.defer()
             return
         except WorkloadServiceError as e:
-            logger.error(
-                "An exception occurred when starting pbm agent, error: %s.", str(e)
-            )
+            logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
             raise
         except ResyncError:
-            self.charm.status_manager.set_and_share_status(
-                BackupStatuses.PBM_WAITING_TO_SYNC
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.PBM_WAITING_TO_SYNC)
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
             )
             return
         except PBMBusyError:
-            self.charm.status_manager.set_and_share_status(
-                BackupStatuses.PBM_WAITING_TO_SYNC
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.PBM_WAITING_TO_SYNC)
             defer_event_with_info_log(
                 logger,
                 event,
@@ -157,9 +145,7 @@ class BackupEventsHandler(Object):
             )
             return
         except WorkloadExecError as e:
-            self.charm.status_manager.to_blocked(
-                self.manager.process_pbm_error(e.stdout)
-            )
+            self.charm.status_manager.to_blocked(self.manager.process_pbm_error(e.stdout))
             return
 
         self.charm.status_manager.set_and_share_status(
@@ -182,9 +168,7 @@ class BackupEventsHandler(Object):
             self.assert_pass_sanity_checks()
             self.manager.assert_can_backup()
             backup_id = self.manager.create_backup_action()
-            self.charm.status_manager.set_and_share_status(
-                BackupStatuses.backup_running(backup_id)
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.backup_running(backup_id))
             success_action_with_info_log(
                 logger,
                 event,
@@ -205,9 +189,7 @@ class BackupEventsHandler(Object):
             self.assert_pass_sanity_checks()
             self.manager.assert_can_list_backup()
             formatted_list = self.manager.list_backup_action()
-            success_action_with_info_log(
-                logger, event, action, {"backups": formatted_list}
-            )
+            success_action_with_info_log(logger, event, action, {"backups": formatted_list})
         except (
             NonDeferrableFailedHookChecksError,
             InvalidPBMStatusError,
@@ -243,9 +225,7 @@ class BackupEventsHandler(Object):
                 backup_id,
                 remapping_pattern,
             )
-            self.manager.restore_backup(
-                backup_id=backup_id, remapping_pattern=remapping_pattern
-            )
+            self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_manager.set_and_share_status(
                 BackupStatuses.restore_running(backup_id)
             )

@@ -83,10 +83,7 @@ class ClusterProvider(Object):
         """Returns True if the integration to mongos is valid."""
         # The integration is valid if and only if we are a config server or if
         # we don't have any cluster relation.
-        return (
-            self.state.is_role(MongoDBRoles.CONFIG_SERVER)
-            or not self.state.cluster_relations
-        )
+        return self.state.is_role(MongoDBRoles.CONFIG_SERVER) or not self.state.cluster_relations
 
     def share_secret_to_mongos(self, relation: Relation) -> None:
         """Handles the database requested event.
@@ -102,9 +99,7 @@ class ClusterProvider(Object):
             ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
         }
 
-        if int_tls_ca := self.state.tls.get_secret(
-            label_name=SECRET_CA_LABEL, internal=True
-        ):
+        if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
@@ -210,9 +205,7 @@ class ClusterRequirer(Object):
             CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value
         )
 
-    def share_credentials_to_clients(
-        self, username: str | None, password: str | None
-    ) -> None:
+    def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
         """Database created event.
 
         Stores credentials in secrets and share it with clients.
@@ -354,9 +347,7 @@ class ClusterRequirer(Object):
         if not self.state.mongos_cluster_relation:
             return True
         config_server_tls_ca = self.state.cluster.internal_ca_secret
-        mongos_tls_ca = self.state.tls.get_secret(
-            internal=True, label_name=SECRET_CA_LABEL
-        )
+        mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
         if not config_server_tls_ca or not mongos_tls_ca:
             return True
 
@@ -366,9 +357,7 @@ class ClusterRequirer(Object):
         """Returns True if mongos has been waiting for config server in order to request certs."""
         if not self.state.tls_relation:
             return False
-        mongos_tls_ca = self.state.tls.get_secret(
-            internal=True, label_name=SECRET_CA_LABEL
-        )
+        mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
 
         # our CA is none until certs have been requested. We cannot request certs until integrated
         # to config-server.

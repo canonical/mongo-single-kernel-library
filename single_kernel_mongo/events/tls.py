@@ -90,12 +90,8 @@ class TLSEventsHandler(Object):
                 param = "internal-key" if internal else "external-key"
                 key = event.params.get(param, None)
                 csr = self.manager.generate_certificate_request(key, internal=internal)
-                self.certs_client.request_certificate_creation(
-                    certificate_signing_request=csr
-                )
-                self.manager.set_waiting_for_cert_to_update(
-                    internal=internal, waiting=True
-                )
+                self.certs_client.request_certificate_creation(certificate_signing_request=csr)
+                self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
         except ValueError as e:
             event.fail(str(e))
 
@@ -119,9 +115,7 @@ class TLSEventsHandler(Object):
 
         for internal in (True, False):
             csr = self.manager.generate_certificate_request(None, internal=internal)
-            self.certs_client.request_certificate_creation(
-                certificate_signing_request=csr
-            )
+            self.certs_client.request_certificate_creation(certificate_signing_request=csr)
             self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
@@ -135,9 +129,7 @@ class TLSEventsHandler(Object):
             logger.warning(
                 "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
-        logger.debug(
-            "Disabling external and internal TLS for unit: %s", self.charm.unit.name
-        )
+        logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
         self.manager.disable_certificates_for_unit()
 
         # TODO: Improve this during Advanced status handling.
@@ -190,9 +182,7 @@ class TLSEventsHandler(Object):
 
             self.manager.enable_certificates_for_unit()
             # TODO: Improve this during Advanced status handling.
-            self.charm.status_manager.set_and_share_status(
-                TLSStatuses.ACTIVE_IDLE.value
-            )
+            self.charm.status_manager.set_and_share_status(TLSStatuses.ACTIVE_IDLE.value)
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return
@@ -209,9 +199,7 @@ class TLSEventsHandler(Object):
             event.defer()
             return
         try:
-            old_csr, new_csr = self.manager.renew_expiring_certificate(
-                event.certificate
-            )
+            old_csr, new_csr = self.manager.renew_expiring_certificate(event.certificate)
             self.certs_client.request_certificate_renewal(
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,

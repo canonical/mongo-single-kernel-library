@@ -189,9 +189,8 @@ def test_config_server_get_status_shard_draining(
         return_value=True,
     )
 
-    assert (
-        harness.charm.operator.config_server_manager.get_status()
-        == MaintenanceStatus("Draining shard shard0")
+    assert harness.charm.operator.config_server_manager.get_status() == MaintenanceStatus(
+        "Draining shard shard0"
     )
 
 
@@ -226,9 +225,7 @@ def test_config_server_get_status_unreachable_shards(
     )
 
 
-def test_config_server_all_active(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
@@ -422,9 +419,7 @@ def test_shard_get_status_shard_not_aware(
     )
 
 
-def test_shard_get_status_all_ok(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
