@@ -262,4 +262,4 @@ class WaitingForLdapDataError(DeferrableError):
 
 
 class LDAPSNotEnabledError(Exception):
-    """Raised when the charm hasn't received ldaps urls.."""
+    """Raised when the charm hasn't received ldaps urls."""

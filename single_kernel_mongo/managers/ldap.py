@@ -8,6 +8,7 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from ops import MaintenanceStatus
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
@@ -35,9 +36,11 @@ if TYPE_CHECKING:
 
 logger = getLogger(__name__)
 
+CANNOT_INTEGRATE_WITH_SHARD_STATUS = BlockedStatus("Cannot integrate LDAP with shard.")
+
 
 class LDAPManager(Object, StatusProvider):
-    """Manage the relation between glauth-k8s and mongos router."""
+    """Manages the relation between glauth-k8s and replica set, config-sever or mongos router."""
 
     def __init__(
         self,
@@ -63,7 +66,7 @@ class LDAPManager(Object, StatusProvider):
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
-            self.charm.status_manager.to_blocked("Cannot integrate LDAP with shard.")
+            self.charm.status_manager.set_and_share_status(CANNOT_INTEGRATE_WITH_SHARD_STATUS)
             raise NonDeferrableFailedHookChecksError("Cannot integrate LDAP with shard.")
         if self.state.upgrade_in_progress:
             raise DeferrableFailedHookChecksError(
@@ -79,7 +82,7 @@ class LDAPManager(Object, StatusProvider):
         """Runs when LDAP is ready."""
         self.assert_pass_hook_checks()
 
-        self.charm.status_manager.to_maintenance("Configuring LDAP")
+        self.charm.status_manager.set_and_share_status(MaintenanceStatus("Configuring LDAP"))
 
         ldap_data = self.ldap_requirer.consume_ldap_relation_data(relation=relation)
         if not ldap_data:
@@ -87,17 +90,29 @@ class LDAPManager(Object, StatusProvider):
             raise WaitingForLdapDataError("Waiting for LDAP data.")
 
         if not ldap_data.ldaps_urls:
-            logger.info("You must configure Glauth with LDAPS support")
+            logger.error("You must configure Glauth with LDAPS support")
             raise LDAPSNotEnabledError("LDAPS not enabled.")
 
         if self.charm.unit.is_leader():
             self.state.ldap.set_from(ldap_data)
 
+        self.restart_when_ready()
+
+    def restart_when_ready(self):
+        """Restarts when we are ready."""
+        if not self.state.ldap_relation:
+            logger.info(f"Not restarting, missing the `{ExternalRequirerRelations.LDAP}` relation")
+            return
+        if not self.state.ldap_cert_relation:
+            logger.info(
+                f"Not restarting, missing the `{ExternalRequirerRelations.LDAP_CERT}` relation"
+            )
+            return
+
         if self.state.ldap.is_ready():
             logger.info("Restarting mongodb server for LDAP integration")
             self.dependent.restart_charm_services()
-
-            self.charm.status_manager.to_active()
+            self.charm.status_manager.set_and_share_status(ActiveStatus())
 
     def on_ldap_unavailable(self) -> None:
         """Runs when the LDAP integration is broken."""
@@ -113,9 +128,7 @@ class LDAPManager(Object, StatusProvider):
         full_chain = "\n".join(chain)
         self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP, full_chain)
 
-        if self.state.ldap.is_ready():
-            logger.info("Restarting mongodb server for LDAP integration")
-            self.dependent.restart_charm_services()
+        self.restart_when_ready()
 
     def on_certificate_removed(self):
         """Runs when the certificate is removed."""
