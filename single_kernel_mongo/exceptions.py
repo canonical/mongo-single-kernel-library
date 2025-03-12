@@ -251,3 +251,7 @@ class InvalidLdapUserToDnMappingError(Exception):
 
 class InvalidLdapQueryTemplateError(Exception):
     """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""
+
+
+class WaitingForLeaderError(Exception):
+    """Raised when we haven't elected a leader yet but we need it."""

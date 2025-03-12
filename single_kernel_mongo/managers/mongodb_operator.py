@@ -54,6 +54,7 @@ from single_kernel_mongo.exceptions import (
     SetPasswordError,
     ShardingMigrationError,
     UpgradeInProgressError,
+    WaitingForLeaderError,
     WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
@@ -367,7 +368,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         from executing other hooks with a new role.
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
-            self.state.app_peer_data.role = self.config.role
+            logger.info("We haven't elected a leader yet.")
+            raise WaitingForLeaderError
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")

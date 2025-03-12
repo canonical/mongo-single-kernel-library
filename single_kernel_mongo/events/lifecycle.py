@@ -48,6 +48,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
+    WaitingForLeaderError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
@@ -132,7 +133,7 @@ class LifecycleEventsHandler(Object):
         """Config Changed Event."""
         try:
             self.dependent.on_config_changed()
-        except UpgradeInProgressError:
+        except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
             return
         except (InvalidLdapUserToDnMappingError, InvalidLdapQueryTemplateError) as err:
