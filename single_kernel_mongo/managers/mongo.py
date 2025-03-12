@@ -236,6 +236,8 @@ class MongoManager(Object, StatusProvider):
             data_interface.set_database(relation.id, config.database)
             data_interface.set_credentials(relation.id, config.username, config.password)
 
+            self.state.app_peer_data.managed_users = managed_users
+
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 return
 
@@ -246,8 +248,6 @@ class MongoManager(Object, StatusProvider):
                 data_interface.set_replset(
                     relation.id, config.replset or self.state.app_peer_data.replica_set
                 )
-
-        self.state.app_peer_data.managed_users = managed_users
 
     def update_user(self, relation: Relation) -> None:
         """Add the user for this relation."""
