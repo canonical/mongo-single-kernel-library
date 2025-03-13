@@ -31,6 +31,7 @@ from single_kernel_mongo.config.literals import (
     TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.events.upgrades import UpgradeEventHandler
+    from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
 
@@ -76,10 +78,12 @@ class OperatorProtocol(ABC, Object):
     state: CharmState
     mongo_manager: MongoManager
     upgrade_manager: MongoUpgradeManager
+    ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
     upgrade_events: UpgradeEventHandler
+    ldap_events: LDAPEventHandler
 
     if TYPE_CHECKING:
 

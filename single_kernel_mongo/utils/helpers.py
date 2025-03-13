@@ -6,11 +6,18 @@
 
 import base64
 import re
+import ssl
 from functools import partial
 from logging import getLogger
 
+from ldap3 import Connection as LDAPConnection
+from ldap3 import Server as LDAPServer
+from ldap3 import Tls as LDAPTls
+from ops.model import ActiveStatus, BlockedStatus, StatusBase
+
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.exceptions import InvalidCharmKindError
+from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
 
 logger = getLogger(__name__)
@@ -73,3 +80,28 @@ def charm_kind_only(func, charm_kind: CharmKind):
 
 mongodb_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOD)
 mongos_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOS)
+
+
+def get_ldap_connection_status(state: LdapState) -> StatusBase:
+    """Checks if the LDAP connection is working or not."""
+    bind_dn = state.bind_user
+    bind_password = state.bind_password
+    base_dn = state.base_dn
+    if not base_dn:
+        return BlockedStatus("Missing base DN.")
+    if not state.ldaps_urls:
+        return BlockedStatus("Missing LDAPS URLs.")
+
+    try:
+        for ldap_uri in state.ldaps_urls:
+            ldap_host, ldap_port = ldap_uri.rsplit(sep=":", maxsplit=1)
+            tls = LDAPTls(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLSv1_2)
+            server = LDAPServer(host=ldap_host, port=int(ldap_port), use_ssl=True, tls=tls)
+            conn = LDAPConnection(server, user=bind_dn, password=bind_password)
+            conn.bind()  # We consider sufficient to be able to bind.
+            conn.unbind()
+    except Exception as err:
+        logger.error(f"Could not bind: {err}", exc_info=True)
+        return BlockedStatus("Could not bind with ldap")
+
+    return ActiveStatus()
