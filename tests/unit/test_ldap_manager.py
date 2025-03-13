@@ -108,7 +108,7 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
     assert ldap_state.ldaps_urls == ["ldaps://ldap.glauth.com"]
 
 
-def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions):
+def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.db_initialised = True
     # Case 1: No integration
@@ -173,6 +173,9 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
     )
     harness.charm.operator.ldap_manager.on_certificate_available(
         "beefdead", "deadbeef", ["feeddead"]
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.get_ldap_connection_status", return_value=ActiveStatus()
     )
     assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
 

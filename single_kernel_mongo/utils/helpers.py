@@ -94,9 +94,8 @@ def get_ldap_connection_status(state: LdapState) -> StatusBase:
 
     try:
         for ldap_uri in state.ldaps_urls:
-            ldap_host, ldap_port = ldap_uri.rsplit(sep=":", maxsplit=1)
             tls = LDAPTls(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLSv1_2)
-            server = LDAPServer(host=ldap_host, port=int(ldap_port), use_ssl=True, tls=tls)
+            server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
             conn = LDAPConnection(server, user=bind_dn, password=bind_password)
             conn.bind()  # We consider sufficient to be able to bind.
             conn.unbind()
