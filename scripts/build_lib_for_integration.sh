@@ -19,7 +19,7 @@ for directory in "${TEST_CHARMS[@]}"; do
     directory_lib_path="${directory}/${LIB_PATH}"
     rm -rf "$directory_lib_path"
     mkdir "$directory_lib_path"
-    echo "copying over libs from single kernel charm" 
+    echo "copying over libs from single kernel charm"
     cp -r "${LIB_PATH}" "$directory_lib_path"
     cp "pyproject.toml" "$directory_lib_path"
     cp "README.md" "$directory_lib_path"
