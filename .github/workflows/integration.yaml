@@ -121,13 +121,9 @@ jobs:
           new_branch: '${{ steps.comment-branch.outputs.head_ref }}'
           python_version: '3.10'
           pat: '${{ secrets.PAT }}'
-      - name: Convert PR's to ready to review.
-        if: success()
-        shell: bash
-        run: |
-          gh pr ready ${{ steps.remoteupdater.outputs.pull-request-url }}
       - name: Comment on PR
         uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b
         with:
           message: |
             * ${{ steps.remoteupdater.outputs.pull-request-operation }} [${{ matrix.repository }} PR](${{ steps.remoteupdater.outputs.pull-request-url }})
+          pr-number: ${{ github.event.issue.id }}
