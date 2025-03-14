@@ -243,3 +243,15 @@ class ActionFailedError(Exception):
 
 class UnhealthyUpgradeError(Exception):
     """Raised when the upgrade is unhealthy during an post upgrade check."""
+
+
+class InvalidLdapUserToDnMappingError(Exception):
+    """Raised when the LdapUserToDnMapping is invalid."""
+
+
+class InvalidLdapQueryTemplateError(Exception):
+    """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""
+
+
+class WaitingForLeaderError(Exception):
+    """Raised when we haven't elected a leader yet but we need it."""

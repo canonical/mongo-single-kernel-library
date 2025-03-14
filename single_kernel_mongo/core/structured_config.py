@@ -10,7 +10,16 @@ Modifiable configurations should be defined in `config.yaml` in each charm.
 from enum import Enum
 from typing import Annotated, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
+from typing_extensions import Self
 
 # Generic TypeVar for serializers
 T = TypeVar("T")
@@ -62,6 +71,24 @@ class ExposeExternal(str, Enum):
         return {cls.NODEPORT, cls.NONE}
 
 
+class SingleLdapUserToDnMapping(BaseModel):
+    """Validating the Mapping structure."""
+
+    match: str
+    substitution: str | None = None
+    ldap_query: str | None = Field(default=None, alias="ldapQuery")  # noqa: N815
+
+    @model_validator(mode="after")
+    def verify_subst_or_ldapquery(self) -> Self:
+        """Ensures that only one of substitution or ldapQuery is present."""
+        if self.substitution and self.ldap_query or (not self.substitution and not self.ldap_query):
+            raise ValueError("substitution and ldapQuery are mutually exclusive")
+        return self
+
+
+LdapUserToDnMapping = TypeAdapter(list[SingleLdapUserToDnMapping])
+
+
 # NewType for typing (ghost type)
 class MongoConfigModel(BaseConfigModel):
     """Default class for typing."""
@@ -71,6 +98,8 @@ class MongoConfigModel(BaseConfigModel):
     )
     role: SerializeLiteralAsStr[MongoDBRoles]
     auto_delete: bool = Field(default=False, alias="auto-delete")
+    ldap_user_to_dn_mapping: str | None = Field(default=None, alias="ldap-user-to-dn-mapping")
+    ldap_query_template: str | None = Field(default=None, alias="ldap-query-template")
 
     @field_validator("expose_external", mode="before")
     @classmethod
