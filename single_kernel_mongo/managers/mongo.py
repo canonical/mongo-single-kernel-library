@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from dacite import from_dict
 from ops import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
+from ops.model import BlockedStatus, Relation, StatusBase
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
@@ -83,7 +83,9 @@ class MongoManager(Object, StatusProvider):
         Pass direct=False, when checking if the entire replica set is ready
         """
         actual_uri = uri or "localhost"
-        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
+        with MongoConnection(
+            EMPTY_CONFIGURATION, actual_uri, direct=direct
+        ) as direct_mongo:
             return direct_mongo.is_ready
 
     def set_user_password(self, user: MongoDBUser, password: str) -> str:
@@ -106,7 +108,9 @@ class MongoManager(Object, StatusProvider):
 
     def initialise_replica_set(self) -> None:
         """Initialises the replica set."""
-        with MongoConnection(self.state.mongo_config, "localhost", direct=True) as direct_mongo:
+        with MongoConnection(
+            self.state.mongo_config, "localhost", direct=True
+        ) as direct_mongo:
             direct_mongo.init_replset()
 
     def initialise_charm_admin_users(self) -> None:
@@ -140,7 +144,9 @@ class MongoManager(Object, StatusProvider):
             "  passwordDigestor: 'server',"
             '})"',
         ]
-        self.workload.run_bin_command("mongodb://localhost/admin", cmd, input=config.password)
+        self.workload.run_bin_command(
+            "mongodb://localhost/admin", cmd, input=config.password
+        )
         self.state.app_peer_data.set_user_created(OperatorUser.username)
 
     def initialise_user(self, user: MongoDBUser):
@@ -201,7 +207,9 @@ class MongoManager(Object, StatusProvider):
             self.model,
             relation.name,
         )
-        actual_data = data_interface.fetch_relation_data([relation.id]).get(relation.id, {})
+        actual_data = data_interface.fetch_relation_data([relation.id]).get(
+            relation.id, {}
+        )
         new_data = {key: value for key, value in actual_data.items() if key != "data"}
         data_interface.update_relation_data(relation.id, {"data": json.dumps(new_data)})
 
@@ -233,12 +241,16 @@ class MongoManager(Object, StatusProvider):
                 data_interface,
                 relation.id,
             )
-            logger.info("Create relation user: %s on %s", config.username, config.database)
+            logger.info(
+                "Create relation user: %s on %s", config.username, config.database
+            )
 
             mongo.create_user(config.username, config.password, config.supported_roles)
             managed_users.add(username)
             data_interface.set_database(relation.id, config.database)
-            data_interface.set_credentials(relation.id, config.username, config.password)
+            data_interface.set_credentials(
+                relation.id, config.username, config.password
+            )
 
             self.state.app_peer_data.managed_users = managed_users
 
@@ -274,7 +286,9 @@ class MongoManager(Object, StatusProvider):
                 relation.id,
             )
 
-            logger.info("Update relation user: %s on %s", config.username, config.database)
+            logger.info(
+                "Update relation user: %s on %s", config.username, config.database
+            )
             mongo.update_user(config)
             logger.info("Updating relation data according to diff")
 
@@ -296,11 +310,16 @@ class MongoManager(Object, StatusProvider):
         mongo_config = self.state.mongo_config
 
         # Skip our user.
-        if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and username == mongo_config.username
+        ):
             return
 
         # Dropping the admin-user for mongos-k8s-router is done by mongos-k8s charm.
-        if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if self.substrate == Substrates.K8S and self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             logger.info("K8s routers will remove themselves.")
             managed_users.remove(username)
             self.state.app_peer_data.managed_users = managed_users
@@ -347,10 +366,14 @@ class MongoManager(Object, StatusProvider):
         )
         self.update_app_relation_data_for_config(relation, config)
 
-    def update_app_relation_data_for_config(self, relation: Relation, config: MongoConfiguration):
+    def update_app_relation_data_for_config(
+        self, relation: Relation, config: MongoConfiguration
+    ):
         """Updates the data for a given config."""
         data_interface = DatabaseProviderData(self.model, relation.name)
-        endpoints = data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
+        endpoints = (
+            data_interface.fetch_my_relation_field(relation.id, "endpoints") or ""
+        )
         uris = data_interface.fetch_my_relation_field(relation.id, "uris")
         database = data_interface.fetch_my_relation_field(relation.id, "database")
         username = data_interface.fetch_my_relation_field(relation.id, "username")
@@ -387,7 +410,9 @@ class MongoManager(Object, StatusProvider):
             database = data_interface.fetch_relation_field(relation.id, "database")
             if not database:  # Early return, no database to delete.
                 return
-            if database not in mongo.get_databases():  # Early return, database not in mongodb
+            if (
+                database not in mongo.get_databases()
+            ):  # Early return, database not in mongodb
                 return
             logger.info(f"Drop database: {database}")
             mongo.drop_database(database)
@@ -403,7 +428,10 @@ class MongoManager(Object, StatusProvider):
         if not password:
             password = self.workload.generate_password()
         database_name = data_inteface.fetch_relation_field(relation_id, "database")
-        roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles") or "default"
+        roles = (
+            data_inteface.fetch_relation_field(relation_id, "extra-user-roles")
+            or "default"
+        )
         if not database_name or not roles:
             raise Exception("Missing database name or roles.")
         mongo_args = {
@@ -434,7 +462,9 @@ class MongoManager(Object, StatusProvider):
                     logger.debug("Removing %s from replica set", member)
                     mongo.remove_replset_member(member)
             except NotReadyError:
-                logger.info("Deferring process_unremoved_units: another member is syncing")
+                logger.info(
+                    "Deferring process_unremoved_units: another member is syncing"
+                )
                 raise
             except PyMongoError as e:
                 logger.error("Deferring process_unremoved_units: error=%r", e)
@@ -462,7 +492,9 @@ class MongoManager(Object, StatusProvider):
                     raise NotReadyError
                 mongo.add_replset_member(member)
 
-    def get_draining_shards(self, config: MongoConfiguration | None = None) -> list[str]:
+    def get_draining_shards(
+        self, config: MongoConfiguration | None = None
+    ) -> list[str]:
         """Returns the shard that is currently draining."""
         with MongoConnection(config or self.state.mongos_config) as mongo:
             draining_shards = mongo.get_draining_shards()
@@ -474,36 +506,56 @@ class MongoManager(Object, StatusProvider):
 
             return draining_shards
 
-    def get_status(self) -> StatusBase:
+    def get_statuses(self) -> list[StatusBase]:
         """Generates the status of a unit based on its status reported by mongod."""
+        charm_statuses: list[StatusBase] = []
+
+        if not self.state.db_initialised:
+            return [MongodStatus.WAITING_REPL_SET_INIT.value]
+
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
             unit_host = self.state.unit_peer_data.internal_address
             if unit_host not in replset_status:
-                return MongodStatus.MEMBER_BEING_ADDED.value
+                return [MongodStatus.MEMBER_BEING_ADDED.value]
 
             replica_status = replset_status[unit_host]
 
             match replica_status:
                 case "PRIMARY":
-                    return MongodStatus.PRIMARY.value
+                    charm_statuses.append(MongodStatus.PRIMARY.value)
                 case "SECONDARY":
-                    return ActiveStatus("")
+                    charm_statuses.append(MongodStatus.SECONDARY.value)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
-                    return MongodStatus.MEMBER_SYNCING.value
+                    return [MongodStatus.MEMBER_SYNCING.value]
                 case "REMOVED":
-                    return MongodStatus.MEMBER_REMOVING.value
+                    return [MongodStatus.MEMBER_REMOVING.value]
                 case _:
-                    return BlockedStatus(replica_status)
+                    return charm_statuses.append(BlockedStatus(replica_status))
 
         except ServerSelectionTimeoutError as e:
             # Usually it is du to ReplicaSetNoPrimary
             logger.debug(f"Got error {e} while checking replica set status")
-            return MongodStatus.WAITING_ELECTION.value
+            return [MongodStatus.WAITING_ELECTION.value]
         except AutoReconnect as e:
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return MongodStatus.WAITING_RECONNECT.value
+            return [MongodStatus.WAITING_RECONNECT.value]
+
+        if not self.charm.unit.is_leader():
+            return charm_statuses
+
+        try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                replset_members = mongo.get_replset_members()
+                config_hosts = mongo.config.hosts
+                if replset_members != config_hosts:
+                    return charm_statuses.append(MongodStatus.WAITING_RECONFIG)
+        except PyMongoError as e:
+            logger.error("Error checking members, %s", e)
+            return charm_statuses.append(MongodStatus.WAITING_RECONFIG)
+
+        return charm_statuses

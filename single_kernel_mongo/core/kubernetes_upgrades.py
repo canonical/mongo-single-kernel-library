@@ -14,7 +14,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from lightkube.core.exceptions import ApiError
-from ops.model import ActiveStatus, StatusBase
+from ops.model import StatusBase
 from overrides import override
 
 from single_kernel_mongo.config.literals import CharmKind, UnitState
@@ -53,11 +53,14 @@ class KubernetesUpgrade(AbstractUpgrade):
     def _get_unit_healthy_status(self) -> StatusBase:
         version = self.state.unit_workload_container_version
         if version == self.state.app_workload_container_version:
-            return ActiveStatus(
-                f'MongoDB {self._current_versions["workload"]} running;  Charm revision {self._current_versions["charm"]}'
+            return UpgradeStatus.k8s_active_upgrade(
+                self._current_versions["workload"], self._current_versions["charm"]
             )
-        return ActiveStatus(
-            f'MongoDB {self._current_versions["workload"]} running (restart pending); Charm revision {self._current_versions["charm"]}'
+
+        return UpgradeStatus.k8s_active_upgrade(
+            self._current_versions["workload"],
+            self._current_versions["charm"],
+            outdated=True,
         )
 
     @property
@@ -124,7 +127,9 @@ class KubernetesUpgrade(AbstractUpgrade):
                 return unit_number(unit)
         return 0
 
-    def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:  # noqa: C901
+    def reconcile_partition(
+        self, *, from_event: bool = False, force: bool = False
+    ) -> str | None:  # noqa: C901
         """If ready, lower partition to upgrade next unit.
 
         If upgrade is not in progress, set partition to 0. (If a unit receives a stop event, it may

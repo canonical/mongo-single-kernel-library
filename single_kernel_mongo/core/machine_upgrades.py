@@ -12,9 +12,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
+from ops.model import StatusBase
 
 from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatus
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -47,16 +48,21 @@ class MachineUpgrade(AbstractUpgrade):
         AbstractUpgrade.unit_state.fset(self, value)  # type: ignore[attr-defined]
 
     def _get_unit_healthy_status(self) -> StatusBase:
-        if self.state.unit_workload_container_version == self.state.app_workload_container_version:
-            return ActiveStatus(
-                f'MongoDB {self._unit_workload_version} running; '
-                f'Snap revision {self.state.unit_workload_container_version}; '
-                f'Charm revision {self._current_versions["charm"]}'
+        if (
+            self.state.unit_workload_container_version
+            == self.state.app_workload_container_version
+        ):
+            return UpgradeStatus.vm_active_upgrade(
+                self._unit_workload_version,
+                self.state.unit_workload_container_version,
+                self._current_versions["charm"],
             )
-        return ActiveStatus(
-            f'MongoDB {self._unit_workload_version} running; '
-            f'Snap revision {self.state.unit_workload_container_version} (outdated); '
-            f'Charm revision {self._current_versions["charm"]}'
+
+        return UpgradeStatus.vm_active_upgrade(
+            self._unit_workload_version,
+            self.state.unit_workload_container_version,
+            self._current_versions["charm"],
+            outdated=True,
         )
 
     @property
@@ -68,9 +74,7 @@ class MachineUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return BlockedStatus(
-                "Refresh incompatible. Rollback to previous revision with `juju refresh`"
-            )
+            return UpgradeStatus.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property
@@ -78,7 +82,9 @@ class MachineUpgrade(AbstractUpgrade):
         """Installed MongoDB version for this unit."""
         return self._current_versions["workload"]
 
-    def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:
+    def reconcile_partition(
+        self, *, from_event: bool = False, force: bool = False
+    ) -> str | None:
         """Handle Juju action to confirm first upgraded unit is healthy and resume upgrade."""
         if from_event:
             self.upgrade_resumed = True
@@ -110,7 +116,8 @@ class MachineUpgrade(AbstractUpgrade):
             PrecheckFailed: App is not ready to upgrade
         """
         assert (
-            self.state.unit_workload_container_version != self.state.app_workload_container_version
+            self.state.unit_workload_container_version
+            != self.state.app_workload_container_version
         )
         assert self.state.app_upgrade_peer_data.versions
         for index, unit in enumerate(self.state.units_upgrade_peer_data):
@@ -127,10 +134,14 @@ class MachineUpgrade(AbstractUpgrade):
                         # Run pre-upgrade check
                         # (in case user forgot to run pre-upgrade-check action)
                         self.pre_upgrade_check()
-                        logger.debug("Pre-refresh check after `juju refresh` successful")
+                        logger.debug(
+                            "Pre-refresh check after `juju refresh` successful"
+                        )
                 elif index == 1 and self.dependent.name == CharmKind.MONGOD:
                     # User confirmation needed to resume upgrade (i.e. upgrade second unit)
-                    logger.debug(f"Second unit authorized to refresh if {self.upgrade_resumed=}")
+                    logger.debug(
+                        f"Second unit authorized to refresh if {self.upgrade_resumed=}"
+                    )
                     return self.upgrade_resumed
                 return True
             state = unit.unit_state
@@ -153,7 +164,9 @@ class MachineUpgrade(AbstractUpgrade):
             # primary, we must ensure a safe primary re-election.
             try:
                 if self.unit_name == dependent.primary_unit_name:  # type: ignore
-                    logger.debug("Stepping down current primary, before upgrading service...")
+                    logger.debug(
+                        "Stepping down current primary, before upgrading service..."
+                    )
                     dependent.upgrade_manager.step_down_primary_and_wait_reelection()
             except FailedToElectNewPrimaryError:
                 # by not setting the snap revision and immediately returning, this function will be

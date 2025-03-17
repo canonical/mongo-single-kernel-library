@@ -9,6 +9,7 @@ import logging
 from typing import Generic, TypeVar
 
 from ops import ActionEvent
+from ops.model import StatusBase
 from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
@@ -76,7 +77,9 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                     self.dependent.cross_app_version_checker.version  # type: ignore
                 )
         except ContainerNotReadyError:
-            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
+            self.charm.status_manager.set_and_share_status(
+                UpgradeStatus.UNHEALTHY_UPGRADE.value
+            )
             self._reconcile_upgrade(during_upgrade=True)
             raise DeferrableError
 
@@ -91,7 +94,10 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.dependent.upgrade_events.post_app_upgrade_event.emit()
 
     def _on_vm_upgrade(self):
-        if not self.state.upgrade_in_progress and self.dependent.name == CharmKind.MONGOD:
+        if (
+            not self.state.upgrade_in_progress
+            and self.dependent.name == CharmKind.MONGOD
+        ):
             self.state.unit_upgrade_peer_data.current_revision = (
                 self.dependent.cross_app_version_checker.version  # type: ignore
             )
@@ -124,9 +130,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         try:
             self._upgrade.pre_upgrade_check()
         except PrecheckFailedError as exception:
-            message = (
-                f"Charm is not ready for refresh. Pre-refresh check failed: {exception.message}"
-            )
+            message = f"Charm is not ready for refresh. Pre-refresh check failed: {exception.message}"
             raise ActionFailedError(message)
 
     def on_resume_upgrade_action(self, force: bool = False) -> str | None:
@@ -139,13 +143,18 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             raise ActionFailedError(message)
         return self._upgrade.reconcile_partition(from_event=True, force=force)
 
-    def on_force_upgrade_action(self: MongoUpgradeManager[T], event: ActionEvent) -> str:
+    def on_force_upgrade_action(
+        self: MongoUpgradeManager[T], event: ActionEvent
+    ) -> str:
         """Force upgrade action handler."""
         if not self._upgrade or not self.state.upgrade_in_progress:
             message = "No refresh in progress"
             raise ActionFailedError(message)
 
-        if self.substrate == Substrates.VM and self._upgrade.unit_state != UnitState.OUTDATED:
+        if (
+            self.substrate == Substrates.VM
+            and self._upgrade.unit_state != UnitState.OUTDATED
+        ):
             message = "Unit already refreshed"
             raise ActionFailedError(message)
 
@@ -153,7 +162,10 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader force-refresh-start`)"
             raise ActionFailedError(message)
 
-        if self.dependent.name == CharmKind.MONGOD and not self._upgrade.upgrade_resumed:
+        if (
+            self.dependent.name == CharmKind.MONGOD
+            and not self._upgrade.upgrade_resumed
+        ):
             message = f"Run `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}` before trying to force refresh"
             raise ActionFailedError(message)
 
@@ -177,17 +189,23 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             1. have to wait for the unit to resolve itself.
             2. have to run the force-refresh-start action (to upgrade the next unit).
         """
-        logger.debug("Running post refresh checks to verify cluster is not broken after refresh")
+        logger.debug(
+            "Running post refresh checks to verify cluster is not broken after refresh"
+        )
         self.run_post_upgrade_checks(finished_whole_cluster=False)
 
         if self._upgrade.unit_state != UnitState.HEALTHY:
             return
 
-        logger.debug("Cluster is healthy after refreshing unit %s", self.charm.unit.name)
+        logger.debug(
+            "Cluster is healthy after refreshing unit %s", self.charm.unit.name
+        )
 
         # Leader of config-server must wait for all shards to be upgraded before finalising the
         # upgrade.
-        if not self.charm.unit.is_leader() or not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if not self.charm.unit.is_leader() or not self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             return
 
         self.dependent.upgrade_events.post_cluster_upgrade_event.emit()
@@ -196,12 +214,16 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
         """Waits for entire cluster to be upgraded before enabling the balancer."""
         # Leader of config-server must wait for all shards to be upgraded before finalising the
         # upgrade.
-        if not self.charm.unit.is_leader() or not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if not self.charm.unit.is_leader() or not self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             return
 
         # We can because we now we are a config server.
         if not self.dependent.cross_app_version_checker.are_related_apps_valid():  # type: ignore
-            raise DeferrableError("Waiting to finalise refresh, one or more shards need refresh.")
+            raise DeferrableError(
+                "Waiting to finalise refresh, one or more shards need refresh."
+            )
 
         logger.debug(
             "Entire cluster has been refreshed, checking health of the cluster and enabling balancer."
@@ -243,7 +265,7 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
 
         if self.charm.unit.status == UpgradeStatus.UNHEALTHY_UPGRADE.value:
             self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UNHEALTHY_UPGRADE.UPGRADE_ACTIVE.value
+                UpgradeStatus.UPGRADE_ACTIVE.value
             )
 
         self._upgrade.unit_state = UnitState.HEALTHY
@@ -254,7 +276,9 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
     def run_post_app_upgrade_task(self):
         """Runs the post upgrade check to verify that the mongos router is healthy."""
-        logger.debug("Running post refresh checks to verify monogs is not broken after refresh")
+        logger.debug(
+            "Running post refresh checks to verify monogs is not broken after refresh"
+        )
         if not self.state.db_initialised:
             self._upgrade.unit_state = UnitState.HEALTHY
             return
@@ -264,11 +288,15 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
         if self._upgrade.unit_state != UnitState.HEALTHY:
             return
 
-        logger.debug("Cluster is healthy after refreshing unit %s", self.charm.unit.name)
+        logger.debug(
+            "Cluster is healthy after refreshing unit %s", self.charm.unit.name
+        )
 
         # Leader of config-server must wait for all shards to be upgraded before finalising the
         # upgrade.
-        if not self.charm.unit.is_leader() or not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if not self.charm.unit.is_leader() or not self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             return
 
         self.dependent.upgrade_events.post_cluster_upgrade_event.emit()
@@ -283,7 +311,9 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
             )
 
         if not self.is_mongos_able_to_read_write():  # type: ignore
-            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
+            self.charm.status_manager.set_and_share_status(
+                UpgradeStatus.UNHEALTHY_UPGRADE.value
+            )
             logger.info(ROLLBACK_INSTRUCTIONS)
             raise DeferrableError("mongos is not able to read/write after refresh.")
 
@@ -292,3 +322,9 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
         logger.debug("refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
+
+    def get_statuses(self) -> list[StatusBase]:
+        """Returns the statuses of the upgrade manager.
+
+        TODO - implement this once we understand upgrade statuses better.
+        """

@@ -29,7 +29,9 @@ class MongoDB(Enum):
     # STATE statuses:
     MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
     EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
-    SHARDING_ON_REPLICA = BlockedStatus("Sharding interface cannot be used by replicas.")
+    SHARDING_ON_REPLICA = BlockedStatus(
+        "Sharding interface cannot be used by replicas."
+    )
     UNSUPPORTED_MONGOS_REL = BlockedStatus(
         "Relation to mongos not supported, config role must be config-server."
     )
@@ -48,12 +50,16 @@ class MongoDB(Enum):
 class Mongos(Enum):
     """Mongos related statuses."""
 
-    INVALD_EXPOSE_EXTERNAL = BlockedStatus("Config option for expose-external not valid.")
+    INVALD_EXPOSE_EXTERNAL = BlockedStatus(
+        "Config option for expose-external not valid."
+    )
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
     CONNECTING_TO_CONFIG_SERVER = WaitingStatus("Connecting to config-server...")
     WAITING_FOR_SECRETS = WaitingStatus("Waiting for secrets from config-server")
     REQUIRES_TLS = BlockedStatus("mongos requires TLS to be enabled.")
-    REQUIRES_NO_TLS = BlockedStatus("mongos has TLS enabled, but config-server does not.")
+    REQUIRES_NO_TLS = BlockedStatus(
+        "mongos has TLS enabled, but config-server does not."
+    )
     CA_MISMATCH = BlockedStatus("mongos CA and Config-Server CA don't match.")
     ACTIVE_IDLE = ActiveStatus("")
 
@@ -127,7 +133,9 @@ class ConfigServerStatus(Enum):
         return BlockedStatus(f"Shards: {unreachable} are unreachable.")
 
     @staticmethod
-    def waiting_for_shard_upgrade(current_charms_version: str, local_identifier: str) -> StatusBase:
+    def waiting_for_shard_upgrade(
+        current_charms_version: str, local_identifier: str
+    ) -> StatusBase:
         """Returns waiting for shard upgrade status."""
         return WaitingStatus(
             f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
@@ -138,7 +146,9 @@ class ShardStatus(Enum):
     """Shard statuses."""
 
     REQUIRES_TLS = BlockedStatus("Shard requires TLS to be enabled.")
-    SHARD_REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
+    SHARD_REQUIRES_NO_TLS = BlockedStatus(
+        "Shard has TLS enabled, but config-server does not."
+    )
     CA_MISMATCH = BlockedStatus("Shard CA and Config-Server CA don't match.")
 
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
@@ -191,8 +201,43 @@ class UpgradeStatus(Enum):
     """Upgrade statuses."""
 
     UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after refresh.")
-    WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks...")
     INCOMPATIBLE_UPGRADE = BlockedStatus(
         "Refresh incompatible. Rollback to previous revision with `juju refresh`"
     )
     UPGRADE_ACTIVE = ActiveStatus()
+    WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks...")
+    REFRESH_IN_PROG = MaintenanceStatus(
+        "Refreshing. To rollback, `juju refresh` to the previous revision"
+    )
+
+    def vm_active_upgrade(
+        unit_workload_version: str,
+        unit_workload_container_version: str,
+        current_versions: str,
+        outdated: bool = False,
+    ) -> StatusBase:
+        """Returns the active status for a vm unit."""
+        outdated_str = " (outdated)" if outdated else ""
+        return ActiveStatus(
+            f"MongoDB {unit_workload_version} running; "
+            f"Snap revision {unit_workload_container_version}{outdated_str}; "
+            f"Charm revision {current_versions}"
+        )
+
+    def k8s_active_upgrade(
+        self, workload_version: str, charm_version: str, outdated=False
+    ) -> StatusBase:
+        """Returns the active status for a k8s unit."""
+        outdated_str = " (restart pending)" if outdated else ""
+        return ActiveStatus(
+            f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}"
+        )
+
+    def refreshing_needs_resume(
+        self,
+        resume_string: str,
+    ) -> StatusBase:
+        """Returns refreshing status."""
+        return BlockedStatus(
+            f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
+        )

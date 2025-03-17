@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
 from ops import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
+from ops.model import ActiveStatus, BlockedStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
@@ -122,12 +122,14 @@ class AbstractUpgrade(ABC):
         # TODO charm versioning: remove `.split("+")` (which removes git hash before comparing)
         previous_version_strs["charm"] = previous_version_strs["charm"].split("+")[0]
         previous_versions: dict[str, poetry_version.Version] = {
-            key: poetry_version.Version.parse(value) for key, value in previous_version_strs.items()
+            key: poetry_version.Version.parse(value)
+            for key, value in previous_version_strs.items()
         }
         current_version_strs = copy.copy(self._current_versions)
         current_version_strs["charm"] = current_version_strs["charm"].split("+")[0]
         current_versions = {
-            key: poetry_version.Version.parse(value) for key, value in current_version_strs.items()
+            key: poetry_version.Version.parse(value)
+            for key, value in current_version_strs.items()
         }
         try:
             # TODO Future PR: change this > sign to support downgrades
@@ -141,7 +143,8 @@ class AbstractUpgrade(ABC):
                 return False
             if (
                 previous_versions["workload"] > current_versions["workload"]
-                or previous_versions["workload"].major != current_versions["workload"].major
+                or previous_versions["workload"].major
+                != current_versions["workload"].major
             ):
                 logger.debug(
                     f'{previous_versions["workload"]=} incompatible with {current_versions["workload"]=}'
@@ -152,7 +155,9 @@ class AbstractUpgrade(ABC):
             )
             return True
         except KeyError as exception:
-            logger.debug(f"Version missing from {previous_versions=}", exc_info=exception)
+            logger.debug(
+                f"Version missing from {previous_versions=}", exc_info=exception
+            )
             return False
 
     @abstractmethod
@@ -178,10 +183,8 @@ class AbstractUpgrade(ABC):
             resume_string = ""
             if len(self.state.units_upgrade_peer_data) > 1:
                 resume_string = f"Verify highest unit is healthy & run `{UpgradeActions.RESUME_ACTION_NAME.value}` action. "
-            return BlockedStatus(
-                f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
-            )
-        return MaintenanceStatus("Refreshing. To rollback, `juju refresh` to the previous revision")
+            return UpgradeStatus.refreshing_needs_resume(resume_string)
+        return UpgradeStatus.REFRESH_IN_PROG.value
 
     def set_versions_in_app_databag(self) -> None:
         """Save current versions in app databag.
@@ -190,9 +193,13 @@ class AbstractUpgrade(ABC):
         allowed).
         """
         assert not self.state.upgrade_in_progress
-        logger.debug(f"Setting {self._current_versions=} in upgrade peer relation app databag")
+        logger.debug(
+            f"Setting {self._current_versions=} in upgrade peer relation app databag"
+        )
         self.state.app_upgrade_peer_data.versions = self._current_versions
-        logger.debug(f"Set {self._current_versions=} in upgrade peer relation app databag")
+        logger.debug(
+            f"Set {self._current_versions=} in upgrade peer relation app databag"
+        )
 
     @property
     @abstractmethod
@@ -201,7 +208,9 @@ class AbstractUpgrade(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def reconcile_partition(self, *, from_event: bool = False, force: bool = False) -> str | None:
+    def reconcile_partition(
+        self, *, from_event: bool = False, force: bool = False
+    ) -> str | None:
         """If ready, allow next unit to upgrade."""
         raise NotImplementedError()
 
@@ -258,8 +267,12 @@ class AbstractUpgrade(ABC):
             raise PrecheckFailedError("Cluster is not healthy")
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            if not self.dependent.upgrade_manager.are_pre_upgrade_operations_config_server_successful():
-                raise PrecheckFailedError("Pre-refresh operations on config-server failed.")
+            if (
+                not self.dependent.upgrade_manager.are_pre_upgrade_operations_config_server_successful()
+            ):
+                raise PrecheckFailedError(
+                    "Pre-refresh operations on config-server failed."
+                )
 
 
 # END: Useful classes
@@ -299,7 +312,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Sets the upgrade status in the unit and app status."""
         assert self._upgrade
         if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
+            self.charm.app.status = (
+                self._upgrade.app_status or UpgradeStatus.UPGRADE_ACTIVE.value
+            )
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
         if (
@@ -314,7 +329,8 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             or "is not up-to date with" in self.charm.unit.status.message
         ):
             self.charm.status_manager.set_and_share_status(
-                self._upgrade.get_upgrade_unit_status() or ActiveStatus()
+                self._upgrade.get_upgrade_unit_status()
+                or UpgradeStatus.UPGRADE_ACTIVE.value
             )
 
     def on_upgrade_peer_relation_created(self) -> None:
@@ -372,7 +388,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 logger.info(
                     f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
                 )
-                self.charm.status_manager.set_and_share_status(UpgradeStatus.INCOMPATIBLE_UPGRADE)
+                self.charm.status_manager.set_and_share_status(
+                    UpgradeStatus.INCOMPATIBLE_UPGRADE
+                )
                 return
 
         if self.dependent.substrate == Substrates.K8S:
@@ -447,7 +465,10 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         if isinstance(self.charm.unit.status, UpgradeStatus.UPGRADE_ACTIVE):
             return True
 
-        if ignore_unhealthy_upgrade and self.charm.unit.status == UpgradeStatus.UNHEALTHY_UPGRADE:
+        if (
+            ignore_unhealthy_upgrade
+            and self.charm.unit.status == UpgradeStatus.UNHEALTHY_UPGRADE
+        ):
             return True
 
         return self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
@@ -457,7 +478,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
     @mongodb_only
     def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
         """Returns True if all charm units status's show that they are ready for upgrade."""
-        goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
+        goal_state = self.charm.model._backend._run(
+            "goal-state", return_output=True, use_json=True
+        )
         for unit_name, unit_state in goal_state["units"].items():  # type: ignore
             if unit_name == unit_to_ignore:
                 continue
@@ -523,7 +546,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         # infinite check of cluster health due to never being able to reset an unhealthy status.
         if not self.is_current_unit_ready(
             ignore_unhealthy_upgrade=True
-        ) or not self.are_all_units_ready_for_upgrade(unit_to_ignore=self.charm.unit.name):
+        ) or not self.are_all_units_ready_for_upgrade(
+            unit_to_ignore=self.charm.unit.name
+        ):
             logger.error(
                 "Cannot proceed with refresh. Status of charm units do not show active / waiting for refresh."
             )
@@ -559,17 +584,23 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             return False
 
         if not self.are_replicas_in_sharded_cluster_healthy(mongos_config):
-            logger.debug("One or more nodes are not healthy - do not proceed with refresh.")
+            logger.debug(
+                "One or more nodes are not healthy - do not proceed with refresh."
+            )
             return False
 
         return True
 
-    def are_replicas_in_sharded_cluster_healthy(self, mongos_config: MongoConfiguration) -> bool:
+    def are_replicas_in_sharded_cluster_healthy(
+        self, mongos_config: MongoConfiguration
+    ) -> bool:
         """Returns True if all replicas in the sharded cluster are healthy."""
         # dictionary of all replica sets in the sharded cluster
         for mongodb_config in self.get_all_replica_set_configs_in_cluster():
             if not self.are_replica_set_nodes_healthy(mongodb_config):
-                logger.debug(f"Replica set: {mongodb_config.replset} contains unhealthy nodes.")
+                logger.debug(
+                    f"Replica set: {mongodb_config.replset} contains unhealthy nodes."
+                )
                 return False
 
         return True
@@ -578,11 +609,15 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Returns True if all shards in the cluster are healthy."""
         with MongoConnection(mongos_config) as mongos:
             if mongos.is_any_shard_draining():
-                logger.debug("Cluster is draining a shard, do not proceed with refresh.")
+                logger.debug(
+                    "Cluster is draining a shard, do not proceed with refresh."
+                )
                 return False
 
             if not mongos.are_all_shards_aware():
-                logger.debug("Not all shards are shard aware, do not proceed with refresh.")
+                logger.debug(
+                    "Not all shards are shard aware, do not proceed with refresh."
+                )
                 return False
 
             # Config-Server has access to all the related shard applications.
@@ -619,7 +654,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         with MongoConnection(mongos_config) as mongos:
             sc_status = mongos.client.admin.command("listShards")
             for shard in sc_status["shards"]:
-                mongodb_configurations.append(self.get_mongodb_config_from_shard_entry(shard))
+                mongodb_configurations.append(
+                    self.get_mongodb_config_from_shard_entry(shard)
+                )
 
         return mongodb_configurations
 
@@ -648,7 +685,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Returns True if read and write is feasible from mongos."""
         _, collection_name, write_value = self.get_random_write_and_collection()
         config = self.state.mongos_config
-        self.add_write_to_sharded_cluster(config, config.database, collection_name, write_value)
+        self.add_write_to_sharded_cluster(
+            config, config.database, collection_name, write_value
+        )
 
         write_replicated = self.confirm_excepted_write_cluster(
             config,
@@ -694,11 +733,15 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             for shard in sc_status["shards"]:
                 # force a write to a specific shard to ensure the primary on that shard can
                 # receive writes
-                db_name, collection_name, write_value = self.get_random_write_and_collection()
+                db_name, collection_name, write_value = (
+                    self.get_random_write_and_collection()
+                )
                 self.add_write_to_sharded_cluster(
                     mongos_config, db_name, collection_name, write_value
                 )
-                mongos.client.admin.command("movePrimary", db_name, to=shard[SHARD_NAME_INDEX])
+                mongos.client.admin.command(
+                    "movePrimary", db_name, to=shard[SHARD_NAME_INDEX]
+                )
 
                 write_replicated = self.is_write_on_secondaries(
                     self.get_mongodb_config_from_shard_entry(shard),
@@ -714,7 +757,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         return True
 
-    def get_mongodb_config_from_shard_entry(self, shard_entry: dict) -> MongoConfiguration:
+    def get_mongodb_config_from_shard_entry(
+        self, shard_entry: dict
+    ) -> MongoConfiguration:
         """Returns a replica set MongoConfiguration based on a shard entry from ListShards."""
         # field hosts is of the form shard01/host1:27018,host2:27018,host3:27018
         shard_hosts = shard_entry["host"].split("/")[1]
@@ -744,12 +789,16 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         self.clear_tmp_collection(mongodb_config, collection_name)
         return write_replicated
 
-    def clear_db_collection(self, mongos_config: MongoConfiguration, db_name: str) -> None:
+    def clear_db_collection(
+        self, mongos_config: MongoConfiguration, db_name: str
+    ) -> None:
         """Clears the temporary collection."""
         with MongoConnection(mongos_config) as mongos:
             mongos.client.drop_database(db_name)
 
-    def clear_tmp_collection(self, mongo_config: MongoConfiguration, collection_name: str) -> None:
+    def clear_tmp_collection(
+        self, mongo_config: MongoConfiguration, collection_name: str
+    ) -> None:
         """Clears the temporary collection."""
         with MongoConnection(mongo_config) as mongo:
             db = mongo.client[mongo_config.database]
@@ -780,8 +829,12 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
     def get_random_write_and_collection(self) -> tuple[str, str, str]:
         """Returns a tuple for a random collection name and a unique write to add to it."""
         choices = string.ascii_letters + string.digits
-        collection_name = "collection_" + "".join([secrets.choice(choices) for _ in range(32)])
-        write_value = "unique_write_" + "".join([secrets.choice(choices) for _ in range(16)])
+        collection_name = "collection_" + "".join(
+            [secrets.choice(choices) for _ in range(32)]
+        )
+        write_value = "unique_write_" + "".join(
+            [secrets.choice(choices) for _ in range(16)]
+        )
         db_name = "db_name_" + "".join([secrets.choice(choices) for _ in range(32)])
         return (db_name, collection_name, write_value)
 
@@ -824,7 +877,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 )
             except ClusterNotHealthyError:
                 # do not return False immediately - as it is
-                logger.debug("Secondary with IP %s, does not contain the expected write.")
+                logger.debug(
+                    "Secondary with IP %s, does not contain the expected write."
+                )
                 return False
 
         return True
@@ -841,7 +896,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         with MongoConnection(self.state.mongo_config) as mongod:
             mongod.step_down_primary()
 
-        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(1), reraise=True):
+        for attempt in Retrying(
+            stop=stop_after_attempt(30), wait=wait_fixed(1), reraise=True
+        ):
             with attempt:
                 new_primary = self.dependent.primary_unit_name  # type: ignore
                 if new_primary == old_primary:
@@ -869,7 +926,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             try:
                 self.turn_off_and_wait_for_balancer()
             except BalancerStillRunningError:
-                logger.debug("Balancer is still running. Please try the pre-refresh check later.")
+                logger.debug(
+                    "Balancer is still running. Please try the pre-refresh check later."
+                )
                 return False
 
         return True
@@ -903,7 +962,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
     def set_mongos_feature_compatibilty_version(self, feature_version: str) -> None:
         """Sets the mongos feature compatibility version."""
         with MongoConnection(self.state.mongos_config) as mongos:
-            mongos.client.admin.command("setFeatureCompatibilityVersion", feature_version)
+            mongos.client.admin.command(
+                "setFeatureCompatibilityVersion", feature_version
+            )
 
     @retry(
         stop=stop_after_attempt(10),
