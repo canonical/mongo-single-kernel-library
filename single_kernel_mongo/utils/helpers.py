@@ -87,8 +87,10 @@ def get_ldap_connection_status(state: LdapState) -> StatusBase:
     bind_dn = state.bind_user
     bind_password = state.bind_password
     base_dn = state.base_dn
+
     if not base_dn:
         return BlockedStatus("Missing base DN.")
+
     if not state.ldaps_urls:
         return BlockedStatus("Missing LDAPS URLs.")
 

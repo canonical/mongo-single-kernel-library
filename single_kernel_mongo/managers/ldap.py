@@ -124,15 +124,23 @@ class LDAPManager(Object, StatusProvider):
         self.assert_pass_hook_checks()
         self.state.ldap.set_certificates(certificate, ca, chain)
 
-        full_chain = "\n".join(chain)
-        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP, full_chain)
+        self.save_certificates()
 
         self.dependent.ldap_events.restart_if_ready_event.emit()
+
+    def save_certificates(self):
+        """Saves the certificates in different files."""
+        if not (ca := self.state.ldap.ca) or not (certificate := self.state.ldap.certificate):
+            return
+
+        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP_CERT, certificate)
+        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP_CA, ca)
 
     def on_certificate_removed(self):
         """Runs when the certificate is removed."""
         self.state.ldap.set_certificates(None, None, None)
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP)
+        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP_CA)
+        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP_CERT)
 
         self.dependent.restart_charm_services()
 

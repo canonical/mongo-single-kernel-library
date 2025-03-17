@@ -865,6 +865,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
+        self.ldap_manager.save_certificates()
 
         # Update licenses
         self.handle_licenses()
