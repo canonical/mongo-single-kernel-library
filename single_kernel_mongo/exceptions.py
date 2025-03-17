@@ -251,3 +251,15 @@ class WaitingForLdapDataError(DeferrableError):
 
 class LDAPSNotEnabledError(Exception):
     """Raised when the charm hasn't received ldaps urls."""
+
+
+class InvalidLdapUserToDnMappingError(Exception):
+    """Raised when the LdapUserToDnMapping is invalid."""
+
+
+class InvalidLdapQueryTemplateError(Exception):
+    """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""
+
+
+class WaitingForLeaderError(Exception):
+    """Raised when we haven't elected a leader yet but we need it."""

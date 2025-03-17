@@ -45,7 +45,10 @@ from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    InvalidLdapQueryTemplateError,
+    InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
+    WaitingForLeaderError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
@@ -130,8 +133,11 @@ class LifecycleEventsHandler(Object):
         """Config Changed Event."""
         try:
             self.dependent.on_config_changed()
-        except UpgradeInProgressError:
+        except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
+            return
+        except (InvalidLdapUserToDnMappingError, InvalidLdapQueryTemplateError) as err:
+            self.charm.status_manager.to_blocked(f"{err}")
             return
 
     def on_update_status(self, event: UpdateStatusEvent):

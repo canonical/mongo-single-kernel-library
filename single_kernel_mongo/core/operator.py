@@ -257,6 +257,11 @@ class OperatorProtocol(ABC, Object):
                     f"{path}",
                 ]
             )
+        for path in (
+            self.workload.paths.config_file,
+            self.workload.paths.mongos_config_file,
+        ):
+            self.workload.exec(["chmod", "600", f"{path}"])
 
     def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: str) -> None:
         """Saves the certificate in the trust store.

@@ -47,6 +47,11 @@ class MongoPaths:
         return Path(f"{self.conf_path}/mongod.conf")
 
     @property
+    def mongos_config_file(self) -> Path:
+        """The main mongod config file."""
+        return Path(f"{self.conf_path}/mongos.conf")
+
+    @property
     def socket_path(self) -> Path:
         """The socket path for internal connectivity."""
         return Path(f"{self.var_path}/mongodb-27018.sock")

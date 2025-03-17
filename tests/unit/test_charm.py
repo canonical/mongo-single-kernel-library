@@ -1,6 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from ops import MaintenanceStatus
 from ops.model import BlockedStatus, WaitingStatus
@@ -149,11 +151,81 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.unit.status == BlockedStatus("couldn't start pbm-agent")
 
 
-def test_on_config_changed(harness):
+def test_on_config_changed_invalid_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LdapUserToDnMapping, please update your config."
+    )
+
+
+def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.example\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=example,DC=com",
+        }
+    ]
+
+    harness.update_config(
+        {
+            "ldap-user-to-dn-mapping": json.dumps(valid_mapping),
+            "ldap-query-template": "{PROVIDED_USER}",
+        }
+    )
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LDAP Query template, please update your config."
+    )
+
+
+def test_on_config_changed_invalid_ldap_query_template_user(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    harness.update_config(
+        {
+            "ldap-query-template": "{USER}",
+        }
+    )
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LDAP Query template, please update your config."
+    )
+
+
+def test_on_config_changed_valid_ldap_query_template(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.example\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=example,DC=com",
+        }
+    ]
+
+    harness.update_config(
+        {
+            "ldap-user-to-dn-mapping": json.dumps(valid_mapping),
+            "ldap-query-template": "{USER}",
+        }
+    )
+    assert (
+        json.loads(harness.charm.operator.state.app_peer_data.ldap_user_to_dn_mapping)
+        == valid_mapping
+    )
+    assert harness.charm.operator.state.app_peer_data.ldap_query_template == "{USER}"
 
 
 def test_on_config_changed_upgrade_in_progress(harness, mocker):
@@ -163,7 +235,11 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
     )
-    harness.update_config({"role": "shard"})
+    harness.update_config(
+        {
+            "ldap-query-template": "{PROVIDED_USER}",
+        }
+    )
 
     mocked_defer.assert_called()
 

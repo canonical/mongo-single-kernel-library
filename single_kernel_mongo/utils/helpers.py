@@ -14,8 +14,10 @@ from ldap3 import Connection as LDAPConnection
 from ldap3 import Server as LDAPServer
 from ldap3 import Tls as LDAPTls
 from ops.model import ActiveStatus, BlockedStatus, StatusBase
+from pydantic import ValidationError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.core.structured_config import LdapUserToDnMapping
 from single_kernel_mongo.exceptions import InvalidCharmKindError
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
@@ -62,6 +64,40 @@ def hostname_from_shardname(host: str) -> str:
 def unit_number(unit: UnitUpgradePeerData) -> int:
     """Gets the unit number from a unit upgrade peer data."""
     return int(unit.component.name.split("/")[-1])
+
+
+def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
+    """Validates the mapping, returning a boolean."""
+    if not ldap_user_to_dn_mapping:
+        return True
+    try:
+        LdapUserToDnMapping.validate_json(ldap_user_to_dn_mapping)
+        return True
+    except ValidationError:
+        logger.error("Invalid LDAP User to DN Mapping", exc_info=True)
+        return False
+
+
+def is_valid_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
+    """Validates the combination of the two LDAP options.
+
+    Rules are the following:
+     * if ldap_user_to_dn_mapping is empty then ldap_query_template MUST
+     contain the placeholder `{PROVIDED_USER}`.
+     * if ldap_user_to_dn_mapping is not empty then ldap_query_template MUST
+     contain the placeholder `{USER}`.
+
+    More information in the [official documentation](https://docs.percona.com/percona-server-for-mongodb/6.0/ldap-setup.html#active-directory-configuration).
+    """
+    if not ldap_query_template:
+        return True
+    if not ldap_user_to_dn_mapping and "{PROVIDED_USER}" not in ldap_query_template:
+        logger.error("Invalid ldapQueryTemplate: should contain `{PROVIDED_USER}`")
+        return False
+    if ldap_user_to_dn_mapping and "{USER}" not in ldap_query_template:
+        logger.error("Invalid ldapQueryTemplate: should contain `{USER}`")
+        return False
+    return True
 
 
 def charm_kind_only(func, charm_kind: CharmKind):
