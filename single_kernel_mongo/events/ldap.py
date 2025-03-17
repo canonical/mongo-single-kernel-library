@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ops.framework import EventBase, EventSource, Object
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, WaitingStatus
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.exceptions import (
@@ -75,7 +75,7 @@ class LDAPEventHandler(Object):
         try:
             self.manager.on_ldap_ready(event.relation)
         except WaitingForLdapDataError as err:
-            self.charm.status_manager.set_and_share_status(BlockedStatus("Waiting for LDAP data."))
+            self.charm.status_manager.set_and_share_status(WaitingStatus("Waiting for LDAP data."))
             defer_event_with_info_log(logger, event, action, f"{err}")
 
         except (DeferrableError, DeferrableFailedHookChecksError) as err:
