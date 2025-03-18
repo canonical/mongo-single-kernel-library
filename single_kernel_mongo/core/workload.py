@@ -101,6 +101,26 @@ class MongoPaths:
             self.int_ca_file,
         }
 
+    @property
+    def ldap_path(self) -> Path:
+        """The LDAP conf path."""
+        return Path(f"{self.etc_path}/ldap")
+
+    @property
+    def ldap_conf_path(self) -> Path:
+        """The LDAP conf path."""
+        return Path(f"{self.ldap_path}/ldap.conf")
+
+    @property
+    def ldap_certificates_dir(self) -> Path:
+        """The LDAP conf path."""
+        return Path(f"{self.ldap_path}/certs")
+
+    @property
+    def ldap_certificates_file(self) -> Path:
+        """The LDAP certificates file path."""
+        return Path(f"{self.ldap_certificates_dir}/ldap.crt")
+
 
 class WorkloadBase(ABC):  # pragma: nocover
     """The protocol for workloads.

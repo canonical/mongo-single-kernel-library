@@ -236,9 +236,7 @@ def test_on_certificate_removed_clean_certs(
     mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
     )
-    mock_remove_ca_cert = mocker.patch(
-        "single_kernel_mongo.core.operator.OperatorProtocol.remove_ca_cert_from_trust_store"
-    )
+    mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )

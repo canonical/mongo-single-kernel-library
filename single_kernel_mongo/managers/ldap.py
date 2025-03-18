@@ -8,14 +8,15 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+import jinja2
 from ops import MaintenanceStatus
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
 from single_kernel_mongo.config.literals import (
     Substrates,
-    TrustStoreFiles,
 )
+from single_kernel_mongo.config.models import LDAP_CONFIG
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -130,17 +131,26 @@ class LDAPManager(Object, StatusProvider):
 
     def save_certificates(self):
         """Saves the certificates in different files."""
-        if not (ca := self.state.ldap.ca) or not (certificate := self.state.ldap.certificate):
+        if not (chain := self.state.ldap.chain):
             return
 
-        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP_CERT, certificate)
-        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP_CA, ca)
+        full_chain = "\n".join(chain)
+
+        template_data = LDAP_CONFIG.ldap_conf_template.read_text()
+        template = jinja2.Template(template_data)
+
+        rendered_template = template.render(
+            ldap_certificate_file=f"{self.workload.paths.ldap_certificates_file}"
+        )
+
+        self.workload.write(self.workload.paths.ldap_conf_path, rendered_template)
+
+        self.workload.write(self.workload.paths.ldap_certificates_file, full_chain)
 
     def on_certificate_removed(self):
         """Runs when the certificate is removed."""
-        self.state.ldap.set_certificates(None, None, None)
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP_CA)
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP_CERT)
+        self.state.ldap.clean_certificates()
+        self.workload.delete(self.workload.paths.ldap_certificates_file)
 
         self.dependent.restart_charm_services()
 
@@ -181,4 +191,4 @@ class LDAPManager(Object, StatusProvider):
                 logger.info("Waiting for LDAP data.")
                 return BlockedStatus("Missing LDAP data from Glauth.")
             case _:
-                return get_ldap_connection_status(self.state.ldap)
+                return get_ldap_connection_status(self.state.ldap, self.state.paths)

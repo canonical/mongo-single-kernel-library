@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.core.structured_config import LdapUserToDnMapping
+from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.exceptions import InvalidCharmKindError
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
@@ -118,7 +119,7 @@ mongodb_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOD)
 mongos_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOS)
 
 
-def get_ldap_connection_status(state: LdapState) -> StatusBase:
+def get_ldap_connection_status(state: LdapState, paths: MongoPaths) -> StatusBase:
     """Checks if the LDAP connection is working or not."""
     bind_dn = state.bind_user
     bind_password = state.bind_password
@@ -132,7 +133,11 @@ def get_ldap_connection_status(state: LdapState) -> StatusBase:
 
     try:
         for ldap_uri in state.ldaps_urls:
-            tls = LDAPTls(validate=ssl.CERT_REQUIRED, version=ssl.PROTOCOL_TLSv1_2)
+            tls = LDAPTls(
+                validate=ssl.CERT_REQUIRED,
+                version=ssl.PROTOCOL_TLSv1_2,
+                ca_certs_file=f"{paths.ldap_certificates_file}",
+            )
             server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
             conn = LDAPConnection(server, user=bind_dn, password=bind_password)
             conn.bind()  # We consider sufficient to be able to bind.
