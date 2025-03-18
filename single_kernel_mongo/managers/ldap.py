@@ -5,10 +5,14 @@
 
 from __future__ import annotations
 
+import ssl
 from logging import getLogger
 from typing import TYPE_CHECKING
 
 import jinja2
+from ldap3 import Connection as LDAPConnection
+from ldap3 import Server as LDAPServer
+from ldap3 import Tls as LDAPTls
 from ops import MaintenanceStatus
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
@@ -31,7 +35,6 @@ from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificat
 )
 from single_kernel_mongo.lib.charms.glauth_k8s.v0.ldap import LdapRequirer
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import get_ldap_connection_status
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import OperatorProtocol
@@ -191,4 +194,36 @@ class LDAPManager(Object, StatusProvider):
                 logger.info("Waiting for LDAP data.")
                 return BlockedStatus("Missing LDAP data from Glauth.")
             case _:
-                return get_ldap_connection_status(self.state.ldap, self.state.paths)
+                return self.get_ldap_connection_status()
+
+    def get_ldap_connection_status(self) -> StatusBase:
+        """Checks if the LDAP connection is working or not.
+
+        Helpful to prevent restarts that would fail.
+        """
+        bind_dn = self.state.ldap.bind_user
+        bind_password = self.state.ldap.bind_password
+        base_dn = self.state.ldap.base_dn
+
+        if not base_dn:
+            return BlockedStatus("Missing base DN.")
+
+        if not self.state.ldap.ldaps_urls:
+            return BlockedStatus("Missing LDAPS URLs.")
+
+        try:
+            for ldap_uri in self.state.ldap.ldaps_urls:
+                tls = LDAPTls(
+                    validate=ssl.CERT_REQUIRED,
+                    version=ssl.PROTOCOL_TLSv1_2,
+                    ca_certs_file=f"{self.state.paths.ldap_certificates_file}",
+                )
+                server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
+                conn = LDAPConnection(server, user=bind_dn, password=bind_password)
+                conn.bind()  # We consider sufficient to be able to bind.
+                conn.unbind()
+        except Exception as err:
+            logger.error(f"Could not bind: {err}", exc_info=True)
+            return BlockedStatus("Could not bind with ldap")
+
+        return ActiveStatus()

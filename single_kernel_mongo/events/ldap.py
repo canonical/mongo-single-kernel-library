@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ops.framework import EventBase, EventSource, Object
 from ops.model import BlockedStatus, WaitingStatus
 
-from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, PeerRelationNames
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
@@ -66,10 +66,11 @@ class LDAPEventHandler(Object):
         self.framework.observe(self.restart_if_ready_event, self._on_restart_if_ready)
 
         self.framework.observe(
-            self.charm.on["ldap-peers"].relation_changed, self._on_restart_if_ready
+            self.charm.on[PeerRelationNames.LDAP_PEERS.value].relation_changed,
+            self._on_restart_if_ready,
         )
 
-    def _on_ldap_ready(self, event: LdapReadyEvent):
+    def _on_ldap_ready(self, event: LdapReadyEvent) -> None:
         """Handles the ops event that indicates that ldap relation is ready."""
         action = "ldap-ready"
         try:
@@ -77,7 +78,6 @@ class LDAPEventHandler(Object):
         except WaitingForLdapDataError as err:
             self.charm.status_manager.set_and_share_status(WaitingStatus("Waiting for LDAP data."))
             defer_event_with_info_log(logger, event, action, f"{err}")
-
         except (DeferrableError, DeferrableFailedHookChecksError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except LDAPSNotEnabledError:
@@ -88,7 +88,7 @@ class LDAPEventHandler(Object):
             logger.error(f"{err}")
             self.charm.status_manager.set_and_share_status(BlockedStatus(err.args[0]))
 
-    def _on_ldap_unavailable(self, event: LdapUnavailableEvent):
+    def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable."""
         self.manager.on_ldap_unavailable()
 
@@ -102,7 +102,7 @@ class LDAPEventHandler(Object):
             logger.error(f"{err}")
             self.charm.status_manager.set_and_share_status(BlockedStatus(err.args[0]))
 
-    def _on_certificate_removed(self, event: CertificateRemovedEvent):
+    def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
         self.manager.on_certificate_removed()
 

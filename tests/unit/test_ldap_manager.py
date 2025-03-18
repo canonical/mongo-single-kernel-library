@@ -175,7 +175,8 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
         "beefdead", "deadbeef", ["feeddead"]
     )
     mocker.patch(
-        "single_kernel_mongo.managers.ldap.get_ldap_connection_status", return_value=ActiveStatus()
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=ActiveStatus(),
     )
     assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
 
