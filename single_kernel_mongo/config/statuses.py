@@ -23,7 +23,7 @@ from ops.model import (
 )
 
 
-class MongoDB(Enum):
+class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
@@ -47,7 +47,7 @@ class MongoDB(Enum):
     STARTING_MONGODB = MaintenanceStatus("Starting MongoDB.")
 
 
-class Mongos(Enum):
+class MongosStatuses(Enum):
     """Mongos related statuses."""
 
     INVALD_EXPOSE_EXTERNAL = BlockedStatus(
@@ -72,9 +72,8 @@ class CharmStatuses(Enum):
 
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
     MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
-
-    mongos = Mongos
-    mongodb = MongoDB
+    mongodb = MongoDBStatuses
+    mongos = MongosStatuses
 
 
 class TLSStatuses(Enum):
