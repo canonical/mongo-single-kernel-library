@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import pytest
-from ops.model import ActiveStatus, BlockedStatus, Relation
+from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
@@ -99,7 +99,7 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
 
     relation: Relation = harness.charm.operator.state.ldap_relation
 
-    harness.charm.operator.ldap_manager.on_ldap_ready(relation)
+    harness.charm.operator.ldap_manager.ldap_ready(relation)
 
     ldap_state = harness.charm.operator.state.ldap
 
@@ -135,7 +135,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )
 
-    assert harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
         "Waiting for both LDAP data and Glauth certificates."
     )
 
@@ -157,9 +157,9 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
 
     relation: Relation = harness.charm.operator.state.ldap_relation
 
-    harness.charm.operator.ldap_manager.on_ldap_ready(relation)
+    harness.charm.operator.ldap_manager.ldap_ready(relation)
 
-    assert harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
         "Waiting for Glauth certificates."
     )
 
@@ -171,14 +171,12 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
         "glauth-k8s",
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
-    harness.charm.operator.ldap_manager.on_certificate_available(
-        "beefdead", "deadbeef", ["feeddead"]
-    )
+    harness.charm.operator.ldap_manager.certificate_available("beefdead", "deadbeef", ["feeddead"])
     assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
 
     # Case 7: Begin of sundown, remove data from databag
     harness.charm.operator.state.ldap.clean_databag()
-    assert harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
         "Missing LDAP data from Glauth."
     )
 
@@ -209,11 +207,11 @@ def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, moc
 
     relation: Relation = harness.charm.operator.state.ldap_relation
 
-    harness.charm.operator.ldap_manager.on_ldap_ready(relation)
+    harness.charm.operator.ldap_manager.ldap_ready(relation)
 
     mock_restart.assert_not_called()
 
-    harness.charm.operator.ldap_manager.on_ldap_unavailable()
+    harness.charm.operator.ldap_manager.ldap_unavailable()
 
     mock_restart.assert_called()
 
@@ -244,13 +242,11 @@ def test_on_certificate_removed_clean_certs(
         "glauth-k8s",
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
-    harness.charm.operator.ldap_manager.on_certificate_available(
-        "beefdead", "deadbeef", ["feeddead"]
-    )
+    harness.charm.operator.ldap_manager.certificate_available("beefdead", "deadbeef", ["feeddead"])
 
     mock_restart.assert_not_called()
 
-    harness.charm.operator.ldap_manager.on_certificate_removed()
+    harness.charm.operator.ldap_manager.certificate_removed()
 
     mock_restart.assert_called()
     mock_remove_ca_cert.assert_called()

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from ops import MaintenanceStatus
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
+from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
 
 from single_kernel_mongo.config.literals import (
     Substrates,
@@ -78,14 +78,13 @@ class LDAPManager(Object, StatusProvider):
         """Returns True if the integration to ldap is valid."""
         return (self.state.ldap_relation is not None) and not self.state.is_role(MongoDBRoles.SHARD)
 
-    def on_ldap_ready(self, relation: Relation) -> None:
+    def ldap_ready(self, relation: Relation) -> None:
         """Runs when LDAP is ready."""
         self.assert_pass_hook_checks()
 
         self.charm.status_manager.set_and_share_status(MaintenanceStatus("Configuring LDAP"))
 
-        ldap_data = self.ldap_requirer.consume_ldap_relation_data(relation=relation)
-        if not ldap_data:
+        if not (ldap_data := self.ldap_requirer.consume_ldap_relation_data(relation=relation)):
             logger.info("Waiting for LDAP data.")
             raise WaitingForLdapDataError("Waiting for LDAP data.")
 
@@ -98,7 +97,7 @@ class LDAPManager(Object, StatusProvider):
 
         self.restart_when_ready()
 
-    def restart_when_ready(self):
+    def restart_when_ready(self) -> None:
         """Restarts when we are ready."""
         if not self.state.ldap_relation:
             logger.info(f"Not restarting, missing the `{ExternalRequirerRelations.LDAP}` relation")
@@ -114,13 +113,13 @@ class LDAPManager(Object, StatusProvider):
             self.dependent.restart_charm_services()
             self.charm.status_manager.set_and_share_status(ActiveStatus())
 
-    def on_ldap_unavailable(self) -> None:
+    def ldap_unavailable(self) -> None:
         """Runs when the LDAP integration is broken."""
         self.state.ldap.clean_databag()
 
         self.dependent.restart_charm_services()
 
-    def on_certificate_available(self, certificate: str, ca: str, chain: list[str]):
+    def certificate_available(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
         self.assert_pass_hook_checks()
         self.state.ldap.set_certificates(certificate, ca, chain)
@@ -130,7 +129,7 @@ class LDAPManager(Object, StatusProvider):
 
         self.restart_when_ready()
 
-    def on_certificate_removed(self):
+    def certificate_removed(self) -> None:
         """Runs when the certificate is removed."""
         self.state.ldap.set_certificates(None, None, None)
         self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP)
@@ -145,13 +144,15 @@ class LDAPManager(Object, StatusProvider):
         if self.state.is_role(MongoDBRoles.SHARD):
             return BlockedStatus("Cannot integrate LDAP with shard.")
 
-        if self.state.ldap_relation is not None and self.state.ldap_cert_relation is None:
+        if self.state.ldap_cert_relation is None:
             logger.info(
                 "Integrate the certificate interface between glauth and charm using"
-                f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert {self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
+                f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert "  # type: ignore[union-attr]
+                f"{self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
             )
             return BlockedStatus("TLS is mandatory for LDAP transport.")
-        if self.state.ldap_relation is None and self.state.ldap_cert_relation is not None:
+
+        if self.state.ldap_relation is None:
             logger.info(
                 "Integrate glauth with ldap using"
                 f"`juju integrate {self.state.ldap_cert_relation.app.name}:ldap {self.charm.app.name}:{ExternalRequirerRelations.LDAP}`"
@@ -165,11 +166,11 @@ class LDAPManager(Object, StatusProvider):
 
         match (ldap_relation_status, ldap_certificate_integration_status):
             case False, False:
-                return BlockedStatus("Waiting for both LDAP data and Glauth certificates.")
+                return WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
             case True, False:
-                return BlockedStatus("Waiting for Glauth certificates.")
+                return WaitingStatus("Waiting for Glauth certificates.")
             case False, True:
                 logger.info("Waiting for LDAP data.")
-                return BlockedStatus("Missing LDAP data from Glauth.")
+                return WaitingStatus("Missing LDAP data from Glauth.")
             case _:
                 return ActiveStatus()
