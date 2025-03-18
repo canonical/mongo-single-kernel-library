@@ -86,7 +86,7 @@ class LDAPEventHandler(Object):
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.charm.status_manager.set_and_share_status(BlockedStatus(err.args[0]))
+            self.charm.status_manager.set_and_share_status(BlockedStatus(f"{err}"))
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable."""
@@ -100,7 +100,7 @@ class LDAPEventHandler(Object):
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.charm.status_manager.set_and_share_status(BlockedStatus(err.args[0]))
+            self.charm.status_manager.set_and_share_status(BlockedStatus(f"{err}"))
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
