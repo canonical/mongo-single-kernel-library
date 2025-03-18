@@ -74,7 +74,7 @@ class LDAPEventHandler(Object):
         """Handles the ops event that indicates that ldap relation is ready."""
         action = "ldap-ready"
         try:
-            self.manager.on_ldap_ready(event.relation)
+            self.manager.ldap_ready(event.relation)
         except WaitingForLdapDataError as err:
             self.charm.status_manager.set_and_share_status(WaitingStatus("Waiting for LDAP data."))
             defer_event_with_info_log(logger, event, action, f"{err}")
@@ -90,12 +90,12 @@ class LDAPEventHandler(Object):
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable."""
-        self.manager.on_ldap_unavailable()
+        self.manager.ldap_unavailable()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent):
         """Handles the ops event that indicates that ldap-certificates relation is ready."""
         try:
-            self.manager.on_certificate_available(event.certificate, event.ca, event.chain)
+            self.manager.certificate_available(event.certificate, event.ca, event.chain)
         except DeferrableFailedHookChecksError as err:
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except NonDeferrableFailedHookChecksError as err:
@@ -104,7 +104,7 @@ class LDAPEventHandler(Object):
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
-        self.manager.on_certificate_removed()
+        self.manager.certificate_removed()
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent):
         """Custom ops revent to trigger restart of leader with a single source of truth."""

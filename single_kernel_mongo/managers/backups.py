@@ -378,8 +378,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             credentials: A dictionary provided by backup event handler.
         """
         # Add certificate to trust store
-        cert_chain_list = credentials.get("tls-ca-chain", None)
-        if cert_chain_list:
+        if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.configure_and_restart(force=True)
 
