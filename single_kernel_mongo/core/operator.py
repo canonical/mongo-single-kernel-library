@@ -285,4 +285,4 @@ class OperatorProtocol(ABC, Object):
         # Update CA certificates to remove the certificate from the trust store
         self.workload.exec("update-ca-certificates")
         # Restart the service
-        self.restart_charm_services()
+        self.restart_charm_services(force=True)
