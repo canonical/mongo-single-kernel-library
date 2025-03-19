@@ -29,9 +29,7 @@ class MongoDBStatuses(Enum):
     # STATE statuses:
     MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
     EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
-    SHARDING_ON_REPLICA = BlockedStatus(
-        "Sharding interface cannot be used by replicas."
-    )
+    SHARDING_ON_REPLICA = BlockedStatus("Sharding interface cannot be used by replicas.")
     UNSUPPORTED_MONGOS_REL = BlockedStatus(
         "Relation to mongos not supported, config role must be config-server."
     )
@@ -50,16 +48,12 @@ class MongoDBStatuses(Enum):
 class MongosStatuses(Enum):
     """Mongos related statuses."""
 
-    INVALD_EXPOSE_EXTERNAL = BlockedStatus(
-        "Config option for expose-external not valid."
-    )
+    INVALD_EXPOSE_EXTERNAL = BlockedStatus("Config option for expose-external not valid.")
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
     CONNECTING_TO_CONFIG_SERVER = WaitingStatus("Connecting to config-server...")
     WAITING_FOR_SECRETS = WaitingStatus("Waiting for secrets from config-server")
     REQUIRES_TLS = BlockedStatus("mongos requires TLS to be enabled.")
-    REQUIRES_NO_TLS = BlockedStatus(
-        "mongos has TLS enabled, but config-server does not."
-    )
+    REQUIRES_NO_TLS = BlockedStatus("mongos has TLS enabled, but config-server does not.")
     CA_MISMATCH = BlockedStatus("mongos CA and Config-Server CA don't match.")
     ACTIVE_IDLE = ActiveStatus("")
 
@@ -132,9 +126,7 @@ class ConfigServerStatuses(Enum):
         return BlockedStatus(f"Shards: {unreachable} are unreachable.")
 
     @staticmethod
-    def waiting_for_shard_upgrade(
-        current_charms_version: str, local_identifier: str
-    ) -> StatusBase:
+    def waiting_for_shard_upgrade(current_charms_version: str, local_identifier: str) -> StatusBase:
         """Returns waiting for shard upgrade status."""
         return WaitingStatus(
             f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
@@ -145,9 +137,7 @@ class ShardStatuses(Enum):
     """Shard statuses."""
 
     REQUIRES_TLS = BlockedStatus("Shard requires TLS to be enabled.")
-    SHARD_REQUIRES_NO_TLS = BlockedStatus(
-        "Shard has TLS enabled, but config-server does not."
-    )
+    SHARD_REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
     CA_MISMATCH = BlockedStatus("Shard CA and Config-Server CA don't match.")
 
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
@@ -210,6 +200,7 @@ class UpgradeStatuses(Enum):
     )
 
     def vm_active_upgrade(
+        self,
         unit_workload_version: str,
         unit_workload_container_version: str,
         current_versions: str,
