@@ -188,7 +188,10 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_status = self.dependent.backup_manager.get_status()
+        pbm_statuses = self.dependent.backup_manager.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
+
+        # TODO: future work will be to check the actual status of the backup and not the status.
         if isinstance(pbm_status, MaintenanceStatus):
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
@@ -275,11 +278,7 @@ class ConfigServerManager(Object, StatusProvider):
         if unreachable_shards := self.get_unreachable_shards():
             charm_statuses.append(unreachable_shards)
 
-        return (
-            charm_statuses
-            if charm_statuses
-            else [ConfigServerStatuses.CONFIG_SERVER_ACTIVE_IDLE.value]
-        )
+        return charm_statuses if charm_statuses else [ConfigServerStatuses.ACTIVE_IDLE.value]
 
     def add_shards(self):
         """Add shards on all relations."""
@@ -872,4 +871,4 @@ class ShardManager(Object, StatusProvider):
         if not self._is_shard_aware():
             charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
 
-        return charm_statuses if charm_statuses else [ShardStatuses.SHARD_ACTIVE_IDLE.value]
+        return charm_statuses if charm_statuses else [ShardStatuses.ACTIVE_IDLE.value]

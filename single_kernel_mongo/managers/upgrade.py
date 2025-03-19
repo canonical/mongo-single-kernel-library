@@ -243,7 +243,7 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             raise UnhealthyUpgradeError
 
         if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
-            self.charm.status_manager.set_and_share_status(UpgradeStatuses.UPGRADE_ACTIVE.value)
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
 
         self._upgrade.unit_state = UnitState.HEALTHY
 

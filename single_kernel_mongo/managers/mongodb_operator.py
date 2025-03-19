@@ -30,7 +30,11 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses, ShardStatuses
+from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
+    MongodStatuses,
+    ShardStatuses,
+)
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -294,9 +298,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             raise WorkloadNotReadyError
 
-        self.charm.status_manager.set_and_share_status(
-            CharmStatuses.mongodb.value.ACTIVE_IDLE.value
-        )
+        self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
 
         try:
             self._initialise_replica_set()
@@ -314,9 +316,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
-        self.charm.status_manager.set_and_share_status(
-            CharmStatuses.mongodb.value.ACTIVE_IDLE.value
-        )
+        self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
 
         if self.substrate == Substrates.K8S:
             # K8S upgrades result in the start hook getting fired following this pattern
@@ -662,7 +662,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot set password on shard, please set password on config-server."
             )
-        if isinstance(self.backup_manager.get_status(), MaintenanceStatus):
+
+        # todo future work - check status of pbm directly
+        pbm_statuses = self.backup_manager.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
+        if isinstance(pbm_status, MaintenanceStatus):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
             )

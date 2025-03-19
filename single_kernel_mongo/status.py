@@ -90,11 +90,17 @@ class StatusManager(Object):
     def get_statuses(self) -> Statuses:
         """Collects the statuses of all managers."""
         if self.operator.name == CharmKind.MONGOD:
+            # Getting first status is a temporary work around for using our current get_statuses
+            #  functions. When advacned statuses are implemented they will prioritised + shown.
+            mongo_statuses = self.operator.mongo_manager.get_statuses()
+            shard_statuses = self.operator.shard_manager.get_statuses()
+            config_server_statuses = self.operator.config_server_manager.get_statuses()
+            pbm_statuses = self.operator.backup_manager.get_statuses()
             return Statuses(
-                mongodb=self.operator.mongo_manager.get_status(),
-                shard=self.operator.shard_manager.get_status(),
-                config_server=self.operator.config_server_manager.get_status(),
-                pbm=self.operator.backup_manager.get_status(),
+                mongodb=next(iter(mongo_statuses), None),
+                shard=next(iter(shard_statuses), None),
+                config_server=next(iter(config_server_statuses), None),
+                pbm=next(iter(pbm_statuses), None),
             )
         # Mongos case
         return Statuses(mongodb=self.operator.get_sanity_check_status() or ActiveStatus())
@@ -137,7 +143,10 @@ class StatusManager(Object):
         try:
             statuses = self.get_statuses()
         except OperationFailure as e:
-            if e.code in (MongoErrorCodes.UNAUTHORIZED, MongoErrorCodes.AUTHENTICATION_FAILED):
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+            ):
                 waiting_status = f"Waiting to sync passwords across the {deployment_mode}"
             elif e.code == MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE:
                 waiting_status = f"Waiting to sync internal membership across the {deployment_mode}"

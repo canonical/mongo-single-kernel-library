@@ -39,8 +39,6 @@ class MongoDBStatuses(Enum):
 
     DB_REl_ON_SHARD = BlockedStatus("Sharding roles do not support database interface.")
 
-    ACTIVE_IDLE = ActiveStatus("")
-
     # RUNNING statuses:
     STARTING_MONGODB = MaintenanceStatus("Starting MongoDB.")
 
@@ -55,7 +53,6 @@ class MongosStatuses(Enum):
     REQUIRES_TLS = BlockedStatus("mongos requires TLS to be enabled.")
     REQUIRES_NO_TLS = BlockedStatus("mongos has TLS enabled, but config-server does not.")
     CA_MISMATCH = BlockedStatus("mongos CA and Config-Server CA don't match.")
-    ACTIVE_IDLE = ActiveStatus("")
 
     # Running statuses:
     STARTING_MONGOS = MaintenanceStatus("Starting mongos.")
@@ -64,6 +61,7 @@ class MongosStatuses(Enum):
 class CharmStatuses(Enum):
     """Charm Statuses."""
 
+    ACTIVE_IDLE = ActiveStatus()
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
     MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
     mongodb = MongoDBStatuses
@@ -73,7 +71,7 @@ class CharmStatuses(Enum):
 class TLSStatuses(Enum):
     """TLS statuses."""
 
-    ACTIVE_IDLE = ActiveStatus("")
+    ACTIVE_IDLE = ActiveStatus()
 
     # RUNNING statuses:
     DISABLING_TLS = MaintenanceStatus("Disabling TLS...")
@@ -92,7 +90,7 @@ class BackupStatuses(Enum):
     UNKNOWN_PBM_ERROR = BlockedStatus("Unknown PBM error, check logs.")
     CANT_CONFIGURE = BlockedStatus("Couldn't configure s3 backup options.")
     PBM_WAITING_TO_SYNC = WaitingStatus("Waiting to sync s3 configurations...")
-    PBM_ACTIVE_IDLE = ActiveStatus("")
+    ACTIVE_IDLE = ActiveStatus()
 
     @staticmethod
     def backup_running(backup_id: str) -> StatusBase:
@@ -112,7 +110,7 @@ class ConfigServerStatuses(Enum):
     MONGOS_NOT_RUNNING = BlockedStatus("Internal mongos is not running.")
     NEED_SHARDS = BlockedStatus("Missing relation to shard(s).")
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
-    CONFIG_SERVER_ACTIVE_IDLE = ActiveStatus("")
+    ACTIVE_IDLE = ActiveStatus()
 
     @staticmethod
     def draining_shard(shard: str) -> StatusBase:
@@ -145,7 +143,7 @@ class ShardStatuses(Enum):
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
     ADDING_TO_CLUSTER = MaintenanceStatus("Adding shard to config-server.")
     SHARD_NOT_AWARE = BlockedStatus("Shard is not yet shard aware.")
-    SHARD_ACTIVE_IDLE = ActiveStatus("")
+    ACTIVE_IDLE = ActiveStatus()
 
     # RUNNING status:
     DRAINING_SHARD = MaintenanceStatus("Draining shard from cluster...")
@@ -193,7 +191,7 @@ class UpgradeStatuses(Enum):
     INCOMPATIBLE_UPGRADE = BlockedStatus(
         "Refresh incompatible. Rollback to previous revision with `juju refresh`"
     )
-    UPGRADE_ACTIVE = ActiveStatus()
+    ACTIVE_IDLE = ActiveStatus()
     WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks...")
     REFRESH_IN_PROG = MaintenanceStatus(
         "Refreshing. To rollback, `juju refresh` to the previous revision"

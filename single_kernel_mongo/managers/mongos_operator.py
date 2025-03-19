@@ -545,6 +545,6 @@ class MongosOperator(OperatorProtocol, Object):
         if not username or not password:
             charm_statuses.append(CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value)
 
-        return charm_statuses if charm_statuses else [CharmStatuses.mongos.value.ACTIVE_IDLE.value]
+        return charm_statuses if charm_statuses else [CharmStatuses.ACTIVE_IDLE.value]
 
     # END: Helpers

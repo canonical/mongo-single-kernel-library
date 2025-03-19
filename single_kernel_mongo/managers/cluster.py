@@ -253,9 +253,7 @@ class ClusterRequirer(Object):
                 )
                 raise DeferrableError
 
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongos.value.ACTIVE_IDLE.value
-            )
+            self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
 
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True

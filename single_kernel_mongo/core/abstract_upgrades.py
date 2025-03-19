@@ -297,7 +297,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Sets the upgrade status in the unit and app status."""
         assert self._upgrade
         if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or UpgradeStatuses.UPGRADE_ACTIVE.value
+            self.charm.app.status = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
         if (
@@ -312,7 +312,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             or "is not up-to date with" in self.charm.unit.status.message
         ):
             self.charm.status_manager.set_and_share_status(
-                self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.UPGRADE_ACTIVE.value
+                self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
             )
 
     def on_upgrade_peer_relation_created(self) -> None:
@@ -442,7 +442,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         Note: we allow the use of ignore_unhealthy_upgrade, to avoid infinite loops due to this
         function returning False and preventing the status from being reset.
         """
-        if isinstance(self.charm.unit.status, UpgradeStatuses.UPGRADE_ACTIVE):
+        if isinstance(self.charm.unit.status, UpgradeStatuses.ACTIVE_IDLE):
             return True
 
         if ignore_unhealthy_upgrade and self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE:

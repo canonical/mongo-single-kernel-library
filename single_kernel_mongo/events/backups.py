@@ -148,9 +148,9 @@ class BackupEventsHandler(Object):
             self.charm.status_manager.to_blocked(self.manager.process_pbm_error(e.stdout))
             return
 
-        self.charm.status_manager.set_and_share_status(
-            self.manager.get_status() or BackupStatuses.PBM_ACTIVE_IDLE
-        )
+        pbm_statuses = self.manager.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
+        self.charm.status_manager.set_and_share_status(pbm_status)
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
