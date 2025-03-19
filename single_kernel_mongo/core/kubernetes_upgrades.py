@@ -18,7 +18,7 @@ from ops.model import StatusBase
 from overrides import override
 
 from single_kernel_mongo.config.literals import CharmKind, UnitState
-from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -53,11 +53,11 @@ class KubernetesUpgrade(AbstractUpgrade):
     def _get_unit_healthy_status(self) -> StatusBase:
         version = self.state.unit_workload_container_version
         if version == self.state.app_workload_container_version:
-            return UpgradeStatus.k8s_active_upgrade(
+            return UpgradeStatuses.k8s_active_upgrade(
                 self._current_versions["workload"], self._current_versions["charm"]
             )
 
-        return UpgradeStatus.k8s_active_upgrade(
+        return UpgradeStatuses.k8s_active_upgrade(
             self._current_versions["workload"],
             self._current_versions["charm"],
             outdated=True,
@@ -72,7 +72,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return UpgradeStatus.INCOMPATIBLE_UPGRADE
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE
         return super().app_status
 
     @property

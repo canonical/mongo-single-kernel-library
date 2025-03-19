@@ -111,7 +111,7 @@ class BackupStatuses(Enum):
         return MaintenanceStatus(f"Restore started/running, backup id: '{backup_id}'")
 
 
-class ConfigServerStatus(Enum):
+class ConfigServerStatuses(Enum):
     """Config server statuses."""
 
     # todo consider this status to be put in charm
@@ -141,7 +141,7 @@ class ConfigServerStatus(Enum):
         )
 
 
-class ShardStatus(Enum):
+class ShardStatuses(Enum):
     """Shard statuses."""
 
     REQUIRES_TLS = BlockedStatus("Shard requires TLS to be enabled.")
@@ -183,7 +183,7 @@ class ShardStatus(Enum):
         )
 
 
-class MongodStatus(Enum):
+class MongodStatuses(Enum):
     """MongoD statuses."""
 
     WAITING_REPL_SET_INIT = WaitingStatus("Waiting for replica set initialisation...")
@@ -196,7 +196,7 @@ class MongodStatus(Enum):
     PRIMARY = ActiveStatus("Primary.")
 
 
-class UpgradeStatus(Enum):
+class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
     UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after refresh.")

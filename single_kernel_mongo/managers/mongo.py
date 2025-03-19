@@ -21,7 +21,7 @@ from ops.model import BlockedStatus, Relation, StatusBase
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
-from single_kernel_mongo.config.statuses import MongodStatus
+from single_kernel_mongo.config.statuses import MongodStatuses
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -511,7 +511,7 @@ class MongoManager(Object, StatusProvider):
         charm_statuses: list[StatusBase] = []
 
         if not self.state.db_initialised:
-            return [MongodStatus.WAITING_REPL_SET_INIT.value]
+            return [MongodStatuses.WAITING_REPL_SET_INIT.value]
 
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
@@ -519,31 +519,31 @@ class MongoManager(Object, StatusProvider):
 
             unit_host = self.state.unit_peer_data.internal_address
             if unit_host not in replset_status:
-                return [MongodStatus.MEMBER_BEING_ADDED.value]
+                return [MongodStatuses.MEMBER_BEING_ADDED.value]
 
             replica_status = replset_status[unit_host]
 
             match replica_status:
                 case "PRIMARY":
-                    charm_statuses.append(MongodStatus.PRIMARY.value)
+                    charm_statuses.append(MongodStatuses.PRIMARY.value)
                 case "SECONDARY":
-                    charm_statuses.append(MongodStatus.SECONDARY.value)
+                    charm_statuses.append(MongodStatuses.SECONDARY.value)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
-                    return [MongodStatus.MEMBER_SYNCING.value]
+                    return [MongodStatuses.MEMBER_SYNCING.value]
                 case "REMOVED":
-                    return [MongodStatus.MEMBER_REMOVING.value]
+                    return [MongodStatuses.MEMBER_REMOVING.value]
                 case _:
                     return charm_statuses.append(BlockedStatus(replica_status))
 
         except ServerSelectionTimeoutError as e:
             # Usually it is du to ReplicaSetNoPrimary
             logger.debug(f"Got error {e} while checking replica set status")
-            return [MongodStatus.WAITING_ELECTION.value]
+            return [MongodStatuses.WAITING_ELECTION.value]
         except AutoReconnect as e:
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return [MongodStatus.WAITING_RECONNECT.value]
+            return [MongodStatuses.WAITING_RECONNECT.value]
 
         if not self.charm.unit.is_leader():
             return charm_statuses
@@ -553,9 +553,9 @@ class MongoManager(Object, StatusProvider):
                 replset_members = mongo.get_replset_members()
                 config_hosts = mongo.config.hosts
                 if replset_members != config_hosts:
-                    return charm_statuses.append(MongodStatus.WAITING_RECONFIG)
+                    return charm_statuses.append(MongodStatuses.WAITING_RECONFIG)
         except PyMongoError as e:
             logger.error("Error checking members, %s", e)
-            return charm_statuses.append(MongodStatus.WAITING_RECONFIG)
+            return charm_statuses.append(MongodStatuses.WAITING_RECONFIG)
 
         return charm_statuses

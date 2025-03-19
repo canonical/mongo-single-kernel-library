@@ -30,7 +30,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatus, ShardStatus
+from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses, ShardStatuses
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -307,7 +307,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError, WorkloadExecError) as e:
             logger.error(f"Deferring on start: error={e}")
             self.charm.status_manager.set_and_share_status(
-                MongodStatus.WAITING_REPL_SET_INIT.value
+                MongodStatuses.WAITING_REPL_SET_INIT.value
             )
             raise
 
@@ -468,7 +468,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.charm.status_manager.set_and_share_status(
-                MongodStatus.WAITING_RECONFIG.value
+                MongodStatuses.WAITING_RECONFIG.value
             )
             raise
 
@@ -564,7 +564,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             ):
                 logger.info("Wait for shard to drain before detaching storage.")
                 self.charm.status_manager.set_and_share_status(
-                    ShardStatus.DRAINING_SHARD.value
+                    ShardStatuses.DRAINING_SHARD.value
                 )
                 mongos_hosts = self.state.shard_state.mongos_hosts
                 self.shard_manager.wait_for_draining(mongos_hosts)
@@ -611,7 +611,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
             if config_server_has_tls and not shard_has_tls:
                 self.charm.status_manager.set_and_share_status(
-                    ShardStatus.REQUIRES_TLS.value
+                    ShardStatuses.REQUIRES_TLS.value
                 )
                 return
 

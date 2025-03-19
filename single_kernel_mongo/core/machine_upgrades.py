@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from ops.model import StatusBase
 
 from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
-from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -52,13 +52,13 @@ class MachineUpgrade(AbstractUpgrade):
             self.state.unit_workload_container_version
             == self.state.app_workload_container_version
         ):
-            return UpgradeStatus.vm_active_upgrade(
+            return UpgradeStatuses.vm_active_upgrade(
                 self._unit_workload_version,
                 self.state.unit_workload_container_version,
                 self._current_versions["charm"],
             )
 
-        return UpgradeStatus.vm_active_upgrade(
+        return UpgradeStatuses.vm_active_upgrade(
             self._unit_workload_version,
             self.state.unit_workload_container_version,
             self._current_versions["charm"],
@@ -74,7 +74,7 @@ class MachineUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return UpgradeStatus.INCOMPATIBLE_UPGRADE.value
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property

@@ -18,7 +18,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     UnitState,
 )
-from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     GenericMongoDBUpgradeManager,
     UpgradeActions,
@@ -78,13 +78,13 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 )
         except ContainerNotReadyError:
             self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UNHEALTHY_UPGRADE.value
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value
             )
             self._reconcile_upgrade(during_upgrade=True)
             raise DeferrableError
 
         self.charm.status_manager.set_and_share_status(
-            UpgradeStatus.WAITING_POST_UPGRADE_STATUS.value
+            UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value
         )
 
         self._reconcile_upgrade(during_upgrade=True)
@@ -263,9 +263,9 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
             raise UnhealthyUpgradeError
 
-        if self.charm.unit.status == UpgradeStatus.UNHEALTHY_UPGRADE.value:
+        if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
             self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UPGRADE_ACTIVE.value
+                UpgradeStatuses.UPGRADE_ACTIVE.value
             )
 
         self._upgrade.unit_state = UnitState.HEALTHY
@@ -312,12 +312,12 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
         if not self.is_mongos_able_to_read_write():  # type: ignore
             self.charm.status_manager.set_and_share_status(
-                UpgradeStatus.UNHEALTHY_UPGRADE.value
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value
             )
             logger.info(ROLLBACK_INSTRUCTIONS)
             raise DeferrableError("mongos is not able to read/write after refresh.")
 
-        if self.charm.unit.status == UpgradeStatus.UNHEALTHY_UPGRADE.value:
+        if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
             self.charm.status_manager.to_active()
 
         logger.debug("refresh of unit succeeded.")

@@ -31,8 +31,8 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
-    ConfigServerStatus,
-    ShardStatus,
+    ConfigServerStatuses,
+    ShardStatuses,
 )
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -303,19 +303,19 @@ class ConfigServerManager(Object, StatusProvider):
 
         uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
-            charm_statuses.append(ConfigServerStatus.MONGOS_NOT_RUNNING.value)
+            charm_statuses.append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses.append(ConfigServerStatus.NEED_SHARDS.value)
+            charm_statuses.append(ConfigServerStatuses.NEED_SHARDS.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses
 
         if not self.cluster_password_synced():
-            charm_statuses.append(ConfigServerStatus.SYNCING_PASSWORDS.value)
+            charm_statuses.append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
         if shard_draining := self.dependent.mongo_manager.get_draining_shards():
             draining = ",".join(shard_draining)
-            charm_statuses.append(ConfigServerStatus.draining_shard(draining))
+            charm_statuses.append(ConfigServerStatuses.draining_shard(draining))
 
         if unreachable_shards := self.get_unreachable_shards():
             charm_statuses.append(unreachable_shards)
@@ -323,7 +323,7 @@ class ConfigServerManager(Object, StatusProvider):
         return (
             charm_statuses
             if charm_statuses
-            else [ConfigServerStatus.CONFIG_SERVER_ACTIVE_IDLE.value]
+            else [ConfigServerStatuses.CONFIG_SERVER_ACTIVE_IDLE.value]
         )
 
     def add_shards(self):
@@ -929,9 +929,9 @@ class ShardManager(Object, StatusProvider):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return ShardStatus.REQUIRES_TLS.value
+                return ShardStatuses.REQUIRES_TLS.value
             case True, False:
-                return ShardStatus.REQUIRES_NO_TLS.value
+                return ShardStatuses.REQUIRES_NO_TLS.value
             case _:
                 pass
 
@@ -939,7 +939,7 @@ class ShardManager(Object, StatusProvider):
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return ShardStatus.CA_MISMATCH.value
+            return ShardStatuses.CA_MISMATCH.value
         return None
 
     def get_statuses(self) -> list[StatusBase]:
@@ -952,13 +952,13 @@ class ShardManager(Object, StatusProvider):
         # return in these cases as other statuses require a config-server to compute
         if not self.state.shard_relation:
             if self.state.unit_peer_data.drained:
-                return [ShardStatus.SHARD_DRAINED.value]
+                return [ShardStatuses.SHARD_DRAINED.value]
 
             if not self.state.unit_peer_data.drained:
-                return [ShardStatus.NEED_CONF_SERVER.value]
+                return [ShardStatuses.NEED_CONF_SERVER.value]
 
         if not self.cluster_password_synced():
-            charm_statuses.append(ShardStatus.SYNCING_PASSWORDS.value)
+            charm_statuses.append(ShardStatuses.SYNCING_PASSWORDS.value)
 
         if tls_status := self.get_tls_status():
             charm_statuses.append(tls_status)
@@ -966,11 +966,11 @@ class ShardManager(Object, StatusProvider):
             return charm_statuses
 
         if not self.state.is_shard_added_to_cluster():
-            charm_statuses.append(ShardStatus.ADDING_TO_CLUSTER.value)
+            charm_statuses.append(ShardStatuses.ADDING_TO_CLUSTER.value)
 
         if not self._is_shard_aware():
-            charm_statuses.append(ShardStatus.SHARD_NOT_AWARE.value)
+            charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
 
         return (
-            charm_statuses if charm_statuses else [ShardStatus.SHARD_ACTIVE_IDLE.value]
+            charm_statuses if charm_statuses else [ShardStatuses.SHARD_ACTIVE_IDLE.value]
         )

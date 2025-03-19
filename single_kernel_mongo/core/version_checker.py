@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from data_platform_helpers.version_check import NoVersionError, get_charm_revision
 from ops.model import StatusBase
 
-from single_kernel_mongo.config.statuses import ConfigServerStatus, ShardStatus
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 
 if TYPE_CHECKING:
@@ -56,7 +56,7 @@ class VersionChecker:
             # do not, it is because they are from an earlier charm revision, i.e. pre-revison X.
             logger.debug(e)
             if self.state.is_role(MongoDBRoles.SHARD):
-                return ShardStatus.older_version_shard_needs_upgrade(
+                return ShardStatuses.older_version_shard_needs_upgrade(
                     current_charms_version, local_identifier
                 )
 
@@ -73,7 +73,7 @@ class VersionChecker:
                 if self.version_checker.is_local_charm(self.state.config_server_name)
                 else ""
             )
-            return ShardStatus.shard_needs_upgrade(
+            return ShardStatuses.shard_needs_upgrade(
                 current_charms_version,
                 local_identifier,
                 config_server_revision,
@@ -81,7 +81,7 @@ class VersionChecker:
             )
 
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            return ConfigServerStatus.waiting_for_shard_upgrade(
+            return ConfigServerStatuses.waiting_for_shard_upgrade(
                 current_charms_version, local_identifier
             )
 

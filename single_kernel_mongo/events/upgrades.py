@@ -15,7 +15,7 @@ from ops.model import ModelError
 
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import UpgradeStatus
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import UpgradeActions
 from single_kernel_mongo.exceptions import (
     ActionFailedError,
@@ -130,7 +130,7 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.UNHEALTHY_UPGRADE.value)
             event.defer()
 
     def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
@@ -145,5 +145,5 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UpgradeStatus.UNHEALTHY_UPGRADE.value)
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.UNHEALTHY_UPGRADE.value)
             event.defer()
