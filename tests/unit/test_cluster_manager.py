@@ -1,5 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from pathlib import Path
+
 import pytest
 from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
@@ -260,11 +262,6 @@ def test_cluster_requirer_update_mongos_and_restart(
     operator = mongos_harness.charm.operator
     mongos_harness.set_leader(True)
 
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
-        return_value={"MONGOS_ARGS": "unused"},
-    )
-
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
     rel_id_proxy = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "test-application")
 
@@ -272,6 +269,13 @@ def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness.add_relation_unit(rel_id_proxy, "test-application/0")
 
     manager.share_credentials_to_clients("operator", "password")
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
 
     mongos_harness.update_relation_data(
         rel_id_cluster,
@@ -330,10 +334,14 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     mongos_harness.set_leader(True)
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
     mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
-        return_value={"MONGOS_ARGS": "unused"},
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
     )
+
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
     mongos_harness.add_relation_unit(rel_id_cluster, "test-mongodb/0")
@@ -358,10 +366,6 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
     mongos_harness.set_leader(True)
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
-        return_value={"MONGOS_ARGS": "unused"},
-    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
     relation_cluster: Relation = mongos_harness.model.get_relation(
@@ -370,6 +374,13 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
     mongos_harness.add_relation_unit(rel_id_cluster, "test-mongodb/0")
 
     manager.share_credentials_to_clients("operator", "password")
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
 
     mongos_harness.update_relation_data(
         rel_id_cluster,
@@ -409,10 +420,6 @@ def test_cluster_requirer_is_ca_compatible(
     mongos_harness.set_leader(True)
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
-        return_value={"MONGOS_ARGS": "unused"},
-    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
     # Create the cluster relation
@@ -423,6 +430,13 @@ def test_cluster_requirer_is_ca_compatible(
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
 
     # Write the information + optional certificate
     mongos_harness.update_relation_data(
@@ -481,6 +495,13 @@ def test_cluster_requirer_tls_status(
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
 
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+
     # Write the information + optional certificate
     mongos_harness.update_relation_data(
         rel_id_cluster,
@@ -518,10 +539,6 @@ def test_cluster_requirer_get_tls_statuses(
     mongos_harness.set_leader(True)
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=True)
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.get_env",
-        return_value={"MONGOS_ARGS": "unused"},
-    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
     # Create the cluster relation
@@ -537,6 +554,13 @@ def test_cluster_requirer_get_tls_statuses(
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
 
     # Write the information + optional certificate
     mongos_harness.update_relation_data(

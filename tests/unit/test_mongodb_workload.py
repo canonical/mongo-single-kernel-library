@@ -35,7 +35,7 @@ def test_mongodb_workload_init(monkeypatch):
                 "mongod": {
                     "override": "replace",
                     "summary": "mongod",
-                    "command": "/usr/bin/mongod test_var",
+                    "command": "/bin/bash /bin/start-mongod.sh",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
@@ -63,7 +63,7 @@ def test_mongos_workload_init(monkeypatch):
                 "mongos": {
                     "override": "replace",
                     "summary": "mongos",
-                    "command": "/usr/bin/mongos test_var",
+                    "command": "/bin/bash /bin/start-mongos.sh",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
