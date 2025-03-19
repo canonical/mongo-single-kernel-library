@@ -12,6 +12,6 @@ class StatusProvider(Protocol):
     """Enforces all classes inheriting from this class to provide a `get_status` method."""
 
     @abstractmethod
-    def get_status(self) -> StatusBase | None:
+    def get_statuses(self) -> list[StatusBase]:
         """Returns a sensitive status about the manager."""
         ...

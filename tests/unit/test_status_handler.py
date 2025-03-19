@@ -44,7 +44,8 @@ def test_mongo_get_status_no_error(
         return_value=replset_status,
     )
 
-    status = harness.charm.operator.mongo_manager.get_status()
+    statuses = harness.charm.operator.mongo_manager.get_statuses()
+    status = next(iter(statuses), None)
 
     assert status == expected_status
 
@@ -72,7 +73,8 @@ def test_mongo_get_status_with_error(
         side_effect=error,
     )
 
-    status = harness.charm.operator.mongo_manager.get_status()
+    statuses = harness.charm.operator.mongo_manager.get_statuses()
+    status = next(iter(statuses), None)
 
     assert status == expected_status
 
@@ -86,9 +88,10 @@ def test_config_server_get_status_invalid_integration(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "Sharding interface cannot be used by replicas."
-    )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Sharding interface cannot be used by replicas.")
 
 
 def test_config_server_get_status_invalid_role(
@@ -100,7 +103,10 @@ def test_config_server_get_status_invalid_role(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    assert harness.charm.operator.config_server_manager.get_status() is None
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status is None
 
 
 def test_config_server_get_status_db_not_initialised(
@@ -112,7 +118,10 @@ def test_config_server_get_status_db_not_initialised(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    assert harness.charm.operator.config_server_manager.get_status() is None
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status is None
 
 
 def test_config_server_get_status_client_relation(
@@ -124,9 +133,10 @@ def test_config_server_get_status_client_relation(
 
     harness.add_relation(RelationNames.DATABASE.value, "client")
 
-    assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "Sharding roles do not support database interface."
-    )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Sharding roles do not support database interface.")
 
 
 def test_config_server_get_status_internal_mongos_not_running(
@@ -143,9 +153,10 @@ def test_config_server_get_status_internal_mongos_not_running(
         return_value=False,
     )
 
-    assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "Internal mongos is not running."
-    )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Internal mongos is not running.")
 
 
 def test_config_server_get_status_password_not_synced(
@@ -162,9 +173,10 @@ def test_config_server_get_status_password_not_synced(
         return_value=True,
     )
 
-    assert harness.charm.operator.config_server_manager.get_status() == WaitingStatus(
-        "Waiting to sync passwords across the cluster..."
-    )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == WaitingStatus("Waiting to sync passwords across the cluster...")
 
 
 def test_config_server_get_status_shard_draining(
@@ -189,9 +201,10 @@ def test_config_server_get_status_shard_draining(
         return_value=True,
     )
 
-    assert harness.charm.operator.config_server_manager.get_status() == MaintenanceStatus(
-        "Draining shard shard0"
-    )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == MaintenanceStatus("Draining shard shard0")
 
 
 def test_config_server_get_status_unreachable_shards(
@@ -219,10 +232,10 @@ def test_config_server_get_status_unreachable_shards(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.get_unreachable_shards",
         return_value=["shard0"],
     )
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
 
-    assert harness.charm.operator.config_server_manager.get_status() == BlockedStatus(
-        "Shards: shard0 are unreachable."
-    )
+    assert status == BlockedStatus("Shards: shard0 are unreachable.")
 
 
 def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
@@ -249,7 +262,10 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
         return_value=[],
     )
 
-    assert harness.charm.operator.config_server_manager.get_status() == ActiveStatus()
+    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == ActiveStatus()
 
 
 def test_shard_get_status_invalid_role(
@@ -259,7 +275,10 @@ def test_shard_get_status_invalid_role(
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    assert harness.charm.operator.shard_manager.get_status() is None
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status is None
 
 
 def test_shard_get_status_db_not_initialised(
@@ -269,7 +288,10 @@ def test_shard_get_status_db_not_initialised(
     harness.charm.operator.state.db_initialised = False
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
 
-    assert harness.charm.operator.shard_manager.get_status() is None
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status is None
 
 
 def test_shard_get_status_charm_is_replication(
@@ -281,9 +303,10 @@ def test_shard_get_status_charm_is_replication(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Sharding interface cannot be used by replicas."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Sharding interface cannot be used by replicas.")
 
 
 def test_shard_get_status_charm_client_relation(
@@ -295,9 +318,10 @@ def test_shard_get_status_charm_client_relation(
 
     harness.add_relation(RelationNames.DATABASE.value, "client")
 
-    assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Sharding roles do not support database interface."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Sharding roles do not support database interface.")
 
 
 def test_shard_get_status_charm_missing_relation_not_drained(
@@ -309,9 +333,10 @@ def test_shard_get_status_charm_missing_relation_not_drained(
 
     harness.charm.operator.state.unit_peer_data.drained = False
 
-    assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Missing relation to config-server."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Missing relation to config-server.")
 
 
 def test_shard_get_status_charm_missing_relation_drained(
@@ -323,9 +348,10 @@ def test_shard_get_status_charm_missing_relation_drained(
 
     harness.charm.operator.state.unit_peer_data.drained = True
 
-    assert harness.charm.operator.shard_manager.get_status() == ActiveStatus(
-        "Shard drained from cluster, ready for removal."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == ActiveStatus("Shard drained from cluster, ready for removal.")
 
 
 def test_shard_get_status_cluster_password_not_synced(
@@ -342,9 +368,10 @@ def test_shard_get_status_cluster_password_not_synced(
         return_value=False,
     )
 
-    assert harness.charm.operator.shard_manager.get_status() == WaitingStatus(
-        "Waiting to sync passwords across the cluster..."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == WaitingStatus("Waiting to sync passwords across the cluster...")
 
 
 def test_shard_get_status_tls_status(
@@ -366,7 +393,10 @@ def test_shard_get_status_tls_status(
         return_value=status,
     )
 
-    assert harness.charm.operator.shard_manager.get_status() == status
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == status
 
 
 def test_shard_get_status_shard_not_added_to_cluster(
@@ -387,9 +417,10 @@ def test_shard_get_status_shard_not_added_to_cluster(
         return_value=False,
     )
 
-    assert harness.charm.operator.shard_manager.get_status() == MaintenanceStatus(
-        "Adding shard to config-server."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == MaintenanceStatus("Adding shard to config-server.")
 
 
 def test_shard_get_status_shard_not_aware(
@@ -414,9 +445,10 @@ def test_shard_get_status_shard_not_aware(
         return_value=False,
     )
 
-    assert harness.charm.operator.shard_manager.get_status() == BlockedStatus(
-        "Shard is not yet shard aware."
-    )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
+
+    assert status == BlockedStatus("Shard is not yet shard aware.")
 
 
 def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
@@ -438,8 +470,10 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
         "single_kernel_mongo.managers.sharding.ShardManager._is_shard_aware",
         return_value=True,
     )
+    statuses = harness.charm.operator.shard_manager.get_statuses()
+    status = next(iter(statuses), None)
 
-    assert harness.charm.operator.shard_manager.get_status() == ActiveStatus()
+    assert status == ActiveStatus()
 
 
 @pytest.mark.parametrize(
@@ -499,13 +533,20 @@ def test_status_handler_prioritize_status(
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
 
 
-def test_mongos_get_status_no_relation(
-    mongos_harness: Harness[MongosTestCharm],
-):
+def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")
-    assert mongos_operator.get_sanity_check_status() == expected_status
+
+    mocker.patch(
+        "single_kernel_mongo.workload.VMMongosWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+
+    statuses = mongos_operator.get_statuses()
+    status = next(iter(statuses), None)
+    assert status == expected_status
 
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
@@ -517,7 +558,11 @@ def test_mongos_get_status_tls_status(
     mocker,
 ):
     mongos_operator = mongos_harness.charm.operator
-
+    mocker.patch(
+        "single_kernel_mongo.workload.VMMongosWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
     expected_status = BlockedStatus("mongos requires TLS to be enabled.")
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
@@ -526,7 +571,9 @@ def test_mongos_get_status_tls_status(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
-    assert mongos_operator.get_sanity_check_status() == expected_status
+    statuses = mongos_operator.get_statuses()
+    status = next(iter(statuses), None)
+    assert status == expected_status
 
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
@@ -551,7 +598,9 @@ def test_mongos_get_status_mongos_not_running(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
-    assert mongos_operator.get_sanity_check_status() == expected_status
+    statuses = mongos_operator.get_statuses()
+    status = next(iter(statuses), None)
+    assert status == expected_status
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
     assert mongos_operator.charm.unit.status == expected_status
@@ -578,8 +627,6 @@ def test_mongos_get_status_all_good(
     )
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
-
-    assert mongos_operator.get_sanity_check_status() is None
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
     assert mongos_operator.charm.unit.status == expected_status
