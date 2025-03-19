@@ -494,7 +494,7 @@ class MongosConfigManager(MongoConfigManager):
                         "queryPassword": self.state.ldap.bind_password,
                     },
                     # TODO: Update this when writing config-server/mongos sync.
-                    "userToDNMapping": self.state.config.ldap_user_to_dn_mapping,
+                    "userToDNMapping": self.state.config.ldap_user_to_dn_mapping or "[]",
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
