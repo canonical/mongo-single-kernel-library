@@ -149,6 +149,7 @@ def test_mongos_config_manager(mocker):
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.internal_enabled = False
     mock_state.tls.external_enabled = False
+    mock_state.ldap.is_ready = lambda: False
     workload = VMMongosWorkload(VM_MONGOS, None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(

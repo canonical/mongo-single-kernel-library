@@ -1,6 +1,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
@@ -89,7 +91,7 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
             "bind_password": "password",
-            "bind_password_di": "secret-id",
+            "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": '["ldaps://ldap.glauth.com"]',
@@ -106,6 +108,9 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
     assert ldap_state.bind_user is not None
     assert ldap_state.bind_password is not None
     assert ldap_state.ldaps_urls == ["ldaps://ldap.glauth.com"]
+
+    # We haven't integrated the tls certificates for ldap, no parameter generated.
+    assert harness.charm.operator.config_manager.ldap_parameters == {}  # type: ignore
 
 
 def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
@@ -147,7 +152,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
             "bind_password": "password",
-            "bind_password_di": "secret-id",
+            "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": '["ldaps://ldap.glauth.com"]',
@@ -178,6 +183,17 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     )
     assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
 
+    ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
+
+    assert ldap_parameters["servers"] == "ldap.glauth.com:636"  # parsing adds port if non existent
+    assert ldap_parameters["transportSecurity"] == "tls"
+    assert ldap_parameters["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
+    assert ldap_parameters["bind"]["queryPassword"] == "password"
+    assert (
+        ldap_parameters["authz"]["queryTemplate"]
+        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={PROVIDED_USER}))"
+    )
+
     # Case 7: Begin of sundown, remove data from databag
     harness.charm.operator.state.ldap.clean_databag()
     assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
@@ -201,7 +217,7 @@ def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, moc
             "base_dn": "dc=glauth,dc=com",
             "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
             "bind_password": "password",
-            "bind_password_di": "secret-id",
+            "bind_password_id": "secret-id",
             "auth_method": "simple",
             "starttls": "true",
             "ldaps_urls": '["ldaps://ldap.glauth.com"]',
@@ -258,3 +274,110 @@ def test_on_certificate_removed_clean_certs(
     assert ldap_state.ca is None
     assert ldap_state.certificate is None
     assert ldap_state.chain is None
+
+
+def test_ldap_full_integration_cycle(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=ActiveStatus(),
+    )
+
+    ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    harness.update_relation_data(
+        ldap_relation_id,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_id": "secret-id",
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": '["ldaps://ldap.glauth.com"]',
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+
+    assert harness.charm.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
+
+    ldap_cert_relation_id = harness.add_relation(
+        ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
+    )
+    harness.add_relation_unit(ldap_cert_relation_id, "glauth-k8s/0")
+
+    harness.update_relation_data(
+        ldap_cert_relation_id,
+        "glauth-k8s/0",
+        {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
+    )
+
+    # All is good, we are green
+    assert harness.charm.unit.status == ActiveStatus("")
+
+    # Check the parameters
+    ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
+
+    assert ldap_parameters["servers"] == "ldap.glauth.com:636"  # parsing adds port if non existent
+    assert ldap_parameters["transportSecurity"] == "tls"
+    assert ldap_parameters["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
+    assert ldap_parameters["bind"]["queryPassword"] == "password"
+    assert (
+        ldap_parameters["authz"]["queryTemplate"]
+        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={PROVIDED_USER}))"
+    )
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.glauth\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=glauth,DC=com",
+        }
+    ]
+
+    harness.update_config({"ldap-user-to-dn-mapping": json.dumps(valid_mapping)})
+
+    ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
+
+    assert (
+        ldap_parameters["authz"]["queryTemplate"]
+        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={USER}))"
+    )
+    assert (
+        ldap_parameters["userToDNMapping"]
+        == '[{"match": "([^@]+)@([^@\\\\.]+)\\\\.glauth\\\\.com", "substitution": "CN={0},CN=Users,DC={1},DC=glauth,DC=com"}]'
+    )
+
+
+def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+
+    ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    harness.update_relation_data(
+        ldap_relation_id,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_id": "secret-id",
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": "[]",
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+
+    assert harness.charm.unit.status == BlockedStatus("LDAPS not enabled on LDAP application.")
+    mock_restart.assert_not_called()

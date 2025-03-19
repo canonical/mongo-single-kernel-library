@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from ldap3.utils.uri import parse_uri
 from ops import Relation
 from ops.model import Application
 
@@ -158,6 +160,15 @@ class LdapState(AbstractRelationState[DataPeerData]):
             self.update({LdapStateKeys.LDAPS_URLS.value: value})
             return
         self.update({LdapStateKeys.LDAPS_URLS.value: json.dumps(sorted(value))})
+
+    @property
+    def formatted_ldap_urls(self) -> Iterator[str]:
+        """LDAP urls formatted for mongodb config."""
+        if not (ldaps_urls := self.ldaps_urls):
+            return
+        for uri in ldaps_urls:
+            parsed_uri = parse_uri(uri)
+            yield f"{parsed_uri['host']}:{parsed_uri['port']}"
 
     @property
     def certificate(self) -> str | None:

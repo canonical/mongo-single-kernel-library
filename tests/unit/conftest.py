@@ -83,6 +83,7 @@ def mock_fs_interactions(mocker) -> None:
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.stop")
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.restart")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.update_env")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
