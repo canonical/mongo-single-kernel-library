@@ -10,7 +10,6 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
-from single_kernel_mongo.exceptions import WorkloadServiceError
 
 
 class MongoDBWorkload(WorkloadBase):
@@ -30,8 +29,6 @@ class MongoDBWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns the Pebble configuration layer for MongoDB."""
-        if self._env == "":
-            raise WorkloadServiceError("Impossible to create layer: missing parameter")
         return Layer(
             {
                 "summary": "mongod layer",
@@ -40,7 +37,7 @@ class MongoDBWorkload(WorkloadBase):
                     self.service: {
                         "override": "replace",
                         "summary": "mongod",
-                        "command": f"/usr/bin/mongod {self._env}",
+                        "command": "/bin/bash /bin/start-mongod.sh",
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
