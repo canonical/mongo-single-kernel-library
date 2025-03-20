@@ -205,9 +205,13 @@ class LDAPManager(Object, StatusProvider):
         bind_dn = self.state.ldap.bind_user
         bind_password = self.state.ldap.bind_password
         base_dn = self.state.ldap.base_dn
+        cert_chain = self.state.ldap.chain
 
         if not base_dn:
             return BlockedStatus("Missing base DN.")
+
+        if not cert_chain:
+            return BlockedStatus("Missing chain.")
 
         if not self.state.ldap.ldaps_urls:
             return BlockedStatus("Missing LDAPS URLs.")
@@ -217,7 +221,7 @@ class LDAPManager(Object, StatusProvider):
                 tls = LDAPTls(
                     validate=ssl.CERT_REQUIRED,
                     version=ssl.PROTOCOL_TLSv1_2,
-                    ca_certs_file=f"{self.state.paths.ldap_certificates_file}",
+                    ca_certs_data="\n".join(cert_chain),
                 )
                 server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
                 conn = LDAPConnection(server, user=bind_dn, password=bind_password)
