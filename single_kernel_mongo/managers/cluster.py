@@ -102,6 +102,9 @@ class ClusterProvider(Object):
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
+        if ldap_user_to_dn_mapping := self.state.app_peer_data.ldap_user_to_dn_mapping:
+            relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
+
         self.data_interface.update_relation_data(relation.id, relation_data)
 
     def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:
@@ -151,6 +154,17 @@ class ClusterProvider(Object):
                 relation.id,
                 {
                     ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
+                },
+            )
+
+    def update_ldap_user_to_dn_mapping(self) -> None:
+        """Updates the ldap user to dn mapping value in the databag."""
+        self.assert_pass_hook_checks()
+        for relation in self.state.cluster_relations:
+            self.data_interface.update_relation_data(
+                relation.id,
+                {
+                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.config.ldap_user_to_dn_mapping
                 },
             )
 
@@ -228,6 +242,10 @@ class ClusterRequirer(Object):
         self.assert_pass_hook_checks()
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
+
+        if ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping:
+            logger.debug("Received a userToDNMapping, storing it in databag.")
+            self.state.app_peer_data.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
 
         if not key_file_contents or not config_server_db_uri:
             raise WaitingForSecretsError("Waiting for keyfile or config server db uri")

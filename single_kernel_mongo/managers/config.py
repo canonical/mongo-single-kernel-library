@@ -493,7 +493,6 @@ class MongosConfigManager(MongoConfigManager):
                         "queryUser": self.state.ldap.bind_user,
                         "queryPassword": self.state.ldap.bind_password,
                     },
-                    # TODO: Update this when writing config-server/mongos sync.
                     "userToDNMapping": self.state.app_peer_data.ldap_user_to_dn_mapping or "[]",
                 }
             },

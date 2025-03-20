@@ -77,6 +77,7 @@ class LdapState(AbstractRelationState[DataPeerData]):
         self.certificate = certificate
         self.ca = ca
         self.chain = chain
+        self.secrets.get(Scope.UNIT)
 
     def clean_certificates(self) -> None:
         """Removes the certificate secrets."""

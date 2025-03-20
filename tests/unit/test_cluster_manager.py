@@ -1,5 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 from pathlib import Path
 
 import pytest
@@ -113,6 +114,47 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
 
     assert len(data.get("key-file", "")) == 1024
     assert data.get("config-server-db") == f"{harness.charm.app.name}/1.1.1.1:27017"
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_share_secret_to_mongos_also_shares_ldap_config(harness: Harness[MongoTestCharm], mocker):
+    manager = harness.charm.operator.cluster_manager
+
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+
+    mocked_reconcile = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.example\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=example,DC=com",
+        }
+    ]
+
+    harness.update_config(
+        {
+            "role": MongoDBRoles.CONFIG_SERVER.value,
+            "ldap-user-to-dn-mapping": json.dumps(valid_mapping),
+        }
+    )
+
+    rel_id = harness.add_relation(RelationNames.CLUSTER.value, "test-mongos")
+    harness.add_relation_unit(rel_id, "test-mongos/0")
+    harness.update_relation_data(rel_id, "test-mongos", {"database": "test_mongos"})
+
+    mocked_reconcile.assert_called()
+    data = manager.data_interface.as_dict(rel_id)
+
+    assert len(data.get("key-file", "")) == 1024
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/1.1.1.1:27017"
+    assert data.get("ldap-user-to-dn-mapping") == json.dumps(valid_mapping)
 
 
 @patch_network_get(private_address="1.1.1.1")
