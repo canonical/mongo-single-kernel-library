@@ -66,7 +66,9 @@ from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
 if TYPE_CHECKING:
-    from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator  # pragma: nocover
+    from single_kernel_mongo.managers.mongodb_operator import (
+        MongoDBOperator,
+    )  # pragma: nocover
 
 BackupListType = NewType("BackupListType", list[tuple[str, str, str]])
 
@@ -293,6 +295,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             )
             return BlockedStatus("s3 configurations missing.")
         try:
+            # TODO we must re-evaluate with field to find a better solution.
             previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
             pbm_error = self.process_pbm_error(pbm_status)
@@ -387,7 +390,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         for pbm_key, pbm_value in config.items():
             try:
                 self.workload.run_bin_command(
-                    "config", ["--set", f"{pbm_key}={pbm_value}"], environment=self.environment
+                    "config",
+                    ["--set", f"{pbm_key}={pbm_value}"],
+                    environment=self.environment,
                 )
             except WorkloadExecError:
                 logger.error(f"Failed to configure PBM option: {pbm_key}")
@@ -401,7 +406,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                 "# this file is to be left empty. Changes in this file will be ignored.\n",
             )
         self.workload.run_bin_command(
-            "config", ["--file", str(self.workload.paths.pbm_config)], environment=self.environment
+            "config",
+            ["--file", str(self.workload.paths.pbm_config)],
+            environment=self.environment,
         )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
@@ -474,6 +481,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
 
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+
         Returns:
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
@@ -499,7 +509,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             )
 
     def assert_can_backup(self) -> None:
-        """Is PBM is a state where it can backup?"""
+        """Is PBM is a state where it can backup?
+
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+        """
         pbm_status = self.get_status()
         match pbm_status:
             case MaintenanceStatus():
@@ -516,7 +530,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                 return
 
     def assert_can_list_backup(self) -> None:
-        """Is PBM in a state to list backup?"""
+        """Is PBM in a state to list backup?
+
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+        """
         pbm_status = self.get_status()
         match pbm_status:
             case WaitingStatus():
@@ -569,9 +587,23 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     ) -> str:
         """Returns a string with the result of the backup/restore operation.
 
+        This was a request from field so that they could valid the status of a backup from
+        the charm
+
+        Note: current_pbm_status is a freshly calculated status from PBM directly, so we allow
+        calculations based on its result.
+
         The function call is expected to be only for not failed operations.
         The operation is taken from previous status of the unit and expected
         to contain the operation type (backup/restore) and the backup id.
+
+        Notes: I don't believe this currently works
+        1. Another status could get set and then the use of the previous_pbm_status is meaningless
+        2. If an operation failed it will incorrectly report that it succeeded.
+
+        Thoughts on how we can check this:
+        1. store the names of backup+restores performed
+        2. if pbm is no longer running an op with that
         """
         if (
             current_pbm_status.name == previous_pbm_status.name

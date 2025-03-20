@@ -20,7 +20,10 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     UnitState,
 )
-from single_kernel_mongo.core.abstract_upgrades import GenericMongoDBUpgradeManager, UpgradeActions
+from single_kernel_mongo.core.abstract_upgrades import (
+    GenericMongoDBUpgradeManager,
+    UpgradeActions,
+)
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -238,6 +241,8 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
             raise UnhealthyUpgradeError
 
+        # TODO this will be addressed in the Advanced Status Handling, when we have the
+        # functionality to clear a status.
         if self.charm.unit.status == UNHEALTHY_UPGRADE:
             self.charm.status_manager.set_and_share_status(ActiveStatus())
 

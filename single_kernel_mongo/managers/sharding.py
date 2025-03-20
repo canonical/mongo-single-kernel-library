@@ -16,7 +16,13 @@ from typing import TYPE_CHECKING
 
 from ops import StatusBase
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    Relation,
+    WaitingStatus,
+)
 from pymongo.errors import (
     NotPrimaryError,
     OperationFailure,
@@ -47,7 +53,11 @@ from single_kernel_mongo.state.config_server_state import AppShardingComponentKe
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    BackupUser,
+    MongoDBUser,
+    OperatorUser,
+)
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
@@ -160,6 +170,10 @@ class ConfigServerManager(Object, StatusProvider):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if not self.charm.unit.is_leader():
             raise NonDeferrableFailedHookChecksError
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
         if (
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
@@ -177,6 +191,8 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_sanity_hook_checks()
 
+        # Note: we permit this logic based on status since we aren't checking
+        # `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         pbm_status = self.dependent.backup_manager.get_status()
         if isinstance(pbm_status, MaintenanceStatus):
             raise DeferrableFailedHookChecksError(
@@ -442,6 +458,10 @@ class ShardManager(Object, StatusProvider):
             )
             if not is_leaving:
                 raise DeferrableFailedHookChecksError("Upgrade in progress")
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
         if (
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
