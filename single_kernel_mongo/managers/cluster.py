@@ -161,7 +161,11 @@ class ClusterProvider(Object):
 
     def update_ldap_user_to_dn_mapping(self) -> None:
         """Updates the ldap user to dn mapping value in the databag."""
-        self.assert_pass_hook_checks()
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not updating ldap user to dn mapping now, not ready.")
+            return
 
         if not self.charm.unit.is_leader():
             return
