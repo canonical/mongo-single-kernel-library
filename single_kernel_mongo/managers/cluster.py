@@ -102,6 +102,8 @@ class ClusterProvider(Object):
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
+        # We want to avoid having to configure both applications with the exact
+        # same string so the config-server shares it with the client.
         if ldap_user_to_dn_mapping := self.state.app_peer_data.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
@@ -160,6 +162,10 @@ class ClusterProvider(Object):
     def update_ldap_user_to_dn_mapping(self) -> None:
         """Updates the ldap user to dn mapping value in the databag."""
         self.assert_pass_hook_checks()
+
+        if not self.charm.unit.is_leader():
+            return
+
         for relation in self.state.cluster_relations:
             self.data_interface.update_relation_data(
                 relation.id,
@@ -243,7 +249,9 @@ class ClusterRequirer(Object):
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
-        if ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping:
+        if self.charm.unit.is_leader() and (
+            ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping
+        ):
             logger.debug("Received a userToDNMapping, storing it in databag.")
             self.state.app_peer_data.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
 

@@ -211,13 +211,22 @@ class LDAPManager(Object, StatusProvider):
         cert_chain = self.state.ldap.chain
 
         if not base_dn:
-            return BlockedStatus("Missing base DN.")
+            logger.info(
+                "The ldap data seems incomplete, it is missing the base DN, check that the integration was completed without error."
+            )
+            return BlockedStatus("Missing base DN for LDAP.")
 
         if not cert_chain:
-            return BlockedStatus("Missing chain.")
+            logger.info(
+                "The ldap data seems incomplete, it is missing the certificates chain, check that the integration was completed without error."
+            )
+            return BlockedStatus("Missing chain for LDAP.")
 
         if not self.state.ldap.ldaps_urls:
-            return BlockedStatus("Missing LDAPS URLs.")
+            logger.info(
+                "The ldap data seems incomplete, it is missing the LDAP URIs of the server, check that the integration was completed without error."
+            )
+            return BlockedStatus("Missing LDAPS URLs for LDAP.")
 
         try:
             for ldap_uri in self.state.ldap.ldaps_urls:
