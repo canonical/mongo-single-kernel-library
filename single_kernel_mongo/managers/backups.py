@@ -295,7 +295,6 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             )
             return BlockedStatus("s3 configurations missing.")
         try:
-            # TODO we must re-evaluate with field to find a better solution.
             previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
             pbm_error = self.process_pbm_error(pbm_status)
@@ -587,9 +586,6 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     ) -> str:
         """Returns a string with the result of the backup/restore operation.
 
-        This was a request from field so that they could valid the status of a backup from
-        the charm
-
         Note: current_pbm_status is a freshly calculated status from PBM directly, so we allow
         calculations based on its result.
 
@@ -597,13 +593,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         The operation is taken from previous status of the unit and expected
         to contain the operation type (backup/restore) and the backup id.
 
-        Notes: I don't believe this currently works
+        This function does not work reliably for the following reasons.
         1. Another status could get set and then the use of the previous_pbm_status is meaningless
-        2. If an operation failed it will incorrectly report that it succeeded.
+        2. If there was a PBM failure that wasn't noticed by a status check (i.e. in between hooks)
+        there is a chance that this function it will incorrectly report the backup/restore
+        succeeded.
 
-        Thoughts on how we can check this:
-        1. store the names of backup+restores performed
-        2. if pbm is no longer running an op with that
+        TODO: Rework this and integrate it with COS
         """
         if (
             current_pbm_status.name == previous_pbm_status.name
