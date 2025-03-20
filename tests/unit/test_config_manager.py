@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from ops.model import Relation
 from yaml import safe_dump
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
@@ -18,6 +19,7 @@ from single_kernel_mongo.managers.config import (
 from single_kernel_mongo.state.app_peer_state import AppPeerReplicaSet
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterState
+from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 
@@ -133,6 +135,48 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock.assert_called_once_with(
         Path(f"{VM_PATH['mongod']['CONF']}/mongod.conf"), safe_dump(all_params)
     )
+
+
+def test_mongodb_ldap_config(mocker):
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.write",
+    )
+
+    mock_state = mocker.MagicMock(CharmState)
+    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.app_peer_data = mock_app_state
+    mock_state.tls = mocker.MagicMock(TLSState)
+    mock_state.ldap = mocker.MagicMock(LdapState)
+
+    mock_state.ldap.is_ready = lambda: True
+    mock_state.ldap.relation = mocker.MagicMock(Relation)
+    mock_state.ldap.bind_user = "cn=user,ou=group,dc=glauth,dc=com"
+    mock_state.ldap.bind_password = "password"
+    mock_state.ldap.base_dn = "dc=glauth,dc=com"
+    mock_state.ldap.formatted_ldap_urls = ["ldap.glauth.com:3894"]
+    mock_state.ldap.certificate = "beefdead"
+    mock_state.ldap.ca = "deadbeef"
+    mock_state.ldap.chain = ["feeddead"]
+
+    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.is_role = lambda x: False
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.internal_enabled = False
+    mock_state.tls.external_enabled = False
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
+    config = MongoDBCharmConfig()
+    manager = MongoDBConfigManager(
+        config,
+        mock_state,
+        workload,
+    )
+    ldap_config = manager.ldap_parameters["security"]["ldap"]
+
+    assert ldap_config["servers"] == "ldap.glauth.com:3894"
+    assert ldap_config["bind"]["queryPassword"] == "password"
+    assert ldap_config["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
+    assert ldap_config["transportSecurity"] == "tls"
 
 
 def test_mongos_config_manager(mocker):
