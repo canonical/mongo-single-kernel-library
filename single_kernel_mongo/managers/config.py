@@ -89,12 +89,12 @@ class FileBasedConfigManager(CommonConfigManager):
 
     def configure_and_restart(self, force: bool = False) -> None:
         """Re-configure if needed and restart the service if needed."""
-        data = "\n".join(self.workload.read(self.file))
-        current_content = safe_load(data)
+        current_config_file = "\n".join(self.workload.read(self.file))
+        current_config_file_content = safe_load(current_config_file)
 
         new_content = self.build_config()
 
-        if force or not self.workload.active() or new_content != current_content:
+        if force or not self.workload.active() or new_content != current_config_file_content:
             self.workload.write(self.file, safe_dump(new_content))
             self.workload.restart()
 
