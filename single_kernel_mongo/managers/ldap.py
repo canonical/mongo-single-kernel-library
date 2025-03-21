@@ -275,7 +275,7 @@ class LDAPManager(Object, StatusProvider):
         """Gets the hash in a consistent way."""
         if not (chain := self.state.ldap.chain):
             return None
-        if not (ldaps_urls := self.state.ldap.chain):
+        if not (ldaps_urls := self.state.ldap.ldaps_urls):
             return None
         data = sorted(chain) + sorted(ldaps_urls)
         return hashlib.sha256(".".join(data).encode("ascii")).hexdigest()

@@ -323,6 +323,11 @@ def test_ldap_full_integration_cycle(
     # All is good, we are green
     assert harness.charm.unit.status == ActiveStatus("")
 
+    assert (
+        harness.charm.operator.ldap_manager.get_hash()
+        == "ea94093f0d37df1ba61800afd667921396f1f6d7e9957832456058df2ad8602f"
+    )
+
     # Check the parameters
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
