@@ -414,8 +414,11 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def ldap_parameters(self) -> dict[str, Any]:
+        # Don't write any config if we are not fully ready to connect to LDAP
+        # (meaning config + certs received)
         if not self.state.ldap.is_ready():
             return {}
+        # We never configure shards for LDAP, see spec (DA-156).
         if self.state.is_role(MongoDBRoles.SHARD):
             return {}
 
