@@ -89,7 +89,7 @@ class LDAPManager(Object, StatusProvider):
         """Returns True if the integration to ldap is valid."""
         return (self.state.ldap_relation is not None) and not self.state.is_role(MongoDBRoles.SHARD)
 
-    def ldap_ready(self, relation: Relation) -> None:
+    def store_ldap_credentials_and_uri(self, relation: Relation) -> None:
         """Runs when LDAP is ready."""
         self.assert_pass_hook_checks()
 
@@ -127,7 +127,7 @@ class LDAPManager(Object, StatusProvider):
                         "mongos and config-server not integrated with the same ldap server."
                     )
 
-    def ldap_unavailable(self) -> None:
+    def clean_ldap_credentials_and_uri(self) -> None:
         """Runs when the LDAP integration is broken."""
         self.state.ldap.clean_databag()
 
@@ -135,7 +135,7 @@ class LDAPManager(Object, StatusProvider):
             self.dependent.restart_charm_services()
         self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
 
-    def certificate_available(self, certificate: str, ca: str, chain: list[str]) -> None:
+    def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
         self.assert_pass_hook_checks()
         self.state.ldap.set_certificates(certificate, ca, chain)
@@ -162,7 +162,7 @@ class LDAPManager(Object, StatusProvider):
 
         self.workload.write(self.workload.paths.ldap_certificates_file, full_chain)
 
-    def certificate_removed(self):
+    def remove_ldap_certificates(self) -> None:
         """Runs when the certificate is removed."""
         self.state.ldap.clean_certificates()
 
