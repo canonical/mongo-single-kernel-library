@@ -235,9 +235,7 @@ def test_config_server_get_status_unreachable_shards(
     assert status == BlockedStatus("Shards: shard0 are unreachable.")
 
 
-def test_config_server_all_active(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
@@ -450,9 +448,7 @@ def test_shard_get_status_shard_not_aware(
     assert status == BlockedStatus("Shard is not yet shard aware.")
 
 
-def test_shard_get_status_all_ok(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
@@ -534,9 +530,7 @@ def test_status_handler_prioritize_status(
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
 
 
-def test_mongos_get_status_no_relation(
-    mongos_harness: Harness[MongosTestCharm], mocker
-):
+def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")

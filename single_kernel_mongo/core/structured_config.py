@@ -81,11 +81,7 @@ class SingleLdapUserToDnMapping(BaseModel):
     @model_validator(mode="after")
     def verify_subst_or_ldapquery(self) -> Self:
         """Ensures that only one of substitution or ldapQuery is present."""
-        if (
-            self.substitution
-            and self.ldap_query
-            or (not self.substitution and not self.ldap_query)
-        ):
+        if self.substitution and self.ldap_query or (not self.substitution and not self.ldap_query):
             raise ValueError("substitution and ldapQuery are mutually exclusive")
         return self
 
@@ -102,9 +98,7 @@ class MongoConfigModel(BaseConfigModel):
     )
     role: SerializeLiteralAsStr[MongoDBRoles]
     auto_delete: bool = Field(default=False, alias="auto-delete")
-    ldap_user_to_dn_mapping: str | None = Field(
-        default=None, alias="ldap-user-to-dn-mapping"
-    )
+    ldap_user_to_dn_mapping: str | None = Field(default=None, alias="ldap-user-to-dn-mapping")
     ldap_query_template: str | None = Field(default=None, alias="ldap-query-template")
 
     @field_validator("expose_external", mode="before")
