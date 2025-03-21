@@ -64,7 +64,8 @@ backends:
       # Use instead of `concierge restore` to save time between tests
       # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
       # min instead of 3 min between every spread job)
-      juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
+      juju destroy-model --force --no-wait --destroy-storage --no-prompt concierge-microk8s:testing
+      juju destroy-model --force --no-wait --destroy-storage --no-prompt concierge-lxd:testing
       juju kill-controller --no-prompt concierge-microk8s
       juju kill-controller --no-prompt concierge-lxd
     restore: |
@@ -121,7 +122,7 @@ path: /root/spread_project
 kill-timeout: 3h
 environment:
   PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
-  CONCIERGE_JUJU_CHANNEL/juju36: 3.6/stable
+  CONCIERGE_JUJU_CHANNEL: 3.6/stable
 prepare: |
   snap refresh --hold
   chown -R root:root "$SPREAD_PATH"
