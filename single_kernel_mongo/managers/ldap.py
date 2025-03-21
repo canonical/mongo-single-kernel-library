@@ -14,6 +14,7 @@ import jinja2
 from ldap3 import Connection as LDAPConnection
 from ldap3 import Server as LDAPServer
 from ldap3 import Tls as LDAPTls
+from ldap3.core.exceptions import LDAPException
 from ops import MaintenanceStatus
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
@@ -222,6 +223,8 @@ class LDAPManager(Object, StatusProvider):
         """Checks if the LDAP connection is working or not.
 
         Helpful to prevent restarts that would fail.
+        This returns a status for the ldap connection.
+        It is an early-fail method, it will return as soon as one uri is not working.
         """
         bind_dn = self.state.ldap.bind_user
         bind_password = self.state.ldap.bind_password
@@ -255,9 +258,10 @@ class LDAPManager(Object, StatusProvider):
                 )
                 server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
                 conn = LDAPConnection(server, user=bind_dn, password=bind_password)
-                conn.bind()  # We consider sufficient to be able to bind.
+                # For LDAP, binding is authenticating.
+                conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
                 conn.unbind()
-        except Exception as err:
+        except LDAPException as err:
             logger.error(f"Could not bind: {err}", exc_info=True)
             return BlockedStatus("Could not bind with ldap")
 

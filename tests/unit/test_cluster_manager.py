@@ -18,7 +18,6 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 from .mongos_test_charm.src.charm import MongosTestCharm
 
@@ -93,7 +92,6 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     assert "during an upgrade" in err.value.args[0]
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
 
@@ -113,10 +111,9 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
     data = manager.data_interface.as_dict(rel_id)
 
     assert len(data.get("key-file", "")) == 1024
-    assert data.get("config-server-db") == f"{harness.charm.app.name}/1.1.1.1:27017"
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/10.0.0.10:27017"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_share_secret_to_mongos_also_shares_ldap_config(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
 
@@ -153,11 +150,10 @@ def test_share_secret_to_mongos_also_shares_ldap_config(harness: Harness[MongoTe
     data = manager.data_interface.as_dict(rel_id)
 
     assert len(data.get("key-file", "")) == 1024
-    assert data.get("config-server-db") == f"{harness.charm.app.name}/1.1.1.1:27017"
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/10.0.0.10:27017"
     assert data.get("ldap-user-to-dn-mapping") == json.dumps(valid_mapping)
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
 
@@ -300,7 +296,6 @@ def test_cluster_requirer_share_credentials_to_clients(
     assert manager.state.secrets.get_for_key(Scope.APP, "password") == "password"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker
 ):
@@ -347,7 +342,6 @@ def test_cluster_requirer_update_mongos_and_restart(
         )
 
 
-@patch_network_get(private_address="1.1.1.1")
 @pytest.mark.parametrize(
     ("databag"), (({"key-file": "deadbeef"}), ({"config-server-db": "deadbeef"}), ({}))
 )
@@ -374,7 +368,6 @@ def test_cluster_requirer_update_mongos_and_restart_fail_missing_data(
     assert err.value.args[0] == "Waiting for keyfile or config server db uri"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker
 ):
@@ -407,7 +400,6 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     assert mongos_harness.charm.unit.status == WaitingStatus("Waiting for mongos to start")
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_cluster_requirer_remove_users_and_cleanup_mongo(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker
 ):
