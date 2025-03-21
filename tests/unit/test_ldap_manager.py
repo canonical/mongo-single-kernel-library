@@ -446,4 +446,21 @@ def test_ldaps_mongos_invalid_hash(
         },
     )
 
-    assert mongos_harness.charm.operator.ldap_manager.get_status() == BlockedStatus()
+    assert mongos_harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+        "mongos and config-server not integrated with the same ldap server."
+    )
+
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=ActiveStatus(),
+    )
+
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "test-mongodb",
+        {
+            "ldap-hash": "ea94093f0d37df1ba61800afd667921396f1f6d7e9957832456058df2ad8602f",
+        },
+    )
+
+    assert mongos_harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
