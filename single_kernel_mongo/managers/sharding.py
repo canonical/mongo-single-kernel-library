@@ -276,7 +276,7 @@ class ConfigServerManager(Object, StatusProvider):
             charm_statuses.append(ConfigServerStatuses.draining_shard(draining))
 
         if unreachable_shards := self.get_unreachable_shards():
-            charm_statuses.append(unreachable_shards)
+            charm_statuses.append(ConfigServerStatuses.unreachable_shards(unreachable_shards))
 
         return charm_statuses if charm_statuses else [ConfigServerStatuses.ACTIVE_IDLE.value]
 

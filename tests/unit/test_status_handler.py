@@ -19,7 +19,7 @@ from .mongos_test_charm.src.charm import MongosTestCharm
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added.")),
+        ({}, WaitingStatus("Member being added...")),
         ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary")),
         ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
         ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
@@ -85,7 +85,7 @@ def test_config_server_get_status_invalid_integration(
 
     harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
 
-    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    statuses = harness.charm.operator.get_statuses()
     status = next(iter(statuses), None)
 
     assert status == BlockedStatus("Sharding interface cannot be used by replicas.")
@@ -130,7 +130,7 @@ def test_config_server_get_status_client_relation(
 
     harness.add_relation(RelationNames.DATABASE.value, "client")
 
-    statuses = harness.charm.operator.config_server_manager.get_statuses()
+    statuses = harness.charm.operator.get_statuses()
     status = next(iter(statuses), None)
 
     assert status == BlockedStatus("Sharding roles do not support database interface.")
@@ -235,7 +235,9 @@ def test_config_server_get_status_unreachable_shards(
     assert status == BlockedStatus("Shards: shard0 are unreachable.")
 
 
-def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_config_server_all_active(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
@@ -300,7 +302,7 @@ def test_shard_get_status_charm_is_replication(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    statuses = harness.charm.operator.shard_manager.get_statuses()
+    statuses = harness.charm.operator.get_statuses()
     status = next(iter(statuses), None)
 
     assert status == BlockedStatus("Sharding interface cannot be used by replicas.")
@@ -315,7 +317,7 @@ def test_shard_get_status_charm_client_relation(
 
     harness.add_relation(RelationNames.DATABASE.value, "client")
 
-    statuses = harness.charm.operator.shard_manager.get_statuses()
+    statuses = harness.charm.operator.get_statuses()
     status = next(iter(statuses), None)
 
     assert status == BlockedStatus("Sharding roles do not support database interface.")
@@ -448,7 +450,9 @@ def test_shard_get_status_shard_not_aware(
     assert status == BlockedStatus("Shard is not yet shard aware.")
 
 
-def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_shard_get_status_all_ok(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
@@ -530,7 +534,9 @@ def test_status_handler_prioritize_status(
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
 
 
-def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
+def test_mongos_get_status_no_relation(
+    mongos_harness: Harness[MongosTestCharm], mocker
+):
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")
@@ -589,9 +595,14 @@ def test_mongos_get_status_mongos_not_running(
         return_value=None,
     )
     mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present",
+        return_value=True,
+    )
+    mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.active",
         return_value=False,
     )
+    mongos_harness.charm.operator.state.cluster.config_server_uri = "config-server"
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 

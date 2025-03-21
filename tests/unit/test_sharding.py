@@ -122,7 +122,7 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
 
     mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
-        return_value=MaintenanceStatus(""),
+        return_value=[MaintenanceStatus("")],
     )
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")

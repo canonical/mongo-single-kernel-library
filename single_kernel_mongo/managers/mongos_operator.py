@@ -538,7 +538,8 @@ class MongosOperator(OperatorProtocol, Object):
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
-            return CharmStatuses.MONGOS_NOT_STARTED.value
+            charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
+            return charm_statuses
 
         username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
         password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
