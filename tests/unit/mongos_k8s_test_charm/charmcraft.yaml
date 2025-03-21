@@ -13,20 +13,22 @@ bases:
 parts:
   charm:
     charm-strict-dependencies: true
-    override-pull: |
+    override-build: |
+      rustup default stable
       craftctl default
-      if [[ ! -f requirements.txt ]]
-      then
-          echo 'ERROR: Use "tox run -e build" instead of calling "charmcraft pack" directly' >&2
-          exit 1
-      fi
+    build-snaps:
+      - rustup
     build-packages:
       - git
+      - build-essential
       - libffi-dev
       - libssl-dev
       - pkg-config
       - rustc
       - cargo
+  version_data:
+    plugin: dump
+    source: .
     prime:
       - workload_version
       - charm_version

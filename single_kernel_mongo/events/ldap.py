@@ -111,7 +111,7 @@ class LDAPEventHandler(Object):
         action = "restart-ldap-if-ready"
         try:
             self.manager.restart_when_ready()
-        except DeferrableFailedHookChecksError as err:
+        except (DeferrableFailedHookChecksError, DeferrableError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")

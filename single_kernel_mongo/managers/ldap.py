@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import ssl
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -26,6 +27,7 @@ from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
+    InvalidLdapHashError,
     LDAPSNotEnabledError,
     NonDeferrableFailedHookChecksError,
     WaitingForLdapDataError,
@@ -42,6 +44,9 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 CANNOT_INTEGRATE_WITH_SHARD_STATUS = BlockedStatus("Cannot integrate LDAP with shard.")
+INVALID_HASH_STATUS = BlockedStatus(
+    "mongos and config-server not integrated with the same ldap server."
+)
 
 
 class LDAPManager(Object, StatusProvider):
@@ -110,17 +115,23 @@ class LDAPManager(Object, StatusProvider):
             case None:
                 return
             case ActiveStatus():
+                self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
                 self.dependent.restart_charm_services()
                 self.charm.status_manager.set_and_share_status(ActiveStatus())
             case status:
                 self.charm.status_manager.set_and_share_status(status)
+                if status == INVALID_HASH_STATUS:
+                    raise InvalidLdapHashError(
+                        "mongos and config-server not integrated with the same ldap server."
+                    )
 
     def ldap_unavailable(self) -> None:
         """Runs when the LDAP integration is broken."""
         self.state.ldap.clean_databag()
 
-        self.dependent.restart_charm_services()
+        if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
+            self.dependent.restart_charm_services()
         self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
 
     def certificate_available(self, certificate: str, ca: str, chain: list[str]) -> None:
@@ -158,7 +169,8 @@ class LDAPManager(Object, StatusProvider):
         if self.workload.exists(self.workload.paths.ldap_certificates_file):
             self.workload.delete(self.workload.paths.ldap_certificates_file)
 
-        self.dependent.restart_charm_services()
+        if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
+            self.dependent.restart_charm_services()
 
         self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
 
@@ -184,9 +196,15 @@ class LDAPManager(Object, StatusProvider):
             )
             return BlockedStatus("GLauth TLS is integrated but LDAP is not.")
 
-        ldap_relation_status = self.state.ldap.ldap_ready()
+        if self.state.is_role(MongoDBRoles.MONGOS):
+            if self.state.cluster.ldap_hash != self.get_hash():
+                logger.error(
+                    "Config Server and mongos integrations with LDAP have a different checksum."
+                    "This usually means they are not integrated with the same LDAP application."
+                )
+                return INVALID_HASH_STATUS
 
-        # We can ignore the typing error because we'll end up here only if both are not None.
+        ldap_relation_status = self.state.ldap.ldap_ready()
         ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()
 
         match (ldap_relation_status, ldap_certificate_integration_status):
@@ -244,3 +262,24 @@ class LDAPManager(Object, StatusProvider):
             return BlockedStatus("Could not bind with ldap")
 
         return ActiveStatus()
+
+    def share_hash_with_mongos(self):
+        """If we are a config-server, we share a hash to confirm the integration."""
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+        if not (hashed_data := self.get_hash()):
+            return
+        self.dependent.cluster_manager.update_ldap_hash_to_mongos(hashed_data)  # type: ignore
+
+    def get_hash(self) -> str | None:
+        """Gets the hash in a consistent way."""
+        if not (chain := self.state.ldap.chain):
+            return None
+        if not (ldaps_urls := self.state.ldap.chain):
+            return None
+        data = sorted(chain) + sorted(ldaps_urls)
+        return hashlib.sha256(".".join(data).encode("ascii")).hexdigest()
+
+    def remove_hash_from_mongos(self):
+        """When one of the relation is broken, we clean the hash from the integration."""
+        self.dependent.cluster_manager.remove_ldap_hash()  # type: ignore

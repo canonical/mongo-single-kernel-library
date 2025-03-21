@@ -102,6 +102,9 @@ class ClusterProvider(Object):
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
+        if hashed_data := self.dependent.ldap_manager.get_hash():
+            relation_data[ClusterStateKeys.LDAP_HASH.value] = hashed_data
+
         # We want to avoid having to configure both applications with the exact
         # same string so the config-server shares it with the client.
         if ldap_user_to_dn_mapping := self.state.app_peer_data.ldap_user_to_dn_mapping:
@@ -159,6 +162,40 @@ class ClusterProvider(Object):
                 },
             )
 
+    def update_ldap_hash_to_mongos(self, hashed_data: str) -> None:
+        """Sends the hash to mongos to confirm we are integrated with the same units."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not updating ldap hash now, not ready.")
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        for relation in self.state.cluster_relations:
+            self.data_interface.update_relation_data(
+                relation.id,
+                {ClusterStateKeys.LDAP_HASH.value: hashed_data},
+            )
+
+    def remove_ldap_hash(self) -> None:
+        """Removes the hash from all relations."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not removing ldap hash now, not ready.")
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        for relation in self.state.cluster_relations:
+            self.data_interface.delete_relation_data(
+                relation.id,
+                [ClusterStateKeys.LDAP_HASH.value],
+            )
+
     def update_ldap_user_to_dn_mapping(self) -> None:
         """Updates the ldap user to dn mapping value in the databag."""
         try:
@@ -174,7 +211,7 @@ class ClusterProvider(Object):
             self.data_interface.update_relation_data(
                 relation.id,
                 {
-                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.config.ldap_user_to_dn_mapping
+                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.app_peer_data.ldap_user_to_dn_mapping
                 },
             )
 

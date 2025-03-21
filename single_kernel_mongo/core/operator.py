@@ -280,9 +280,10 @@ class OperatorProtocol(ABC, Object):
 
     def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
-        # Remove the file
-        self.workload.delete(TRUST_STORE_PATH / file.value)
-        # Update CA certificates to remove the certificate from the trust store
-        self.workload.exec("update-ca-certificates")
-        # Restart the service
-        self.restart_charm_services(force=True)
+        if self.workload.exists(TRUST_STORE_PATH / file.value):
+            # Remove the file
+            self.workload.delete(TRUST_STORE_PATH / file.value)
+            # Update CA certificates to remove the certificate from the trust store
+            self.workload.exec("update-ca-certificates")
+            # Restart the service
+            self.restart_charm_services(force=True)
