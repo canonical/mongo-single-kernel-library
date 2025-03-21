@@ -12,24 +12,22 @@ from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.status import Statuses
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 from .mongos_test_charm.src.charm import MongosTestCharm
 
 
-@patch_network_get(private_address="1.1.1.1")
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added...")),
-        ({"1.1.1.1": "PRIMARY"}, ActiveStatus("Primary.")),
-        ({"1.1.1.1": "SECONDARY"}, ActiveStatus("")),
-        ({"1.1.1.1": "STARTUP"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "STARTUP2"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "RECOVERING"}, WaitingStatus("Member is syncing...")),
-        ({"1.1.1.1": "REMOVED"}, WaitingStatus("Member is removing...")),
-        ({"1.1.1.1": "ERROR"}, BlockedStatus("ERROR")),
+        ({}, WaitingStatus("Member being added.")),
+        ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary")),
+        ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
+        ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "STARTUP2"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "RECOVERING"}, WaitingStatus("Member is syncing...")),
+        ({"10.0.0.10": "REMOVED"}, WaitingStatus("Member is removing...")),
+        ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
 def test_mongo_get_status_no_error(
@@ -50,7 +48,6 @@ def test_mongo_get_status_no_error(
     assert status == expected_status
 
 
-@patch_network_get(private_address="1.1.1.1")
 @pytest.mark.parametrize(
     ("error", "expected_status"),
     (
@@ -238,7 +235,9 @@ def test_config_server_get_status_unreachable_shards(
     assert status == BlockedStatus("Shards: shard0 are unreachable.")
 
 
-def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_config_server_all_active(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
@@ -451,7 +450,9 @@ def test_shard_get_status_shard_not_aware(
     assert status == BlockedStatus("Shard is not yet shard aware.")
 
 
-def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_shard_get_status_all_ok(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
@@ -533,7 +534,9 @@ def test_status_handler_prioritize_status(
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
 
 
-def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
+def test_mongos_get_status_no_relation(
+    mongos_harness: Harness[MongosTestCharm], mocker
+):
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")

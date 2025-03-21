@@ -1,6 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from ops import MaintenanceStatus
 from ops.model import BlockedStatus, WaitingStatus
@@ -19,7 +21,6 @@ from single_kernel_mongo.utils.mongodb_users import (
     OperatorUser,
 )
 
-from .helpers import patch_network_get
 from .mongodb_test_charm.src.charm import MongoTestCharm
 
 PEER_ADDR = {"private-address": "127.4.5.6"}
@@ -173,11 +174,81 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
-def test_on_config_changed(harness):
+def test_on_config_changed_invalid_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LdapUserToDnMapping, please update your config."
+    )
+
+
+def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.example\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=example,DC=com",
+        }
+    ]
+
+    harness.update_config(
+        {
+            "ldap-user-to-dn-mapping": json.dumps(valid_mapping),
+            "ldap-query-template": "{PROVIDED_USER}",
+        }
+    )
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LDAP Query template, please update your config."
+    )
+
+
+def test_on_config_changed_invalid_ldap_query_template_user(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    harness.update_config(
+        {
+            "ldap-query-template": "{USER}",
+        }
+    )
+    assert harness.charm.unit.status == BlockedStatus(
+        "Invalid LDAP Query template, please update your config."
+    )
+
+
+def test_on_config_changed_valid_ldap_query_template(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+
+    valid_mapping = [
+        {
+            "match": "([^@]+)@([^@\\.]+)\\.example\\.com",
+            "substitution": "CN={0},CN=Users,DC={1},DC=example,DC=com",
+        }
+    ]
+
+    harness.update_config(
+        {
+            "ldap-user-to-dn-mapping": json.dumps(valid_mapping),
+            "ldap-query-template": "{USER}",
+        }
+    )
+    assert (
+        json.loads(harness.charm.operator.state.app_peer_data.ldap_user_to_dn_mapping)
+        == valid_mapping
+    )
+    assert harness.charm.operator.state.app_peer_data.ldap_query_template == "{USER}"
 
 
 def test_on_config_changed_upgrade_in_progress(harness, mocker):
@@ -188,7 +259,11 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
         return_value=True,
     )
-    harness.update_config({"role": "shard"})
+    harness.update_config(
+        {
+            "ldap-query-template": "{PROVIDED_USER}",
+        }
+    )
 
     mocked_defer.assert_called()
 
@@ -360,7 +435,6 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     mock_on_relation_changed.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -371,7 +445,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mock_conn.return_value = False
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members",
-        return_value={"1.1.1.1"},
+        return_value={"10.0.0.10"},
     )
     mocked_add_replset_member = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
@@ -389,7 +463,6 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mocked_add_replset_member.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_departed_not_leader(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
@@ -420,7 +493,6 @@ def test_on_relation_departed_not_leader(
     update_host_mock.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -448,7 +520,6 @@ def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mo
     update_host_mock.assert_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
@@ -457,19 +528,17 @@ def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):
         harness.run_action("get-primary")
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        return_value="1.1.1.1",
+        return_value="10.0.0.10",
     )
     output = harness.run_action("get-primary")
     assert output.results["replica-set-primary"] == "test-mongodb/0"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
