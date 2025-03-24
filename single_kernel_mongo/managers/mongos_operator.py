@@ -541,8 +541,8 @@ class MongosOperator(OperatorProtocol, Object):
             charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
             return charm_statuses
 
-        username = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
-        password = self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
+        username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
+        password = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
         if not username or not password:
             charm_statuses.append(CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value)
 

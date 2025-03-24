@@ -72,7 +72,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return UpgradeStatuses.INCOMPATIBLE_UPGRADE
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property

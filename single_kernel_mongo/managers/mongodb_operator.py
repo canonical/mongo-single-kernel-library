@@ -31,6 +31,7 @@ from single_kernel_mongo.config.literals import (
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
+    BackupStatuses,
     CharmStatuses,
     MongodStatuses,
     ShardStatuses,
@@ -291,8 +292,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.start_charm_services()
                 self.open_ports()
 
-        print("STARTED SERVICES")
-
         # This seems unnecessary
         # if self.substrate == Substrates.K8S:
         #    if not self.workload.exists(self.workload.paths.socket_path):
@@ -300,9 +299,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.MONGODB_NOT_STARTED.value)
             raise WorkloadNotReadyError
 
         self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
@@ -319,7 +316,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             self._restart_related_services()
         except WorkloadServiceError:
-            print("ERROR STARTING SERVICES")
             logger.error("Could not restart the related services.")
             return
 

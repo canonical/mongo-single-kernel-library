@@ -135,7 +135,7 @@ class ShardStatuses(Enum):
     """Shard statuses."""
 
     REQUIRES_TLS = BlockedStatus("Shard requires TLS to be enabled.")
-    SHARD_REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
+    REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
     CA_MISMATCH = BlockedStatus("Shard CA and Config-Server CA don't match.")
 
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
@@ -160,8 +160,8 @@ class ShardStatuses(Enum):
             f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
         )
 
+    @staticmethod
     def older_version_shard_needs_upgrade(
-        self,
         current_charms_version: str,
         local_identifier: str,
     ) -> StatusBase:
@@ -198,8 +198,8 @@ class UpgradeStatuses(Enum):
         "Refreshing. To rollback, `juju refresh` to the previous revision"
     )
 
+    @staticmethod
     def vm_active_upgrade(
-        self,
         unit_workload_version: str,
         unit_workload_container_version: str,
         current_versions: str,
@@ -213,17 +213,16 @@ class UpgradeStatuses(Enum):
             f"Charm revision {current_versions}"
         )
 
-    def k8s_active_upgrade(
-        self, workload_version: str, charm_version: str, outdated=False
-    ) -> StatusBase:
+    @staticmethod
+    def k8s_active_upgrade(workload_version: str, charm_version: str, outdated=False) -> StatusBase:
         """Returns the active status for a k8s unit."""
         outdated_str = " (restart pending)" if outdated else ""
         return ActiveStatus(
             f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}"
         )
 
+    @staticmethod
     def refreshing_needs_resume(
-        self,
         resume_string: str,
     ) -> StatusBase:
         """Returns refreshing status."""

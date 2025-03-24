@@ -150,6 +150,15 @@ def test_config_server_get_status_internal_mongos_not_running(
         return_value=False,
     )
 
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
+        return_value=[],
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.sharding.ConfigServerManager.get_unreachable_shards",
+        return_value=[],
+    )
+
     statuses = harness.charm.operator.config_server_manager.get_statuses()
     status = next(iter(statuses), None)
 
@@ -168,6 +177,18 @@ def test_config_server_get_status_password_not_synced(
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
         return_value=True,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.sharding.ConfigServerManager.cluster_password_synced",
+        return_value=False,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
+        return_value=[],
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.sharding.ConfigServerManager.get_unreachable_shards",
+        return_value=[],
     )
 
     statuses = harness.charm.operator.config_server_manager.get_statuses()
@@ -617,13 +638,20 @@ def test_mongos_get_status_wait_to_connect(
     assert mongos_operator.charm.unit.status == expected_status
 
 
-def test_mongos_get_status_all_good(
+def test_mongos_get_statuses_needs_waiting_to_connect(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
 ):
     mongos_operator = mongos_harness.charm.operator
 
-    expected_status = ActiveStatus()
+    expected_status = WaitingStatus("Connecting to config-server...")
+
+    mocker.patch(
+        "single_kernel_mongo.workload.VMMongosWorkload.workload_present",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
         return_value=None,
