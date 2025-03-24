@@ -20,7 +20,7 @@ from .mongos_test_charm.src.charm import MongosTestCharm
     ("replset_status", "expected_status"),
     (
         ({}, WaitingStatus("Member being added...")),
-        ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary")),
+        ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary.")),
         ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
         ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
         ({"10.0.0.10": "STARTUP2"}, WaitingStatus("Member is syncing...")),
@@ -235,9 +235,7 @@ def test_config_server_get_status_unreachable_shards(
     assert status == BlockedStatus("Shards: shard0 are unreachable.")
 
 
-def test_config_server_all_active(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
@@ -363,6 +361,14 @@ def test_shard_get_status_cluster_password_not_synced(
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
     mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.is_shard_added_to_cluster",
+        return_value=True,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.sharding.ShardManager._is_shard_aware",
+        return_value=True,
+    )
+    mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.cluster_password_synced",
         return_value=False,
     )
@@ -450,9 +456,7 @@ def test_shard_get_status_shard_not_aware(
     assert status == BlockedStatus("Shard is not yet shard aware.")
 
 
-def test_shard_get_status_all_ok(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
-):
+def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
@@ -534,9 +538,7 @@ def test_status_handler_prioritize_status(
     assert status_handler.prioritize_statuses(status) == asdict(status)[expected_key]  # type: ignore[literal-required]
 
 
-def test_mongos_get_status_no_relation(
-    mongos_harness: Harness[MongosTestCharm], mocker
-):
+def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
     mongos_operator = mongos_harness.charm.operator
 
     expected_status = BlockedStatus("Missing relation to config-server.")
@@ -583,13 +585,13 @@ def test_mongos_get_status_tls_status(
     assert mongos_operator.charm.unit.status == expected_status
 
 
-def test_mongos_get_status_mongos_not_running(
+def test_mongos_get_status_wait_to_connect(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
 ):
     mongos_operator = mongos_harness.charm.operator
 
-    expected_status = WaitingStatus("Waiting to start mongos...")
+    expected_status = WaitingStatus("Connecting to config-server...")
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
         return_value=None,
@@ -602,7 +604,6 @@ def test_mongos_get_status_mongos_not_running(
         "single_kernel_mongo.core.vm_workload.VMWorkload.active",
         return_value=False,
     )
-    mongos_harness.charm.operator.state.cluster.config_server_uri = "config-server"
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
 
@@ -611,6 +612,8 @@ def test_mongos_get_status_mongos_not_running(
     assert status == expected_status
     mongos_harness.charm.status_manager.process_and_share_statuses()
 
+    # mongos can have the relation to config-server, but until the config-server URI is set we
+    # are still waiting to connect
     assert mongos_operator.charm.unit.status == expected_status
 
 

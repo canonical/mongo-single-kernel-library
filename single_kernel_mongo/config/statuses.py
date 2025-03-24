@@ -182,6 +182,7 @@ class MongodStatuses(Enum):
     MEMBER_REMOVING = WaitingStatus("Member is removing...")
     MEMBER_SYNCING = WaitingStatus("Member is syncing...")
     PRIMARY = ActiveStatus("Primary.")
+    SECONDARY = ActiveStatus()
 
 
 class UpgradeStatuses(Enum):

@@ -857,9 +857,6 @@ class ShardManager(Object, StatusProvider):
             if not self.state.unit_peer_data.drained:
                 return [ShardStatuses.NEED_CONF_SERVER.value]
 
-        if not self.cluster_password_synced():
-            charm_statuses.append(ShardStatuses.SYNCING_PASSWORDS.value)
-
         if tls_status := self.get_tls_status():
             charm_statuses.append(tls_status)
             # if TLS is misconfigured we will get redherrings on the remaining messages
@@ -867,8 +864,14 @@ class ShardManager(Object, StatusProvider):
 
         if not self.state.is_shard_added_to_cluster():
             charm_statuses.append(ShardStatuses.ADDING_TO_CLUSTER.value)
+            # the rest of the statuses need mongos information which occurs after being added
+            # to the clusters
+            return charm_statuses
+
+        if not self.cluster_password_synced():
+            charm_statuses.append(ShardStatuses.SYNCING_PASSWORDS.value)
 
         if not self._is_shard_aware():
             charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
 
-        return charm_statuses if charm_statuses else [ShardStatuses.ACTIVE_IDLE.value]
+        return charm_statuses or [ShardStatuses.ACTIVE_IDLE.value]

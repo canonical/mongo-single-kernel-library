@@ -494,14 +494,16 @@ class MongoManager(Object, StatusProvider):
             match replica_status:
                 case "PRIMARY":
                     charm_statuses.append(MongodStatuses.PRIMARY.value)
+                    print(charm_statuses)
                 case "SECONDARY":
                     charm_statuses.append(MongodStatuses.SECONDARY.value)
+                    print(charm_statuses)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
                     return [MongodStatuses.MEMBER_SYNCING.value]
                 case "REMOVED":
                     return [MongodStatuses.MEMBER_REMOVING.value]
                 case _:
-                    return charm_statuses.append(BlockedStatus(replica_status))
+                    return [BlockedStatus(replica_status)]
 
         except ServerSelectionTimeoutError as e:
             # Usually it is du to ReplicaSetNoPrimary
@@ -513,7 +515,8 @@ class MongoManager(Object, StatusProvider):
             logger.debug("Got error: %s, while checking replica set status", str(e))
             return [MongodStatuses.WAITING_RECONNECT.value]
 
-        charm_statuses.extend(self.get_leader_statuses)
+        charm_statuses.extend(self.get_leader_statuses())
+        print(charm_statuses)
         return charm_statuses
 
     def get_leader_statuses(self) -> list[StatusBase]:
