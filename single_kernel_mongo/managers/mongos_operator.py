@@ -81,7 +81,9 @@ class MongosOperator(OperatorProtocol, Object):
         )
 
         container = (
-            self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
+            self.charm.unit.get_container(self.name)
+            if self.substrate == Substrates.K8S
+            else None
         )
 
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
@@ -107,7 +109,9 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
-        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        upgrade_backend = (
+            MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
+        )
         self.upgrade_manager = MongosUpgradeManager(
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
@@ -152,7 +156,6 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
-            print("RAISE")
             raise ContainerNotReadyError
 
         self._configure_workloads()
@@ -163,11 +166,7 @@ class MongosOperator(OperatorProtocol, Object):
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        print("ending")
         if not self.state.mongos_cluster_relation:
-            print("setting")
-            print(CharmStatuses.mongos.value.NEED_CONF_SERVER.value)
-            print("----")
             self.charm.status_manager.set_and_share_status(
                 CharmStatuses.mongos.value.NEED_CONF_SERVER.value
             )
@@ -387,7 +386,9 @@ class MongosOperator(OperatorProtocol, Object):
             ).split(",")
         )
         external_connectivity = json.loads(
-            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            data_interface.fetch_relation_field(
+                relation.id, "external-node-connectivity"
+            )
             or "false"
         )
 
@@ -459,11 +460,17 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+                host = (
+                    self.state.unit_peer_data.internal_address
+                    + f":{MongoPorts.MONGOS_PORT}"
+                )
             else:
                 host = self.state.formatted_socket_path
         else:
-            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+            host = (
+                self.state.unit_peer_data.internal_address
+                + f":{MongoPorts.MONGOS_PORT}"
+            )
 
         uri = f"mongodb://{host}"
 
@@ -514,7 +521,9 @@ class MongosOperator(OperatorProtocol, Object):
                 self.charm.config["expose-external"],
                 "['nodeport', 'none']",
             )
-            charm_statuses.append(CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value)
+            charm_statuses.append(
+                CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+            )
 
         if not self.workload.workload_present:
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
@@ -533,16 +542,25 @@ class MongosOperator(OperatorProtocol, Object):
             charm_statuses.append(status)
             return charm_statuses
 
-        if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
-            charm_statuses.append(CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value)
+        if (
+            self.state.mongos_cluster_relation
+            and not self.state.cluster.config_server_uri
+        ):
+            charm_statuses.append(
+                CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value
+            )
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
             charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
             return charm_statuses
 
-        username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
-        password = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
+        username = self.state.secrets.get_for_key(
+            Scope.APP, key=AppPeerDataKeys.USERNAME.value
+        )
+        password = self.state.secrets.get_for_key(
+            Scope.APP, key=AppPeerDataKeys.PASSWORD.value
+        )
         if not username or not password:
             charm_statuses.append(CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value)
 
