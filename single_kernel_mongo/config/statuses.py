@@ -200,8 +200,8 @@ class UpgradeStatuses(Enum):
 
     @staticmethod
     def vm_active_upgrade(
-        unit_workload_version: str,
-        unit_workload_container_version: str,
+        unit_workload_version: str | None,
+        unit_workload_container_version: str | None,
         current_versions: str,
         outdated: bool = False,
     ) -> StatusBase:

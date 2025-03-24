@@ -299,7 +299,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.charm.status_manager.set_and_share_status(BackupStatuses.MONGODB_NOT_STARTED.value)
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+            )
             raise WorkloadNotReadyError
 
         self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
@@ -846,9 +848,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.PBM_NOT_STARTED.value
-            )
+            self.charm.status_manager.set_and_share_status(BackupStatuses.PBM_NOT_STARTED.value)
             raise
 
     @override

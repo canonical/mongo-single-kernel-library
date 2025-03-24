@@ -442,7 +442,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         Note: we allow the use of ignore_unhealthy_upgrade, to avoid infinite loops due to this
         function returning False and preventing the status from being reset.
         """
-        if isinstance(self.charm.unit.status, UpgradeStatuses.ACTIVE_IDLE):
+        if isinstance(self.charm.unit.status, ActiveStatus):
             return True
 
         if ignore_unhealthy_upgrade and self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE:

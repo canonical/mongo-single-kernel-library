@@ -297,3 +297,4 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
         TODO - implement this once we understand upgrade statuses better.
         """
+        return []

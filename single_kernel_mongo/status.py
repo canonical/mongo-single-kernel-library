@@ -97,7 +97,7 @@ class StatusManager(Object):
             config_server_statuses = self.operator.config_server_manager.get_statuses()
             pbm_statuses = self.operator.backup_manager.get_statuses()
             return Statuses(
-                mongodb=next(iter(mongo_statuses), None),
+                mongodb=next(iter(mongo_statuses), ActiveStatus()),
                 shard=next(iter(shard_statuses), None),
                 config_server=next(iter(config_server_statuses), None),
                 pbm=next(iter(pbm_statuses), None),

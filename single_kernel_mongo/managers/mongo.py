@@ -494,10 +494,8 @@ class MongoManager(Object, StatusProvider):
             match replica_status:
                 case "PRIMARY":
                     charm_statuses.append(MongodStatuses.PRIMARY.value)
-                    print(charm_statuses)
                 case "SECONDARY":
                     charm_statuses.append(MongodStatuses.SECONDARY.value)
-                    print(charm_statuses)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
                     return [MongodStatuses.MEMBER_SYNCING.value]
                 case "REMOVED":
@@ -516,7 +514,6 @@ class MongoManager(Object, StatusProvider):
             return [MongodStatuses.WAITING_RECONNECT.value]
 
         charm_statuses.extend(self.get_leader_statuses())
-        print(charm_statuses)
         return charm_statuses
 
     def get_leader_statuses(self) -> list[StatusBase]:
@@ -531,9 +528,9 @@ class MongoManager(Object, StatusProvider):
                 replset_members = mongo.get_replset_members()
                 config_hosts = mongo.config.hosts
                 if replset_members != config_hosts:
-                    charm_statuses.append(MongodStatuses.WAITING_RECONFIG)
+                    return [MongodStatuses.WAITING_RECONFIG.value]
         except PyMongoError as e:
             logger.error("Error checking members, %s", e)
-            charm_statuses.append(MongodStatuses.WAITING_RECONFIG)
+            return [MongodStatuses.WAITING_RECONFIG.value]
 
         return charm_statuses
