@@ -599,7 +599,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         there is a chance that this function it will incorrectly report the backup/restore
         succeeded.
 
-        TODO: Rework this and integrate it with COS - see DPE-6868 on JIRA for more information.
+        TODO: Rework this and integrate it with COS - see DPE-6868 on JIRA for more info.
         """
         if (
             current_pbm_status.name == previous_pbm_status.name
