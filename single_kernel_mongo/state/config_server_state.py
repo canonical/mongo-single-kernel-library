@@ -41,18 +41,14 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     component: Application
 
-    def __init__(
-        self, relation: Relation | None, data_interface: Data, component: Application
-    ):
+    def __init__(self, relation: Relation | None, data_interface: Data, component: Application):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
 
     @property
     def mongos_hosts(self) -> list[str]:
         """The mongos hosts in the relation."""
-        return json.loads(
-            self.relation_data.get(AppShardingComponentKeys.HOST.value, "[]")
-        )
+        return json.loads(self.relation_data.get(AppShardingComponentKeys.HOST.value, "[]"))
 
     @mongos_hosts.setter
     def mongos_hosts(self, value: list[str]):
@@ -63,13 +59,9 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         if not self.relation:
             return False
         return (
-            self.relation_data.get(
-                AppShardingComponentKeys.OPERATOR_PASSWORD.value, None
-            )
+            self.relation_data.get(AppShardingComponentKeys.OPERATOR_PASSWORD.value, None)
             is not None
-            and self.relation_data.get(
-                AppShardingComponentKeys.BACKUP_PASSWORD.value, None
-            )
+            and self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
             is not None
         )
 
@@ -78,9 +70,7 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         """Returns the internal CA secret."""
         if not self.relation:
             return None
-        return self.relation_data.get(
-            AppShardingComponentKeys.INT_CA_SECRET.value, None
-        )
+        return self.relation_data.get(AppShardingComponentKeys.INT_CA_SECRET.value, None)
 
     @property
     def keyfile(self) -> str | None:
@@ -94,18 +84,14 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         """Returns the operator password."""
         if not self.relation:
             return None
-        return self.relation_data.get(
-            AppShardingComponentKeys.OPERATOR_PASSWORD.value, None
-        )
+        return self.relation_data.get(AppShardingComponentKeys.OPERATOR_PASSWORD.value, None)
 
     @property
     def backup_password(self) -> str | None:
         """Returns the operator password."""
         if not self.relation:
             return None
-        return self.relation_data.get(
-            AppShardingComponentKeys.BACKUP_PASSWORD.value, None
-        )
+        return self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):
@@ -113,9 +99,7 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
 
     component: Unit
 
-    def __init__(
-        self, relation: Relation | None, data_interface: Data, component: Unit
-    ):
+    def __init__(self, relation: Relation | None, data_interface: Data, component: Unit):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
 
@@ -136,7 +120,7 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
 
     @status_ready_for_upgrade.setter
     def status_ready_for_upgrade(self, value: bool):
-        """Sets old status
+        """Sets old status.
 
         Legacy: for old upgrades that require status from shards.
         """
