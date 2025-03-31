@@ -21,7 +21,7 @@ backends:
       ssh_pwauth: true
       users:
         - default
-        - name: spread
+        - name: runner
           plain_text_passwd: $SPREAD_PASSWORD
           lock_passwd: false
           sudo: ALL=(ALL) NOPASSWD:ALL
@@ -36,7 +36,7 @@ backends:
         -d root,size="${DISK}GiB"
 
       # Wait for the runner user
-      while ! lxc exec "${VM_NAME}" -- id -u spread &>/dev/null; do sleep 0.5; done
+      while ! lxc exec "${VM_NAME}" -- id -u runner &>/dev/null; do sleep 0.5; done
 
       # Set the instance address for spread
       ADDRESS "$(lxc ls -f csv | grep "${VM_NAME}" | cut -d"," -f3 | cut -d" " -f1)"
@@ -49,7 +49,7 @@ backends:
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
       - ubuntu-22.04:
-          username: spread
+          username: runner
     prepare: |
       systemctl disable --now unattended-upgrades.service
       systemctl mask unattended-upgrades.service
@@ -87,13 +87,13 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl restart ssh
 
-      sudo useradd spread -s /bin/bash -m || true
-      echo "spread:$SPREAD_PASSWORD" | sudo chpasswd || true
-      echo 'spread ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-spread-user || true
+      sudo useradd runner -s /bin/bash -m || true
+      echo "runner:$SPREAD_PASSWORD" | sudo chpasswd || true
+      echo 'runner ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-spread-user || true
 
       ADDRESS "127.0.0.1"
     discard: |
-      sudo userdel -f -r spread || true
+      sudo userdel -f -r runner || true
       sudo rm -f /etc/sudoers.d/99-spread-user
 
     # HACK: spread does not pass environment variables set on runner
@@ -102,7 +102,7 @@ backends:
       CI: '$(HOST: echo $CI)'
     systems:
       - ubuntu-22.04:
-          username: spread
+          username: runner
 
 suites:
   tests/spread/mongodb/:
