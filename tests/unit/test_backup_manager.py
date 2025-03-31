@@ -19,8 +19,6 @@ from single_kernel_mongo.exceptions import (
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
-from .helpers import patch_network_get
-
 
 def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
@@ -85,12 +83,11 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], mocker):
         ("status code: 301", "s3 configurations are incompatible."),
         ("Unknown message", "PBM error"),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/1.1.1.1:27018", "errors": "status code: 403"}], "rs": "test-mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "test-mongodb"}]}',
             "s3 credentials are incorrect.",
         ),
     ),
 )
-@patch_network_get(private_address="1.1.1.1")
 def test_get_status_pbm_error(harness: Harness[MongoTestCharm], mocker, pbm_status, expected):
     backup_manager = harness.charm.operator.backup_manager
     harness.set_leader(True)
