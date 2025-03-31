@@ -81,17 +81,12 @@ backends:
     # each spread job & select a single job when running spread)
     # Derived from https://github.com/jnsgruk/zinc-k8s-operator/blob/a21eae8399eb3b9df4ddb934b837af25ef831976/spread.yaml#L47
     allocate: |
-      sudo sed -i "s|#PasswordAuthentication yes|PasswordAuthentication yes|g" /etc/ssh/sshd_config
-      sudo sed -i "s|KbdInteractiveAuthentication no|KbdInteractiveAuthentication yes|g" /etc/ssh/sshd_config
-      sudo rm -f /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
-      sudo systemctl daemon-reload
-      sudo systemctl restart ssh
+      sudo tee /etc/ssh/sshd_config.d/10-spread-github-ci.conf << 'EOF'
+      PasswordAuthentication yes
+      PermitEmptyPasswords yes
+      EOF
 
-      sudo useradd runner -s /bin/bash -m || true
-      echo "runner:$SPREAD_PASSWORD" | sudo chpasswd || true
-      echo 'runner ALL=(ALL) NOPASSWD:ALL ' | sudo tee /etc/sudoers.d/99-spread-user || true
-
-      ADDRESS "127.0.0.1"
+      ADDRESS localhost
     discard: |
       sudo userdel -f -r runner || true
       sudo rm -f /etc/sudoers.d/99-spread-user
@@ -105,17 +100,14 @@ backends:
           username: runner
 
 suites:
-  tests/spread/mongodb/:
-    summary: Spread tests for MongoDB
-    variants:
-      - microk8s
-      - lxd
-  tests/spread/mongos/:
-    summary: Spread tests for Mongos
-    variants:
-      - microk8s
-      - lxd
-
+  tests/spread/mongodb/lxd/:
+    summary: Spread tests for MongoDB VM
+  tests/spread/mongodb/microk8s/:
+    summary: Spread tests for MongoDB Kubernetes
+  tests/spread/mongos/lxd/:
+    summary: Spread tests for Mongos VM
+  tests/spread/mongos/microk8s/:
+    summary: Spread tests for Mongos VM
 
 path: /root/spread_project
 
@@ -129,21 +121,23 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
-  # Install charmcraft & pipx (on lxd-vm backend)
-  if [[ $SPREAD_VARIANT == *"lxd"* ]]
-  then
-    concierge prepare --trace -p machine
-  else
-    concierge prepare --trace -p microk8s
-  fi
+  concierge prepare --trace
 
+  # Install charmcraft & pipx (on lxd-vm backend)
   pipx install tox
   pipx install poetry
 prepare-each: |
   cd "$SPREAD_PATH"
-  concierge prepare --trace
 
   # `concierge prepare` needs to be run for each spread job in case Juju version changed
+  concierge prepare --trace
+
+  if [[ $SPREAD_SUITE == *"lxd"* ]]
+  then
+    juju switch concierge-lxd
+  else
+    juju switch concierge-microk8s
+  fi
 
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
