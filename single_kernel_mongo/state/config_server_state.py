@@ -35,6 +35,8 @@ SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-se
 class UnitShardingComponentKeys(str, Enum):
     """Config Server State Model for the unit."""
 
+    STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
+
 
 class AppShardingComponentState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
