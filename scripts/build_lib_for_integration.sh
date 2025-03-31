@@ -23,19 +23,25 @@ for directory in "${TEST_CHARMS[@]}"; do
     cp -r "${LIB_PATH}" "$directory_lib_path"
     cp "pyproject.toml" "$directory_lib_path"
     cp "README.md" "$directory_lib_path"
-    cp "${directory}/requirements.txt" "${directory}/requirements.txt.backup"
-    echo "mongo-charms-single-kernel @ file:${LIB_PATH}" > "${directory}/requirements.txt"
-    poetry export --without-hashes >> "${directory}/requirements.txt"
 
     echo "Building charm ${directory}\n"
 
 
     pushd $directory
+
+    poetry add "${LIB_PATH}/"
+    poetry lock
+
     python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
+
+    # Pack the charm
     charmcraft -v pack
-     echo "removing copied files from single kernel charm."
+
+    # Cleanup
+    echo "removing copied files from single kernel charm."
     rm ${LIB_PATH} -rf
     mv charm_version.backup charm_version
+
+    # Go back to root directory
     popd
-    mv "${directory}/requirements.txt.backup" "${directory}/requirements.txt"
 done
