@@ -417,7 +417,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.ldap_user_to_dn_mapping = (
                     self.config.ldap_user_to_dn_mapping
                 )
-            # TODO: Send this to mongos as well.
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                self.cluster_manager.update_ldap_user_to_dn_mapping()
 
             if self.config.ldap_query_template:
                 self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
@@ -897,7 +898,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
-        self.ldap_manager.save_certificates()
+        self.ldap_manager.save_certificates(self.state.ldap.chain)
 
         # Update licenses
         self.handle_licenses()

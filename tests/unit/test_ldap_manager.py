@@ -2,12 +2,13 @@
 # See LICENSE file for licensing details.
 
 import json
+from pathlib import Path
 
 import pytest
 from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
-from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -15,6 +16,7 @@ from single_kernel_mongo.exceptions import (
 )
 
 from .mongodb_test_charm.src.charm import MongoTestCharm
+from .mongos_test_charm.src.charm import MongosTestCharm
 
 
 def test_valid_ldap_integration(harness: Harness[MongoTestCharm]):
@@ -254,6 +256,7 @@ def test_on_certificate_removed_clean_certs(
     mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
     )
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exists", return_value=True)
     mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
@@ -327,6 +330,11 @@ def test_ldap_full_integration_cycle(
     # All is good, we are green
     assert harness.charm.unit.status == ActiveStatus("")
 
+    assert (
+        harness.charm.operator.ldap_manager.get_hash()
+        == "ea94093f0d37df1ba61800afd667921396f1f6d7e9957832456058df2ad8602f"
+    )
+
     # Check the parameters
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
@@ -386,3 +394,78 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
 
     assert harness.charm.unit.status == BlockedStatus("LDAPS not enabled on LDAP application.")
     mock_restart.assert_not_called()
+
+
+def test_ldaps_mongos_invalid_hash(
+    mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions
+):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.db_initialised = True
+    rel_id_ldap = mongos_harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    mongos_harness.update_relation_data(
+        rel_id_ldap,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_id": "secret-id",
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": '["ldaps://ldap.glauth.com"]',
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+    rel_id_ldap_cert = mongos_harness.add_relation(
+        ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
+    )
+    mongos_harness.add_relation_unit(rel_id_ldap_cert, "glauth-k8s/0")
+
+    mongos_harness.update_relation_data(
+        rel_id_ldap_cert,
+        "glauth-k8s/0",
+        {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
+    )
+
+    assert mongos_harness.charm.unit.status == BlockedStatus(
+        "mongos and config-server not integrated with the same ldap server."
+    )
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+
+    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "test-mongodb")
+    mongos_harness.add_relation_unit(rel_id_cluster, "test-mongodb/0")
+
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "test-mongodb",
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "test-mongodb/2.2.2.2:27017",
+            "ldap-hash": "deabeef",
+        },
+    )
+
+    assert mongos_harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+        "mongos and config-server not integrated with the same ldap server."
+    )
+
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=ActiveStatus(),
+    )
+
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "test-mongodb",
+        {
+            "ldap-hash": "ea94093f0d37df1ba61800afd667921396f1f6d7e9957832456058df2ad8602f",
+        },
+    )
+
+    assert mongos_harness.charm.operator.ldap_manager.get_status() == ActiveStatus()

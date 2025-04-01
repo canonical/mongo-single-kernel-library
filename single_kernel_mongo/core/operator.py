@@ -280,6 +280,9 @@ class OperatorProtocol(ABC, Object):
 
     def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
+        if not self.workload.exists(TRUST_STORE_PATH / file.value):
+            return
+
         # Remove the file
         self.workload.delete(TRUST_STORE_PATH / file.value)
         # Update CA certificates to remove the certificate from the trust store

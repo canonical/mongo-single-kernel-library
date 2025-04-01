@@ -99,7 +99,10 @@ class StatusManager(Object):
                 ldap=self.operator.ldap_manager.get_status(),
             )
         # Mongos case
-        return Statuses(mongodb=self.operator.get_sanity_check_status() or ActiveStatus())
+        return Statuses(
+            mongodb=self.operator.get_sanity_check_status() or ActiveStatus(),
+            ldap=self.operator.ldap_manager.get_status(),
+        )
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""

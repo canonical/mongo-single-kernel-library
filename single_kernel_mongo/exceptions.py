@@ -263,3 +263,7 @@ class InvalidLdapQueryTemplateError(Exception):
 
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
+
+
+class InvalidLdapHashError(DeferrableError):
+    """Raised when the hash shared by config server is invalid."""
