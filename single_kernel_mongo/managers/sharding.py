@@ -610,7 +610,7 @@ class ShardManager(Object, StatusProvider):
         # membership authentication. If TLS is disabled on the cluster this enables the cluster to
         # have the correct cluster KeyFile readily available.
         self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
-        self.dependent.restart_charm_services()
+        self.dependent.restart_charm_services(force=True)
         if self.charm.unit.is_leader():
             self.state.set_keyfile(keyfile)
 

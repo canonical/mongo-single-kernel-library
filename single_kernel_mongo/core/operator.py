@@ -36,7 +36,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
-from single_kernel_mongo.managers.config import CommonConfigManager
+from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
@@ -73,7 +73,7 @@ class OperatorProtocol(ABC, Object):
     name: ClassVar[CharmKind]
     substrate: Substrates
     role: CharmSpec
-    config_manager: CommonConfigManager
+    config_manager: FileBasedConfigManager
     tls_manager: TLSManager
     state: CharmState
     mongo_manager: MongoManager
@@ -159,7 +159,7 @@ class OperatorProtocol(ABC, Object):
         ...
 
     @abstractmethod
-    def restart_charm_services(self) -> None:
+    def restart_charm_services(self, force: bool = False) -> None:
         """Restart the relevant services with updated config."""
         ...
 
@@ -280,9 +280,12 @@ class OperatorProtocol(ABC, Object):
 
     def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
+        if not self.workload.exists(TRUST_STORE_PATH / file.value):
+            return
+
         # Remove the file
         self.workload.delete(TRUST_STORE_PATH / file.value)
         # Update CA certificates to remove the certificate from the trust store
         self.workload.exec("update-ca-certificates")
         # Restart the service
-        self.restart_charm_services()
+        self.restart_charm_services(force=True)

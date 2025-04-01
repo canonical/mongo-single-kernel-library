@@ -151,6 +151,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     def _configure_workloads(self) -> None:
         self.tls_manager.push_tls_files_to_workload()
+        self.ldap_manager.save_certificates(self.state.ldap.chain)
         self.handle_licenses()
         self.set_permissions()
 
@@ -311,15 +312,13 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self) -> None:
+    def restart_charm_services(self, force: bool = False) -> None:
         """Restarts the charm with the new configuration."""
-        self.workload.stop()
         if not self.state.cluster.config_server_uri:
             logger.error("Cannot start mongos without a config server db")
             raise MissingConfigServerError()
 
-        self.mongos_config_manager.set_environment()
-        self.workload.start()
+        self.mongos_config_manager.configure_and_restart(force=force)
 
     @override
     def is_relation_feasible(self, name: str) -> bool:

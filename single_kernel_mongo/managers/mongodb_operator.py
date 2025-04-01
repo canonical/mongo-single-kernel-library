@@ -417,12 +417,14 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.ldap_user_to_dn_mapping = (
                     self.config.ldap_user_to_dn_mapping
                 )
-            # TODO: Send this to mongos as well.
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                self.cluster_manager.update_ldap_user_to_dn_mapping()
 
             if self.config.ldap_query_template:
                 self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
 
-            # TODO: Invalidate the cache and restart with those parameters if needed.
+            # This will restart only if the config was changed.
+            self.restart_charm_services()
 
     @override
     def on_leader_elected(self) -> None:
@@ -807,16 +809,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self):
+    def restart_charm_services(self, force: bool = False):
         """Restarts the charm services with updated config.
 
         If we are running as config-server, we should update both mongod and mongos environments.
         """
-        self.stop_charm_services()
-        self.config_manager.set_environment()
+        self.config_manager.configure_and_restart(force=force)
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            self.mongos_config_manager.set_environment()
-        self.start_charm_services()
+            self.mongos_config_manager.configure_and_restart(force=force)
 
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""
@@ -898,7 +898,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
-        self.ldap_manager.save_certificates()
+        self.ldap_manager.save_certificates(self.state.ldap.chain)
 
         # Update licenses
         self.handle_licenses()
