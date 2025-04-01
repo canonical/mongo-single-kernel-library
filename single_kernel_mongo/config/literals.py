@@ -69,10 +69,10 @@ class Snap:
 
     name: str = "charmed-mongodb"
     channel: str = "6/edge"
-    revision: str = "128"
+    revision: str = "129"
 
 
-SNAP = Snap(channel="6/edge", revision="128")
+SNAP = Snap(channel="6/edge", revision="129")
 
 T = TypeVar("T", bound=str | int)
 
@@ -129,4 +129,3 @@ class TrustStoreFiles(str, Enum):
     """The different files we store in the trust store."""
 
     PBM = "pbm.crt"
-    LDAP = "ldap.crt"

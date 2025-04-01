@@ -39,6 +39,7 @@ from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS, BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
@@ -204,7 +205,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
-        # TODO: Write ldap peer data event handlers.
+        self.ldap_events = LDAPEventHandler(self)
 
     @property
     def config(self):
@@ -897,6 +898,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
+        self.ldap_manager.save_certificates()
 
         # Update licenses
         self.handle_licenses()

@@ -107,6 +107,7 @@ class CharmState(Object):
         self.substrate: Substrates = substrate
         self.secrets = SecretCache(charm)
         self.peer_relation_name = charm.peer_rel_name.value
+        self.ldap_peer_relation_name = PeerRelationNames.LDAP_PEERS.value
 
         self.peer_app_interface = DataPeerData(
             self.model,
@@ -119,7 +120,7 @@ class CharmState(Object):
         )
         self.ldap_peer_interface = DataPeerData(
             self.model,
-            PeerRelationNames.LDAP_PEERS.value,
+            self.ldap_peer_relation_name,
         )
 
         self.upgrade_app_interface = DataPeerData(
@@ -150,6 +151,11 @@ class CharmState(Object):
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
         return self.model.get_relation(self.peer_relation_name)
+
+    @property
+    def ldap_peer_relation(self) -> Relation | None:
+        """The LDAP peer relation."""
+        return self.model.get_relation(self.ldap_peer_relation_name)
 
     @property
     def peers_units(self) -> set[Unit]:
@@ -376,7 +382,7 @@ class CharmState(Object):
         """A view of the TLS status from the local unit databag."""
         return LdapState(
             self.charm,
-            relation=self.peer_relation,
+            relation=self.ldap_peer_relation,
             data_interface=self.ldap_peer_interface,
             component=self.model.app,
         )

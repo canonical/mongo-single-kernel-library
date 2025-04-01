@@ -108,7 +108,7 @@ def test_ldap_ready_success(harness: Harness[MongoTestCharm], mock_fs_interactio
     assert ldap_state.ldaps_urls == ["ldaps://ldap.glauth.com"]
 
 
-def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions):
+def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.db_initialised = True
     # Case 1: No integration
@@ -171,9 +171,14 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mock_fs_interactions)
         "glauth-k8s",
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=ActiveStatus(),
+    )
     harness.charm.operator.ldap_manager.store_ldap_certificates(
         "beefdead", "deadbeef", ["feeddead"]
     )
+
     assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
 
     # Case 7: Begin of sundown, remove data from databag
@@ -233,9 +238,7 @@ def test_on_certificate_removed_clean_certs(
     mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
     )
-    mock_remove_ca_cert = mocker.patch(
-        "single_kernel_mongo.core.operator.OperatorProtocol.remove_ca_cert_from_trust_store"
-    )
+    mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )

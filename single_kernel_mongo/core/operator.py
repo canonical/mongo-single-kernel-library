@@ -31,6 +31,7 @@ from single_kernel_mongo.config.literals import (
     TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.events.upgrades import UpgradeEventHandler
+    from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
 
@@ -76,10 +78,12 @@ class OperatorProtocol(ABC, Object):
     state: CharmState
     mongo_manager: MongoManager
     upgrade_manager: MongoUpgradeManager
+    ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
     upgrade_events: UpgradeEventHandler
+    ldap_events: LDAPEventHandler
 
     if TYPE_CHECKING:
 
@@ -253,7 +257,6 @@ class OperatorProtocol(ABC, Object):
                     f"{path}",
                 ]
             )
-
         for path in (
             self.workload.paths.config_file,
             self.workload.paths.mongos_config_file,
@@ -275,10 +278,10 @@ class OperatorProtocol(ABC, Object):
         # Update ca certificates.
         self.workload.exec("update-ca-certificates")
 
-    def remove_ca_cert_from_trust_store(self, file: str):
+    def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
         # Remove the file
-        self.workload.delete(TRUST_STORE_PATH / file)
+        self.workload.delete(TRUST_STORE_PATH / file.value)
         # Update CA certificates to remove the certificate from the trust store
         self.workload.exec("update-ca-certificates")
         # Restart the service

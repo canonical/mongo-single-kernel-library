@@ -74,10 +74,10 @@ class LdapState(AbstractRelationState[DataPeerData]):
         """Removes the credentials and base DN from the databag."""
         self.certificate = certificate
         self.ca = ca
-        self.chain = "\n".join(chain) if chain else None
+        self.chain = chain
 
     def clean_certificates(self) -> None:
-        """Removes the credentials and base DN from the databag."""
+        """Removes the certificate secrets."""
         self.ca = None
         self.chain = None
         self.certificate = None
@@ -184,13 +184,13 @@ class LdapState(AbstractRelationState[DataPeerData]):
         self.secrets.set(LdapStateKeys.CA.value, value, Scope.UNIT)
 
     @property
-    def chain(self) -> str | None:
+    def chain(self) -> list[str] | None:
         """The chain."""
-        return self.secrets.get_for_key(Scope.UNIT, LdapStateKeys.CHAIN.value)
+        return json.loads(self.secrets.get_for_key(Scope.UNIT, LdapStateKeys.CHAIN.value) or "null")
 
     @chain.setter
-    def chain(self, value: str | None) -> None:
+    def chain(self, value: list[str] | None) -> None:
         if not value:
             self.secrets.remove(Scope.UNIT, LdapStateKeys.CHAIN.value)
             return
-        self.secrets.set(LdapStateKeys.CHAIN.value, value, Scope.UNIT)
+        self.secrets.set(LdapStateKeys.CHAIN.value, json.dumps(value), Scope.UNIT)

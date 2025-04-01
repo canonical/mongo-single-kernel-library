@@ -150,7 +150,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         if self.state.is_scaling_down(relation.id):
             logger.info("Relation broken event occurring due to scale down.")
             return
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM.value)
+        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         self.configure_and_restart(force=True)
 
     @retry(

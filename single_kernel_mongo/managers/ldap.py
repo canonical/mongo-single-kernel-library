@@ -5,17 +5,23 @@
 
 from __future__ import annotations
 
+import ssl
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+import jinja2
+from ldap3 import Connection as LDAPConnection
+from ldap3 import Server as LDAPServer
+from ldap3 import Tls as LDAPTls
+from ldap3.core.exceptions import LDAPException
 from ops import MaintenanceStatus
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
 
 from single_kernel_mongo.config.literals import (
     Substrates,
-    TrustStoreFiles,
 )
+from single_kernel_mongo.config.models import LDAP_CONFIG
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -84,57 +90,75 @@ class LDAPManager(Object, StatusProvider):
 
         self.charm.status_manager.set_and_share_status(MaintenanceStatus("Configuring LDAP"))
 
-        if not (ldap_data := self.ldap_requirer.consume_ldap_relation_data(relation=relation)):
+        ldap_data = self.ldap_requirer.consume_ldap_relation_data(relation=relation)
+        if not ldap_data:
             logger.info("Waiting for LDAP data.")
             raise WaitingForLdapDataError("Waiting for LDAP data.")
 
         if not ldap_data.ldaps_urls:
-            logger.error("You must configure Glauth with LDAPS support")
+            logger.error("You must configure Glauth with LDAPS (ldaps_enabled=true) support")
             raise LDAPSNotEnabledError("LDAPS not enabled.")
 
         if self.charm.unit.is_leader():
             self.state.ldap.set_from(ldap_data)
-
-        self.restart_when_ready()
+            # ops event to restart if ready for the leader.
+            # The other units will restart during the ldap-peers-relation-changed hook.
+            self.dependent.ldap_events.restart_if_ready_event.emit()
 
     def restart_when_ready(self) -> None:
         """Restarts when we are ready."""
-        if not self.state.ldap_relation:
-            logger.info(f"Not restarting, missing the `{ExternalRequirerRelations.LDAP}` relation")
-            return
-        if not self.state.ldap_cert_relation:
-            logger.info(
-                f"Not restarting, missing the `{ExternalRequirerRelations.LDAP_CERT}` relation"
-            )
-            return
-
-        if self.state.ldap.is_ready():
-            logger.info("Restarting mongodb server for LDAP integration")
-            self.dependent.restart_charm_services()
-            self.charm.status_manager.set_and_share_status(ActiveStatus())
+        match self.get_status():
+            case None:
+                return
+            case ActiveStatus():
+                logger.info("Restarting mongodb server for LDAP integration")
+                self.dependent.restart_charm_services()
+                self.charm.status_manager.set_and_share_status(ActiveStatus())
+            case status:
+                self.charm.status_manager.set_and_share_status(status)
 
     def clean_ldap_credentials_and_uri(self) -> None:
         """Runs when the LDAP integration is broken."""
         self.state.ldap.clean_databag()
 
         self.dependent.restart_charm_services()
+        self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
 
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
         self.assert_pass_hook_checks()
         self.state.ldap.set_certificates(certificate, ca, chain)
 
-        full_chain = "\n".join(chain)
-        self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.LDAP, full_chain)
+        self.save_certificates()
 
-        self.restart_when_ready()
+        self.dependent.ldap_events.restart_if_ready_event.emit()
+
+    def save_certificates(self) -> None:
+        """Saves the certificates in different files."""
+        if not (chain := self.state.ldap.chain):
+            return
+
+        full_chain = "\n".join(chain)
+
+        template_data = LDAP_CONFIG.ldap_conf_template.read_text()
+        template = jinja2.Template(template_data)
+
+        rendered_template = template.render(
+            ldap_certificate_file=f"{self.workload.paths.ldap_certificates_file}"
+        )
+
+        self.workload.write(self.workload.paths.ldap_conf_path, rendered_template)
+
+        self.workload.write(self.workload.paths.ldap_certificates_file, full_chain)
 
     def remove_ldap_certificates(self) -> None:
         """Runs when the certificate is removed."""
-        self.state.ldap.set_certificates(None, None, None)
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.LDAP)
+        self.state.ldap.clean_certificates()
+        self.workload.delete(self.workload.paths.ldap_certificates_file)
 
         self.dependent.restart_charm_services()
+
+        self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
 
     def get_status(self) -> StatusBase | None:
         """Generates the status of a unit based on its status reported by mongod."""
@@ -146,12 +170,11 @@ class LDAPManager(Object, StatusProvider):
 
         if self.state.ldap_cert_relation is None:
             logger.info(
-                "Integrate the certificate interface between glauth and charm using"
-                f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert "  # type: ignore[union-attr]
+                "Integrate the certificate interface between glauth and charm using "
+                f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert"  # type: ignore[union-attr]
                 f"{self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
             )
             return BlockedStatus("TLS is mandatory for LDAP transport.")
-
         if self.state.ldap_relation is None:
             logger.info(
                 "Integrate glauth with ldap using"
@@ -173,4 +196,39 @@ class LDAPManager(Object, StatusProvider):
                 logger.info("Waiting for LDAP data.")
                 return WaitingStatus("Missing LDAP data from Glauth.")
             case _:
-                return ActiveStatus()
+                return self.get_ldap_connection_status()
+
+    def get_ldap_connection_status(self) -> StatusBase:
+        """Checks if the LDAP connection is working or not.
+
+        Helpful to prevent restarts that would fail.
+        This returns a status for the ldap connection.
+        It is an early-fail method, it will return as soon as one uri is not working.
+        """
+        bind_dn = self.state.ldap.bind_user
+        bind_password = self.state.ldap.bind_password
+        base_dn = self.state.ldap.base_dn
+
+        if not base_dn:
+            return BlockedStatus("Missing base DN.")
+
+        if not self.state.ldap.ldaps_urls:
+            return BlockedStatus("Missing LDAPS URLs.")
+
+        try:
+            for ldap_uri in self.state.ldap.ldaps_urls:
+                tls = LDAPTls(
+                    validate=ssl.CERT_REQUIRED,
+                    version=ssl.PROTOCOL_TLSv1_2,
+                    ca_certs_file=f"{self.state.paths.ldap_certificates_file}",
+                )
+                server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
+                conn = LDAPConnection(server, user=bind_dn, password=bind_password)
+                # For LDAP, binding is authenticating.
+                conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+                conn.unbind()
+        except LDAPException as err:
+            logger.error(f"Could not bind: {err}", exc_info=True)
+            return BlockedStatus("Could not bind with ldap")
+
+        return ActiveStatus()

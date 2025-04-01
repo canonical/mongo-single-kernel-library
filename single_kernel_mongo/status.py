@@ -96,6 +96,7 @@ class StatusManager(Object):
                 shard=self.operator.shard_manager.get_status(),
                 config_server=self.operator.config_server_manager.get_status(),
                 pbm=self.operator.backup_manager.get_status(),
+                ldap=self.operator.ldap_manager.get_status(),
             )
         # Mongos case
         return Statuses(mongodb=self.operator.get_sanity_check_status() or ActiveStatus())
