@@ -76,6 +76,7 @@ class FileBasedConfigManager(CommonConfigManager):
     @abstractmethod
     def build_config(self) -> dict[str, Any]:
         """Builds the config dict."""
+        ...
 
     def set_environment(self):
         """Write update parameters in the file."""
