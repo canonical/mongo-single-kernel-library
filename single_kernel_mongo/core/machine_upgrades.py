@@ -164,6 +164,9 @@ class MachineUpgrade(AbstractUpgrade):
         logger.debug(f"Upgrading {self.unit_name=}")
         self.unit_state = UnitState.UPGRADING
         dependent.workload.install()
+        dependent.start_charm_services()
+        if dependent.name == CharmKind.MONGOD:
+            dependent._restart_related_services()  # type: ignore[attr-defined]
         self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
         logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
 

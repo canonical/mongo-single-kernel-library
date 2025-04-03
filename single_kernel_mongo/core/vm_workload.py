@@ -48,7 +48,7 @@ class VMWorkload(WorkloadBase):
     @override
     def start(self) -> None:
         try:
-            self.mongod_snap.start(services=[self.service])
+            self.mongod_snap.start(services=[self.service], enable=True)
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
@@ -70,7 +70,7 @@ class VMWorkload(WorkloadBase):
     @override
     def stop(self) -> None:
         try:
-            self.mongod_snap.stop(services=[self.service])
+            self.mongod_snap.stop(services=[self.service], disable=True)
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
