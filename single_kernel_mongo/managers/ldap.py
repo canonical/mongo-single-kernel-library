@@ -267,7 +267,7 @@ class LDAPManager(Object, StatusProvider):
 
         return ActiveStatus()
 
-    def share_hash_with_mongos(self):
+    def share_hash_with_mongos(self) -> None:
         """If we are a config-server, we share a hash to confirm the integration."""
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return
@@ -276,7 +276,12 @@ class LDAPManager(Object, StatusProvider):
         self.dependent.cluster_manager.update_ldap_hash_to_mongos(hashed_data)  # type: ignore
 
     def get_hash(self) -> str | None:
-        """Gets the hash in a consistent way."""
+        """Gets the hash in a consistent way.
+
+        Everything is sorted, and by including both chains and ldaps_urls, we
+        can be "sure" that we integrate the same certificates and the same ldap
+        server.
+        """
         if not (chain := self.state.ldap.chain):
             return None
         if not (ldaps_urls := self.state.ldap.ldaps_urls):
@@ -284,6 +289,6 @@ class LDAPManager(Object, StatusProvider):
         data = sorted(chain) + sorted(ldaps_urls)
         return hashlib.sha256(".".join(data).encode("ascii")).hexdigest()
 
-    def remove_hash_from_mongos(self):
+    def remove_hash_from_mongos(self) -> None:
         """When one of the relation is broken, we clean the hash from the integration."""
         self.dependent.cluster_manager.remove_ldap_hash()  # type: ignore

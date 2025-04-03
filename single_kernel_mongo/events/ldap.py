@@ -106,7 +106,7 @@ class LDAPEventHandler(Object):
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
         self.manager.remove_ldap_certificates()
 
-    def _on_restart_if_ready(self, event: RestartIfReadyEvent):
+    def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
         """Custom ops revent to trigger restart of leader with a single source of truth."""
         action = "restart-ldap-if-ready"
         try:
