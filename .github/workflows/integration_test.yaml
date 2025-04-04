@@ -22,10 +22,6 @@ jobs:
         run: |
           sudo snap install charmcraft --classic
           pipx install tox poetry
-      - name: Install spread
-        run: |
-          sudo snap install go --classic
-          go install github.com/snapcore/spread/cmd/spread@latest
       - name: Collect spread jobs
         id: collect-jobs
         shell: python
@@ -35,18 +31,17 @@ jobs:
           import subprocess
           spread_jobs = (
               subprocess.run(
-              ["charmcraft", "test", "--list", "github-ci:tests/spread/"], capture_output=True, check=True, text=True
+              ["charmcraft", "test", "--list", "github-ci"], capture_output=True, check=True, text=True
               )
               .stdout.strip()
               .split("\n")
           )
           jobs = []
           for job in spread_jobs:
-              # Example `job`: "github-ci:ubuntu-22.04:tests/spread/mongodb/microk8s/test_charm.py"
+              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/mongodb/microk8s/test_charm.py"
               _, runner, task = job.split(":")
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
-              task = task.replace("/", "-")
               if runner.endswith("-arm"):
                   architecture = "arm64"
               else:
@@ -54,7 +49,7 @@ jobs:
               # Example: "test_charm.py | amd64"
               name = f"{task} | {architecture}"
               # ":" character not valid in GitHub Actions artifact
-              name_in_artifact = f"{task}-{architecture}"
+              name_in_artifact = f"{task.replace('/', '-')}-{architecture}"
               jobs.append({
                   "spread_job": job,
                   "name": name,
