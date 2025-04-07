@@ -129,7 +129,8 @@ class LDAPManager(Object, StatusProvider):
 
     def clean_ldap_credentials_and_uri(self) -> None:
         """Runs when the LDAP integration is broken."""
-        self.state.ldap.clean_databag()
+        if self.charm.unit.is_leader():
+            self.state.ldap.clean_databag()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
