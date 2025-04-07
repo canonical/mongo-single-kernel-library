@@ -426,7 +426,7 @@ class MongoDBConfigManager(MongoConfigManager):
         # Fallback if no queryTemplate is provided.
         user = "{USER}" if self.state.app_peer_data.ldap_user_to_dn_mapping else "{PROVIDED_USER}"
 
-        return {
+        ldap_params: dict[str, Any] = {
             "security": {
                 "ldap": {
                     "servers": ",".join(self.state.ldap.formatted_ldap_urls),
@@ -439,11 +439,15 @@ class MongoDBConfigManager(MongoConfigManager):
                         "queryTemplate": self.state.app_peer_data.ldap_query_template
                         or f"{self.state.ldap.base_dn}??sub?(&(objectClass=groupOfNames)(member={user}))",
                     },
-                    "userToDNMapping": self.state.app_peer_data.ldap_user_to_dn_mapping or "[]",
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
         }
+        if self.state.app_peer_data.ldap_user_to_dn_mapping:
+            ldap_params["security"]["ldap"]["userToDNMapping"] = (
+                self.state.app_peer_data.ldap_user_to_dn_mapping
+            )
+        return ldap_params
 
     @override
     def build_config(self) -> dict[str, Any]:
