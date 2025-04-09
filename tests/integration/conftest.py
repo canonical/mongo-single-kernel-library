@@ -47,16 +47,16 @@ def mongos_base_path(substrate) -> Path:
 def mongodb_charm(substrate, mongod_base_path) -> str:
     """The MongoDB charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongod_base_path}/test-mongodb-k8s_ubuntu@22.04-amd64.charm"
-    return f"./{mongod_base_path}/test-mongodb_ubuntu@22.04-amd64.charm"
+        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@22.04-amd64.charm"
+    return f"./{mongod_base_path}/mongodb_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
 def mongos_charm(substrate, mongos_base_path) -> str:
     """The Mongos charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongos_base_path}/test-mongos-k8s_ubuntu@22.04-amd64.charm"
-    return f"./{mongos_base_path}/test-mongos_ubuntu@22.04-amd64.charm"
+        return f"./{mongos_base_path}/mongos-k8s_ubuntu@22.04-amd64.charm"
+    return f"./{mongos_base_path}/mongos_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
