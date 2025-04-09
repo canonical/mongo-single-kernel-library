@@ -74,6 +74,13 @@ parts:
       rustup set profile minimal
       rustup default 1.83.0  # renovate: charmcraft-rust-latest
 
+      # Relock for single-kernel-library if it's not a local build
+      if [ ! -d single_kernel_mongo ]
+      then
+        echo "Updating mongo single kernel to last version"
+        poetry add mongo-charms-single-kernel@latest
+      fi
+
       craftctl default
       # Include requirements.txt in *.charm artifact for easier debugging
       cp requirements.txt "$CRAFT_PART_INSTALL/requirements.txt"
