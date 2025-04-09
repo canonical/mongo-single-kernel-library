@@ -39,6 +39,10 @@ class LdapStateKeys(str, Enum):
     CA = "ldap-ca"
     CHAIN = "ldap-chain"
 
+    # config options
+    LDAP_USER_TO_DN_MAPPING = "ldap-user-to-dn-mapping"
+    LDAP_QUERY_TEMPLATE = "ldap-query-template"
+
 
 class LdapState(AbstractRelationState[DataPeerData]):
     """The stored state for the Ldap relation."""
@@ -206,3 +210,21 @@ class LdapState(AbstractRelationState[DataPeerData]):
             self.secrets.remove(Scope.UNIT, LdapStateKeys.CHAIN.value)
             return
         self.secrets.set(LdapStateKeys.CHAIN.value, json.dumps(value), Scope.UNIT)
+
+    @property
+    def ldap_user_to_dn_mapping(self) -> str:
+        """The LDAP User To DN Mapping configuration used for user authentication."""
+        return self.relation_data.get(LdapStateKeys.LDAP_USER_TO_DN_MAPPING.value, "")
+
+    @ldap_user_to_dn_mapping.setter
+    def ldap_user_to_dn_mapping(self, value: str) -> None:
+        self.update({LdapStateKeys.LDAP_USER_TO_DN_MAPPING.value: value})
+
+    @property
+    def ldap_query_template(self) -> str:
+        """The LDAP Query Template used for identity users authorisation."""
+        return self.relation_data.get(LdapStateKeys.LDAP_QUERY_TEMPLATE.value, "")
+
+    @ldap_query_template.setter
+    def ldap_query_template(self, value: str) -> None:
+        self.update({LdapStateKeys.LDAP_QUERY_TEMPLATE.value: value})

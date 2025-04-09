@@ -36,10 +36,6 @@ class AppPeerDataKeys(str, Enum):
     USERNAME = "username"
     PASSWORD = "password"
 
-    # LDAP
-    LDAP_USER_TO_DN_MAPPING = "ldap-user-to-dn-mapping"
-    LDAP_QUERY_TEMPLATE = "ldap-query-template"
-
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     """State collection for replicaset relation."""
@@ -209,21 +205,3 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @expose_external.setter
     def expose_external(self, value: ExposeExternal):
         self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: f"{value}"})
-
-    @property
-    def ldap_user_to_dn_mapping(self) -> str:
-        """The LDAP User To DN Mapping configuration used for user authentication."""
-        return self.relation_data.get(AppPeerDataKeys.LDAP_USER_TO_DN_MAPPING.value, "")
-
-    @ldap_user_to_dn_mapping.setter
-    def ldap_user_to_dn_mapping(self, value: str) -> None:
-        self.update({AppPeerDataKeys.LDAP_USER_TO_DN_MAPPING.value: value})
-
-    @property
-    def ldap_query_template(self) -> str:
-        """The LDAP Query Template used for identity users authorisation."""
-        return self.relation_data.get(AppPeerDataKeys.LDAP_QUERY_TEMPLATE.value, "")
-
-    @ldap_query_template.setter
-    def ldap_query_template(self, value: str) -> None:
-        self.update({AppPeerDataKeys.LDAP_QUERY_TEMPLATE.value: value})

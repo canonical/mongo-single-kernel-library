@@ -418,16 +418,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Helpful method to handle the ldap changes and a restart if necessary."""
         # Store in the databag so we never miss it.
         if self.config.ldap_user_to_dn_mapping:
-            self.state.app_peer_data.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
+            self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.cluster_manager.update_ldap_user_to_dn_mapping()
 
         if self.config.ldap_query_template:
-            self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
+            self.state.ldap.ldap_query_template = self.config.ldap_query_template
 
         # This will restart only if the config was changed.
-        if self.workload.active():
-            self.restart_charm_services()
+        self.ldap_events.restart_if_ready_event.emit()
 
     @override
     def on_leader_elected(self) -> None:

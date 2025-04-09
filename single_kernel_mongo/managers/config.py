@@ -424,7 +424,7 @@ class MongoDBConfigManager(MongoConfigManager):
             return {}
 
         # Fallback if no queryTemplate is provided.
-        user = "{USER}" if self.state.app_peer_data.ldap_user_to_dn_mapping else "{PROVIDED_USER}"
+        user = "{USER}" if self.state.ldap.ldap_user_to_dn_mapping else "{PROVIDED_USER}"
 
         ldap_params: dict[str, Any] = {
             "security": {
@@ -436,16 +436,16 @@ class MongoDBConfigManager(MongoConfigManager):
                         "queryPassword": self.state.ldap.bind_password,
                     },
                     "authz": {
-                        "queryTemplate": self.state.app_peer_data.ldap_query_template
-                        or f"{self.state.ldap.base_dn}??sub?(&(objectClass=groupOfNames)(member={user}))",
+                        "queryTemplate": self.state.ldap.ldap_query_template
+                        or f"{self.state.ldap.base_dn}??sub?(&(objectClass=posixGroup)(uniqueMember={user}))",
                     },
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
         }
-        if self.state.app_peer_data.ldap_user_to_dn_mapping:
+        if self.state.ldap.ldap_user_to_dn_mapping:
             ldap_params["security"]["ldap"]["userToDNMapping"] = (
-                self.state.app_peer_data.ldap_user_to_dn_mapping
+                self.state.ldap.ldap_user_to_dn_mapping
             )
         return ldap_params
 
@@ -501,7 +501,7 @@ class MongosConfigManager(MongoConfigManager):
                         "queryUser": self.state.ldap.bind_user,
                         "queryPassword": self.state.ldap.bind_password,
                     },
-                    "userToDNMapping": self.state.app_peer_data.ldap_user_to_dn_mapping or "[]",
+                    "userToDNMapping": self.state.ldap.ldap_user_to_dn_mapping or "[]",
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},

@@ -107,7 +107,7 @@ class ClusterProvider(Object):
 
         # We want to avoid having to configure both applications with the exact
         # same string so the config-server shares it with the client.
-        if ldap_user_to_dn_mapping := self.state.app_peer_data.ldap_user_to_dn_mapping:
+        if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
         self.data_interface.update_relation_data(relation.id, relation_data)
@@ -211,7 +211,7 @@ class ClusterProvider(Object):
             self.data_interface.update_relation_data(
                 relation.id,
                 {
-                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.app_peer_data.ldap_user_to_dn_mapping
+                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.ldap.ldap_user_to_dn_mapping
                 },
             )
 
@@ -294,7 +294,7 @@ class ClusterRequirer(Object):
             ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping
         ):
             logger.debug("Received a userToDNMapping, storing it in databag.")
-            self.state.app_peer_data.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+            self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
 
         if not key_file_contents or not config_server_db_uri:
             raise WaitingForSecretsError("Waiting for keyfile or config server db uri")

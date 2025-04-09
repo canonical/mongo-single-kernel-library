@@ -112,6 +112,9 @@ class LDAPManager(Object, StatusProvider):
 
     def restart_when_ready(self) -> None:
         """Restarts when we are ready."""
+        if not self.state.db_initialised:
+            return
+
         match self.get_status():
             case None:
                 return

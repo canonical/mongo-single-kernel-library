@@ -196,7 +196,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     assert ldap_parameters["bind"]["queryPassword"] == "password"
     assert (
         ldap_parameters["authz"]["queryTemplate"]
-        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={PROVIDED_USER}))"
+        == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
     )
 
     # Case 7: Begin of sundown, remove data from databag
@@ -344,7 +344,7 @@ def test_ldap_full_integration_cycle(
     assert ldap_parameters["bind"]["queryPassword"] == "password"
     assert (
         ldap_parameters["authz"]["queryTemplate"]
-        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={PROVIDED_USER}))"
+        == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
     )
 
     valid_mapping = [
@@ -360,7 +360,7 @@ def test_ldap_full_integration_cycle(
 
     assert (
         ldap_parameters["authz"]["queryTemplate"]
-        == "dc=glauth,dc=com??sub?(&(objectClass=groupOfNames)(member={USER}))"
+        == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
     )
     assert (
         ldap_parameters["userToDNMapping"]

@@ -223,11 +223,8 @@ def test_on_config_changed_valid_ldap_query_template(harness, mocker):
             "ldap-query-template": "{USER}",
         }
     )
-    assert (
-        json.loads(harness.charm.operator.state.app_peer_data.ldap_user_to_dn_mapping)
-        == valid_mapping
-    )
-    assert harness.charm.operator.state.app_peer_data.ldap_query_template == "{USER}"
+    assert json.loads(harness.charm.operator.state.ldap.ldap_user_to_dn_mapping) == valid_mapping
+    assert harness.charm.operator.state.ldap.ldap_query_template == "{USER}"
 
 
 def test_on_config_changed_upgrade_in_progress(harness, mocker):
