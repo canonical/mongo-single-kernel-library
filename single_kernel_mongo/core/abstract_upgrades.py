@@ -44,7 +44,6 @@ from single_kernel_mongo.exceptions import (
     PrecheckFailedError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
 from single_kernel_mongo.utils.helpers import mongodb_only
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
@@ -262,7 +261,7 @@ class AbstractUpgrade(ABC):
             if not self.dependent.upgrade_manager.are_pre_upgrade_operations_config_server_successful():
                 raise PrecheckFailedError("Pre-refresh operations on config-server failed.")
 
-            self.add_status_data_for_legacy_upgrades()
+        self.add_status_data_for_legacy_upgrades()
 
     def add_status_data_for_legacy_upgrades(self):
         """Add dummy data for legacy upgrades.
@@ -272,15 +271,13 @@ class AbstractUpgrade(ABC):
         obsolete. It is true that this information is *not* needed for earlier revisions to
         facilitate earlier revisions we populate this data with ActiveStatus.
         """
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if not self.state.is_role(MongoDBRoles.SHARD):
             return
 
-        for sharding_relation in self.state.config_server_relation:
-            for unit in sharding_relation.units:
-                unit_data = UnitShardingComponentState(
-                    sharding_relation, self.state.config_server_data_interface, unit
-                )
-                unit_data.status_ready_for_upgrade = True
+        if not self.state.shard_relation:
+            return
+
+        self.state.unit_shard_state.status_ready_for_upgrade = True
 
 
 # END: Useful classes
