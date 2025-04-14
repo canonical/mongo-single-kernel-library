@@ -17,7 +17,7 @@ class MongoTestCharm(AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
     operator_type = MongoDBOperator
     substrate = Substrates.VM
     peer_rel_name = PeerRelationNames.PEERS
-    name = "mongodb-test"
+    name = "mongodb"
 
 
 if __name__ == "__main__":

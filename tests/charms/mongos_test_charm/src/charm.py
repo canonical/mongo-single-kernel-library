@@ -17,7 +17,7 @@ class MongosTestCharm(AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
     operator_type = MongosOperator
     substrate = Substrates.VM
     peer_rel_name = PeerRelationNames.ROUTER_PEERS
-    name = "mongos-test"
+    name = "mongos"
 
 
 if __name__ == "__main__":
