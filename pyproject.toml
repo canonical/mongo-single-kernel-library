@@ -32,7 +32,7 @@ dependencies = [
     "pymongo",
     "jinja2",
     "lightkube",
-    "dacite (~=1.8.0)",
+    "dacite (~=1.9.0)",
     "data-platform-helpers (~=0.1.4)",
     "cosl",  # loki_push_api
     "deepmerge (>=2.0)",
@@ -54,6 +54,9 @@ packages = [
 include = ["single_kernel_mongo/templates/"]
 exclude = ["single_kernel_mongo/charmcraft.yaml"]
 
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
 
 [build-system]
 requires = ["poetry-core>=2.0"]
@@ -74,6 +77,7 @@ ruff = "^0.7.2"
 pydantic = "~2.9.0"
 mypy = "*"
 types-PyYAML = "*"
+types-python-dateutil = "*"
 
 [tool.poetry.group.format]
 optional = true
@@ -103,6 +107,18 @@ parameterized = "^0.9.0"
 factory_boy = "*"
 mongomock = "^4.2.0.post1"
 pytest-mock = "*"
+
+[tool.poetry.group.integration.dependencies]
+coverage = {extras = ["toml"], version = "^7.5.0"}
+juju = "~3.6.0"
+pytest = "^8.1.1"
+pytest-mock = "*"
+pytest-asyncio = "^0.21.1"
+pytest-operator = "^0.36.0"
+parameterized = "^0.9.0"
+allure-pytest = "^2.13.5"
+ops = "~2.15.0"
+tenacity = "^8.2.3"
 
 [tool.ruff]
 target-version = "py310"
@@ -166,10 +182,12 @@ exclude = [
     "./dist/",
     "./site/",
     "./venv/",
-    "venv/",
+    "venv/*",
     "./__pypackages__/",
-    "^single_kernel_mongo/lib/.*",
-    "tests/unit/"
+    "^single_kernel_mongo/lib/*",
+    "tests/charms/*",
+    "tests/integration/*",
+    "tests/unit/*"
 ]
 # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-ignore-missing-imports
 ignore_missing_imports = true
@@ -177,4 +195,4 @@ plugins = ["pydantic.mypy"]
 
 [tool.codespell]
 ignore-words=".codespellignore"
-skip="*single_kernel_mongo/lib/*,*single_kernel_mongo/observability_rules/*"
+skip="*single_kernel_mongo/lib/*,*single_kernel_mongo/observability_rules/*,*.lock"

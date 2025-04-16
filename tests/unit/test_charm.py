@@ -16,8 +16,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 PEER_ADDR = {"private-address": "127.4.5.6"}
 
@@ -270,7 +269,7 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     )
     harness.set_leader(True)
     password = "deadbeef"
-    secret_label = "test-mongodb.app"
+    secret_label = "mongodb.app"
     secret = harness.charm.operator.state.secrets.get(scope=Scope.APP)
     # breakpoint()
     content = secret.get_content()
@@ -383,7 +382,7 @@ def test_relation_joined_non_leader_does_nothing(harness: Harness[MongoTestCharm
     spied = mocker.spy(harness.charm.operator, "on_relation_joined")
 
     harness.set_leader(False)
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.add_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     mock_on_relation_changed.assert_not_called()
@@ -399,7 +398,7 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     )
     spied = mocker.spy(harness.charm.operator, "on_relation_joined")
     harness.set_leader(True)
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.add_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     mock_on_relation_changed.assert_not_called()
@@ -426,8 +425,8 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
 
     rel = harness.charm.operator.state.peer_relation
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
-    harness.update_relation_data(rel.id, "test-mongodb/1", PEER_ADDR)
+    harness.add_relation_unit(rel.id, "mongodb/1")
+    harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR)
 
     assert isinstance(harness.charm.unit.status, WaitingStatus)
     mocked_add_replset_member.assert_not_called()
@@ -454,10 +453,10 @@ def test_on_relation_departed_not_leader(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
     )
     rel = harness.charm.operator.state.peer_relation
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.add_relation_unit(rel.id, "mongodb/1")
 
     harness.set_leader(False)
-    harness.remove_relation_unit(rel.id, "test-mongodb/1")
+    harness.remove_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_not_called()
@@ -482,9 +481,9 @@ def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mo
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
     )
     rel = harness.charm.operator.state.peer_relation
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
+    harness.add_relation_unit(rel.id, "mongodb/1")
 
-    harness.remove_relation_unit(rel.id, "test-mongodb/1")
+    harness.remove_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_called()
@@ -506,7 +505,7 @@ def test_primary(harness: Harness[MongoTestCharm], mocker):
         return_value="10.0.0.10",
     )
     output = harness.run_action("get-primary")
-    assert output.results["replica-set-primary"] == "test-mongodb/0"
+    assert output.results["replica-set-primary"] == "mongodb/0"
 
 
 def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
@@ -528,7 +527,7 @@ def test_primary_other_unit(harness: Harness[MongoTestCharm], mocker):
         return_value=PEER_ADDR["private-address"],
     )
     rel = harness.charm.operator.state.peer_relation
-    harness.add_relation_unit(rel.id, "test-mongodb/1")
-    harness.update_relation_data(rel.id, "test-mongodb/1", PEER_ADDR)
+    harness.add_relation_unit(rel.id, "mongodb/1")
+    harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR)
     output = harness.run_action("get-primary")
-    assert output.results["replica-set-primary"] == "test-mongodb/1"
+    assert output.results["replica-set-primary"] == "mongodb/1"

@@ -12,8 +12,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.exceptions import DeferrableError
-
-from .mongos_test_charm.src.charm import MongosTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
 
 def test_start_sets_status(mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions):
