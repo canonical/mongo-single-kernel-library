@@ -11,9 +11,8 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.status import Statuses
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
-from .mongos_test_charm.src.charm import MongosTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+import logging
+import os
+from pathlib import Path
+
+import pytest
+from pytest_operator.plugin import OpsTest
+
+from ..helpers import (
+    DEPLOYMENT_TIMEOUT,
+    UNIT_IDS,
+    check_or_scale_app,
+    get_app_name,
+)
+
+logger = logging.getLogger(__name__)
+
+
+MEDIAN_REELECTION_TIME = 12
+
+
+@pytest.mark.skipif(
+    os.environ.get("PYTEST_SKIP_DEPLOY", False),
+    reason="skipping deploy, model expected to be provided.",
+)
+@pytest.mark.abort_on_fail
+async def test_build_and_deploy(
+    ops_test: OpsTest, mongodb_charm: Path, substrate: str, mongod_resource, base_app_name
+):
+    """Build and deploy one unit of MongoDB."""
+    # it is possible for users to provide their own cluster for testing. Hence check if there
+    # is a pre-existing cluster.
+    app_name = await get_app_name(ops_test)
+    if app_name:
+        return await check_or_scale_app(ops_test, app_name, len(UNIT_IDS))
+
+    if substrate == "lxd":
+        await ops_test.model.deploy(
+            mongodb_charm,
+            num_units=len(UNIT_IDS),
+            application_name=base_app_name,
+        )
+    else:
+        await ops_test.model.deploy(
+            mongodb_charm,
+            resources=mongod_resource,
+            application_name=base_app_name,
+            num_units=len(UNIT_IDS),
+            series="jammy",
+            trust=True,
+        )
+    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    return None

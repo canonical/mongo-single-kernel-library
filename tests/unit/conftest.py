@@ -6,19 +6,18 @@ from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import SNAP
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
-from .mongodb_test_charm.src.charm import MongoTestCharm
-from .mongos_test_charm.src.charm import MongosTestCharm
-
-CONFIG = str(yaml.safe_load(Path("./tests/unit/mongodb_test_charm/config.yaml").read_text()))
-ACTIONS = str(yaml.safe_load(Path("./tests/unit/mongodb_test_charm/actions.yaml").read_text()))
-METADATA = str(yaml.safe_load(Path("./tests/unit/mongodb_test_charm/metadata.yaml").read_text()))
+CONFIG = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/config.yaml").read_text()))
+ACTIONS = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/actions.yaml").read_text()))
+METADATA = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/metadata.yaml").read_text()))
 
 MONGOS_ACTIONS = str(
-    yaml.safe_load(Path("./tests/unit/mongos_test_charm/actions.yaml").read_text())
+    yaml.safe_load(Path("./tests/charms/mongos_test_charm/actions.yaml").read_text())
 )
 MONGOS_METADATA = str(
-    yaml.safe_load(Path("./tests/unit/mongos_test_charm/metadata.yaml").read_text())
+    yaml.safe_load(Path("./tests/charms/mongos_test_charm/metadata.yaml").read_text())
 )
 
 

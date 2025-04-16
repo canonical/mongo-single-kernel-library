@@ -14,9 +14,8 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
-from .mongos_test_charm.src.charm import MongosTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
 
 def test_valid_ldap_integration(harness: Harness[MongoTestCharm]):

@@ -1,0 +1,89 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: mongodb-k8s
+display-name: Test MongoDB
+description: |
+  Test charm for MongoDB single kernel.
+docs: https://discourse.charmhub.io/t/charmed-mongodb-6-docs/12461
+source: https://github.com/canonical/mongodb-operator
+issues: https://github.com/canonical/mongodb-operator/issues
+website:
+  - https://ubuntu.com/data/mongodb
+  - https://charmhub.io/mongodb
+  - https://github.com/canonical/mongodb-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+summary: A Test MongoDB operator charm
+
+assumes:
+  - k8s-api
+
+
+storage:
+  mongodb:
+    type: filesystem
+    location: /var/lib/mongodb
+  mongodb-logs:
+    type: filesystem
+    location: /var/log/mongodb
+
+containers:
+  mongod:
+    resource: mongodb-image
+    mounts:
+      - storage: mongodb
+        location: /var/lib/mongodb
+
+provides:
+  database:
+    interface: mongodb_client
+  config-server:
+    interface: shards
+  cluster:
+    interface: config-server
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
+
+peers:
+  database-peers:
+    interface: mongodb-peers
+  upgrade-version-a:
+    # Relation versioning scheme:
+    # DA056 - Upgrading in-place upgrade protocol
+    # https://docs.google.com/document/d/1H7qy5SAwLiCOKO9xMQJbbQP5_-jGV6Lhi-mJOk4gZ08/edit
+    interface: upgrade
+  ldap-peers:
+    # Stores the data for the ldap relation.
+    interface: ldap-peers
+
+requires:
+  s3-credentials:
+    interface: s3
+    limit: 1
+  logging:
+    interface: loki_push_api
+    limit: 1
+    optional: true
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  sharding:
+    interface: shards
+    # shards can only relate to one config-server
+    limit: 1
+  ldap:
+    interface: ldap
+    limit: 1
+    optional: true
+  ldap-certificate-transfer:
+    interface: certificate_transfer
+    limit: 1
+    optional: true
+
+resources:
+  mongodb-image:
+    type: oci-image
+    description: OCI image for mongodb
+    # TODO: Update sha whenever upstream rock changes
+    upstream-source: ghcr.io/canonical/charmed-mongodb@sha256:7ddb80a3b5ddffa95704a8980fc11037ba1a23273a9805214bc42be9f507107f
