@@ -14,6 +14,7 @@ CONFIG_SERVER_APP_NAME = "config-server"
 CLUSTER_COMPONENTS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, CONFIG_SERVER_APP_NAME]
 CONFIG_SERVER_REL_NAME = "config-server"
 SHARD_REL_NAME = "sharding"
+CLUSTER_REL_NAME = "cluster"
 
 
 async def deploy_cluster_components(

@@ -31,8 +31,8 @@ MONGOS_PORT = 27018
 UNIT_IDS = [0, 1, 2]
 SERIES = "jammy"
 DEPLOYMENT_TIMEOUT = 2000
-logger = logging.getLogger(__name__)
 
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
 logger = logging.getLogger(__name__)
 
 
