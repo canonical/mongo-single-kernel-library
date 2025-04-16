@@ -4,11 +4,15 @@
 import json
 import logging
 import subprocess
+from pathlib import Path
 from typing import Any
+from urllib.parse import quote_plus
 
 import ops
 import yaml
 from dateutil.parser import parse
+from juju.application import Application
+from juju.model import Model
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -22,13 +26,80 @@ from tenacity import (
 )
 
 MONGO_SHELL = "charmed-mongodb.mongosh"
-PORT = 27017
+MONGOD_PORT = 27017
+MONGOS_PORT = 27018
 UNIT_IDS = [0, 1, 2]
 SERIES = "jammy"
 DEPLOYMENT_TIMEOUT = 2000
 logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
+
+
+class ProcessError(Exception):
+    """Raised when a process fails."""
+
+
+async def deploy_charm(
+    ops_test: OpsTest,
+    charm: Path,
+    substrate: str,
+    mongod_resource: str,
+    app_name: str,
+    num_units: int = 3,
+    config: dict | None = None,
+):
+    if substrate == "lxd":
+        await ops_test.model.deploy(
+            charm,
+            num_units=num_units,
+            application_name=app_name,
+            config=config,
+        )
+    else:
+        await ops_test.model.deploy(
+            charm,
+            resources=mongod_resource,
+            application_name=app_name,
+            num_units=num_units,
+            series="jammy",
+            trust=True,
+            config=config,
+        )
+
+
+async def run_action(
+    kubernetes_model: Model, application_name: str, action_name: str, **params: Any
+) -> dict[str, str]:
+    app: Application = kubernetes_model.applications[application_name]
+    action = await app.units[0].run_action(action_name, **params)
+    await action.wait()
+    return action.results
+
+
+async def generate_mongodb_client(
+    ops_test: OpsTest,
+    app_name: str,
+    mongos: bool,
+    username: str = "operator",
+    password: str | None = None,
+):
+    """Returns a MongoDB client for mongos/mongod."""
+    hosts = [unit.public_address for unit in ops_test.model.applications[app_name].units]
+    password = password or await get_password(ops_test, app_name=app_name)
+    username = username
+    port = MONGOS_PORT if mongos else MONGOD_PORT
+    hosts = [f"{host}:{port}" for host in hosts]
+    hosts = ",".join(hosts)
+    auth_source = ""
+    database = "admin"
+
+    return MongoClient(
+        f"mongodb://{username}:"
+        f"{quote_plus(password)}@"
+        f"{hosts}/{quote_plus(database)}?"
+        f"{auth_source}"
+    )
 
 
 class Status:
@@ -102,7 +173,7 @@ def unit_uri(ip_address: str, password, app) -> str:
         password: password of database.
         app: name of application which has the cluster.
     """
-    return f"mongodb://operator:{password}@{ip_address}:{PORT}/admin?replicaSet={app}"
+    return f"mongodb://operator:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
 async def get_password(ops_test: OpsTest, username="operator", app_name=None) -> str:
@@ -296,7 +367,9 @@ async def check_or_scale_app(ops_test: OpsTest, user_app_name: str, required_uni
     await ops_test.model.wait_for_idle()
 
 
-async def get_app_name(ops_test: OpsTest, test_deployments: list[str] = []) -> str:
+async def get_app_name(
+    ops_test: OpsTest, ch_name: str = "mongodb", test_deployments: list[str] = []
+) -> str:
     """Returns the name of the cluster running MongoDB.
 
     This is important since not all deployments of the MongoDB charm have the application name
@@ -308,11 +381,13 @@ async def get_app_name(ops_test: OpsTest, test_deployments: list[str] = []) -> s
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mongodb" but instead takes the form
         # of `local:focal/mongodb-6`
-        if "mongodb" in status["applications"][app]["charm"]:
-            logger.debug("Found mongodb app named '%s'", app)
+        if ch_name in status["applications"][app]["charm"]:
+            logger.debug("Found %s app named '%s'", ch_name, app)
 
             if app in test_deployments:
-                logger.debug("mongodb app named '%s', was deployed by the test, not by user", app)
+                logger.debug(
+                    "%s app named '%s', was deployed by the test, not by user", ch_name, app
+                )
                 continue
 
             return app

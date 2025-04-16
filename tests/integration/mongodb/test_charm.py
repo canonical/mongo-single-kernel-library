@@ -13,6 +13,7 @@ from ..helpers import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
+    deploy_charm,
     get_app_name,
 )
 
@@ -37,20 +38,13 @@ async def test_build_and_deploy(
     if app_name:
         return await check_or_scale_app(ops_test, app_name, len(UNIT_IDS))
 
-    if substrate == "lxd":
-        await ops_test.model.deploy(
-            mongodb_charm,
-            num_units=len(UNIT_IDS),
-            application_name=base_app_name,
-        )
-    else:
-        await ops_test.model.deploy(
-            mongodb_charm,
-            resources=mongod_resource,
-            application_name=base_app_name,
-            num_units=len(UNIT_IDS),
-            series="jammy",
-            trust=True,
-        )
+    await deploy_charm(
+        ops_test=ops_test,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
+        app_name=base_app_name,
+        num_units=len(UNIT_IDS),
+    )
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
     return None
