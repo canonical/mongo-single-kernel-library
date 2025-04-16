@@ -42,19 +42,17 @@ class ProcessError(Exception):
 
 async def deploy_charm(
     ops_test: OpsTest,
-    charm: Path,
+    charm: Path | str,
     substrate: str,
     mongod_resource: str,
     app_name: str,
     num_units: int = 3,
+    channel: str | None = None,
     config: dict | None = None,
 ):
     if substrate == "lxd":
         await ops_test.model.deploy(
-            charm,
-            num_units=num_units,
-            application_name=app_name,
-            config=config,
+            charm, num_units=num_units, application_name=app_name, config=config, channel=channel
         )
     else:
         await ops_test.model.deploy(
@@ -65,6 +63,7 @@ async def deploy_charm(
             series="jammy",
             trust=True,
             config=config,
+            channel=channel,
         )
 
 
