@@ -4,6 +4,7 @@
 
 from pathlib import Path
 
+import pytest
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
@@ -38,6 +39,7 @@ from ...sharding_helpers import (
 TIMEOUT = 15 * 60
 
 
+@pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongodb_cluster(
     ops_test: OpsTest,
     mongodb_charm: Path,
@@ -82,6 +84,7 @@ async def test_build_and_deploy_mongodb_cluster(
     await apply_ldif(ops_test, kubernetes_model, "add.ldif")
 
 
+@pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongos(
     ops_test: OpsTest, mongos_charm: Path, substrate: str, mongod_resource, base_app_name
 ) -> None:
@@ -129,6 +132,7 @@ async def test_build_and_deploy_mongos(
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_only_mongos_integrated(ops_test: OpsTest):
     app_name = await get_app_name(ops_test, ch_name="mongos")
 
@@ -145,6 +149,7 @@ async def test_only_mongos_integrated(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_all_integrated(ops_test: OpsTest):
     app_name = await get_app_name(ops_test, ch_name="mongos")
 
@@ -161,6 +166,7 @@ async def test_all_integrated(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_user_can_write(ops_test: OpsTest):
     app_name = await get_app_name(ops_test, ch_name="mongos")
 
@@ -177,6 +183,7 @@ async def test_user_can_write(ops_test: OpsTest):
     client.superdb["test-collection"].insert_one({"number": 1})
 
 
+@pytest.mark.abort_on_fail
 async def test_only_mongodb_integrated(ops_test: OpsTest):
     app_name = await get_app_name(ops_test, ch_name="mongos")
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
@@ -193,6 +200,7 @@ async def test_only_mongodb_integrated(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     app_name = await get_app_name(ops_test, ch_name="mongos")
     await ops_test.model.applications[app_name].remove_relation(

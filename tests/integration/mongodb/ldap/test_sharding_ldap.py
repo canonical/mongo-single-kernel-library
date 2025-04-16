@@ -5,6 +5,7 @@
 import logging
 from pathlib import Path
 
+import pytest
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
@@ -38,6 +39,7 @@ ENDPOINT_LDAP_CERT = "send-ca-cert"
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.abort_on_fail
 async def test_build_and_deploy(
     ops_test: OpsTest,
     mongodb_charm: Path,
@@ -82,6 +84,7 @@ async def test_build_and_deploy(
     await apply_ldif(ops_test, kubernetes_model, "add.ldif")
 
 
+@pytest.mark.abort_on_fail
 async def test_integrate_ldap_only(ops_test: OpsTest):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = CONFIG_SERVER_APP_NAME
@@ -94,6 +97,7 @@ async def test_integrate_ldap_only(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_integrate_also_ldap_cert(ops_test: OpsTest):
     db_app_name = CONFIG_SERVER_APP_NAME
     await ops_test.model.integrate(
@@ -103,6 +107,7 @@ async def test_integrate_also_ldap_cert(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
 
 
+@pytest.mark.abort_on_fail
 async def test_user_can_write(ops_test: OpsTest):
     db_app_name = CONFIG_SERVER_APP_NAME
     client = generate_mongodb_ldap_client(
@@ -116,6 +121,7 @@ async def test_user_can_write(ops_test: OpsTest):
     client.superdb["test-collection"].insert_one({"number": 1})
 
 
+@pytest.mark.abort_on_fail
 async def test_ldap_user_to_dn_mapping(ops_test):
     db_app_name = CONFIG_SERVER_APP_NAME
 
@@ -150,6 +156,7 @@ async def test_ldap_user_to_dn_mapping(ops_test):
     client.superdb["test-collection"].insert_one({"number": 2})
 
 
+@pytest.mark.abort_on_fail
 async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = CONFIG_SERVER_APP_NAME
@@ -164,6 +171,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest):
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     db_app_name = CONFIG_SERVER_APP_NAME
     await ops_test.model.applications[db_app_name].remove_relation(
