@@ -1,3 +1,6 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 from collections.abc import AsyncGenerator
 from logging import getLogger
 from typing import Any
@@ -18,14 +21,15 @@ async def kubernetes_model(
 ) -> AsyncGenerator[Model, Any]:
     try:
         k8s_cloud = await ops_test.add_k8s(skip_storage=False)
-        logger.info(f"created cloud {k8s_cloud}")
+        logger.warning(f"created cloud {k8s_cloud}")
     except (ConfigException, TypeError):
         pytest.fail("No Kubernetes config found to add-k8s")
     # deploy the glauth-k8s charm
     kubernetes_model = await ops_test.track_model(
         "secondary", cloud_name=k8s_cloud, keep=ops_test.ModelKeep.NEVER
     )
-    logger.info(f"Created model {kubernetes_model.name}")
+    logger.warning(f"Created model {kubernetes_model.name}")
+
     yield kubernetes_model
 
     await ops_test.forget_model(alias="secondary", timeout=TIMEOUT, allow_failure=True)

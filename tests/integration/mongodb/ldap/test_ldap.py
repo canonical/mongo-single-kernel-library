@@ -39,11 +39,11 @@ logger = logging.getLogger(__name__)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
     ops_test: OpsTest,
+    kubernetes_model: Model,
     mongodb_charm: Path,
     substrate: str,
     mongod_resource,
     base_app_name: str,
-    kubernetes_model: Model,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
