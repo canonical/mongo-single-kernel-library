@@ -10,7 +10,7 @@ from juju.model import Model
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from ...helpers import MONGOD_PORT, MONGOS_PORT, generate_mongodb_client, run_action
+from .helpers import MONGOD_PORT, MONGOS_PORT, generate_mongodb_client, run_action
 
 POSTGRESQL_K8S = "postgresql-k8s"
 CERTIFICATES = "self-signed-certificates"
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 async def apply_ldif(ops_test: OpsTest, kubernetes_model: Model, ldif_file: str):
     """Apply an LDIF on glauth-utils."""
-    source_path = f"./tests/integration/mongodb/ldap/data/{ldif_file}"
+    source_path = f"./tests/integration/data/{ldif_file}"
     target_path = f"/var/tmp/{ldif_file}"
     with ops_test.model_context("secondary"):
         app = kubernetes_model.applications[LDAP_UTILS_APP_NAME]

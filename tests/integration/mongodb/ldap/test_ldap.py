@@ -18,7 +18,7 @@ from ...helpers import (
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
-from .helpers import (
+from ...ldap_helpers import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,

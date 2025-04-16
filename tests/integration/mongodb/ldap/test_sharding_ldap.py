@@ -14,13 +14,7 @@ from ...helpers import (
     ProcessError,
     wait_for_mongodb_units_blocked,
 )
-from ..sharding_helpers import (
-    CLUSTER_COMPONENTS,
-    CONFIG_SERVER_APP_NAME,
-    deploy_cluster_components,
-    integrate_cluster,
-)
-from .helpers import (
+from ...ldap_helpers import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -29,6 +23,12 @@ from .helpers import (
     deploy_glauth,
     generate_mongodb_ldap_client,
     teardown_offers,
+)
+from ...sharding_helpers import (
+    CLUSTER_COMPONENTS,
+    CONFIG_SERVER_APP_NAME,
+    deploy_cluster_components,
+    integrate_cluster,
 )
 
 TIMEOUT = 15 * 60
