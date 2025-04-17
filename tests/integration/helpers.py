@@ -12,6 +12,7 @@ import ops
 import yaml
 from dateutil.parser import parse
 from juju.application import Application
+from juju.client.client import FullStatus
 from juju.model import Model
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
@@ -81,15 +82,25 @@ async def run_action(
     return action.results
 
 
+async def get_address_of_unit(ops_test: OpsTest, unit_id: int, app_name: str) -> str:
+    """Retrieves the address of the unit based on provided id."""
+    status: FullStatus = await ops_test.model.get_status()
+    return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
+
+
 async def generate_mongodb_client(
     ops_test: OpsTest,
+    substrate: str,
     app_name: str,
     mongos: bool,
     username: str = "operator",
     password: str | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
-    hosts = [unit.public_address for unit in ops_test.model.applications[app_name].units]
+    hosts = [
+        await get_address_of_unit(ops_test, unit.id, app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
     password = password or await get_password(ops_test, app_name=app_name)
     username = username
     port = MONGOS_PORT if mongos else MONGOD_PORT
@@ -102,7 +113,8 @@ async def generate_mongodb_client(
         f"mongodb://{username}:"
         f"{quote_plus(password)}@"
         f"{hosts}/{quote_plus(database)}?"
-        f"{auth_source}"
+        f"{auth_source}",
+        directConnection=True,
     )
 
 
