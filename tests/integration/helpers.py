@@ -98,7 +98,7 @@ async def generate_mongodb_client(
 ):
     """Returns a MongoDB client for mongos/mongod."""
     hosts = [
-        await get_address_of_unit(ops_test, unit.id, app_name)
+        await get_address_of_unit(ops_test, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
     password = password or await get_password(ops_test, app_name=app_name)
