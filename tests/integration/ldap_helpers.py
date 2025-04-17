@@ -68,8 +68,17 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
             status="active",
         )
 
-        await kubernetes_model.create_offer("ldap", LDAP_OFFER, LDAP_APP_NAME)
-        await kubernetes_model.create_offer("send-ca-cert", LDAP_CERT_OFFER, LDAP_APP_NAME)
+        # On k8s creating an offer on a remote model fails somehow, so we fallback to juju command.
+        first_offer_command = (
+            f"offer {kubernetes_model.info.name}.{LDAP_APP_NAME}:ldap {LDAP_OFFER}"
+        )
+        await ops_test.juju(*first_offer_command.split())
+
+        second_offer_command = (
+            f"offer {kubernetes_model.info.name}.{LDAP_APP_NAME}:send-ca-cert {LDAP_CERT_OFFER}"
+        )
+
+        await ops_test.juju(*second_offer_command.split())
 
 
 async def consume_offers(ops_test: OpsTest, kubernetes_model: Model):
