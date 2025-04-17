@@ -82,23 +82,27 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
 
 
 async def consume_offers(ops_test: OpsTest, kubernetes_model: Model):
-    await ops_test.model.consume(f"admin/{kubernetes_model.name}.{LDAP_OFFER}")
-    await ops_test.model.consume(f"admin/{kubernetes_model.name}.{LDAP_CERT_OFFER}")
+    # On k8s consuming an offer on a remote model fails somehow, so we fallback to juju command.
+    first_consume_command = f"consume admin/{kubernetes_model.info.name}.{LDAP_OFFER}"
+    await ops_test.juju(*first_consume_command.split())
+
+    second_consume_command = f"consume admin/{kubernetes_model.info.name}.{LDAP_CERT_OFFER}"
+    await ops_test.juju(*second_consume_command.split())
 
 
 async def teardown_offers(ops_test, kubernetes_model):
     await ops_test.model.remove_saas(LDAP_OFFER)
     await ops_test.model.remove_saas(LDAP_CERT_OFFER)
 
-    with ops_test.model_context("secondary"):
-        logger.info("Removing ldap offer")
-        await kubernetes_model.remove_offer(
-            endpoint=f"admin/{kubernetes_model.name}.{LDAP_OFFER}", force=True
-        )
-        logger.info("Removing ldap cert offer")
-        await kubernetes_model.remove_offer(
-            endpoint=f"admin/{kubernetes_model.name}.{LDAP_CERT_OFFER}", force=True
-        )
+    first_remove_offer_command = f"remove-offer admin/{kubernetes_model.name}.{LDAP_OFFER} --force"
+    logger.info("Removing ldap offer")
+    await ops_test.juju(*first_remove_offer_command.split())
+
+    second_remove_offer_command = (
+        f"remove-offer admin/{kubernetes_model.name}.{LDAP_CERT_OFFER} --force"
+    )
+    logger.info("Removing ldap cert offer")
+    await ops_test.juju(*second_remove_offer_command.split())
 
 
 async def create_groups(ops_test: OpsTest, app_name: str, role_name: str):

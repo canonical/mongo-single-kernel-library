@@ -98,6 +98,7 @@ async def test_build_and_deploy_mongos(
             mongod_resource=mongod_resource,
             app_name=base_app_name,
             num_units=3,
+            subordinate=(substrate == "lxd"),
         )
         app_name = base_app_name
 

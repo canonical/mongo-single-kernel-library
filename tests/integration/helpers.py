@@ -49,17 +49,22 @@ async def deploy_charm(
     num_units: int = 3,
     channel: str | None = None,
     config: dict | None = None,
+    subordinate: bool = False,
 ):
     if substrate == "lxd":
         await ops_test.model.deploy(
-            charm, num_units=num_units, application_name=app_name, config=config, channel=channel
+            charm,
+            num_units=0 if subordinate else num_units,
+            application_name=app_name,
+            config=config,
+            channel=channel,
         )
     else:
         await ops_test.model.deploy(
             charm,
             resources=mongod_resource,
             application_name=app_name,
-            num_units=num_units,
+            num_units=0 if subordinate else num_units,
             series="jammy",
             trust=True,
             config=config,
