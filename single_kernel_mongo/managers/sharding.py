@@ -171,6 +171,10 @@ class ConfigServerManager(Object, StatusProvider):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if not self.charm.unit.is_leader():
             raise NonDeferrableFailedHookChecksError
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
         if (
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
@@ -191,7 +195,9 @@ class ConfigServerManager(Object, StatusProvider):
         pbm_statuses = self.dependent.backup_manager.get_statuses()
         pbm_status = next(iter(pbm_statuses), None)
 
-        # TODO: future work will be to check the actual status of the backup and not the status.
+        # TODO: future work will be to check the actual status of the backup and not the status.=======
+        # Note: we permit this logic based on status since we aren't checking
+        # `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         if isinstance(pbm_status, MaintenanceStatus):
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
@@ -455,6 +461,10 @@ class ShardManager(Object, StatusProvider):
             )
             if not is_leaving:
                 raise DeferrableFailedHookChecksError("Upgrade in progress")
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
         if (
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()

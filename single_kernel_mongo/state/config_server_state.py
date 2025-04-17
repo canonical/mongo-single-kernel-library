@@ -23,7 +23,6 @@ class AppShardingComponentKeys(str, Enum):
     HOST = "host"
     KEY_FILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
-    STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
 
     # We don't use those except to check if we've received credentials
     USERNAME = "username"
@@ -108,7 +107,10 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
 
     @property
     def status_ready_for_upgrade(self) -> bool:
-        """Returns true if the shard is ready for upgrade."""
+        """Returns true if the shard is ready for upgrade.
+
+        Legacy: for old upgrades that require status from shards.
+        """
         if not self.relation:
             return True
         # We get directly the data in the unit because it's hidden otherwise
@@ -120,6 +122,10 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
 
     @status_ready_for_upgrade.setter
     def status_ready_for_upgrade(self, value: bool):
+        """Sets old status.
+
+        Legacy: for old upgrades that require status from shards.
+        """
         if not self.relation:
             raise Exception("No databag to write in")
         self.relation.data[self.component][

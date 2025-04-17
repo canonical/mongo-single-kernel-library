@@ -43,7 +43,6 @@ from single_kernel_mongo.exceptions import (
     PrecheckFailedError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.config_server_state import UnitShardingComponentState
 from single_kernel_mongo.utils.helpers import mongodb_only
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
@@ -259,6 +258,24 @@ class AbstractUpgrade(ABC):
             if not self.dependent.upgrade_manager.are_pre_upgrade_operations_config_server_successful():
                 raise PrecheckFailedError("Pre-refresh operations on config-server failed.")
 
+        self.add_status_data_for_legacy_upgrades()
+
+    def add_status_data_for_legacy_upgrades(self):
+        """Add dummy data for legacy upgrades.
+
+        Upgrades supported on revision 212 and lower require status information from shards.
+        however in upgrades on later reisions this information was determined not necessary and
+        obsolete. It is true that this information is *not* needed for earlier revisions to
+        facilitate earlier revisions we populate this data with ActiveStatus.
+        """
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
+
+        if not self.state.shard_relation:
+            return
+
+        self.state.unit_shard_state.status_ready_for_upgrade = True
+
 
 # END: Useful classes
 
@@ -298,6 +315,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         assert self._upgrade
         if self.charm.unit.is_leader():
             self.charm.app.status = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
+
+        # TODO future-work: for organisation of upgrade statuses we must find a stateless way for
+        # determining statuses without checking the already set status.
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
         if (
@@ -314,6 +334,14 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             self.charm.status_manager.set_and_share_status(
                 self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
             )
+
+    def get_status(self) -> StatusBase | None:
+        """Gets statuses for upgrades statelessly."""
+        assert self._upgrade
+        if self.charm.unit.is_leader():
+            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
+
+        return self._upgrade.get_upgrade_unit_status() or ActiveStatus()
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
@@ -436,23 +464,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             mongod.move_primary(new_primary_ip=unit_host)
 
     @mongodb_only
-    def is_current_unit_ready(self, ignore_unhealthy_upgrade: bool = False) -> bool:
-        """Returns True if the current unit status shows that the unit is ready.
-
-        Note: we allow the use of ignore_unhealthy_upgrade, to avoid infinite loops due to this
-        function returning False and preventing the status from being reset.
-        """
-        if isinstance(self.charm.unit.status, ActiveStatus):
-            return True
-
-        if ignore_unhealthy_upgrade and self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE:
-            return True
-
-        return self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
-            type(self.charm.unit.status).__name__.lower()
-        )
-
-    @mongodb_only
     def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
         """Returns True if all charm units status's show that they are ready for upgrade."""
         goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
@@ -465,26 +476,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 unit_state["status"]
             ):
                 return False
-
-        return True
-
-    @mongodb_only
-    def are_shards_status_ready_for_upgrade(self) -> bool:
-        """Returns True if all integrated shards status's show that they are ready for upgrade.
-
-        A shard is ready for upgrade if it is either in the waiting for upgrade status or active
-        status.
-        """
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            return False
-
-        for sharding_relation in self.state.config_server_relation:
-            for unit in sharding_relation.units:
-                unit_data = UnitShardingComponentState(
-                    sharding_relation, self.state.config_server_data_interface, unit
-                )
-                if not unit_data.status_ready_for_upgrade:
-                    return False
 
         return True
 
@@ -514,25 +505,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
         if self.state.is_sharding_component and not self.state.has_sharding_integration:
             return True
-
-        # It is possible that in a previous run of post-upgrade-check, that the unit was set to
-        # unhealthy. In order to check if this unit has resolved its issue, we ignore the status
-        # that was set in a previous check of cluster health. Otherwise, we are stuck in an
-        # infinite check of cluster health due to never being able to reset an unhealthy status.
-        if not self.is_current_unit_ready(
-            ignore_unhealthy_upgrade=True
-        ) or not self.are_all_units_ready_for_upgrade(unit_to_ignore=self.charm.unit.name):
-            logger.error(
-                "Cannot proceed with refresh. Status of charm units do not show active / waiting for refresh."
-            )
-            return False
-
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            if not self.are_shards_status_ready_for_upgrade():
-                logger.error(
-                    "Cannot proceed with refresh. Status of shard units do not show active / waiting for refresh."
-                )
-                return False
 
         try:
             return self.are_nodes_healthy()

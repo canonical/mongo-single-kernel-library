@@ -242,6 +242,8 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
             raise UnhealthyUpgradeError
 
+        # TODO this will be addressed in the Advanced Status Handling, when we have the
+        # functionality to clear a status.
         if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
             self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
 

@@ -86,21 +86,3 @@ class VersionChecker:
             )
 
         return None
-
-    def is_status_related_to_mismatched_revision(self, status_type: str) -> bool:
-        """Returns True if the current status is related to a mimsatch in revision.
-
-        Note: A few functions calling this method receive states differently. One receives them by
-        "goal state" which processes data differently and the other via the ".status" property.
-        Hence we have to be flexible to handle each.
-        """
-        if not self.get_cluster_mismatched_revision_status():
-            return False
-
-        if "waiting" in status_type and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            return True
-
-        if "blocked" in status_type and self.state.is_role(MongoDBRoles.SHARD):
-            return True
-
-        return False
