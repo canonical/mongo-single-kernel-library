@@ -79,7 +79,9 @@ async def test_build_and_deploy(
     await apply_ldif(ops_test, kubernetes_model, "add.ldif")
 
     # Create the roles on MongoDB
-    await create_groups(ops_test, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com")
+    await create_groups(
+        ops_test, substrate, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    )
 
 
 @pytest.mark.abort_on_fail

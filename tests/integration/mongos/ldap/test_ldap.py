@@ -79,7 +79,9 @@ async def test_build_and_deploy_mongodb_cluster(
 
     db_app_name = CONFIG_SERVER_APP_NAME
 
-    await create_groups(ops_test, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com")
+    await create_groups(
+        ops_test, substrate, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    )
 
     await apply_ldif(ops_test, kubernetes_model, "add.ldif")
 
