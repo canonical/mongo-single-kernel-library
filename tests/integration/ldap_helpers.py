@@ -45,7 +45,11 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
             ),
             kubernetes_model.deploy(LDAP_UTILS_APP_NAME, channel="latest/edge", trust=True),
             kubernetes_model.deploy(
-                POSTGRESQL_K8S, channel="14/stable", trust=True, storage={"pgdata": "100G"}
+                POSTGRESQL_K8S,
+                channel="14/stable",
+                trust=True,
+                series="jammy",
+                config={"profile": "testing"},
             ),
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
