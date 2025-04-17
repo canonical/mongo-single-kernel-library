@@ -50,10 +50,12 @@ class StatusManager(Object):
         self.charm_kind = self.operator.name
 
     def set_and_share_status(self, status: StatusBase) -> None:
-        """Sets the unit status."""
+        """Sets the unit status.
+
+        Even though this function no longer shares the status - we kept the naming as the future
+        work will remove this altogether.
+        """
         self.charm.unit.status = status
-        if self.state.is_role(MongoDBRoles.SHARD):
-            self.state.share_status_with_config_server(status)
 
     def to_active(self, message: str | None = None) -> None:
         """Sets status to active."""
@@ -137,7 +139,10 @@ class StatusManager(Object):
         try:
             statuses = self.get_statuses()
         except OperationFailure as e:
-            if e.code in (MongoErrorCodes.UNAUTHORIZED, MongoErrorCodes.AUTHENTICATION_FAILED):
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+            ):
                 waiting_status = f"Waiting to sync passwords across the {deployment_mode}"
             elif e.code == MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE:
                 waiting_status = f"Waiting to sync internal membership across the {deployment_mode}"

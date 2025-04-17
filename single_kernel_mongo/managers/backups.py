@@ -492,6 +492,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
 
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+
         Returns:
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
@@ -517,7 +520,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             )
 
     def assert_can_backup(self) -> None:
-        """Is PBM is a state where it can backup?"""
+        """Is PBM is a state where it can backup?
+
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+        """
         pbm_status = self.get_status()
         match pbm_status:
             case MaintenanceStatus():
@@ -534,7 +541,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                 return
 
     def assert_can_list_backup(self) -> None:
-        """Is PBM in a state to list backup?"""
+        """Is PBM in a state to list backup?
+
+        Note: we permit this logic based on status since we aren't checking
+        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
+        """
         pbm_status = self.get_status()
         match pbm_status:
             case WaitingStatus():
@@ -585,9 +596,20 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
     ) -> str:
         """Returns a string with the result of the backup/restore operation.
 
+        Note: current_pbm_status is a freshly calculated status from PBM directly, so we allow
+        calculations based on its result.
+
         The function call is expected to be only for not failed operations.
         The operation is taken from previous status of the unit and expected
         to contain the operation type (backup/restore) and the backup id.
+
+        This function does not work reliably for the following reasons.
+        1. Another status could get set and then the use of the previous_pbm_status is meaningless
+        2. If there was a PBM failure that wasn't noticed by a status check (i.e. in between hooks)
+        there is a chance that this function it will incorrectly report the backup/restore
+        succeeded.
+
+        TODO: Rework this and integrate it with COS - see DPE-6868 on JIRA for more info.
         """
         if (
             current_pbm_status.name == previous_pbm_status.name
