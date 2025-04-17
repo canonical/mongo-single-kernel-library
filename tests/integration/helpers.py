@@ -109,12 +109,15 @@ async def generate_mongodb_client(
     auth_source = ""
     database = "admin"
 
-    return MongoClient(
+    complement = f"{auth_source}"
+    if not mongos:
+        complement = complement + f"replicaSet={app_name}"
+
+    return (
         f"mongodb://{username}:"
         f"{quote_plus(password)}@"
         f"{hosts}/{quote_plus(database)}?"
-        f"{auth_source}",
-        directConnection=True,
+        f"{complement}"
     )
 
 

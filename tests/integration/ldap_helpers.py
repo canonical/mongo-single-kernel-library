@@ -10,7 +10,7 @@ from juju.model import Model
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from .helpers import MONGOD_PORT, MONGOS_PORT, generate_mongodb_client, run_action
+from .helpers import MONGOD_PORT, MONGOS_PORT, generate_mongodb_client, get_leader_id, run_action
 
 POSTGRESQL_K8S = "postgresql-k8s"
 CERTIFICATES = "self-signed-certificates"
@@ -112,17 +112,29 @@ async def teardown_offers(ops_test, kubernetes_model):
 
 
 async def create_groups(ops_test: OpsTest, substrate: str, app_name: str, role_name: str):
-    client = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
+    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
 
-    client.admin.command(
-        "createRole",
-        role_name,
-        roles=[
-            {"db": "superdb", "role": "readWrite"},
-            {"db": "superdb", "role": "enableSharding"},
-        ],
-        privileges=[],
-    )
+    leader_id = await get_leader_id(ops_test, app_name)
+
+    cmd = [
+        f"{app_name}/f{leader_id}",
+        "mongosh",
+        uri,
+        "--quiet",
+        "--eval",
+        '"db.createRole({'
+        f"  role: '{role_name}'"
+        "  privileges: [],"
+        '  roles: [{"db": "superdb", "role": "readWrite"}, {"db": "superdb", "role": "enableSharding"}]'
+        "})",
+    ]
+
+    if substrate == "microk8s":
+        cmd = ["--container", "mongod"] + cmd
+
+    cmd = ["ssh"] + cmd
+
+    await ops_test.juju(*cmd)
 
 
 def generate_mongodb_ldap_client(
