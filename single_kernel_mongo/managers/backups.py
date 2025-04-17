@@ -525,7 +525,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def assert_can_backup(self) -> None:
         """Is PBM is a state where it can backup?
-        
+
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
