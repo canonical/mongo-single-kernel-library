@@ -9,7 +9,6 @@ import logging
 from typing import Generic, TypeVar
 
 from ops import ActionEvent
-from ops.model import StatusBase
 from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
@@ -293,10 +292,3 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
         logger.debug("refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
-
-    def get_statuses(self) -> list[StatusBase]:
-        """Returns the statuses of the upgrade manager.
-
-        TODO - implement this once we understand upgrade statuses better.
-        """
-        return []

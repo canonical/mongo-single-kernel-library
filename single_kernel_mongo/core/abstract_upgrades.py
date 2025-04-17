@@ -335,13 +335,10 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
             )
 
-    def get_status(self) -> StatusBase | None:
+    def get_statuses(self) -> list[StatusBase]:
         """Gets statuses for upgrades statelessly."""
         assert self._upgrade
-        if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
-
-        return self._upgrade.get_upgrade_unit_status() or ActiveStatus()
+        return [self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value]
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
