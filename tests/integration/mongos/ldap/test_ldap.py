@@ -104,8 +104,8 @@ async def test_build_and_deploy_mongos(
 
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
-        channel="edge",
-        base="ubuntu@22.04",
+        channel="latest/stable",
+        series="jammy",
         num_units=2,
         config={"database-name": "test-database"},
     )
