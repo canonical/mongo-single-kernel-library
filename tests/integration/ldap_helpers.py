@@ -106,12 +106,14 @@ async def teardown_offers(ops_test, kubernetes_model):
     await ops_test.model.remove_saas(LDAP_OFFER)
     await ops_test.model.remove_saas(LDAP_CERT_OFFER)
 
-    first_remove_offer_command = f"remove-offer admin/{kubernetes_model.name}.{LDAP_OFFER} --force"
+    first_remove_offer_command = (
+        f"remove-offer admin/{kubernetes_model.name}.{LDAP_OFFER} --force --yes"
+    )
     logger.info("Removing ldap offer")
     await ops_test.juju(*first_remove_offer_command.split())
 
     second_remove_offer_command = (
-        f"remove-offer admin/{kubernetes_model.name}.{LDAP_CERT_OFFER} --force"
+        f"remove-offer admin/{kubernetes_model.name}.{LDAP_CERT_OFFER} --force --yes"
     )
     logger.info("Removing ldap cert offer")
     await ops_test.juju(*second_remove_offer_command.split())
@@ -126,7 +128,7 @@ async def create_groups(ops_test: OpsTest, substrate: str, app_name: str, role_n
         substrate,
         uri,
         "db.createRole({"
-        "  role: '{role_name}',"
+        f"  role: '{role_name}',"
         "  privileges: [],"
         "  roles: [{'db': 'superdb', 'role': 'readWrite'}, {'db': 'superdb', 'role': 'enableSharding'}]"
         "})",

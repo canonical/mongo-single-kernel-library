@@ -142,9 +142,17 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
 
     await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
 
+    path = (
+        "/var/snap/charmed-mongodb/current/etc/mongod/mongod.conf"
+        if substrate == "lxd"
+        else "/etc/mongod/mongod.conf"
+    )
+
+    ssh_command = "ssh --container mongod" if substrate == "microk8s" else "ssh"
+
     # Check that all units have restarted and updated their configuration.
     for unit in ops_test.model.applications[db_app_name].units:
-        cat_cmd = f"exec --unit {unit.name} -- cat /var/snap/charmed-mongodb/current/etc/mongod/mongod.conf"
+        cat_cmd = f"{ssh_command} {unit.name} cat {path}"
         return_code, output, _ = await ops_test.juju(*cat_cmd.split())
 
         if return_code != 0:
@@ -173,6 +181,13 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
     await ops_test.model.applications[db_app_name].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{db_app_name}:ldap"
     )
+
+    units = ops_test.model.applications[db_app_name].units
+
+    await ops_test.model.block_until(
+        *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
+    )
+
     await wait_for_mongodb_units_blocked(
         ops_test,
         db_app_name,
