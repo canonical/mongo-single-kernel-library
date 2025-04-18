@@ -125,9 +125,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         password="dogood",
     )
 
-    await execute_on_mongod(
-        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 1})"
-    )
+    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})")
 
 
 @pytest.mark.abort_on_fail
@@ -163,9 +161,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         username="johndoe@superheroes",
         password="dogood",
     )
-    await execute_on_mongod(
-        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 2})"
-    )
+    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})")
 
 
 @pytest.mark.abort_on_fail
@@ -195,7 +191,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
 
     with pytest.raises(ProcessError):
         await execute_on_mongod(
-            ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 2})"
+            ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
         )
 
 

@@ -184,9 +184,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         mongos=True,
     )
 
-    await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "db.test-collection.insertOne({number: 1})"
-    )
+    await execute_on_mongod(ops_test, app_name, substrate, uri, "db.test.insertOne({number: 1})")
 
 
 @pytest.mark.abort_on_fail
