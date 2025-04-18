@@ -92,10 +92,14 @@ async def run_action(
     return action.results
 
 
-async def get_address_of_unit(ops_test: OpsTest, unit_id: int, app_name: str) -> str:
+async def get_address_of_unit(
+    ops_test: OpsTest, substrate: str, unit_id: int, app_name: str
+) -> str:
     """Retrieves the address of the unit based on provided id."""
     status: FullStatus = await ops_test.model.get_status()
-    return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
+    if substrate == "microk8s":
+        return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
+    return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["public-address"]
 
 
 async def generate_mongodb_client(
@@ -108,7 +112,7 @@ async def generate_mongodb_client(
 ):
     """Returns a MongoDB client for mongos/mongod."""
     hosts = [
-        await get_address_of_unit(ops_test, int(unit.name.split("/")[1]), app_name)
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
     password = password or await get_password(ops_test, app_name=app_name)

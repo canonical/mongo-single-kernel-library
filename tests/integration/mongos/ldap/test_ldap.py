@@ -177,6 +177,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
     # We create a client which should be able to write
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         app_name,
         database="superdb",
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",

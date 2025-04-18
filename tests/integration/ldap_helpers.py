@@ -137,6 +137,7 @@ async def create_groups(ops_test: OpsTest, substrate: str, app_name: str, role_n
 
 async def generate_mongodb_ldap_client(
     ops_test: OpsTest,
+    substrate: str,
     app_name: str,
     database: str,
     username: str,
@@ -144,7 +145,7 @@ async def generate_mongodb_ldap_client(
     mongos: bool = False,
 ) -> str:
     hosts = [
-        await get_address_of_unit(ops_test, int(unit.name.split("/")[1]), app_name)
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
     port = MONGOS_PORT if mongos else MONGOD_PORT

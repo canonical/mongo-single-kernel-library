@@ -119,6 +119,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
     # We create a client which should be able to write
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         db_app_name,
         database="superdb",
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
@@ -148,15 +149,18 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         else "/etc/mongod/mongod.conf"
     )
 
-    ssh_command = "ssh --container mongod" if substrate == "microk8s" else "ssh"
+    if substrate == "lxd":
+        cat_cmd = "exec --unit {} -- cat {}"
+    else:
+        cat_cmd = "ssh --container mongod {} cat {}"
 
     # Check that all units have restarted and updated their configuration.
     for unit in ops_test.model.applications[db_app_name].units:
-        cat_cmd = f"{ssh_command} {unit.name} cat {path}"
-        return_code, output, _ = await ops_test.juju(*cat_cmd.split())
+        cat_cmd = cat_cmd.format(unit.name, path)
+        return_code, output, err = await ops_test.juju(*cat_cmd.split())
 
         if return_code != 0:
-            raise ProcessError("Could not cat configuration.")
+            raise ProcessError(f"Could not cat configuration. {output=} {err=}")
 
         configuration = safe_load(output)
         assert configuration["security"]["ldap"].get("userToDNMapping", "") != ""
@@ -164,6 +168,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
 
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         db_app_name,
         database="superdb",
         username="johndoe@superheroes",
@@ -198,6 +203,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
     # John should not be able to log in now.
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         db_app_name,
         database="superdb",
         username="johndoe@superheroes",

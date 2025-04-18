@@ -115,6 +115,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
     db_app_name = CONFIG_SERVER_APP_NAME
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         db_app_name,
         database="superdb",
         username="cn=johndoe,ou=superheros,ou=users,dc=glauth,dc=com",
@@ -143,10 +144,13 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         else "/etc/mongod/mongod.conf"
     )
 
-    ssh_command = "ssh --container mongod" if substrate == "microk8s" else "ssh"
+    if substrate == "lxd":
+        cat_cmd = "exec --unit {} -- cat {}"
+    else:
+        cat_cmd = "ssh --container mongod {} cat {}"
 
     for unit in ops_test.model.applications[db_app_name].units:
-        cat_cmd = f"{ssh_command} {unit.name} cat {path}"
+        cat_cmd = cat_cmd.format(unit.name, path)
         return_code, output, _ = await ops_test.juju(*cat_cmd.split())
 
         if return_code != 0:
@@ -158,6 +162,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
 
     uri = await generate_mongodb_ldap_client(
         ops_test,
+        substrate,
         db_app_name,
         database="superdb",
         username="johndoe@superheroes",
