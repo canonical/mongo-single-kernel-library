@@ -37,6 +37,16 @@ DATA_INTEGRATOR_APP_NAME = "data-integrator"
 logger = logging.getLogger(__name__)
 
 
+def mongosh(substrate: str) -> str:
+    match substrate:
+        case "lxd":
+            return "charmed-mongodb.mongosh"
+        case "microk8s":
+            return "mongosh"
+        case _:
+            raise Exception("Invalid substrate")
+
+
 class ProcessError(Exception):
     """Raised when a process fails."""
 
@@ -577,3 +587,21 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
         if endpoint_one in endpoints and endpoint_two in endpoints:
             return True
     return False
+
+
+async def execute_on_mongod(
+    ops_test: OpsTest, app_name: str, substrate: str, uri: str, command: str
+):
+    """Executes the command with mongosh."""
+    leader_id = await get_leader_id(ops_test, app_name)
+    ssh_command = ["ssh", "--container", "mongod"] if substrate == "microk8s" else ["ssh"]
+
+    formatted_string = f'"{uri}" --quiet --eval "{command}"'
+    cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
+
+    ret_code, stdout, stderr = await ops_test.juju(*(ssh_command + cmd))
+
+    logger.info("ret_code: %s, stdout: %s, stderr: %s", ret_code, stdout, stderr)
+
+    if ret_code != 0:
+        raise ProcessError(f"Failed to execute {command}", stderr, stdout)

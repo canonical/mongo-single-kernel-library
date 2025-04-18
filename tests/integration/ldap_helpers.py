@@ -7,10 +7,16 @@ import logging
 from urllib.parse import quote_plus
 
 from juju.model import Model
-from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from .helpers import MONGOD_PORT, MONGOS_PORT, generate_mongodb_client, get_leader_id, run_action
+from .helpers import (
+    MONGOD_PORT,
+    MONGOS_PORT,
+    execute_on_mongod,
+    generate_mongodb_client,
+    get_address_of_unit,
+    run_action,
+)
 
 POSTGRESQL_K8S = "postgresql-k8s"
 CERTIFICATES = "self-signed-certificates"
@@ -114,39 +120,31 @@ async def teardown_offers(ops_test, kubernetes_model):
 async def create_groups(ops_test: OpsTest, substrate: str, app_name: str, role_name: str):
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
 
-    leader_id = await get_leader_id(ops_test, app_name)
-
-    cmd = [
-        f"{app_name}/f{leader_id}",
-        "mongosh",
+    await execute_on_mongod(
+        ops_test,
+        app_name,
+        substrate,
         uri,
-        "--quiet",
-        "--eval",
-        '"db.createRole({'
-        f"  role: '{role_name}'"
+        "db.createRole({"
+        "  role: '{role_name}',"
         "  privileges: [],"
-        '  roles: [{"db": "superdb", "role": "readWrite"}, {"db": "superdb", "role": "enableSharding"}]'
+        "  roles: [{'db': 'superdb', 'role': 'readWrite'}, {'db': 'superdb', 'role': 'enableSharding'}]"
         "})",
-    ]
-
-    if substrate == "microk8s":
-        cmd = ["--container", "mongod"] + cmd
-
-    cmd = ["ssh"] + cmd
-
-    await ops_test.juju(*cmd)
+    )
 
 
-def generate_mongodb_ldap_client(
+async def generate_mongodb_ldap_client(
     ops_test: OpsTest,
     app_name: str,
     database: str,
     username: str,
     password: str,
     mongos: bool = False,
-) -> MongoClient:
-    hosts = [unit.public_address for unit in ops_test.model.applications[app_name].units]
+) -> str:
+    hosts = [
+        await get_address_of_unit(ops_test, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = ",".join([f"{host}:{port}" for host in hosts])
-    uri = f"mongodb://{quote_plus(username)}:{quote_plus(password)}@{hosts}/{database}?authSource=$external&authMechanism=PLAIN"
-    return MongoClient(uri)
+    return f"mongodb://{quote_plus(username)}:{quote_plus(password)}@{hosts}/{database}?authSource=\\$external&authMechanism=PLAIN"

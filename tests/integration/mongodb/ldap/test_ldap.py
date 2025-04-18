@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 from juju.model import Model
-from pymongo.errors import OperationFailure
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
@@ -15,6 +14,7 @@ from ...helpers import (
     ProcessError,
     check_or_scale_app,
     deploy_charm,
+    execute_on_mongod,
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
@@ -113,11 +113,11 @@ async def test_integrate_also_ldap_cert(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest):
+async def test_user_can_write(ops_test: OpsTest, substrate: str):
     db_app_name = await get_app_name(ops_test)
 
     # We create a client which should be able to write
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         db_app_name,
         database="superdb",
@@ -125,11 +125,13 @@ async def test_user_can_write(ops_test: OpsTest):
         password="dogood",
     )
 
-    client.superdb["test-collection"].insert_one({"number": 1})
+    await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 1})"
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_ldap_user_to_dn_mapping(ops_test):
+async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
     db_app_name = await get_app_name(ops_test)
 
     # We update the config to be able to login as johndoe@superheroes
@@ -154,19 +156,20 @@ async def test_ldap_user_to_dn_mapping(ops_test):
         assert configuration["security"]["ldap"].get("userToDNMapping", "") != ""
         assert configuration["security"]["ldap"]["authz"].get("queryTemplate", "") != ""
 
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         db_app_name,
         database="superdb",
         username="johndoe@superheroes",
         password="dogood",
     )
-
-    client.superdb["test-collection"].insert_one({"number": 2})
+    await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 2})"
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest):
+async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = await get_app_name(ops_test)
 
@@ -182,7 +185,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest):
     )
 
     # John should not be able to log in now.
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         db_app_name,
         database="superdb",
@@ -190,8 +193,10 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest):
         password="dogood",
     )
 
-    with pytest.raises(OperationFailure):
-        client.superdb["test-collection"].insert_one({"number": 3})
+    with pytest.raises(ProcessError):
+        await execute_on_mongod(
+            ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 2})"
+        )
 
 
 @pytest.mark.abort_on_fail

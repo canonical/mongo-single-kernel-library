@@ -13,6 +13,7 @@ from yaml import safe_load
 from ...helpers import (
     DEPLOYMENT_TIMEOUT,
     ProcessError,
+    execute_on_mongod,
     wait_for_mongodb_units_blocked,
 )
 from ...ldap_helpers import (
@@ -110,9 +111,9 @@ async def test_integrate_also_ldap_cert(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest):
+async def test_user_can_write(ops_test: OpsTest, substrate: str):
     db_app_name = CONFIG_SERVER_APP_NAME
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         db_app_name,
         database="superdb",
@@ -120,11 +121,13 @@ async def test_user_can_write(ops_test: OpsTest):
         password="dogood",
     )
 
-    client.superdb["test-collection"].insert_one({"number": 1})
+    await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 1})"
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_ldap_user_to_dn_mapping(ops_test):
+async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
     db_app_name = CONFIG_SERVER_APP_NAME
 
     await ops_test.model.applications[db_app_name].set_config(
@@ -147,7 +150,7 @@ async def test_ldap_user_to_dn_mapping(ops_test):
         assert configuration["security"]["ldap"].get("userToDNMapping", "") != ""
         assert configuration["security"]["ldap"]["authz"].get("queryTemplate", "") != ""
 
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         db_app_name,
         database="superdb",
@@ -155,7 +158,9 @@ async def test_ldap_user_to_dn_mapping(ops_test):
         password="dogood",
     )
 
-    client.superdb["test-collection"].insert_one({"number": 2})
+    await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test-collection.insertOne({number: 2})"
+    )
 
 
 @pytest.mark.abort_on_fail

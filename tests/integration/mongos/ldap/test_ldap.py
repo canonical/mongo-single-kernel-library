@@ -13,6 +13,7 @@ from ...helpers import (
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
     deploy_charm,
+    execute_on_mongod,
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
@@ -170,11 +171,11 @@ async def test_all_integrated(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest):
+async def test_user_can_write(ops_test: OpsTest, substrate: str):
     app_name = await get_app_name(ops_test, ch_name="mongos")
 
     # We create a client which should be able to write
-    client = generate_mongodb_ldap_client(
+    uri = await generate_mongodb_ldap_client(
         ops_test,
         app_name,
         database="superdb",
@@ -183,7 +184,9 @@ async def test_user_can_write(ops_test: OpsTest):
         mongos=True,
     )
 
-    client.superdb["test-collection"].insert_one({"number": 1})
+    await execute_on_mongod(
+        ops_test, app_name, substrate, uri, "db.test-collection.insertOne({number: 1})"
+    )
 
 
 @pytest.mark.abort_on_fail
