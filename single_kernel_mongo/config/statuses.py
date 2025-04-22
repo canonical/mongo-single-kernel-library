@@ -153,7 +153,7 @@ class ShardStatuses(Enum):
     FAILED_TO_DRAIN = BlockedStatus("Failed to drain shard from cluster")
     WAITING_TO_REMOVE = WaitingStatus("Waiting for config-server to remove shard")
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
-    ADDING_TO_CLUSTER = MaintenanceStatus("Adding shard to config-server.")
+    ADDING_TO_CLUSTER = MaintenanceStatus("Adding shard to config-server")
     SHARD_NOT_AWARE = BlockedStatus("Shard is not yet shard aware.")
     ACTIVE_IDLE = ActiveStatus()
 
