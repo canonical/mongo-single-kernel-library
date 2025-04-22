@@ -80,11 +80,11 @@ async def test_build_and_deploy(
 
     db_app_name = CONFIG_SERVER_APP_NAME
 
+    await apply_ldif(ops_test, kubernetes_model, "add.ldif")
+
     await create_groups(
         ops_test, substrate, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
-
-    await apply_ldif(ops_test, kubernetes_model, "add.ldif")
 
 
 @pytest.mark.abort_on_fail
@@ -118,7 +118,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         substrate,
         db_app_name,
         database="superdb",
-        username="cn=johndoe,ou=superheros,ou=users,dc=glauth,dc=com",
+        username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
         password="dogood",
     )
 
