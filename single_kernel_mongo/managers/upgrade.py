@@ -288,7 +288,7 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
             raise DeferrableError("mongos is not able to read/write after refresh.")
 
         if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
-            self.charm.status_manager.to_active()
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
 
         logger.debug("refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
