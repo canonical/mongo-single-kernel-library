@@ -120,7 +120,7 @@ class ConfigServerStatuses(Enum):
     @staticmethod
     def adding_shard(shard: str) -> StatusBase:
         """Returns add shard status."""
-        return MaintenanceStatus(f"Adding shard {shard} to config-server")
+        return MaintenanceStatus(f"Adding shard {shard} to config-server.")
 
     @staticmethod
     def draining_shard(shard: str) -> StatusBase:
