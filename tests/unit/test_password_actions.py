@@ -10,8 +10,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MonitorUser,
     OperatorUser,
 )
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
 def test_get_password_action_fail(harness: Harness[MongoTestCharm], mocker):

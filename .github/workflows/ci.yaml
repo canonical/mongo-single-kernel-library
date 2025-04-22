@@ -109,3 +109,74 @@ jobs:
           cache: "poetry"
       - name: Run tests
         run: tox run -e unit
+
+  build:
+    name: Build test charms
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        path:
+          - tests/charms/mongodb_test_charm
+          - tests/charms/mongodb_k8s_test_charm
+          - tests/charms/mongos_test_charm
+          - tests/charms/mongos_k8s_test_charm
+    steps:
+      - name: Install CLI
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@v30.2.0#subdirectory=python/cli
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install tox & poetry
+        shell: bash
+        run: |
+          pipx install tox poetry
+          pipx inject poetry poetry-plugin-export
+      - name: Set up environment
+        run: |
+          sudo snap install lxd
+          # shellcheck disable=SC2078
+          # (shellcheck sees it as constant, but GitHub Actions expression is not constant between workflow runs)
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+
+          sudo snap install charmcraft --classic
+          pipx install charmcraftcache
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'poetry'
+      - name: Update lib and build charm
+        shell: bash
+        run: |
+          sudo --user "$USER" --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh ${{ matrix.path }}
+      - name: Compute path in artifact
+        id: path-in-artifact
+        run: compute-path-in-artifact '${{ matrix.path }}'
+      - name: Upload charm
+        uses: actions/upload-artifact@v4
+        with:
+          name: packed-charm-${{ steps.path-in-artifact.outputs.path }}
+          path: |
+            ${{ matrix.path }}/*.charm
+            .empty
+          if-no-files-found: error
+
+  integration-test:
+    name: Integration test charm
+    needs:
+      - tox-lint
+      - unit-test
+      - build
+    uses: ./.github/workflows/integration_test.yaml
+    with:
+      artifact-prefix: packed-charm
+    permissions:
+      contents: write  # Needed for Allure Report

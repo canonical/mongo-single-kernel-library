@@ -17,8 +17,7 @@ from single_kernel_mongo.exceptions import (
     ResyncError,
     WorkloadExecError,
 )
-
-from .mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
 def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
@@ -96,7 +95,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], mocker):
         ("status code: 301", "s3 configurations are incompatible."),
         ("Unknown message", "Unknown PBM error, check logs."),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "test-mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "mongodb"}]}',
             "s3 credentials are incorrect.",
         ),
     ),
@@ -302,11 +301,11 @@ def test_restore_backup_success(harness: Harness[MongoTestCharm], mocker) -> Non
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock_call = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command")
 
-    backup_manager.restore_backup("deadbeef", "test-mongodb=test-mongodb")
+    backup_manager.restore_backup("deadbeef", "mongodb=mongodb")
 
     mock_call.assert_called_with(
         "restore",
-        ["deadbeef", "--replset-remapping", "test-mongodb=test-mongodb"],
+        ["deadbeef", "--replset-remapping", "mongodb=mongodb"],
         environment=backup_manager.environment,
     )
 
