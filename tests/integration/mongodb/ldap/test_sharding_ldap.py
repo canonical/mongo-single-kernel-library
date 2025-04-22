@@ -120,6 +120,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         database="superdb",
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
         password="dogood",
+        mongos=True,
     )
 
     await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})")
@@ -167,6 +168,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         database="superdb",
         username="johndoe@superheroes",
         password="dogood",
+        mongos=True,
     )
 
     await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})")
