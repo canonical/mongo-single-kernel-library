@@ -57,7 +57,7 @@ async def test_build_and_deploy(
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
         extra_config_config_server={
-            "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(member={PROVIDED_USER}))"
+            "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
     )
     await ops_test.model.wait_for_idle(
