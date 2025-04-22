@@ -63,9 +63,14 @@ class CharmStatuses(Enum):
 
     ACTIVE_IDLE = ActiveStatus()
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
+    MONGODB_INSTALLED = MaintenanceStatus("Installed MongoDB")
     MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
+    FAILED_TO_INSTALL = BlockedStatus("couldn't install MongoDB")
     mongodb = MongoDBStatuses
     mongos = MongosStatuses
+
+    # RUNNING Statuses
+    INSTALLING_MONGODB = MaintenanceStatus("installing MongoDB")
 
 
 class TLSStatuses(Enum):
@@ -113,6 +118,11 @@ class ConfigServerStatuses(Enum):
     ACTIVE_IDLE = ActiveStatus()
 
     @staticmethod
+    def adding_shard(shard: str) -> StatusBase:
+        """Returns add shard status."""
+        return MaintenanceStatus(f"Adding shard {shard} to config-server")
+
+    @staticmethod
     def draining_shard(shard: str) -> StatusBase:
         """Returns draining shard status based on shard."""
         return MaintenanceStatus(f"Draining shard {shard}")
@@ -140,6 +150,8 @@ class ShardStatuses(Enum):
 
     NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
     SHARD_DRAINED = ActiveStatus("Shard drained from cluster, ready for removal.")
+    FAILED_TO_DRAIN = BlockedStatus("Failed to drain shard from cluster")
+    WAITING_TO_REMOVE = WaitingStatus("Waiting for config-server to remove shard")
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
     ADDING_TO_CLUSTER = MaintenanceStatus("Adding shard to config-server.")
     SHARD_NOT_AWARE = BlockedStatus("Shard is not yet shard aware.")

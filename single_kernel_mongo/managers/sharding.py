@@ -306,7 +306,9 @@ class ConfigServerManager(Object, StatusProvider):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
 
-        self.charm.status_manager.to_maintenance(f"Adding shard {shard_name} to config-server")
+        self.charm.status_manager.set_and_share_status(
+            ConfigServerStatuses.adding_shard(shard_name)
+        )
         with MongoConnection(self.state.mongos_config) as mongo:
             try:
                 mongo.add_shard(shard_name, hosts)
@@ -320,7 +322,7 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
-        self.charm.status_manager.to_active()
+        self.charm.status_manager.set_and_share_status(ConfigServerStatuses.ACTIVE_IDLE.value)
 
     def remove_shards(self) -> None:
         """During update-status, remove shards until they are removed completely.
@@ -360,7 +362,9 @@ class ConfigServerManager(Object, StatusProvider):
         """Actually removes a shard based on the shard name."""
         with MongoConnection(self.state.mongos_config) as mongo:
             try:
-                self.charm.status_manager.to_maintenance(f"Draining shard {shard_name}")
+                self.charm.status_manager.set_and_share_status(
+                    ConfigServerStatuses.draining_shard(shard_name)
+                )
                 logger.info("Attempting to removing shard: %s", shard_name)
                 mongo.pre_remove_shard_checks(shard_name)
                 mongo.remove_shard(shard_name)
@@ -514,7 +518,7 @@ class ShardManager(Object, StatusProvider):
         """Sets status and flags in relation data relevant to sharding."""
         # if reusing an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
-        self.charm.status_manager.to_maintenance("Adding shard to config-server")
+        self.charm.status_manager.set_and_share_status(ShardStatuses.ADDING_TO_CLUSTER.value)
 
     def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
         """Retrieves secrets from config-server and updates them within the shard."""
@@ -597,13 +601,13 @@ class ShardManager(Object, StatusProvider):
         """Waits for the shard to be fully drained from the cluster."""
         self.assert_pass_hook_checks(relation, is_leaving=True)
 
-        self.charm.status_manager.to_maintenance("Draining shard from cluster.")
+        self.charm.status_manager.set_and_share_status(ShardStatuses.DRAINING_SHARD.value)
 
         mongos_hosts = self.state.app_peer_data.mongos_hosts
 
         self.wait_for_draining(mongos_hosts)
 
-        self.charm.status_manager.to_active("Shard drained from cluster, ready for removal")
+        self.charm.status_manager.set_and_share_status(ShardStatuses.SHARD_DRAINED.value)
 
     def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
@@ -731,7 +735,7 @@ class ShardManager(Object, StatusProvider):
         """Waits for shards to be drained from sharded cluster."""
         drained = False
 
-        self.charm.status_manager.to_maintenance("Draining shard from cluster.")
+        self.charm.status_manager.set_and_share_status(ShardStatuses.DRAINING_SHARD.value)
         while not drained:
             try:
                 # no need to continuously check and abuse resources while shard is draining
@@ -740,16 +744,18 @@ class ShardManager(Object, StatusProvider):
                 draining_status = (
                     "Shard is still draining" if not drained else "Shard is fully drained."
                 )
-                self.charm.status_manager.to_maintenance("Draining shard from cluster.")
+                self.charm.status_manager.set_and_share_status(ShardStatuses.DRAINING_SHARD.value)
                 logger.debug(draining_status)
             except PyMongoError as e:
                 logger.error("Error occurred while draining shard: %s", e)
-                self.charm.status_manager.to_blocked("Failed to drain shard from cluster")
+                self.charm.status_manager.set_and_share_status(ShardStatuses.FAILED_TO_DRAIN.value)
             except ShardNotPlannedForRemovalError:
                 logger.info(
                     "Shard %s has not been identifies for removal. Must wait for mongos cluster-admin to remove shard."
                 )
-                self.charm.status_manager.to_waiting("Waiting for config-server to remove shard")
+                self.charm.status_manager.set_and_share_status(
+                    ShardStatuses.WAITING_TO_REMOVE.value
+                )
             except ShardNotInClusterError:
                 logger.info(
                     "Shard to remove is not in sharded cluster. It has been successfully removed."

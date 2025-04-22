@@ -413,7 +413,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             and self.dependent.mongo_manager.mongod_ready()
         ):
             self._upgrade.unit_state = UnitState.HEALTHY
-            self.charm.status_manager.to_active()
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 
