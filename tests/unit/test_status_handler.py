@@ -446,7 +446,7 @@ def test_shard_get_status_shard_not_added_to_cluster(
     statuses = harness.charm.operator.shard_manager.get_statuses()
     status = next(iter(statuses), None)
 
-    assert status == MaintenanceStatus("Adding shard to config-server.")
+    assert status == MaintenanceStatus("Adding shard to config-server")
 
 
 def test_shard_get_status_shard_not_aware(
