@@ -17,10 +17,11 @@ from typing import TYPE_CHECKING
 
 from dacite import from_dict
 from ops import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
+from ops.model import BlockedStatus, Relation, StatusBase
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.statuses import MongodStatuses
 from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -162,7 +163,10 @@ class MongoManager(Object, StatusProvider):
         self.state.app_peer_data.set_user_created(user.username)
 
     def reconcile_mongo_users_and_dbs(
-        self, relation: Relation, relation_departing: bool = False, relation_changed: bool = False
+        self,
+        relation: Relation,
+        relation_departing: bool = False,
+        relation_changed: bool = False,
     ):
         """Oversees the users of the relation.
 
@@ -470,36 +474,63 @@ class MongoManager(Object, StatusProvider):
 
             return draining_shards
 
-    def get_status(self) -> StatusBase:
+    def get_statuses(self) -> list[StatusBase]:
         """Generates the status of a unit based on its status reported by mongod."""
+        charm_statuses: list[StatusBase] = []
+
+        if not self.state.db_initialised:
+            return [MongodStatuses.WAITING_REPL_SET_INIT.value]
+
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
             unit_host = self.state.unit_peer_data.internal_address
             if unit_host not in replset_status:
-                return WaitingStatus("Member being added.")
+                return [MongodStatuses.MEMBER_BEING_ADDED.value]
 
             replica_status = replset_status[unit_host]
 
             match replica_status:
                 case "PRIMARY":
-                    return ActiveStatus("Primary")
+                    charm_statuses.append(MongodStatuses.PRIMARY.value)
                 case "SECONDARY":
-                    return ActiveStatus("")
+                    charm_statuses.append(MongodStatuses.SECONDARY.value)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
-                    return WaitingStatus("Member is syncing...")
+                    return [MongodStatuses.MEMBER_SYNCING.value]
                 case "REMOVED":
-                    return WaitingStatus("Member is removing...")
+                    return [MongodStatuses.MEMBER_REMOVING.value]
                 case _:
-                    return BlockedStatus(replica_status)
+                    return [BlockedStatus(replica_status)]
 
         except ServerSelectionTimeoutError as e:
             # Usually it is du to ReplicaSetNoPrimary
             logger.debug(f"Got error {e} while checking replica set status")
-            return WaitingStatus("Waiting for primary re-election.")
+            return [MongodStatuses.WAITING_ELECTION.value]
         except AutoReconnect as e:
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return WaitingStatus("Waiting to reconnect to unit...")
+            return [MongodStatuses.WAITING_RECONNECT.value]
+
+        charm_statuses.extend(self.get_leader_statuses())
+        return charm_statuses
+
+    def get_leader_statuses(self) -> list[StatusBase]:
+        """Returns statuses that juju leader can retrieve for mongo."""
+        charm_statuses: list[StatusBase] = []
+
+        if not self.charm.unit.is_leader():
+            return charm_statuses
+
+        try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                replset_members = mongo.get_replset_members()
+                config_hosts = mongo.config.hosts
+                if replset_members != config_hosts:
+                    return [MongodStatuses.WAITING_RECONFIG.value]
+        except PyMongoError as e:
+            logger.error("Error checking members, %s", e)
+            return [MongodStatuses.WAITING_RECONFIG.value]
+
+        return charm_statuses

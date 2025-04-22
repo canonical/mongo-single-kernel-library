@@ -30,6 +30,7 @@ from ops.charm import CharmBase
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
@@ -91,11 +92,11 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
     def on_install(self, _):
         """First install event handler."""
         if self.substrate == Substrates.VM:
-            self.status_manager.to_maintenance("installing MongoDB")
+            self.status_manager.set_and_share_status(CharmStatuses.INSTALLING_MONGODB.value)
             if not self.workload.install():
-                self.status_manager.to_blocked("couldn't install MongoDB")
+                self.status_manager.set_and_share_status(CharmStatuses.FAILED_TO_INSTALL.value)
                 return
-            self.status_manager.to_maintenance("Installed MongoDB")
+            self.status_manager.set_and_share_status(CharmStatuses.MONGODB_INSTALLED.value)
 
     def on_leader_elected(self, _):
         """First leader elected handler."""

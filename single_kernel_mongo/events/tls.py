@@ -13,6 +13,7 @@ from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -132,7 +133,7 @@ class TLSEventsHandler(Object):
         self.manager.disable_certificates_for_unit()
 
         # TODO: Improve this during Advanced status handling.
-        self.charm.status_manager.to_active()
+        self.charm.status_manager.set_and_share_status(TLSStatuses.ACTIVE_IDLE.value)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -162,7 +163,10 @@ class TLSEventsHandler(Object):
             return
         try:
             self.manager.set_certificates(
-                event.certificate_signing_request, event.chain, event.certificate, event.ca
+                event.certificate_signing_request,
+                event.chain,
+                event.certificate,
+                event.ca,
             )
             self.dependent.state.update_ca_secrets(event.ca)
 
@@ -178,7 +182,7 @@ class TLSEventsHandler(Object):
 
             self.manager.enable_certificates_for_unit()
             # TODO: Improve this during Advanced status handling.
-            self.charm.status_manager.to_active()
+            self.charm.status_manager.set_and_share_status(TLSStatuses.ACTIVE_IDLE.value)
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return

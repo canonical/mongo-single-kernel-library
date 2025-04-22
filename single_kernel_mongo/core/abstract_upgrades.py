@@ -19,20 +19,19 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
 from ops import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
+from ops.model import ActiveStatus, BlockedStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
-    INCOMPATIBLE_UPGRADE,
     SNAP,
-    WAITING_POST_UPGRADE_STATUS,
     CharmKind,
     Substrates,
     UnitState,
 )
 from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -178,10 +177,8 @@ class AbstractUpgrade(ABC):
             resume_string = ""
             if len(self.state.units_upgrade_peer_data) > 1:
                 resume_string = f"Verify highest unit is healthy & run `{UpgradeActions.RESUME_ACTION_NAME.value}` action. "
-            return BlockedStatus(
-                f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
-            )
-        return MaintenanceStatus("Refreshing. To rollback, `juju refresh` to the previous revision")
+            return UpgradeStatuses.refreshing_needs_resume(resume_string)
+        return UpgradeStatuses.REFRESH_IN_PROG.value
 
     def set_versions_in_app_databag(self) -> None:
         """Save current versions in app databag.
@@ -317,7 +314,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Sets the upgrade status in the unit and app status."""
         assert self._upgrade
         if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
+            self.charm.app.status = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
 
         # TODO future-work: for organisation of upgrade statuses we must find a stateless way for
         # determining statuses without checking the already set status.
@@ -331,20 +328,17 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                     "Rollback with `juju refresh`. Pre-refresh check failed:"
                 )
             )
-            or self.charm.unit.status == WAITING_POST_UPGRADE_STATUS
+            or self.charm.unit.status == UpgradeStatuses.WAITING_POST_UPGRADE_STATUS
             or "is not up-to date with" in self.charm.unit.status.message
         ):
             self.charm.status_manager.set_and_share_status(
-                self._upgrade.get_upgrade_unit_status() or ActiveStatus()
+                self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
             )
 
-    def get_status(self) -> StatusBase | None:
+    def get_statuses(self) -> list[StatusBase]:
         """Gets statuses for upgrades statelessly."""
         assert self._upgrade
-        if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or ActiveStatus()
-
-        return self._upgrade.get_upgrade_unit_status() or ActiveStatus()
+        return [self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value]
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
@@ -401,7 +395,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 logger.info(
                     f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
                 )
-                self.charm.status_manager.set_and_share_status(INCOMPATIBLE_UPGRADE)
+                self.charm.status_manager.set_and_share_status(
+                    UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
+                )
                 return
 
         if self.dependent.substrate == Substrates.K8S:
@@ -419,7 +415,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             and self.dependent.mongo_manager.mongod_ready()
         ):
             self._upgrade.unit_state = UnitState.HEALTHY
-            self.charm.status_manager.to_active()
+            self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 

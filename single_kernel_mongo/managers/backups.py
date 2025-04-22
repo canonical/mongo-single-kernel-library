@@ -283,40 +283,38 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
             raise RestoreError(fail_message)
 
-    def get_status(self) -> StatusBase | None:
-        """Gets the PBM status.
-
-        TODO: once implementation spec is approved update this function to return multiple statuses
-        """
+    def get_statuses(self) -> list[StatusBase]:
+        """Gets the PBM statuses."""
         if not self.state.s3_relation:
             logger.info("No configuration for backups, not relation to s3-charm")
-            return None
+            return []
+
         if not self.validate_s3_config():
             logger.info(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
-            return BackupStatuses.PBM_MISSING_CONFIGS.value
+            return [BackupStatuses.PBM_MISSING_CONFIGS.value]
 
         # PBM requires all configuration to be set in order to run.
         if not self.workload.active():
-            return BackupStatuses.PBM_NOT_STARTED.value
+            return [BackupStatuses.PBM_NOT_STARTED.value]
 
         try:
             previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
 
             if pbm_error := self.process_pbm_error(pbm_status):
-                return pbm_error
+                return [pbm_error]
 
             processed_status = self.process_pbm_status(pbm_status)
             operation_result = self._get_backup_restore_operation_result(
                 processed_status, previous_status
             )
             logger.info(operation_result)
-            return processed_status
+            return [processed_status]
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
-            return BackupStatuses.UNKNOWN_PBM_ERROR.value
+            return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
@@ -332,7 +330,10 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             reraise=True,
         ):
             with attempt:
-                pbm_status = self.get_status()
+                pbm_statuses = self.get_statuses()
+                pbm_status = next(iter(pbm_statuses), None)
+
+                # todo future work - check status of pbm directly
                 # wait for backup/restore to finish
                 if isinstance(pbm_status, (MaintenanceStatus)):
                     raise PBMBusyError
@@ -481,13 +482,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         current_op = pbm_as_dict.get("running", {})
         match current_op:
             case {"type": "backup", "name": backup_id}:
-                return MaintenanceStatus(f"backup started/running, backup id: '{backup_id}'")
+                return BackupStatuses.backup_running(backup_id)
             case {"type": "restore", "name": backup_id}:
-                return MaintenanceStatus(f"restore started/running, backup id: '{backup_id}'")
+                return BackupStatuses.restore_running(backup_id)
             case {"type": "resync"}:
-                return WaitingStatus("waiting to sync s3 configurations.")
+                return BackupStatuses.PBM_WAITING_TO_SYNC.value
             case _:
-                return ActiveStatus("")
+                return BackupStatuses.ACTIVE_IDLE.value
 
     def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
@@ -499,7 +500,10 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
         """
-        pbm_status = self.get_status()
+        pbm_statuses = self.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
+
+        # todo future work - check status of pbm directly
         match pbm_status:
             case MaintenanceStatus():
                 raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
@@ -525,7 +529,9 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_status = self.get_status()
+        pbm_statuses = self.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
+
         match pbm_status:
             case MaintenanceStatus():
                 raise InvalidPBMStatusError(
@@ -546,7 +552,8 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_status = self.get_status()
+        pbm_statuses = self.get_statuses()
+        pbm_status = next(iter(pbm_statuses), None)
         match pbm_status:
             case WaitingStatus():
                 raise InvalidPBMStatusError(
@@ -585,7 +592,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                 # since this process takes several minutes we should let the user know
                 # immediately.
                 self.charm.status_manager.set_and_share_status(
-                    WaitingStatus("waiting to sync s3 configurations.")
+                    BackupStatuses.PBM_WAITING_TO_SYNC.value
                 )
                 raise ResyncError
         except WorkloadExecError as e:

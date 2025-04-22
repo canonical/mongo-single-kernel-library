@@ -12,9 +12,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
+from ops.model import StatusBase
 
 from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -48,15 +49,17 @@ class MachineUpgrade(AbstractUpgrade):
 
     def _get_unit_healthy_status(self) -> StatusBase:
         if self.state.unit_workload_container_version == self.state.app_workload_container_version:
-            return ActiveStatus(
-                f'MongoDB {self._unit_workload_version} running; '
-                f'Snap revision {self.state.unit_workload_container_version}; '
-                f'Charm revision {self._current_versions["charm"]}'
+            return UpgradeStatuses.vm_active_upgrade(
+                self._unit_workload_version,
+                self.state.unit_workload_container_version,
+                self._current_versions["charm"],
             )
-        return ActiveStatus(
-            f'MongoDB {self._unit_workload_version} running; '
-            f'Snap revision {self.state.unit_workload_container_version} (outdated); '
-            f'Charm revision {self._current_versions["charm"]}'
+
+        return UpgradeStatuses.vm_active_upgrade(
+            self._unit_workload_version,
+            self.state.unit_workload_container_version,
+            self._current_versions["charm"],
+            outdated=True,
         )
 
     @property
@@ -68,9 +71,7 @@ class MachineUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return BlockedStatus(
-                "Refresh incompatible. Rollback to previous revision with `juju refresh`"
-            )
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property

@@ -15,7 +15,11 @@ from single_kernel_mongo.exceptions import (
     WorkloadExecError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    BackupUser,
+    MonitorUser,
+    OperatorUser,
+)
 
 from .mongodb_test_charm.src.charm import MongoTestCharm
 
@@ -34,23 +38,34 @@ def test_install_snap_install_success(harness, mocker):
     assert harness.charm.unit.status == MaintenanceStatus("Installed MongoDB")
 
 
-def test_snap_start_failure_leads_to_blocked_status(harness, mocker, mock_fs_interactions):
+def test_snap_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
     )
     mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.start", side_effect=WorkloadServiceError
+        "single_kernel_mongo.core.vm_workload.VMWorkload.start",
+        side_effect=WorkloadServiceError,
     )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
 
+    patched_mongo_initialise = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
+    )
     harness.set_leader(True)
     harness.charm.on.start.emit()
     open_ports_mock.assert_not_called()
-    assert harness.charm.unit.status == BlockedStatus("couldn't start MongoDB")
+    patched_mongo_initialise.assert_not_called()
 
 
 def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
+    def mock_exec(command, *_, **__):
+        if command[0] == "open-port":
+            raise WorkloadExecError("open-port", 1, None, None)
+
+    harness.charm.workload.exec = mock_exec
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.get_env")
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
@@ -61,25 +76,32 @@ def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     )
     harness.set_leader(True)
     harness.charm.on.start.emit()
-    assert harness.charm.unit.status == WaitingStatus("waiting for MongoDB to start")
+    assert harness.charm.unit.status == MaintenanceStatus("Starting MongoDB.")
     patched_mongo_initialise.assert_not_called()
 
 
-def test_start_unable_to_open_tcp_moves_to_blocked(harness, mocker, mock_fs_interactions):
+def test_start_unable_to_open_tcp_doesnt_init(harness, mocker, mock_fs_interactions):
     # This also tests that we call the hook on the workload.
     def mock_exec(command, *_, **__):
         if command[0] == "open-port":
             raise WorkloadExecError("open-port", 1, None, None)
+
+    patched_mongo_initialise = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
+    )
 
     harness.charm.workload.exec = mock_exec
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     harness.set_leader(True)
     harness.charm.on.start.emit()
-    assert harness.charm.unit.status == BlockedStatus("failed to open TCP port for MongoDB")
+    patched_mongo_initialise.assert_not_called()
 
 
 def test_start_success(harness, mocker, mock_fs_interactions):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._configure_workloads"
+    )
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
@@ -122,7 +144,8 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
 
     harness.charm.on.start.emit()
 
-    assert harness.charm.unit.status == BlockedStatus("couldn't start mongodb exporter")
+    # not being able to start exporter should not block repl set initiation
+    assert harness.charm.operator.state.db_initialised
 
 
 def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
@@ -147,7 +170,8 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
 
     harness.charm.on.start.emit()
 
-    assert harness.charm.unit.status == BlockedStatus("couldn't start pbm-agent")
+    # not being able to start exporter should not block repl set initiation
+    assert harness.charm.operator.state.db_initialised
 
 
 def test_on_config_changed_invalid_role(harness):
@@ -232,7 +256,8 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     mocked_defer = mocker.patch("ops.framework.EventBase.defer")
     mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
+        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
+        return_value=True,
     )
     harness.update_config(
         {
@@ -313,13 +338,15 @@ def test_pbm_connect_same_env(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
-        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=True
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active",
+        return_value=True,
     )
     mock_start = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.start")
 
     uri = harness.charm.operator.state.backup_config.uri
     mocker.patch(
-        "single_kernel_mongo.managers.config.BackupConfigManager.get_environment", return_value=uri
+        "single_kernel_mongo.managers.config.BackupConfigManager.get_environment",
+        return_value=uri,
     )
     harness.charm.operator.backup_manager.configure_and_restart()
     mock_start.assert_not_called()
@@ -329,7 +356,8 @@ def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
-        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=False
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active",
+        return_value=False,
     )
     mocker.patch(
         "single_kernel_mongo.workload.backup_workload.PBMWorkload.workload_present",
@@ -352,7 +380,8 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
-        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active", return_value=True
+        "single_kernel_mongo.workload.backup_workload.PBMWorkload.active",
+        return_value=True,
     )
     mocker.patch(
         "single_kernel_mongo.workload.backup_workload.PBMWorkload.workload_present",
@@ -395,7 +424,8 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.on_relation_changed"
     )
     mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress", return_value=True
+        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
+        return_value=True,
     )
     spied = mocker.spy(harness.charm.operator, "on_relation_joined")
     harness.set_leader(True)
