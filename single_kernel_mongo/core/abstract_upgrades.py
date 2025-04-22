@@ -395,7 +395,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 logger.info(
                     f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
                 )
-                self.charm.status_manager.set_and_share_status(UpgradeStatuses.INCOMPATIBLE_UPGRADE)
+                self.charm.status_manager.set_and_share_status(
+                    UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
+                )
                 return
 
         if self.dependent.substrate == Substrates.K8S:
