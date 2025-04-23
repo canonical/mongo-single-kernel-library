@@ -56,6 +56,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
                 trust=True,
                 series="jammy",
                 config={"profile": "testing"},
+                storage={"pgdata": "100G"},
             ),
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
