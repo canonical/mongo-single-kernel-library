@@ -112,7 +112,7 @@ async def test_build_and_deploy_mongos(
         num_units=2,
         config={"database-name": "test-database"},
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
 
     await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, app_name)
 

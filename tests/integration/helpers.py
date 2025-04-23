@@ -31,6 +31,7 @@ MONGOD_PORT = 27017
 MONGOS_PORT = 27018
 UNIT_IDS = [0, 1, 2]
 SERIES = "jammy"
+TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
@@ -567,6 +568,10 @@ async def wait_for_mongodb_units_blocked(
 
     This is necessary because the MongoDB app can report a different status than the units.
     """
+    units = ops_test.model.applications[db_app_name].units
+    await ops_test.model.block_until(
+        *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
+    )
     hook_interval_key = "update-status-hook-interval"
     try:
         old_interval = (await ops_test.model.get_config())[hook_interval_key]
