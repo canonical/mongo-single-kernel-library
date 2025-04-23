@@ -119,8 +119,10 @@ async def teardown_offers(ops_test, kubernetes_model):
     await ops_test.juju(*second_remove_offer_command.split())
 
 
-async def create_groups(ops_test: OpsTest, substrate: str, app_name: str, role_name: str):
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
+async def create_groups(
+    ops_test: OpsTest, substrate: str, app_name: str, role_name: str, mongos: bool = False
+):
+    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=mongos)
 
     await execute_on_mongod(
         ops_test,

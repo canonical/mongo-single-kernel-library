@@ -505,7 +505,6 @@ class MongosConfigManager(MongoConfigManager):
                         "queryUser": self.state.ldap.bind_user,
                         "queryPassword": self.state.ldap.bind_password,
                     },
-                    "userToDNMapping": self.state.ldap.ldap_user_to_dn_mapping or "[]",
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
