@@ -317,9 +317,8 @@ class ClusterRequirer(Object):
 
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
-
-        # In the K8S case, create the user
-        self.update_users_for_k8s_routers()
+            # In the K8S case, create the user
+            self.update_users_for_k8s_routers()
 
         self.dependent.share_connection_info()
 

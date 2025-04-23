@@ -547,10 +547,50 @@ async def get_application_units(ops_test: OpsTest, app: str) -> list[Unit]:
     return units
 
 
+async def assert_subordinate_blocked_with_status(
+    ops_test: OpsTest, app_name: str, status: str | None
+) -> None:
+    """Checks if all units are blocked with a provided status.
+
+    The command juju status --model {model-name} {app-name} --json does not provide information
+    for statuses for subordinate charms like it does for normal charms. Specifically when
+    converting to json it lose this information. To get this information we must parse the status
+    manually.
+    """
+    juju_status = (
+        subprocess.check_output(
+            f"juju status --model {ops_test.model.info.name} {app_name}".split()
+        )
+        .decode("utf-8")
+        .split("\n")
+    )
+
+    for status_item in juju_status:
+        if app_name not in status_item:
+            continue
+        # no need to check that status of the application since the application can have a
+        # different status than the units.
+        is_app = "/" not in status_item
+        if is_app:
+            continue
+
+        status_item = status_item.split()
+        unit_name = status_item[0]
+        status_type = status_item[1]
+        status_message = " ".join(status_item[4:])
+        assert status_type == "blocked", f"unit {unit_name} not in blocked state, in {status_type}"
+
+        if status:
+            assert status_message == status, f"unit {unit_name} does not show the status {status}"
+
+
 async def check_all_units_blocked_with_status(
-    ops_test: OpsTest, db_app_name: str, status: str | None
+    ops_test: OpsTest, db_app_name: str, status: str | None, subordinate: bool = False
 ) -> None:
     # this is necessary because ops_model.units does not update the unit statuses
+    if subordinate:
+        await assert_subordinate_blocked_with_status(ops_test, db_app_name, status)
+        return
     for unit in await get_application_units(ops_test, db_app_name):
         assert (
             unit.workload_status.value == "blocked"
@@ -562,7 +602,11 @@ async def check_all_units_blocked_with_status(
 
 
 async def wait_for_mongodb_units_blocked(
-    ops_test: OpsTest, db_app_name: str, status: str | None = None, timeout=20
+    ops_test: OpsTest,
+    db_app_name: str,
+    status: str | None = None,
+    timeout=20,
+    subordinate: bool = False,
 ) -> None:
     """Waits for units of MongoDB to be in the blocked state.
 
@@ -578,7 +622,9 @@ async def wait_for_mongodb_units_blocked(
         await ops_test.model.set_config({hook_interval_key: "1m"})
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
             with attempt:
-                await check_all_units_blocked_with_status(ops_test, db_app_name, status)
+                await check_all_units_blocked_with_status(
+                    ops_test, db_app_name, status, subordinate
+                )
     finally:
         await ops_test.model.set_config({hook_interval_key: old_interval})
 
