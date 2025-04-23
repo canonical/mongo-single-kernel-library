@@ -21,6 +21,9 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, NewType
 
+from data_platform_helpers.advanced_statuses.components import ComponentStatuses
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import Container
 from ops.framework import Object
 from ops.model import (
@@ -44,11 +47,11 @@ from tenacity import (
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_CERTIFICATE_PATH,
     MongoPorts,
+    Scope,
     Substrates,
 )
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.statuses import BackupStatuses
-from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
@@ -105,7 +108,7 @@ def _backup_restore_retry_before_sleep(retry_state) -> None:
     )
 
 
-class BackupManager(Object, BackupConfigManager, StatusProvider):
+class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     """Manager for the S3 integrator and backups."""
 
     def __init__(
@@ -131,6 +134,10 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             role=role, container=container
         )
         self.state = state
+
+        self.component_statuses = ComponentStatuses(
+            self, name="backups", status_relation_name=self.charm.status_peer_rel_name.value
+        )
 
     @cached_property
     def environment(self) -> dict[str, str]:
@@ -283,8 +290,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
             raise RestoreError(fail_message)
 
-    def get_statuses(self) -> list[StatusBase]:
+    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
         """Gets the PBM statuses."""
+        if scope == Scope.APP:
+            return []
+
         if not self.state.s3_relation:
             logger.info("No configuration for backups, not relation to s3-charm")
             return []
@@ -330,16 +340,19 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             reraise=True,
         ):
             with attempt:
-                pbm_statuses = self.get_statuses()
+                pbm_statuses = self.compute_statuses(scope=Scope.UNIT)
                 pbm_status = next(iter(pbm_statuses), None)
+
+                if not pbm_status:
+                    continue
 
                 # todo future work - check status of pbm directly
                 # wait for backup/restore to finish
-                if isinstance(pbm_status, (MaintenanceStatus)):
+                if isinstance(pbm_status.status, (MaintenanceStatus)):
                     raise PBMBusyError
 
                 # if a resync is running restart the service
-                if isinstance(pbm_status, (WaitingStatus)):
+                if isinstance(pbm_status.status, (WaitingStatus)):
                     self.workload.restart()
                     raise PBMBusyError
 
@@ -500,21 +513,22 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
         """
-        pbm_statuses = self.get_statuses()
+        pbm_statuses = self.compute_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
 
         # todo future work - check status of pbm directly
-        match pbm_status:
-            case MaintenanceStatus():
-                raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
-            case WaitingStatus():
-                raise InvalidPBMStatusError(
-                    "Sync-ing configurations needs more time, must wait before listing backups."
-                )
-            case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
-            case _:
-                pass
+        if pbm_status:
+            match pbm_status.status:
+                case MaintenanceStatus():
+                    raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
+                case WaitingStatus():
+                    raise InvalidPBMStatusError(
+                        "Sync-ing configurations needs more time, must wait before listing backups."
+                    )
+                case BlockedStatus():
+                    raise InvalidPBMStatusError(pbm_status.status.message)
+                case _:
+                    pass
 
         if not backup_id:
             raise InvalidArgumentForActionError("Missing backup-id to restore.")
@@ -529,10 +543,13 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses()
+        pbm_statuses = self.compute_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
 
-        match pbm_status:
+        if not pbm_status:
+            return
+
+        match pbm_status.status:
             case MaintenanceStatus():
                 raise InvalidPBMStatusError(
                     "Can only create one backup at a time, please wait for current backup to finish."
@@ -542,7 +559,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
                     "Sync-ing configurations needs more time, must wait before creating backups."
                 )
             case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
+                raise InvalidPBMStatusError(pbm_status.status.message)
             case _:
                 return
 
@@ -552,15 +569,19 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses()
+        pbm_statuses = self.compute_statuses(Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
-        match pbm_status:
+
+        if not pbm_status:
+            return
+
+        match pbm_status.status:
             case WaitingStatus():
                 raise InvalidPBMStatusError(
                     "Sync-ing configurations needs more time, must wait before listing backups."
                 )
             case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
+                raise InvalidPBMStatusError(pbm_status.status.message)
             case _:
                 return
 
@@ -591,12 +612,15 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             if current_pbm_op.get("type", "") == "resync":
                 # since this process takes several minutes we should let the user know
                 # immediately.
-                self.charm.status_manager.set_and_share_status(
-                    BackupStatuses.PBM_WAITING_TO_SYNC.value
+                self.charm.status_handler.set_running_status(
+                    BackupStatuses.PBM_WAITING_TO_SYNC.value,
+                    scope=Scope.UNIT,
+                    async_status_component=self.component_statuses,
                 )
                 raise ResyncError
         except WorkloadExecError as e:
-            self.charm.status_manager.set_and_share_status(self.process_pbm_error(e.stdout))
+            if status := self.process_pbm_error(e.stdout):
+                self.component_statuses.set(BackupStatuses.pbm_error(status), scope=Scope.UNIT)
 
     def _get_backup_restore_operation_result(
         self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase

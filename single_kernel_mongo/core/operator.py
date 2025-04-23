@@ -20,6 +20,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
@@ -49,7 +50,7 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object):
+class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -79,6 +80,12 @@ class OperatorProtocol(ABC, Object):
     if TYPE_CHECKING:
 
         def __init__(self, dependent: AbstractMongoCharm): ...
+
+    @property
+    @abstractmethod
+    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+        """The ordered list of components reporting statuses."""
+        ...
 
     @abstractmethod
     def on_install(self) -> None:

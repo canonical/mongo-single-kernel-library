@@ -10,9 +10,12 @@ import json
 import logging
 from typing import TYPE_CHECKING, final
 
+from data_platform_helpers.advanced_statuses.components import ComponentStatuses
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
-from ops.model import Relation, StatusBase, Unit
+from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
@@ -25,7 +28,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -38,6 +41,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
     MissingConfigServerError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
@@ -80,6 +84,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.role,
         )
 
+        self.component_statuses = ComponentStatuses(
+            self, name="mongos", status_relation_name=self.charm.status_peer_rel_name
+        )
+
         container = (
             self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
         )
@@ -119,6 +127,14 @@ class MongosOperator(OperatorProtocol, Object):
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
         self.upgrade_events = UpgradeEventHandler(self)
+
+    @property
+    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+        """The ordered list of components for this operator."""
+        return (
+            self,
+            self.mongo_manager,
+        )
 
     @property
     def config(self) -> MongosCharmConfig:
@@ -163,9 +179,7 @@ class MongosOperator(OperatorProtocol, Object):
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongos.value.NEED_CONF_SERVER.value
-            )
+            self.component_statuses.add(MongosStatuses.NEED_CONF_SERVER.value, scope="unit")
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
@@ -189,13 +203,13 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
 
-                self.charm.status_manager.set_and_share_status(
-                    CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                self.component_statuses.add(
+                    MongosStatuses.INVALID_EXPOSE_EXTERNAL.value, scope=Scope.UNIT
                 )
                 return
 
-            self.charm.status_manager.clear_status(
-                CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+            self.component_statuses.delete(
+                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value, scope=Scope.UNIT
             )
             self.update_k8s_external_services()
 
@@ -245,15 +259,6 @@ class MongosOperator(OperatorProtocol, Object):
                 self.tls_manager.update_tls_sans()
                 self.upgrade_manager._reconcile_upgrade()
 
-        # TODO remove this in the future when we bring advanced statuses over
-        if self.charm.unit.status in (
-            UpgradeStatuses.UNHEALTHY_UPGRADE,
-            UpgradeStatuses.INCOMPATIBLE_UPGRADE,
-        ):
-            return
-
-        self.charm.status_manager.process_and_share_statuses()
-
     @override
     def on_relation_joined(self) -> None:
         """Any relation event will just share the connection with the client."""
@@ -302,13 +307,22 @@ class MongosOperator(OperatorProtocol, Object):
     @override
     def restart_charm_services(self) -> None:
         """Restarts the charm with the new configuration."""
-        self.workload.stop()
-        if not self.state.cluster.config_server_uri:
-            logger.error("Cannot start mongos without a config server db")
-            raise MissingConfigServerError()
+        try:
+            self.workload.stop()
+            if not self.state.cluster.config_server_uri:
+                logger.error("Cannot start mongos without a config server db")
+                raise MissingConfigServerError()
 
-        self.mongos_config_manager.set_environment()
-        self.workload.start()
+            self.mongos_config_manager.set_environment()
+            self.workload.start()
+        except WorkloadServiceError as e:
+            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.MONGOS_NOT_STARTED.value,
+                running="async",
+                async_component_status=self.component_statuses,
+            )
+            raise
 
     @override
     def is_relation_feasible(self, name: str) -> bool:
@@ -497,9 +511,12 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self) -> list[StatusBase]:
+    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
         """Returns the statuses of the charm manager."""
-        charm_statuses: list[StatusBase] = []
+        charm_statuses: list[StatusObject] = []
+        if scope == Scope.APP:
+            return []
+
         if (
             self.substrate == Substrates.K8S
             and self.config.expose_external == ExposeExternal.UNKNOWN
@@ -509,7 +526,7 @@ class MongosOperator(OperatorProtocol, Object):
                 self.charm.config["expose-external"],
                 "['nodeport', 'none']",
             )
-            charm_statuses.append(CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value)
+            charm_statuses.append(MongosStatuses.INVALID_EXPOSE_EXTERNAL.value)
 
         if not self.workload.workload_present:
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
@@ -518,7 +535,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            charm_statuses.append(CharmStatuses.mongos.value.NEED_CONF_SERVER.value)
+            charm_statuses.append(MongosStatuses.NEED_CONF_SERVER.value)
             # don't bother checking remaining statuses if no config-server is present
             return charm_statuses
 
@@ -529,7 +546,7 @@ class MongosOperator(OperatorProtocol, Object):
             return charm_statuses
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
-            charm_statuses.append(CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value)
+            charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
@@ -539,7 +556,7 @@ class MongosOperator(OperatorProtocol, Object):
         username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
         password = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
         if not username or not password:
-            charm_statuses.append(CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value)
+            charm_statuses.append(MongosStatuses.WAITING_FOR_SECRETS.value)
 
         return charm_statuses if charm_statuses else [CharmStatuses.ACTIVE_IDLE.value]
 

@@ -4,7 +4,9 @@
 
 """All general exceptions."""
 
-from ops.model import BlockedStatus, StatusBase
+from data_platform_helpers.advanced_statuses.models import StatusObject
+
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 
 
 class InvalidCharmKindError(Exception):
@@ -202,8 +204,8 @@ class EarlyRemovalOfConfigServerError(Exception):
 class StatusError(Exception):
     """Exception with ops status."""
 
-    def __init__(self, status: StatusBase) -> None:
-        super().__init__(status.message)
+    def __init__(self, status: StatusObject) -> None:
+        super().__init__(status.status.message)
         self.status = status
 
 
@@ -212,9 +214,7 @@ class PrecheckFailedError(StatusError):
 
     def __init__(self, message: str):
         self.message = message
-        super().__init__(
-            BlockedStatus(f"Rollback with `juju refresh`. Pre-refresh check failed: {self.message}")
-        )
+        super().__init__(UpgradeStatuses.REFRESH_IN_PROG.value)
 
 
 class FailedToElectNewPrimaryError(Exception):
@@ -255,3 +255,7 @@ class InvalidLdapQueryTemplateError(Exception):
 
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
+
+
+class MissingCredentialsError(Exception):
+    """Raised when we haven't received credentials yet."""

@@ -11,6 +11,7 @@ class PeerRelationNames(str, Enum):
 
     PEERS = "database-peers"
     ROUTER_PEERS = "router-peers"
+    STATUS_PEERS = "status-peers"
 
 
 class RelationNames(str, Enum):

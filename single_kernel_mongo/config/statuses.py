@@ -14,6 +14,7 @@ progress. However the idea that all statuses belong in one file holds true regar
 
 from enum import Enum
 
+from data_platform_helpers.advanced_statuses import StatusObject
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -27,60 +28,81 @@ class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
-    MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
-    EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
-    SHARDING_ON_REPLICA = BlockedStatus("Sharding interface cannot be used by replicas.")
-    UNSUPPORTED_MONGOS_REL = BlockedStatus(
-        "Relation to mongos not supported, config role must be config-server."
+    MONGODB_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting to start mongod..."))
+    EXPORTER_NOT_STARTED = StatusObject(
+        status=WaitingStatus("Waiting to start mongodb-exporter...")
     )
-    INVALID_S3_INTEGRATION_STATUS = BlockedStatus(
-        "Relation to s3-integrator is not supported, config role must be config-server."
+    SHARDING_ON_REPLICA = StatusObject(
+        status=BlockedStatus("Sharding interface cannot be used by replicas.")
+    )
+    UNSUPPORTED_MONGOS_REL = StatusObject(
+        status=BlockedStatus("Relation to mongos not supported, config role must be config-server.")
+    )
+    INVALID_S3_INTEGRATION_STATUS = StatusObject(
+        status=BlockedStatus(
+            "Relation to s3-integrator is not supported, config role must be config-server."
+        )
     )
 
-    DB_REl_ON_SHARD = BlockedStatus("Sharding roles do not support database interface.")
+    DB_REL_ON_SHARD = StatusObject(
+        status=BlockedStatus("Sharding roles do not support database interface.")
+    )
 
     # RUNNING statuses:
-    STARTING_MONGODB = MaintenanceStatus("Starting MongoDB.")
+    STARTING_MONGODB = StatusObject(
+        status=MaintenanceStatus("Starting MongoDB."), running="blocking"
+    )
 
 
 class MongosStatuses(Enum):
     """Mongos related statuses."""
 
-    INVALD_EXPOSE_EXTERNAL = BlockedStatus("Config option for expose-external not valid.")
-    NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
-    CONNECTING_TO_CONFIG_SERVER = WaitingStatus("Connecting to config-server...")
-    WAITING_FOR_SECRETS = WaitingStatus("Waiting for secrets from config-server")
-    REQUIRES_TLS = BlockedStatus("mongos requires TLS to be enabled.")
-    REQUIRES_NO_TLS = BlockedStatus("mongos has TLS enabled, but config-server does not.")
-    CA_MISMATCH = BlockedStatus("mongos CA and Config-Server CA don't match.")
+    INVALID_EXPOSE_EXTERNAL = StatusObject(
+        status=BlockedStatus("Config option for expose-external not valid.")
+    )
+    NEED_CONF_SERVER = StatusObject(status=BlockedStatus("Missing relation to config-server."))
+    CONNECTING_TO_CONFIG_SERVER = StatusObject(
+        status=WaitingStatus("Connecting to config-server...")
+    )
+    WAITING_FOR_SECRETS = StatusObject(
+        status=WaitingStatus("Waiting for secrets from config-server")
+    )
+    REQUIRES_TLS = StatusObject(status=BlockedStatus("mongos requires TLS to be enabled."))
+    REQUIRES_NO_TLS = StatusObject(
+        status=BlockedStatus("mongos has TLS enabled, but config-server does not.")
+    )
+    CA_MISMATCH = StatusObject(status=BlockedStatus("mongos CA and Config-Server CA don't match."))
+    MONGOS_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting to start mongos..."))
 
     # Running statuses:
-    STARTING_MONGOS = MaintenanceStatus("Starting mongos.")
+    STARTING_MONGOS = StatusObject(status=MaintenanceStatus("Starting mongos."), running="blocking")
 
 
 class CharmStatuses(Enum):
     """Charm Statuses."""
 
-    ACTIVE_IDLE = ActiveStatus()
-    MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
-    MONGODB_INSTALLED = MaintenanceStatus("Installed MongoDB")
-    MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
-    FAILED_TO_INSTALL = BlockedStatus("couldn't install MongoDB")
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
+    MONGODB_NOT_INSTALLED = StatusObject(status=BlockedStatus("MongoDB not installed."))
+    MONGODB_INSTALLED = StatusObject(status=MaintenanceStatus("Installed MongoDB"))
+    MONGOS_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting to start mongos..."))
+
     mongodb = MongoDBStatuses
     mongos = MongosStatuses
 
     # RUNNING Statuses
-    INSTALLING_MONGODB = MaintenanceStatus("installing MongoDB")
+    INSTALLING_MONGODB = StatusObject(
+        status=MaintenanceStatus("installing MongoDB"), running="blocking"
+    )
 
 
 class TLSStatuses(Enum):
     """TLS statuses."""
 
-    ACTIVE_IDLE = ActiveStatus()
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
 
     # RUNNING statuses:
-    DISABLING_TLS = MaintenanceStatus("Disabling TLS...")
-    ENABLING_TLS = MaintenanceStatus("Enabling TLS...")
+    DISABLING_TLS = StatusObject(status=MaintenanceStatus("Disabling TLS..."), running="blocking")
+    ENABLING_TLS = StatusObject(status=MaintenanceStatus("Enabling TLS..."), running="blocking")
 
 
 class BackupStatuses(Enum):
@@ -88,77 +110,112 @@ class BackupStatuses(Enum):
 
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
-    PBM_NOT_STARTED = WaitingStatus("Waiting for pbm to start...")
-    PBM_MISSING_CONFIGS = BlockedStatus("s3 configurations missing.")
-    PBM_INCORRECT_CREDS = BlockedStatus("s3 credentials are incorrect.")
-    PBM_INCOMPATIBLE_CONF = BlockedStatus("s3 configurations are incompatible.")
-    UNKNOWN_PBM_ERROR = BlockedStatus("Unknown PBM error, check logs.")
-    CANT_CONFIGURE = BlockedStatus("Couldn't configure s3 backup options.")
-    PBM_WAITING_TO_SYNC = WaitingStatus("Waiting to sync s3 configurations...")
-    ACTIVE_IDLE = ActiveStatus()
+    PBM_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting for pbm to start..."))
+    PBM_MISSING_CONFIGS = StatusObject(status=BlockedStatus("s3 configurations missing."))
+    PBM_INCORRECT_CREDS = StatusObject(status=BlockedStatus("s3 credentials are incorrect."))
+    PBM_INCOMPATIBLE_CONF = StatusObject(
+        status=BlockedStatus("s3 configurations are incompatible.")
+    )
+    UNKNOWN_PBM_ERROR = StatusObject(status=BlockedStatus("Unknown PBM error, check logs."))
+    CANT_CONFIGURE = StatusObject(status=BlockedStatus("Couldn't configure s3 backup options."))
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
+
+    # Running status
+    PBM_WAITING_TO_SYNC = StatusObject(
+        status=WaitingStatus("Waiting to sync s3 configurations..."), running="async"
+    )
 
     @staticmethod
     def backup_running(backup_id: str) -> StatusBase:
         """Returns backup starting status based on id."""
-        return MaintenanceStatus(f"Backup started/running, backup id: '{backup_id}'")
+        return StatusObject(
+            status=MaintenanceStatus(f"Backup started/running, backup id: '{backup_id}'"),
+            running="async",
+        )
 
     @staticmethod
     def restore_running(backup_id: str) -> StatusBase:
         """Returns restore starting status based on id."""
-        return MaintenanceStatus(f"Restore started/running, backup id: '{backup_id}'")
+        return StatusObject(
+            status=MaintenanceStatus(f"Restore started/running, backup id: '{backup_id}'"),
+            running="async",
+        )
+
+    @staticmethod
+    def pbm_error(status: StatusBase):
+        """Returns a wrapped status object for PBM errors."""
+        return StatusObject(status=status)
 
 
 class ConfigServerStatuses(Enum):
     """Config server statuses."""
 
     # todo consider this status to be put in charm
-    MONGOS_NOT_RUNNING = BlockedStatus("Internal mongos is not running.")
-    NEED_SHARDS = BlockedStatus("Missing relation to shard(s).")
-    SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
-    ACTIVE_IDLE = ActiveStatus()
+    MONGOS_NOT_RUNNING = StatusObject(status=BlockedStatus("Internal mongos is not running."))
+    NEED_SHARDS = StatusObject(status=BlockedStatus("Missing relation to shard(s)."))
+    SYNCING_PASSWORDS = StatusObject(
+        status=WaitingStatus("Waiting to sync passwords across the cluster...")
+    )
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
 
     @staticmethod
     def adding_shard(shard: str) -> StatusBase:
         """Returns add shard status."""
-        return MaintenanceStatus(f"Adding shard {shard} to config-server.")
+        return StatusObject(
+            status=MaintenanceStatus(f"Adding shard {shard} to config-server."), running="blocking"
+        )
 
     @staticmethod
     def draining_shard(shard: str) -> StatusBase:
         """Returns draining shard status based on shard."""
-        return MaintenanceStatus(f"Draining shard {shard}")
+        return StatusObject(status=MaintenanceStatus(f"Draining shard {shard}"), running="async")
 
     @staticmethod
     def unreachable_shards(unreachable_shards: list[str]) -> StatusBase:
         """Returns unreachable shard status based on list."""
         unreachable = ", ".join(unreachable_shards)
-        return BlockedStatus(f"Shards: {unreachable} are unreachable.")
+        return StatusObject(status=BlockedStatus(f"Shards: {unreachable} are unreachable."))
 
     @staticmethod
     def waiting_for_shard_upgrade(current_charms_version: str, local_identifier: str) -> StatusBase:
         """Returns waiting for shard upgrade status."""
-        return WaitingStatus(
-            f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
+        return StatusObject(
+            status=WaitingStatus(
+                f"Waiting for shards to upgrade/downgrade to revision {current_charms_version}{local_identifier}."
+            )
         )
 
 
 class ShardStatuses(Enum):
     """Shard statuses."""
 
-    REQUIRES_TLS = BlockedStatus("Shard requires TLS to be enabled.")
-    REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
-    CA_MISMATCH = BlockedStatus("Shard CA and Config-Server CA don't match.")
+    REQUIRES_TLS = StatusObject(status=BlockedStatus("Shard requires TLS to be enabled."))
+    REQUIRES_NO_TLS = StatusObject(
+        status=BlockedStatus("Shard has TLS enabled, but config-server does not.")
+    )
+    CA_MISMATCH = StatusObject(status=BlockedStatus("Shard CA and Config-Server CA don't match."))
 
-    NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
-    SHARD_DRAINED = ActiveStatus("Shard drained from cluster, ready for removal.")
-    FAILED_TO_DRAIN = BlockedStatus("Failed to drain shard from cluster")
-    WAITING_TO_REMOVE = WaitingStatus("Waiting for config-server to remove shard")
-    SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
-    ADDING_TO_CLUSTER = MaintenanceStatus("Adding shard to config-server")
-    SHARD_NOT_AWARE = BlockedStatus("Shard is not yet shard aware.")
-    ACTIVE_IDLE = ActiveStatus()
+    NEED_CONF_SERVER = StatusObject(status=BlockedStatus("Missing relation to config-server."))
+    SHARD_DRAINED = StatusObject(
+        status=ActiveStatus("Shard drained from cluster, ready for removal.")
+    )
+    WAITING_TO_REMOVE = StatusObject(
+        status=WaitingStatus("Waiting for config-server to remove shard")
+    )
+    SYNCING_PASSWORDS = StatusObject(
+        status=WaitingStatus("Waiting to sync passwords across the cluster...")
+    )
+    ADDING_TO_CLUSTER = StatusObject(status=MaintenanceStatus("Adding shard to config-server"))
+    SHARD_NOT_AWARE = StatusObject(status=BlockedStatus("Shard is not yet shard aware."))
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
 
     # RUNNING status:
-    DRAINING_SHARD = MaintenanceStatus("Draining shard from cluster...")
+    DRAINING_SHARD = StatusObject(
+        status=MaintenanceStatus("Draining shard from cluster..."), running="blocking"
+    )
+    FAILED_TO_DRAIN = StatusObject(
+        status=BlockedStatus("Failed to drain shard from cluster"), running="blocking"
+    )
 
     @staticmethod
     def shard_needs_upgrade(
@@ -168,8 +225,10 @@ class ShardStatuses(Enum):
         remote_local_identifier: str,
     ) -> StatusBase:
         """Returns needs shard upgrade status."""
-        return BlockedStatus(
-            f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
+        return StatusObject(
+            status=BlockedStatus(
+                f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
+            )
         )
 
     @staticmethod
@@ -178,36 +237,53 @@ class ShardStatuses(Enum):
         local_identifier: str,
     ) -> StatusBase:
         """Returns needs shard upgrade status."""
-        return BlockedStatus(
-            f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server."
+        return StatusObject(
+            status=BlockedStatus(
+                f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server."
+            )
         )
 
 
 class MongodStatuses(Enum):
     """MongoD statuses."""
 
-    WAITING_REPL_SET_INIT = WaitingStatus("Waiting for replica set initialisation...")
-    WAITING_RECONFIG = WaitingStatus("Waiting to reconfigure replica set...")
-    WAITING_ELECTION = WaitingStatus("Waiting for primary re-election...")
-    WAITING_RECONNECT = WaitingStatus("Waiting to reconnect to unit...")
-    MEMBER_BEING_ADDED = WaitingStatus("Member being added...")
-    MEMBER_REMOVING = WaitingStatus("Member is removing...")
-    MEMBER_SYNCING = WaitingStatus("Member is syncing...")
-    PRIMARY = ActiveStatus("Primary.")
-    SECONDARY = ActiveStatus()
+    WAITING_REPL_SET_INIT = StatusObject(
+        status=WaitingStatus("Waiting for replica set initialisation...")
+    )
+    WAITING_RECONFIG = StatusObject(status=WaitingStatus("Waiting to reconfigure replica set..."))
+    WAITING_ELECTION = StatusObject(status=WaitingStatus("Waiting for primary re-election..."))
+    WAITING_RECONNECT = StatusObject(status=WaitingStatus("Waiting to reconnect to unit..."))
+    MEMBER_BEING_ADDED = StatusObject(status=WaitingStatus("Member being added..."))
+    MEMBER_REMOVING = StatusObject(status=WaitingStatus("Member is removing..."))
+    MEMBER_SYNCING = StatusObject(status=WaitingStatus("Member is syncing..."))
+    PRIMARY = StatusObject(status=ActiveStatus("Primary."))
+    SECONDARY = StatusObject(status=ActiveStatus())
+
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
+
+    MISSING_CREDENTIALS = StatusObject(status=WaitingStatus("Missing credentials for mongo"))
+
+    @staticmethod
+    def replset_status(status: str):
+        """When we have an unexpected replica set status."""
+        return StatusObject(status=BlockedStatus(status))
 
 
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    UNHEALTHY_UPGRADE = BlockedStatus("Unhealthy after refresh.")
-    INCOMPATIBLE_UPGRADE = BlockedStatus(
-        "Refresh incompatible. Rollback to previous revision with `juju refresh`"
+    UNHEALTHY_UPGRADE = StatusObject(status=BlockedStatus("Unhealthy after refresh."))
+    INCOMPATIBLE_UPGRADE = StatusObject(
+        status=BlockedStatus(
+            "Refresh incompatible. Rollback to previous revision with `juju refresh`"
+        )
     )
-    ACTIVE_IDLE = ActiveStatus()
-    WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks...")
-    REFRESH_IN_PROG = MaintenanceStatus(
-        "Refreshing. To rollback, `juju refresh` to the previous revision"
+    ACTIVE_IDLE = StatusObject(status=ActiveStatus())
+    WAITING_POST_UPGRADE_STATUS = StatusObject(
+        status=WaitingStatus("Waiting for post upgrade checks...")
+    )
+    REFRESH_IN_PROG = StatusObject(
+        status=MaintenanceStatus("Refreshing. To rollback, `juju refresh` to the previous revision")
     )
 
     @staticmethod
@@ -219,25 +295,31 @@ class UpgradeStatuses(Enum):
     ) -> StatusBase:
         """Returns the active status for a vm unit."""
         outdated_str = " (outdated)" if outdated else ""
-        return ActiveStatus(
-            f"MongoDB {unit_workload_version} running; "
-            f"Snap revision {unit_workload_container_version}{outdated_str}; "
-            f"Charm revision {current_versions}"
+        return StatusObject(
+            status=ActiveStatus(
+                f"MongoDB {unit_workload_version} running; "
+                f"Snap revision {unit_workload_container_version}{outdated_str}; "
+                f"Charm revision {current_versions}"
+            )
         )
 
     @staticmethod
     def k8s_active_upgrade(workload_version: str, charm_version: str, outdated=False) -> StatusBase:
         """Returns the active status for a k8s unit."""
         outdated_str = " (restart pending)" if outdated else ""
-        return ActiveStatus(
-            f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}"
+        return StatusObject(
+            status=ActiveStatus(
+                f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}"
+            )
         )
 
     @staticmethod
     def refreshing_needs_resume(
         resume_string: str,
-    ) -> StatusBase:
+    ) -> StatusObject:
         """Returns refreshing status."""
-        return BlockedStatus(
-            f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
+        return StatusObject(
+            status=BlockedStatus(
+                f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
+            )
         )

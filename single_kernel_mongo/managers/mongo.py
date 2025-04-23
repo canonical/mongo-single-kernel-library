@@ -16,17 +16,20 @@ import logging
 from typing import TYPE_CHECKING
 
 from dacite import from_dict
+from data_platform_helpers.advanced_statuses.components import ComponentStatuses
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import Object
-from ops.model import BlockedStatus, Relation, StatusBase
+from ops.model import Relation
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.statuses import MongodStatuses
-from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
+    MissingCredentialsError,
     SetPasswordError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -53,7 +56,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MongoManager(Object, StatusProvider):
+class MongoManager(Object, ManagerStatusProtocol):
     """Manager for Mongo related operations."""
 
     def __init__(
@@ -68,6 +71,13 @@ class MongoManager(Object, StatusProvider):
         self.workload = workload
         self.state = state
         self.substrate = substrate
+
+        self.component_statuses = ComponentStatuses(
+            self,
+            name="mongo",
+            status_relation_name=self.charm.status_peer_rel_name.value,
+        )
+
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
         if self.substrate == Substrates.K8S:
@@ -474,24 +484,25 @@ class MongoManager(Object, StatusProvider):
 
             return draining_shards
 
-    def get_statuses(self) -> list[StatusBase]:
+    def compute_statuses(self, scope: Scope) -> list[StatusObject]:  # noqa: C901 (this function is complex but we can't reduce its complexity easily enough)
         """Generates the status of a unit based on its status reported by mongod."""
-        charm_statuses: list[StatusBase] = []
+        charm_statuses: list[StatusObject] = []
 
         if not self.state.db_initialised:
             return [MongodStatuses.WAITING_REPL_SET_INIT.value]
+
+        if scope == Scope.APP:
+            return [MongodStatuses.ACTIVE_IDLE.value]
 
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
-            unit_host = self.state.unit_peer_data.internal_address
-            if unit_host not in replset_status:
-                return [MongodStatuses.MEMBER_BEING_ADDED.value]
-
-            replica_status = replset_status[unit_host]
+            replica_status = replset_status.get(self.state.unit_peer_data.internal_address, "")
 
             match replica_status:
+                case "":
+                    return [MongodStatuses.MEMBER_BEING_ADDED.value]
                 case "PRIMARY":
                     charm_statuses.append(MongodStatuses.PRIMARY.value)
                 case "SECONDARY":
@@ -501,7 +512,10 @@ class MongoManager(Object, StatusProvider):
                 case "REMOVED":
                     return [MongodStatuses.MEMBER_REMOVING.value]
                 case _:
-                    return [BlockedStatus(replica_status)]
+                    return [MongodStatuses.replset_status(replica_status)]
+
+            charm_statuses.extend(self.get_leader_statuses())
+            return charm_statuses
 
         except ServerSelectionTimeoutError as e:
             # Usually it is du to ReplicaSetNoPrimary
@@ -512,13 +526,13 @@ class MongoManager(Object, StatusProvider):
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
             return [MongodStatuses.WAITING_RECONNECT.value]
+        except MissingCredentialsError as e:
+            logger.warning("Missing credentials: %s", e, exc_info=True)
+            return [MongodStatuses.MISSING_CREDENTIALS]
 
-        charm_statuses.extend(self.get_leader_statuses())
-        return charm_statuses
-
-    def get_leader_statuses(self) -> list[StatusBase]:
+    def get_leader_statuses(self) -> list[StatusObject]:
         """Returns statuses that juju leader can retrieve for mongo."""
-        charm_statuses: list[StatusBase] = []
+        charm_statuses: list[StatusObject] = []
 
         if not self.charm.unit.is_leader():
             return charm_statuses

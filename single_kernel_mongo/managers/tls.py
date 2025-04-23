@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -204,7 +204,10 @@ class TLSManager:
 
         self.state.update_ca_secrets(new_ca=None)
 
-        self.charm.status_manager.set_and_share_status(TLSStatuses.DISABLING_TLS.value)
+        self.charm.status_handler.set_running_status(
+            TLSStatuses.DISABLING_TLS.value,
+            scope=Scope.UNIT,
+        )
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services()
 
@@ -218,13 +221,15 @@ class TLSManager:
                 "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."
             )
             return
-        self.charm.status_manager.set_and_share_status(TLSStatuses.ENABLING_TLS.value)
+
+        self.charm.status_handler.set_running_status(
+            TLSStatuses.ENABLING_TLS.value,
+            scope=Scope.UNIT,
+        )
         try:
             self.dependent.restart_charm_services()
-        except WorkloadServiceError as e:
+        except WorkloadServiceError:
             # TODO should we defer or just error
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            self.charm.status_manager.to_blocked("couldn't start MongoDB")
             return
 
     def delete_certificates_from_workload(self):
