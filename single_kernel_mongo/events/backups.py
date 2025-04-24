@@ -156,9 +156,11 @@ class BackupEventsHandler(Object):
                 )
             return
 
-        pbm_statuses = self.manager.get_statuses()
+        pbm_statuses = self.manager.compute_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
-        self.manager.component_statuses.add(pbm_status, scope=Scope.UNIT)
+        # Safer here, don't add a status if we don't have a status to add…
+        if pbm_status:
+            self.manager.component_statuses.add(pbm_status, scope=Scope.UNIT)
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""

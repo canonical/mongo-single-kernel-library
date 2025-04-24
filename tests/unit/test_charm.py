@@ -5,10 +5,11 @@ import json
 
 import pytest
 from ops import MaintenanceStatus
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus
 from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.statuses import MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
@@ -455,7 +456,9 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     harness.add_relation_unit(rel.id, "mongodb/1")
     harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR)
 
-    assert isinstance(harness.charm.unit.status, WaitingStatus)
+    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+
+    assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
     mocked_add_replset_member.assert_not_called()
 
 

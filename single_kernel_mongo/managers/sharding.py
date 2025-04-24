@@ -198,13 +198,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_statuses = self.dependent.backup_manager.get_statuses()
+        pbm_statuses = self.dependent.backup_manager.compute_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
 
         # TODO: future work will be to check the actual status of the backup and not the status.
         # Note: we permit this logic based on status since we aren't checking
         # `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
-        if isinstance(pbm_status, MaintenanceStatus):
+        if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
             )

@@ -14,7 +14,7 @@ progress. However the idea that all statuses belong in one file holds true regar
 
 from enum import Enum
 
-from data_platform_helpers.advanced_statuses import StatusObject
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -60,7 +60,6 @@ class MongosStatuses(Enum):
     INVALID_EXPOSE_EXTERNAL = StatusObject(
         status=BlockedStatus("Config option for expose-external not valid.")
     )
-    NEED_CONF_SERVER = StatusObject(status=BlockedStatus("Missing relation to config-server."))
     CONNECTING_TO_CONFIG_SERVER = StatusObject(
         status=WaitingStatus("Connecting to config-server...")
     )
@@ -75,6 +74,9 @@ class MongosStatuses(Enum):
     MONGOS_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting to start mongos..."))
 
     # Running statuses:
+    NEED_CONF_SERVER = StatusObject(
+        status=BlockedStatus("Missing relation to config-server."), running="async"
+    )
     STARTING_MONGOS = StatusObject(status=MaintenanceStatus("Starting mongos."), running="blocking")
 
 

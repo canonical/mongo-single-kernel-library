@@ -708,9 +708,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # todo future work - check status of pbm directly
-        pbm_statuses = self.backup_manager.get_statuses()
+        pbm_statuses = self.backup_manager.compute_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
-        if isinstance(pbm_status, MaintenanceStatus):
+        if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
             )

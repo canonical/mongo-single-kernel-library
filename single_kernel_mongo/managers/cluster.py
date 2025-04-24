@@ -15,7 +15,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import MongoDBStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses, MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -64,7 +64,7 @@ class ClusterProvider(Object):
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
         if not self.is_valid_mongos_integration():
-            self.charm.status_handler.add(
+            self.charm.component_statuses.add(
                 MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value, scope=Scope.UNIT
             )
             raise NonDeferrableFailedHookChecksError(
@@ -239,18 +239,21 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            self.charm.status_handler.set_running_status(MongosStatuses.STARTING_MONGOS.value)
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.STARTING_MONGOS.value, scope=Scope.UNIT
+            )
 
             self.dependent.restart_charm_services()
 
             # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
             if not self.dependent.is_mongos_running():
                 logger.info("Mongos has not started yet, deferring")
-                self.charm.component_statuses.add(
+                self.charm.component_statuses.set(
                     MongosStatuses.MONGOS_NOT_STARTED.value, scope=Scope.UNIT
                 )
                 raise DeferrableError
 
+        self.charm.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
 
