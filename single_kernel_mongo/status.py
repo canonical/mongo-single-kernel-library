@@ -160,6 +160,7 @@ class StatusManager(Object):
             return
 
         main_status = self.prioritize_statuses(statuses)
+        logger.debug(f"Main status is {main_status}")
 
         logger.info(f"{' Charm Statuses ':=^40}")
         for key, value in asdict(statuses).items():

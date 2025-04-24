@@ -76,8 +76,8 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
             f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
         )
         await kubernetes_model.wait_for_idle(
-            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, CERTIFICATES, TRAEFIK_CHARM],
-            raise_on_blocked=False,
+            apps=[LDAP_APP_NAME, CERTIFICATES, TRAEFIK_CHARM],
+            raise_on_blocked=False,  # postgresql can be in Blocked State because of low free space
             status="active",
         )
 
