@@ -134,6 +134,7 @@ class LDAPManager(Object, StatusProvider):
         """Runs when the LDAP integration is broken."""
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
+            self.remove_hash_from_mongos()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
@@ -169,6 +170,8 @@ class LDAPManager(Object, StatusProvider):
     def remove_ldap_certificates(self) -> None:
         """Runs when the certificate is removed."""
         self.state.ldap.clean_certificates()
+        if self.charm.unit.is_leader():
+            self.remove_hash_from_mongos()
 
         # Conditional removal of the certificates
         if self.workload.exists(self.workload.paths.ldap_certificates_file):
@@ -295,4 +298,6 @@ class LDAPManager(Object, StatusProvider):
 
     def remove_hash_from_mongos(self) -> None:
         """When one of the relation is broken, we clean the hash from the integration."""
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
         self.dependent.cluster_manager.remove_ldap_hash()  # type: ignore
