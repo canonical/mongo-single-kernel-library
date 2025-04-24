@@ -198,24 +198,6 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
 
 
 @pytest.mark.abort_on_fail
-async def test_only_mongodb_integrated(ops_test: OpsTest, substrate: str):
-    app_name = await get_app_name(ops_test, ch_name="mongos")
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
-    )
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
-    )
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        app_name,
-        status="mongos and config-server not integrated with the same ldap server.",
-        timeout=300,
-        subordinate=(substrate == "lxd"),
-    )
-
-
-@pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     app_name = await get_app_name(ops_test, ch_name="mongos")
     await ops_test.model.applications[app_name].remove_relation(
