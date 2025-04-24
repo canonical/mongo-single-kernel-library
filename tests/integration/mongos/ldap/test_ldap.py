@@ -122,6 +122,7 @@ async def test_build_and_deploy_mongos(
         app_name,
         status="Missing relation to config-server.",
         timeout=300,
+        subordinate=(substrate == "lxd"),
     )
 
     # connect sharded cluster to mongos
@@ -137,7 +138,7 @@ async def test_build_and_deploy_mongos(
 
 
 @pytest.mark.abort_on_fail
-async def test_only_mongos_integrated(ops_test: OpsTest):
+async def test_only_mongos_integrated(ops_test: OpsTest, substrate: str):
     app_name = await get_app_name(ops_test, ch_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
@@ -150,6 +151,7 @@ async def test_only_mongos_integrated(ops_test: OpsTest):
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
         timeout=300,
+        subordinate=(substrate == "lxd"),
     )
 
 
@@ -185,11 +187,18 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         mongos=True,
     )
 
-    await execute_on_mongod(ops_test, app_name, substrate, uri, "db.test.insertOne({number: 1})")
+    await execute_on_mongod(
+        ops_test,
+        app_name,
+        substrate,
+        uri,
+        "db.test.insertOne({number: 1})",
+        container_name="mongos",
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_only_mongodb_integrated(ops_test: OpsTest):
+async def test_only_mongodb_integrated(ops_test: OpsTest, substrate: str):
     app_name = await get_app_name(ops_test, ch_name="mongos")
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
@@ -202,6 +211,7 @@ async def test_only_mongodb_integrated(ops_test: OpsTest):
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
         timeout=300,
+        subordinate=(substrate == "lxd"),
     )
 
 

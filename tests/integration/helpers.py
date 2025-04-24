@@ -645,11 +645,16 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
 
 
 async def execute_on_mongod(
-    ops_test: OpsTest, app_name: str, substrate: str, uri: str, command: str
+    ops_test: OpsTest,
+    app_name: str,
+    substrate: str,
+    uri: str,
+    command: str,
+    container_name: str = "mongod",
 ):
     """Executes the command with mongosh."""
     leader_id = await get_leader_id(ops_test, app_name)
-    ssh_command = ["ssh", "--container", "mongod"] if substrate == "microk8s" else ["ssh"]
+    ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
 
     formatted_string = f'"{uri}" --quiet --eval "{command}"'
     cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
