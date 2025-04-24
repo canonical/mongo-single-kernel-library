@@ -83,13 +83,15 @@ class CharmStatuses(Enum):
 
     ACTIVE_IDLE = StatusObject(status=ActiveStatus())
     MONGODB_NOT_INSTALLED = StatusObject(status=BlockedStatus("MongoDB not installed."))
-    MONGODB_INSTALLED = StatusObject(status=MaintenanceStatus("Installed MongoDB"))
     MONGOS_NOT_STARTED = StatusObject(status=WaitingStatus("Waiting to start mongos..."))
 
     mongodb = MongoDBStatuses
     mongos = MongosStatuses
 
     # RUNNING Statuses
+    MONGODB_INSTALLED = StatusObject(
+        status=MaintenanceStatus("Installed MongoDB"), running="blocking"
+    )
     INSTALLING_MONGODB = StatusObject(
         status=MaintenanceStatus("installing MongoDB"), running="blocking"
     )

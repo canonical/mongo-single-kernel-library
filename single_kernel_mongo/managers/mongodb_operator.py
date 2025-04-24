@@ -507,7 +507,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongo_manager.process_added_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
-            self.charm.status_manager.add(MongodStatuses.WAITING_RECONFIG.value, scope=Scope.UNIT)
+            self.component_statuses.add(MongodStatuses.WAITING_RECONFIG.value, scope=Scope.UNIT)
             raise
 
     @override
@@ -550,7 +550,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
         self.update_hosts()
-        self.charm.status_manager.process_and_share_statuses()
 
     @override
     def on_storage_attached(self) -> None:  # pragma: nocover
@@ -685,7 +684,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 new_password,
             )
 
-        # self.charm.status_manager.process_and_share_statuses()
         return new_password, secret_id
 
     def on_get_password_action(self, username: str) -> str:

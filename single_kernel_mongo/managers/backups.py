@@ -318,7 +318,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
             processed_status = self.process_pbm_status(pbm_status)
             operation_result = self._get_backup_restore_operation_result(
-                processed_status, previous_status
+                processed_status.status, previous_status
             )
             logger.info(operation_result)
             return [processed_status]
@@ -489,7 +489,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return None
 
-    def process_pbm_status(self, pbm_status: str) -> StatusBase:
+    def process_pbm_status(self, pbm_status: str) -> StatusObject:
         """Processes the pbm status if there's no error."""
         pbm_as_dict: dict[str, dict] = json.loads(pbm_status)
         current_op = pbm_as_dict.get("running", {})

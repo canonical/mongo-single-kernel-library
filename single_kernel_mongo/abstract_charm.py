@@ -105,13 +105,16 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
                 CharmStatuses.INSTALLING_MONGODB.value, scope=Scope.UNIT
             )
             for attempt in Retrying(
-                stop=stop_after_attempt(120),
+                stop=stop_after_attempt(20),
                 wait=wait_fixed(1),
                 reraise=True,
             ):
                 with attempt:
                     if not self.workload.install():
                         raise WorkloadNotReadyError("Failed to install mongodb")
+            self.status_handler.set_running_status(
+                CharmStatuses.MONGODB_INSTALLED.value, scope=Scope.UNIT
+            )
 
     def on_leader_elected(self, _):
         """First leader elected handler."""

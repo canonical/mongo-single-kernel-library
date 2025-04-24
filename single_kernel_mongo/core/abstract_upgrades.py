@@ -295,7 +295,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         *args,
         **kwargs,
     ):
-        super().__init__(dependent, *args, **kwargs)
+        super(Generic, self).__init__(dependent, *args, **kwargs)
         self.dependent = dependent
         self.substrate = self.dependent.substrate
         self.upgrade_backend = upgrade_backend

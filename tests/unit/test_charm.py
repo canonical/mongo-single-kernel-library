@@ -13,6 +13,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
     WorkloadExecError,
+    WorkloadNotReadyError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
@@ -23,8 +24,8 @@ PEER_ADDR = {"private-address": "127.4.5.6"}
 
 def test_install_blocks_snap_install_failure(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=False)
-    harness.charm.on.install.emit()
-    assert harness.charm.unit.status == BlockedStatus("couldn't install MongoDB")
+    with pytest.raises(WorkloadNotReadyError):
+        harness.charm.on.install.emit()
 
 
 def test_install_snap_install_success(harness, mocker):
