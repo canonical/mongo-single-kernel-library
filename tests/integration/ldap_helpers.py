@@ -61,6 +61,10 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
         )
+        await kubernetes_model.wait_for_idle(
+            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, CERTIFICATES, LDAP_UTILS_APP_NAME],
+            raise_on_blocked=False,
+        )
 
         logger.info("Running integrations")
         await kubernetes_model.integrate(LDAP_APP_NAME, POSTGRESQL_K8S)
@@ -147,10 +151,15 @@ async def generate_mongodb_ldap_client(
     password: str,
     mongos: bool = False,
 ) -> str:
-    hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
+    if mongos and substrate == "lxd":
+        app_unit = ops_test.model.applications[app_name].units[0]
+
+        hosts = [await app_unit.get_public_address()]
+    else:
+        hosts = [
+            await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+            for unit in ops_test.model.applications[app_name].units
+        ]
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = ",".join([f"{host}:{port}" for host in hosts])
     return f"mongodb://{quote_plus(username)}:{quote_plus(password)}@{hosts}/{database}?authSource=\\$external&authMechanism=PLAIN"
