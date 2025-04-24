@@ -9,8 +9,9 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
-from ops.model import Relation, StatusBase
+from ops.model import Relation
 from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
@@ -369,7 +370,7 @@ class ClusterRequirer(Object):
 
         return False, False
 
-    def get_tls_statuses(self) -> StatusBase | None:
+    def get_tls_statuses(self) -> StatusObject | None:
         """Return statuses relevant to TLS."""
         mongos_has_tls, config_server_has_tls = self.tls_status()
         match (mongos_has_tls, config_server_has_tls):

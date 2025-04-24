@@ -40,7 +40,6 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
 from single_kernel_mongo.exceptions import WorkloadNotReadyError
-from single_kernel_mongo.status import StatusManager
 
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
@@ -78,7 +77,6 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
 
         # Status manager stores the operator locally
         self.status_handler = StatusHandler(self, self, *self.operator.components)
-        self.status_manager = StatusManager(self)
 
         # We will use the main workload of the Charm to install the snap.
         # A workload represents a service, and the main workload represents the

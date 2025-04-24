@@ -36,6 +36,7 @@ from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
+    LdapStatuses,
     MongoDBStatuses,
     MongodStatuses,
     ShardStatuses,
@@ -969,6 +970,15 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if scope == Scope.APP:
             return charm_statuses
+
+        if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
+            logger.error("Invalid LDAP Config - Please refer to the config option description.")
+            charm_statuses.append(LdapStatuses.INVALID_LDAP_USER_MAPPING.value)
+        if not is_valid_ldap_options(
+            self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
+        ):
+            logger.info("Invalid LDAP Config - Please refer to the config option description.")
+            charm_statuses.append(LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value)
 
         if not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]

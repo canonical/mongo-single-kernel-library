@@ -345,7 +345,13 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
     def compute_statuses(self, scope: Scope) -> list[StatusObject]:
         """Gets statuses for upgrades statelessly."""
         assert self._upgrade
-        return [self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value]
+        match scope:
+            case Scope.UNIT:
+                return [
+                    self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
+                ]
+            case Scope.APP:
+                return [self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value]
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""

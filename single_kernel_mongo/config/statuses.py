@@ -97,6 +97,9 @@ class CharmStatuses(Enum):
     INSTALLING_MONGODB = StatusObject(
         status=MaintenanceStatus("installing MongoDB"), running="blocking"
     )
+    DEPLOYED_WITHOUT_TRUST = StatusObject(
+        status=BlockedStatus("Charm deployed without `trust`"), running="async"
+    )
 
 
 class TLSStatuses(Enum):
@@ -327,3 +330,14 @@ class UpgradeStatuses(Enum):
                 f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
             )
         )
+
+
+class LdapStatuses(Enum):
+    """Ldap Statuses."""
+
+    INVALID_LDAP_USER_MAPPING = StatusObject(
+        status=BlockedStatus("Invalid LdapUserToDnMapping, please update your config."),
+    )
+    INVALID_LDAP_QUERY_TEMPLATE = StatusObject(
+        status=BlockedStatus("Invalid LDAP Query template, please update your config"),
+    )

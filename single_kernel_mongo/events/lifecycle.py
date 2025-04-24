@@ -40,8 +40,9 @@ from ops.charm import (
 from ops.framework import Object
 from pymongo.errors import PyMongoError
 
-from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.literals import CharmKind, Scope, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -139,8 +140,15 @@ class LifecycleEventsHandler(Object):
         except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
             return
-        except (InvalidLdapUserToDnMappingError, InvalidLdapQueryTemplateError) as err:
-            self.charm.status_manager.to_blocked(f"{err}")
+        except InvalidLdapUserToDnMappingError:
+            self.dependent.component_statuses.add(
+                LdapStatuses.INVALID_LDAP_USER_MAPPING.value, scope=Scope.UNIT
+            )
+            return
+        except InvalidLdapQueryTemplateError:
+            self.dependent.component_statuses.add(
+                LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value, scope=Scope.UNIT
+            )
             return
 
     def on_update_status(self, event: UpdateStatusEvent):

@@ -292,6 +292,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     def compute_statuses(self, scope: Scope) -> list[StatusObject]:
         """Gets the PBM statuses."""
+        if not self.state.db_initialised:
+            return []
+
         if scope == Scope.APP:
             return []
 

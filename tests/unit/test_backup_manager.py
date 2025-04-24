@@ -76,6 +76,9 @@ def test_environment_is_valid(harness: Harness[MongoTestCharm]):
 
 
 def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+
     statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
     status = next(iter(statuses), None)
     assert status is None
@@ -111,6 +114,7 @@ def test_get_status_pbm_error(
     harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_status, expected
 ):
     harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     mocker.patch(
@@ -137,6 +141,7 @@ def test_get_status_success(
     harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
 ):
     harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(

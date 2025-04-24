@@ -9,7 +9,7 @@ from ops.model import BlockedStatus
 from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.statuses import MongodStatuses
+from single_kernel_mongo.config.statuses import LdapStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
@@ -183,9 +183,9 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
 
     harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LdapUserToDnMapping, please update your config."
-    )
+
+    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_USER_MAPPING.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
@@ -205,9 +205,8 @@ def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
             "ldap-query-template": "{PROVIDED_USER}",
         }
     )
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LDAP Query template, please update your config."
-    )
+    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_user(harness):
@@ -219,9 +218,8 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
             "ldap-query-template": "{USER}",
         }
     )
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LDAP Query template, please update your config."
-    )
+    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_valid_ldap_query_template(harness):

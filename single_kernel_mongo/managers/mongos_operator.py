@@ -519,6 +519,7 @@ class MongosOperator(OperatorProtocol, Object):
     def compute_statuses(self, scope: Scope) -> list[StatusObject]:
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
         if scope == Scope.APP:
             return []
 
@@ -545,7 +546,7 @@ class MongosOperator(OperatorProtocol, Object):
             return charm_statuses
 
         if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+            logger.info(f"Invalid TLS integration: {status.status.message}")
             # if TLS is misconfigured we will get redherrings on the remaining messages
             charm_statuses.append(status)
             return charm_statuses

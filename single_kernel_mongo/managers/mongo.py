@@ -24,7 +24,7 @@ from ops.model import Relation
 from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
-from single_kernel_mongo.config.statuses import MongodStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
@@ -84,7 +84,9 @@ class MongoManager(Object, ManagerStatusProtocol):
             try:
                 self.k8s.get_pod()
             except DeployedWithoutTrustError:
-                self.charm.status_manager.to_blocked("Charm deployed without `trust`")
+                self.charm.component_statuses.add(
+                    CharmStatuses.DEPLOYED_WITHOUT_TRUST.value, scope=Scope.UNIT
+                )
 
     def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
         """Is MongoDB ready and running?
