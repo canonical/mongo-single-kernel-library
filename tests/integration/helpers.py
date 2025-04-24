@@ -581,7 +581,10 @@ async def assert_subordinate_blocked_with_status(
         assert status_type == "blocked", f"unit {unit_name} not in blocked state, in {status_type}"
 
         if status:
-            assert status_message == status, f"unit {unit_name} does not show the status {status}"
+            # Port can be open and it would make parsing hard.
+            assert (
+                status in status_message
+            ), f"unit {unit_name} does not show the status '{status}',has message '{status_message}'"
 
 
 async def check_all_units_blocked_with_status(
