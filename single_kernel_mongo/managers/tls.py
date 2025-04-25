@@ -204,10 +204,6 @@ class TLSManager:
 
         self.state.update_ca_secrets(new_ca=None)
 
-        self.charm.status_handler.set_running_status(
-            TLSStatuses.DISABLING_TLS.value,
-            scope=Scope.UNIT,
-        )
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services()
 
@@ -225,7 +221,6 @@ class TLSManager:
         self.charm.status_handler.set_running_status(
             TLSStatuses.ENABLING_TLS.value,
             scope=Scope.UNIT,
-            async_status_component=self.dependent.component_statuses,
         )
         try:
             self.dependent.restart_charm_services()

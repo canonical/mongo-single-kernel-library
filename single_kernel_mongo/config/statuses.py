@@ -111,7 +111,7 @@ class TLSStatuses(Enum):
     DISABLING_TLS = StatusObject(status=MaintenanceStatus("Disabling TLS..."), running="blocking")
     # Enabling TLS takes a while because we wait for multiple certs so it's
     # async to span over multiple events.
-    ENABLING_TLS = StatusObject(status=MaintenanceStatus("Enabling TLS..."), running="async")
+    ENABLING_TLS = StatusObject(status=MaintenanceStatus("Enabling TLS..."), running="blocking")
 
 
 class BackupStatuses(Enum):

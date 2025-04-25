@@ -131,6 +131,10 @@ class TLSEventsHandler(Object):
                 "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
         logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
+        self.charm.status_handler.set_running_status(
+            TLSStatuses.DISABLING_TLS.value,
+            scope=Scope.UNIT,
+        )
         self.manager.disable_certificates_for_unit()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
@@ -179,9 +183,6 @@ class TLSEventsHandler(Object):
                 return
 
             self.manager.enable_certificates_for_unit()
-            self.dependent.component_statuses.delete(
-                TLSStatuses.ENABLING_TLS.value, scope=Scope.UNIT
-            )
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return
