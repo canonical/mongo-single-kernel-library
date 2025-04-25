@@ -91,7 +91,7 @@ class BackupEventsHandler(Object):
                 CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value, scope=Scope.UNIT
             )
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:
+    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         action = "configure-pbm"
         if self.dependent.state.upgrade_in_progress:
             logger.warning(

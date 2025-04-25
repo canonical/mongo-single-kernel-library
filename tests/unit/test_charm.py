@@ -5,7 +5,6 @@ import json
 
 import pytest
 from ops import MaintenanceStatus
-from ops.model import BlockedStatus
 from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
