@@ -517,9 +517,6 @@ class MongosOperator(OperatorProtocol, Object):
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 
-        if scope == Scope.APP:
-            return []
-
         if (
             self.substrate == Substrates.K8S
             and self.config.expose_external == ExposeExternal.UNKNOWN
