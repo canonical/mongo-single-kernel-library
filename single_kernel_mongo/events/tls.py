@@ -133,8 +133,6 @@ class TLSEventsHandler(Object):
         logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
         self.manager.disable_certificates_for_unit()
 
-        self.dependent.component_statuses.set(TLSStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
-
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
 
@@ -181,7 +179,9 @@ class TLSEventsHandler(Object):
                 return
 
             self.manager.enable_certificates_for_unit()
-            self.dependent.component_statuses.set(TLSStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+            self.dependent.component_statuses.delete(
+                TLSStatuses.ENABLING_TLS.value, scope=Scope.UNIT
+            )
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return

@@ -16,16 +16,19 @@ this operator like backups or cluster event handlers, etc.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+from data_platform_helpers.advanced_statuses.components import ComponentStatuses
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 
-from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.literals import CharmKind, Scope, Substrates
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -67,6 +70,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     name: ClassVar[CharmKind]
     substrate: Substrates
     role: CharmSpec
+    component_statuses: ComponentStatuses
     config_manager: CommonConfigManager
     tls_manager: TLSManager
     state: CharmState
@@ -169,6 +173,11 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     @abstractmethod
     def _configure_workloads(self) -> None:
         """Configures the workload."""
+        ...
+
+    @abstractmethod
+    def compute_statuses(self, scope: Scope) -> Sequence[StatusObject]:
+        """Recomputes the statuses for the given scope."""
         ...
 
     def assert_proceed_on_broken_event(self, relation: Relation) -> None:
