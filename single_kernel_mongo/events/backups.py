@@ -180,7 +180,9 @@ class BackupEventsHandler(Object):
             backup_id = self.manager.create_backup_action()
             self.charm.status_handler.set_running_status(
                 BackupStatuses.backup_running(backup_id),
+                scope=Scope.UNIT,
                 is_action=True,
+                async_component_status=self.manager.component_statuses,
             )
             success_action_with_info_log(
                 logger,
@@ -240,7 +242,10 @@ class BackupEventsHandler(Object):
             )
             self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_handler.set_running_status(
-                BackupStatuses.restore_running(backup_id), is_action=True
+                BackupStatuses.restore_running(backup_id),
+                scope=Scope.UNIT,
+                is_action=True,
+                async_component_status=self.manager.component_statuses,
             )
             success_action_with_info_log(
                 logger, event, action, {"restore-status": "restore started"}

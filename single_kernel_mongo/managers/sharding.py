@@ -321,6 +321,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
 
+        self.component_statuses.delete(ConfigServerStatuses.NEED_SHARDS.value, scope=Scope.UNIT)
+
         self.charm.status_handler.set_running_status(
             ConfigServerStatuses.adding_shard(shard_name), scope=Scope.UNIT
         )
@@ -520,10 +522,12 @@ class ShardManager(Object, ManagerStatusProtocol):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
+                self.component_statuses.add(ShardStatuses.REQUIRES_TLS.value, scope=Scope.UNIT)
                 raise DeferrableFailedHookChecksError(
                     "Config-Server uses TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
+                self.component_statuses.add(ShardStatuses.REQUIRES_NO_TLS.value, scope=Scope.UNIT)
                 raise DeferrableFailedHookChecksError(
                     "Shard uses TLS but config-server does not. Please synchronise encryption method."
                 )
@@ -539,6 +543,8 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Sets status and flags in relation data relevant to sharding."""
         # if reusing an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
+
+        self.component_statuses.delete(ShardStatuses.NEED_CONF_SERVER.value, scope=Scope.UNIT)
         self.component_statuses.add(ShardStatuses.ADDING_TO_CLUSTER.value, scope=Scope.UNIT)
 
     def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
@@ -570,6 +576,9 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         if not self.dependent.mongo_manager.mongod_ready():
             raise NotReadyError
+
+        # By setting the status we ensure that the former statuses of this component are removed.
+        self.component_statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
 
         if not self.charm.unit.is_leader():
             return
