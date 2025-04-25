@@ -65,7 +65,7 @@ class ClusterProvider(Object):
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
         if not self.is_valid_mongos_integration():
-            self.charm.component_statuses.add(
+            self.dependent.component_statuses.add(
                 MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value, scope=Scope.UNIT
             )
             raise NonDeferrableFailedHookChecksError(
@@ -202,7 +202,7 @@ class ClusterRequirer(Object):
     def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
-        self.charm.component_statuses.add(
+        self.dependent.component_statuses.add(
             MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value, scope=Scope.UNIT
         )
 
@@ -249,12 +249,12 @@ class ClusterRequirer(Object):
             # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
             if not self.dependent.is_mongos_running():
                 logger.info("Mongos has not started yet, deferring")
-                self.charm.component_statuses.set(
+                self.dependent.component_statuses.set(
                     MongosStatuses.MONGOS_NOT_STARTED.value, scope=Scope.UNIT
                 )
                 raise DeferrableError
 
-        self.charm.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+        self.dependent.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
 

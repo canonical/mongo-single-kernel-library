@@ -29,6 +29,9 @@ for directory in "${TEST_CHARMS[@]}"; do
 
     pushd $directory
 
+    cp pyproject.toml pyproject.toml.backup
+    cp poetry.lock poetry.lock.backup
+
     poetry add "${LIB_PATH}/"
     poetry lock
 
@@ -41,6 +44,8 @@ for directory in "${TEST_CHARMS[@]}"; do
     echo "removing copied files from single kernel charm."
     rm ${LIB_PATH} -rf
     mv charm_version.backup charm_version
+    mv pyproject.toml.backup pyproject.toml
+    mv poetry.lock.backup poetry.lock
 
     # Go back to root directory
     popd

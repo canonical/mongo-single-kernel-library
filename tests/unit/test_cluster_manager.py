@@ -59,7 +59,7 @@ def test_assert_pass_hook_checks_fail_invalid_mongos_integration(
 
     assert err.value.args[0] == "ClusterProvider is only executed by a config-server"
 
-    statuses = harness.charm.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
     assert any(isinstance(status.status, BlockedStatus) for status in statuses)
 
 
@@ -230,7 +230,7 @@ def test_cluster_requirer_set_relation_created_status(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
-    statuses = mongos_harness.charm.component_statuses.get(scope=Scope.UNIT)
+    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
 
     assert isinstance(statuses[0].status, WaitingStatus)
     assert statuses[0].status.message == "Connecting to config-server..."
@@ -294,7 +294,7 @@ def test_cluster_requirer_update_mongos_and_restart(
         {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
     )
 
-    statuses = mongos_harness.charm.component_statuses.get(scope=Scope.UNIT)
+    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
     assert isinstance(statuses[0].status, ActiveStatus)
     assert manager.state.db_initialised
 
@@ -377,7 +377,7 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status
-    statuses = mongos_harness.charm.component_statuses.get(scope=Scope.UNIT)
+    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
     assert statuses[0].status == WaitingStatus("Waiting to start mongos...")
 
 

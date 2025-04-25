@@ -494,7 +494,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return [MongodStatuses.WAITING_REPL_SET_INIT.value]
 
         if scope == Scope.APP:
-            return [MongodStatuses.ACTIVE_IDLE.value]
+            return []
 
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
