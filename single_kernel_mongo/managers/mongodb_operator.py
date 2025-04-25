@@ -397,6 +397,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
+
         if not self.state.is_role(self.config.role):
             logger.error(
                 f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
@@ -404,12 +410,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise ShardingMigrationError(
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
             )
-
-        if self.state.upgrade_in_progress:
-            logger.warning(
-                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            raise UpgradeInProgressError
 
         if self.charm.unit.is_leader():
             self._handle_ldap_config_changes()
