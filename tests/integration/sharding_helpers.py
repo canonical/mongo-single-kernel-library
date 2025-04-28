@@ -79,7 +79,7 @@ async def deploy_cluster_components(
     )
 
 
-async def integrate_cluster(
+async def integrate_sharding_components(
     ops_test: OpsTest,
     config_server_name: str = CONFIG_SERVER_APP_NAME,
     shard_one_name: str = SHARD_ONE_APP_NAME,

@@ -21,8 +21,8 @@ from ...ldap_helpers import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
-    consume_offers,
-    create_groups,
+    consume_glauth_offers,
+    create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
     teardown_offers,
@@ -34,7 +34,7 @@ from ...sharding_helpers import (
     SHARD_ONE_APP_NAME,
     SHARD_TWO_APP_NAME,
     deploy_cluster_components,
-    integrate_cluster,
+    integrate_sharding_components,
 )
 
 TIMEOUT = 15 * 60
@@ -66,7 +66,7 @@ async def test_build_and_deploy_mongodb_cluster(
         timeout=DEPLOYMENT_TIMEOUT,
         raise_on_blocked=False,
     )
-    await integrate_cluster(ops_test)
+    await integrate_sharding_components(ops_test)
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
         status="active",
@@ -76,22 +76,24 @@ async def test_build_and_deploy_mongodb_cluster(
 
     # deploy the glauth-k8s charm
     await deploy_glauth(ops_test, kubernetes_model)
-    await consume_offers(ops_test, kubernetes_model)
+    await consume_glauth_offers(ops_test, kubernetes_model)
 
-    db_app_name = CONFIG_SERVER_APP_NAME
-
-    await create_groups(
-        ops_test, substrate, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
+    await create_mongodb_user_roles(
+        ops_test, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 
-    await apply_ldif(ops_test, kubernetes_model, "add.ldif")
+    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
 
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongos(
     ops_test: OpsTest, mongos_charm: Path, substrate: str, mongod_resource, base_app_name
 ) -> None:
-    if app_name := await get_app_name(ops_test, ch_name="mongos"):
+    """Deploys mongos and data integrator, and integrates both.
+
+    Then integrate mongos and sharded cluster.
+    """
+    if app_name := await get_app_name(ops_test, charm_name="mongos"):
         await check_or_scale_app(ops_test, app_name, 3)
     else:
         await deploy_charm(
@@ -138,8 +140,12 @@ async def test_build_and_deploy_mongos(
 
 
 @pytest.mark.abort_on_fail
-async def test_only_mongos_integrated(ops_test: OpsTest, substrate: str):
-    app_name = await get_app_name(ops_test, ch_name="mongos")
+async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: str):
+    """Integrate only mongos, it should go to a blocked state.
+
+    This is because config server is not integrated with LDAP.
+    """
+    app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
     await ops_test.model.integrate(
@@ -156,8 +162,9 @@ async def test_only_mongos_integrated(ops_test: OpsTest, substrate: str):
 
 
 @pytest.mark.abort_on_fail
-async def test_all_integrated(ops_test: OpsTest):
-    app_name = await get_app_name(ops_test, ch_name="mongos")
+async def test_glauth_fully_integrated(ops_test: OpsTest):
+    """Integrate the config server as well, everything should be green."""
+    app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
     await ops_test.model.integrate(
@@ -174,7 +181,7 @@ async def test_all_integrated(ops_test: OpsTest):
 
 @pytest.mark.abort_on_fail
 async def test_user_can_write(ops_test: OpsTest, substrate: str):
-    app_name = await get_app_name(ops_test, ch_name="mongos")
+    app_name = await get_app_name(ops_test, charm_name="mongos")
 
     # We create a client which should be able to write
     uri = await generate_mongodb_ldap_client(
@@ -196,15 +203,30 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         container_name="mongos",
     )
 
+    await execute_on_mongod(
+        ops_test,
+        app_name,
+        substrate,
+        uri,
+        "db.test.findOne({number: 1})",
+        container_name="mongos",
+    )
+
 
 @pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
-    app_name = await get_app_name(ops_test, ch_name="mongos")
+    app_name = await get_app_name(ops_test, charm_name="mongos")
     await ops_test.model.applications[app_name].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
     )
     await ops_test.model.applications[app_name].remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
+    )
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
+    )
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 
     await ops_test.model.wait_for_idle(

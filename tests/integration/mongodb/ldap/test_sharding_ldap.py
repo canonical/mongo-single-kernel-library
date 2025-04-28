@@ -20,8 +20,8 @@ from ...ldap_helpers import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
-    consume_offers,
-    create_groups,
+    consume_glauth_offers,
+    create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
     teardown_offers,
@@ -30,7 +30,7 @@ from ...sharding_helpers import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     deploy_cluster_components,
-    integrate_cluster,
+    integrate_sharding_components,
 )
 
 TIMEOUT = 15 * 60
@@ -66,7 +66,7 @@ async def test_build_and_deploy(
         timeout=DEPLOYMENT_TIMEOUT,
         raise_on_blocked=False,
     )
-    await integrate_cluster(ops_test)
+    await integrate_sharding_components(ops_test)
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
         status="active",
@@ -76,13 +76,13 @@ async def test_build_and_deploy(
 
     # deploy the glauth-k8s charm
     await deploy_glauth(ops_test, kubernetes_model)
-    await consume_offers(ops_test, kubernetes_model)
+    await consume_glauth_offers(ops_test, kubernetes_model)
 
     db_app_name = CONFIG_SERVER_APP_NAME
 
-    await apply_ldif(ops_test, kubernetes_model, "add.ldif")
+    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
 
-    await create_groups(
+    await create_mongodb_user_roles(
         ops_test, substrate, db_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 

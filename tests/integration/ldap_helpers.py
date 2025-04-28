@@ -29,7 +29,7 @@ LDAP_CERT_OFFER = "ldap-cert-integration"
 logger = logging.getLogger(__name__)
 
 
-async def apply_ldif(ops_test: OpsTest, kubernetes_model: Model, ldif_file: str):
+async def apply_ldif(ops_test: OpsTest, kubernetes_model: Model, ldif_file: str) -> None:
     """Apply an LDIF on glauth-utils."""
     source_path = f"./tests/integration/data/{ldif_file}"
     target_path = f"/var/tmp/{ldif_file}"
@@ -40,7 +40,11 @@ async def apply_ldif(ops_test: OpsTest, kubernetes_model: Model, ldif_file: str)
         await run_action(kubernetes_model, LDAP_UTILS_APP_NAME, "apply-ldif", path=target_path)
 
 
-async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
+async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
+    """Deploys glauth and all required charms coming with glauth and relate them.
+
+    Then it offers the two relations provided by glauth.
+    """
     with ops_test.model_context("secondary"):
         await asyncio.gather(
             kubernetes_model.deploy(
@@ -98,7 +102,8 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model):
         await ops_test.juju(*second_offer_command.split())
 
 
-async def consume_offers(ops_test: OpsTest, kubernetes_model: Model):
+async def consume_glauth_offers(ops_test: OpsTest, kubernetes_model: Model) -> None:
+    """Consumes the two offers from glauth in the testing model."""
     # On k8s consuming an offer on a remote model fails somehow, so we fallback to juju command.
     first_consume_command = f"consume admin/{kubernetes_model.info.name}.{LDAP_OFFER}"
     await ops_test.juju(*first_consume_command.split())
@@ -107,7 +112,8 @@ async def consume_offers(ops_test: OpsTest, kubernetes_model: Model):
     await ops_test.juju(*second_consume_command.split())
 
 
-async def teardown_offers(ops_test, kubernetes_model):
+async def teardown_offers(ops_test: OpsTest, kubernetes_model: Model) -> None:
+    """Teardown the offers, removing both saas, and offers."""
     await ops_test.model.remove_saas(LDAP_OFFER)
     await ops_test.model.remove_saas(LDAP_CERT_OFFER)
 
@@ -124,9 +130,10 @@ async def teardown_offers(ops_test, kubernetes_model):
     await ops_test.juju(*second_remove_offer_command.split())
 
 
-async def create_groups(
+async def create_mongodb_user_roles(
     ops_test: OpsTest, substrate: str, app_name: str, role_name: str, mongos: bool = False
-):
+) -> None:
+    """Creates the roles for mongodb with the provided role_name."""
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=mongos)
 
     await execute_on_mongod(
@@ -151,6 +158,7 @@ async def generate_mongodb_ldap_client(
     password: str,
     mongos: bool = False,
 ) -> str:
+    """Generates an ldap client for mongodb."""
     if mongos and substrate == "lxd":
         app_unit = ops_test.model.applications[app_name].units[0]
 

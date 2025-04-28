@@ -22,8 +22,8 @@ from ...ldap_helpers import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
-    consume_offers,
-    create_groups,
+    consume_glauth_offers,
+    create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
     teardown_offers,
@@ -73,13 +73,13 @@ async def test_build_and_deploy(
     await deploy_glauth(ops_test, kubernetes_model)
 
     # Consume the offers exposed by glauth
-    await consume_offers(ops_test, kubernetes_model)
+    await consume_glauth_offers(ops_test, kubernetes_model)
 
     # Apply the LDIF file on glauth-utils to create users and groups
-    await apply_ldif(ops_test, kubernetes_model, "add.ldif")
+    await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
 
     # Create the roles on MongoDB
-    await create_groups(
+    await create_mongodb_user_roles(
         ops_test, substrate, base_app_name, "ou=superheroes,ou=users,dc=glauth,dc=com"
     )
 
@@ -101,7 +101,8 @@ async def test_integrate_ldap_only(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_integrate_also_ldap_cert(ops_test: OpsTest):
+async def test_integrate_ldap_cert(ops_test: OpsTest):
+    """Integrate the second relation, we should end up with everything active."""
     db_app_name = await get_app_name(ops_test)
 
     # Integrate also certificate relation, it should go into active state
@@ -114,6 +115,10 @@ async def test_integrate_also_ldap_cert(ops_test: OpsTest):
 
 @pytest.mark.abort_on_fail
 async def test_user_can_write(ops_test: OpsTest, substrate: str):
+    """Checks that the LDAP user can write to the DB.
+
+    This checks both authentication and authorisation.
+    """
     db_app_name = await get_app_name(ops_test)
 
     # We create a client which should be able to write
@@ -128,9 +133,16 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
 
     await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})")
 
+    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 1})")
+
 
 @pytest.mark.abort_on_fail
 async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
+    """We want to ensure that we can log in using the ldap userToDNMapping.
+
+    So we update the config for both and we log in with the user and check that we can
+    still write in the DB.
+    """
     db_app_name = await get_app_name(ops_test)
 
     # We update the config to be able to login as johndoe@superheroes
@@ -163,8 +175,14 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
             raise ProcessError(f"Could not cat configuration. {output=} {err=}")
 
         configuration = safe_load(output)
-        assert configuration["security"]["ldap"].get("userToDNMapping", "") != ""
-        assert configuration["security"]["ldap"]["authz"].get("queryTemplate", "") != ""
+        assert (
+            configuration["security"]["ldap"].get("userToDNMapping", "")
+            == '[{"match": "([^@]+)@([^@]+)", "substitution": "cn={0},ou={1},ou=users,dc=glauth,dc=com"}]'
+        ), "Invalid userToDNMapping."
+        assert (
+            configuration["security"]["ldap"]["authz"].get("queryTemplate", "")
+            == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
+        ), "Invalid ldap Query Template."
 
     uri = await generate_mongodb_ldap_client(
         ops_test,
@@ -175,6 +193,8 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         password="dogood",
     )
     await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})")
+
+    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 2})")
 
 
 @pytest.mark.abort_on_fail
@@ -211,6 +231,9 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
     )
 
     with pytest.raises(ProcessError):
+        # We expect this write to fail when the ldap relation is missing.
+        # As soon as one relation is removed, a restart is triggered and it
+        # should have disabled LDAP.
         await execute_on_mongod(
             ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
         )
@@ -218,6 +241,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
 
 @pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
+    """Teardown of the whole offers and relations."""
     db_app_name = await get_app_name(ops_test)
 
     # Removing the second relation should go into active

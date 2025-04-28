@@ -63,15 +63,7 @@ async def deploy_charm(
     config: dict | None = None,
     subordinate: bool = False,
 ):
-    if substrate == "lxd":
-        await ops_test.model.deploy(
-            charm,
-            num_units=0 if subordinate else num_units,
-            application_name=app_name,
-            config=config,
-            channel=channel,
-        )
-    else:
+    if substrate == "microk8s":
         await ops_test.model.deploy(
             charm,
             resources=mongod_resource,
@@ -79,6 +71,14 @@ async def deploy_charm(
             num_units=0 if subordinate else num_units,
             series="jammy",
             trust=True,
+            config=config,
+            channel=channel,
+        )
+    else:
+        await ops_test.model.deploy(
+            charm,
+            num_units=0 if subordinate else num_units,
+            application_name=app_name,
             config=config,
             channel=channel,
         )
@@ -121,12 +121,11 @@ async def generate_mongodb_client(
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = [f"{host}:{port}" for host in hosts]
     hosts = ",".join(hosts)
-    auth_source = ""
     database = "admin"
 
-    complement = f"{auth_source}"
+    complement = ""
     if not mongos:
-        complement = complement + f"replicaSet={app_name}"
+        complement = f"replicaSet={app_name}"
 
     return (
         f"mongodb://{username}:"
@@ -402,7 +401,7 @@ async def check_or_scale_app(ops_test: OpsTest, user_app_name: str, required_uni
 
 
 async def get_app_name(
-    ops_test: OpsTest, ch_name: str = "mongodb", test_deployments: list[str] = []
+    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
 ) -> str:
     """Returns the name of the cluster running MongoDB.
 
@@ -415,12 +414,12 @@ async def get_app_name(
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mongodb" but instead takes the form
         # of `local:focal/mongodb-6`
-        if ch_name in status["applications"][app]["charm"]:
-            logger.debug("Found %s app named '%s'", ch_name, app)
+        if charm_name in status["applications"][app]["charm"]:
+            logger.debug("Found %s app named '%s'", charm_name, app)
 
             if app in test_deployments:
                 logger.debug(
-                    "%s app named '%s', was deployed by the test, not by user", ch_name, app
+                    "%s app named '%s', was deployed by the test, not by user", charm_name, app
                 )
                 continue
 
