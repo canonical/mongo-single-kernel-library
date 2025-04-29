@@ -240,13 +240,54 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
 
 
 @pytest.mark.abort_on_fail
+async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: str):
+    """With only certs relation it should also go to blocked."""
+    db_app_name = await get_app_name(ops_test)
+
+    # Add back the ldap relation.
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{db_app_name}:ldap")
+    # Everything should go back to normal.
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
+
+    # We remove the cert relation, it should go into blocked state
+    await ops_test.model.applications[db_app_name].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{db_app_name}:ldap-certificate-transfer"
+    )
+
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        db_app_name,
+        status="TLS is mandatory for LDAP transport.",
+        timeout=300,
+    )
+
+    # John should not be able to log in now.
+    uri = await generate_mongodb_ldap_client(
+        ops_test,
+        substrate,
+        db_app_name,
+        database="superdb",
+        username="johndoe@superheroes",
+        password="dogood",
+    )
+
+    with pytest.raises(ProcessError):
+        # We expect this write to fail when the ldap relation is missing.
+        # As soon as one relation is removed, a restart is triggered and it
+        # should have disabled LDAP.
+        await execute_on_mongod(
+            ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+        )
+
+
+@pytest.mark.abort_on_fail
 async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     """Teardown of the whole offers and relations."""
     db_app_name = await get_app_name(ops_test)
 
     # Removing the second relation should go into active
     await ops_test.model.applications[db_app_name].remove_relation(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{db_app_name}:ldap-certificate-transfer"
+        f"{LDAP_OFFER}:ldap", f"{db_app_name}:ldap"
     )
     await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
 

@@ -107,6 +107,7 @@ async def test_build_and_deploy_mongos(
         )
         app_name = base_app_name
 
+    # This is necessary for mongos operator on VM, but we deploy it anyway for flow unicity.
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",

@@ -564,19 +564,19 @@ async def assert_subordinate_blocked_with_status(
         .split("\n")
     )
 
-    for status_item in juju_status:
-        if app_name not in status_item:
+    for status_line in juju_status:
+        if app_name not in status_line:
             continue
         # no need to check that status of the application since the application can have a
         # different status than the units.
-        is_app = "/" not in status_item
+        is_app = "/" not in status_line
         if is_app:
             continue
 
-        status_item = status_item.split()
-        unit_name = status_item[0]
-        status_type = status_item[1]
-        status_message = " ".join(status_item[4:])
+        status_line = status_line.split()
+        unit_name = status_line[0]
+        status_type = status_line[1]
+        status_message = " ".join(status_line[4:])
         assert status_type == "blocked", f"unit {unit_name} not in blocked state, in {status_type}"
 
         if status:
