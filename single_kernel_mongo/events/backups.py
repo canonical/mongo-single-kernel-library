@@ -124,7 +124,9 @@ class BackupEventsHandler(Object):
             self.manager.resync_config_options()
         except SetPBMConfigError:
             logger.error("Failed to configure s3 backup options")
-            self.manager.component_statuses.add(BackupStatuses.CANT_CONFIGURE, scope=Scope.UNIT)
+            self.manager.component_statuses.add(
+                BackupStatuses.CANT_CONFIGURE.value, scope=Scope.UNIT
+            )
             event.defer()
             return
         except WorkloadServiceError as e:
@@ -132,7 +134,7 @@ class BackupEventsHandler(Object):
             raise
         except ResyncError:
             self.manager.component_statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC, scope=Scope.UNIT
+                BackupStatuses.PBM_WAITING_TO_SYNC.value, scope=Scope.UNIT
             )
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
@@ -140,7 +142,7 @@ class BackupEventsHandler(Object):
             return
         except PBMBusyError:
             self.manager.component_statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC, scope=Scope.UNIT
+                BackupStatuses.PBM_WAITING_TO_SYNC.value, scope=Scope.UNIT
             )
             defer_event_with_info_log(
                 logger,
