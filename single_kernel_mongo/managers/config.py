@@ -496,7 +496,7 @@ class MongosConfigManager(MongoConfigManager):
         if not self.state.ldap.is_ready():
             return {}
 
-        return {
+        ldap_params: dict[str, Any] = {
             "security": {
                 "ldap": {
                     "servers": ",".join(self.state.ldap.formatted_ldap_urls),
@@ -505,11 +505,15 @@ class MongosConfigManager(MongoConfigManager):
                         "queryUser": self.state.ldap.bind_user,
                         "queryPassword": self.state.ldap.bind_password,
                     },
-                    "userToDNMapping": self.state.ldap.ldap_user_to_dn_mapping or "[]",
                 }
             },
             "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
         }
+        if self.state.ldap.ldap_user_to_dn_mapping:
+            ldap_params["security"]["ldap"]["userToDNMapping"] = (
+                self.state.ldap.ldap_user_to_dn_mapping
+            )
+        return ldap_params
 
     @override
     def build_config(self) -> dict[str, Any]:
