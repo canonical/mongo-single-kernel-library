@@ -313,8 +313,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return [BackupStatuses.PBM_NOT_STARTED.value]
 
         try:
-            previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
+        except WorkloadExecError as err:
+            pbm_status = err.stdout
+
+        try:
+            previous_status = self.charm.unit.status
 
             if pbm_error := self.process_pbm_error(pbm_status):
                 return [pbm_error]
