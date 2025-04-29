@@ -504,7 +504,7 @@ class MongosOperator(OperatorProtocol, Object):
             return False
 
         if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+            logger.info(f"Invalid TLS integration: {status.status.message}")
             return False
 
         if not self.is_mongos_running():
