@@ -477,22 +477,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             mongod.move_primary(new_primary_ip=unit_host)
 
     @mongodb_only
-    def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
-        """Returns True if all charm units status's show that they are ready for upgrade."""
-        goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
-        for unit_name, unit_state in goal_state["units"].items():  # type: ignore
-            if unit_name == unit_to_ignore:
-                continue
-            if unit_state["status"] == "active":
-                continue
-            if not self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
-                unit_state["status"]
-            ):
-                return False
-
-        return True
-
-    @mongodb_only
     def wait_for_cluster_healthy(
         self: GenericMongoDBUpgradeManager[MongoDBOperator],
     ) -> None:
