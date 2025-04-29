@@ -469,7 +469,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return ""
 
-    def process_pbm_error(self, pbm_status: str) -> StatusBase | None:
+    def process_pbm_error(self, pbm_status: str) -> StatusObject | None:
         """Look up PBM status for errors."""
         error_message: str
 
@@ -623,7 +623,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 raise ResyncError
         except WorkloadExecError as e:
             if status := self.process_pbm_error(e.stdout):
-                self.component_statuses.set(BackupStatuses.pbm_error(status), scope=Scope.UNIT)
+                self.component_statuses.set(status, scope=Scope.UNIT)
 
     def _get_backup_restore_operation_result(
         self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase

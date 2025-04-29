@@ -151,9 +151,7 @@ class BackupEventsHandler(Object):
             return
         except WorkloadExecError as e:
             if status := self.manager.process_pbm_error(e.stdout):
-                self.manager.component_statuses.add(
-                    BackupStatuses.pbm_error(status), scope=Scope.UNIT
-                )
+                self.manager.component_statuses.add(status, scope=Scope.UNIT)
             return
 
         pbm_statuses = self.manager.compute_statuses(scope=Scope.UNIT)
@@ -182,7 +180,7 @@ class BackupEventsHandler(Object):
                 BackupStatuses.backup_running(backup_id),
                 scope=Scope.UNIT,
                 is_action=True,
-                async_component_status=self.manager.component_statuses,
+                async_status_component=self.manager.component_statuses,
             )
             success_action_with_info_log(
                 logger,
@@ -245,7 +243,7 @@ class BackupEventsHandler(Object):
                 BackupStatuses.restore_running(backup_id),
                 scope=Scope.UNIT,
                 is_action=True,
-                async_component_status=self.manager.component_statuses,
+                async_status_component=self.manager.component_statuses,
             )
             success_action_with_info_log(
                 logger, event, action, {"restore-status": "restore started"}

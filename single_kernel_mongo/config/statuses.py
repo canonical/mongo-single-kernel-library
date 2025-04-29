@@ -150,11 +150,6 @@ class BackupStatuses(Enum):
             running="async",
         )
 
-    @staticmethod
-    def pbm_error(status: StatusBase):
-        """Returns a wrapped status object for PBM errors."""
-        return StatusObject(status=status)
-
 
 class ConfigServerStatuses(Enum):
     """Config server statuses."""

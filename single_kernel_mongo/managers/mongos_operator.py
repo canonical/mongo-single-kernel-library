@@ -322,7 +322,7 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongosStatuses.MONGOS_NOT_STARTED.value,
                 running="async",
-                async_component_status=self.component_statuses,
+                async_status_component=self.component_statuses,
             )
             raise
 

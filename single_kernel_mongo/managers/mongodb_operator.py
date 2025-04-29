@@ -854,7 +854,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongoDBStatuses.MONGODB_NOT_STARTED.value,
                 running="async",
-                async_component_status=self.component_statuses,
+                async_status_component=self.component_statuses,
             )
             raise
 
@@ -889,7 +889,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 rel_name,
             )
 
-            self.component_statuses.add(MongoDBStatuses.DB_REL_ON_SHARD.value)
+            self.component_statuses.add(MongoDBStatuses.DB_REL_ON_SHARD.value, scope=Scope.UNIT)
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
             logger.error(
@@ -897,7 +897,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.component_statuses.add(MongoDBStatuses.SHARDING_ON_REPLICA.value)
+            self.component_statuses.add(MongoDBStatuses.SHARDING_ON_REPLICA.value, scope=Scope.UNIT)
             return False
         return True
 
