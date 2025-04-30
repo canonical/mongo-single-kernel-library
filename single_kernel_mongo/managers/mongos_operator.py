@@ -131,7 +131,7 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self,)
+        return (self, self.upgrade_manager)
 
     @property
     def config(self) -> MongosCharmConfig:

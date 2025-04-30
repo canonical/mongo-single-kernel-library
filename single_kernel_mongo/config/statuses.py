@@ -276,18 +276,24 @@ class MongodStatuses(Enum):
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    UNHEALTHY_UPGRADE = StatusObject(status=BlockedStatus("Unhealthy after refresh."))
+    UNHEALTHY_UPGRADE = StatusObject(
+        status=BlockedStatus("Unhealthy after refresh."), approved_critical_component=True
+    )
     INCOMPATIBLE_UPGRADE = StatusObject(
         status=BlockedStatus(
             "Refresh incompatible. Rollback to previous revision with `juju refresh`"
-        )
+        ),
+        approved_critical_component=True,
     )
     ACTIVE_IDLE = StatusObject(status=ActiveStatus())
     WAITING_POST_UPGRADE_STATUS = StatusObject(
         status=WaitingStatus("Waiting for post upgrade checks...")
     )
     REFRESH_IN_PROG = StatusObject(
-        status=MaintenanceStatus("Refreshing. To rollback, `juju refresh` to the previous revision")
+        status=MaintenanceStatus(
+            "Refreshing. To rollback, `juju refresh` to the previous revision"
+        ),
+        approved_critical_component=True,
     )
 
     @staticmethod

@@ -267,6 +267,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,
+            self.upgrade_manager,
         )
 
     # BEGIN: Handlers.
