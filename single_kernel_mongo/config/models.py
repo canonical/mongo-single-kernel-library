@@ -49,6 +49,16 @@ OBSERVABILITY_CONFIG = ObservabilityConfig()
 
 
 @dataclass(frozen=True)
+class LdapConfig:
+    """The config for the ldap library."""
+
+    ldap_conf_template: Traversable = TEMPLATE_DIRECTORY / "ldap.conf.j2"
+
+
+LDAP_CONFIG = LdapConfig()
+
+
+@dataclass(frozen=True)
 class AuditLogConfig:
     """Audit log related configuration."""
 

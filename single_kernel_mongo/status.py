@@ -37,6 +37,7 @@ class Statuses:
     shard: StatusBase | None = field(default=None)
     config_server: StatusBase | None = field(default=None)
     pbm: StatusBase | None = field(default=None)
+    ldap: StatusBase | None = field(default=None)
 
 
 class StatusManager(Object):
@@ -95,17 +96,22 @@ class StatusManager(Object):
                 shard=self.operator.shard_manager.get_status(),
                 config_server=self.operator.config_server_manager.get_status(),
                 pbm=self.operator.backup_manager.get_status(),
+                ldap=self.operator.ldap_manager.get_status(),
             )
         # Mongos case
-        return Statuses(mongodb=self.operator.get_sanity_check_status() or ActiveStatus())
+        return Statuses(
+            mongodb=self.operator.get_sanity_check_status() or ActiveStatus(),
+            ldap=self.operator.ldap_manager.get_status(),
+        )
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""
-        mongodb_status, shard_status, config_server_status, pbm_status = (
+        mongodb_status, shard_status, config_server_status, pbm_status, ldap_status = (
             statuses.mongodb,
             statuses.shard,
             statuses.config_server,
             statuses.pbm,
+            statuses.ldap,
         )
         if not isinstance(mongodb_status, ActiveStatus):
             return mongodb_status
@@ -115,6 +121,9 @@ class StatusManager(Object):
 
         if config_server_status and not isinstance(config_server_status, ActiveStatus):
             return config_server_status
+
+        if ldap_status and not isinstance(ldap_status, ActiveStatus):
+            return ldap_status
 
         if pbm_status and not isinstance(pbm_status, ActiveStatus):
             return pbm_status
@@ -151,6 +160,7 @@ class StatusManager(Object):
             return
 
         main_status = self.prioritize_statuses(statuses)
+        logger.debug(f"Main status is {main_status}")
 
         logger.info(f"{' Charm Statuses ':=^40}")
         for key, value in asdict(statuses).items():

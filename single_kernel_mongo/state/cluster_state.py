@@ -23,6 +23,8 @@ class ClusterStateKeys(str, Enum):
     CONFIG_SERVER_DB = "config-server-db"
     KEYFILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
+    LDAP_USER_TO_DN_MAPPING = "ldap-user-to-dn-mapping"
+    LDAP_HASH = "ldap-hash"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -71,3 +73,13 @@ class ClusterState(AbstractRelationState[Data]):
         if not self.relation:
             return None
         return self.relation_data.get(ClusterStateKeys.INT_CA_SECRET.value, None)
+
+    @property
+    def ldap_user_to_dn_mapping(self) -> str | None:
+        """Returns the userToDNMapping config option shared by the config-server."""
+        return self.relation_data.get(ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value, None)
+
+    @property
+    def ldap_hash(self) -> str | None:
+        """Returns the ldap hash shared by the config-server."""
+        return self.relation_data.get(ClusterStateKeys.LDAP_HASH.value, None)
