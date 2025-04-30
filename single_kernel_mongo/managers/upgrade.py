@@ -178,6 +178,9 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             1. have to wait for the unit to resolve itself.
             2. have to run the force-refresh-start action (to upgrade the next unit).
         """
+        self.component_statuses.delete(
+            UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value, scope=Scope.UNIT
+        )
         logger.debug("Running post refresh checks to verify cluster is not broken after refresh")
         self.run_post_upgrade_checks(finished_whole_cluster=False)
 
@@ -250,6 +253,7 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
 
         self._upgrade.unit_state = UnitState.HEALTHY
+        self.component_statuses.set(UpgradeStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
 
 
 class MongosUpgradeManager(MongoUpgradeManager[T]):
@@ -297,3 +301,4 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
 
         logger.debug("refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
+        self.component_statuses.set(UpgradeStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
