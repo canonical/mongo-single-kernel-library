@@ -310,7 +310,8 @@ class UpgradeStatuses(Enum):
                 f"MongoDB {unit_workload_version} running; "
                 f"Snap revision {unit_workload_container_version}{outdated_str}; "
                 f"Charm revision {current_versions}"
-            )
+            ),
+            approved_critical_component=True,
         )
 
     @staticmethod
@@ -320,7 +321,8 @@ class UpgradeStatuses(Enum):
         return StatusObject(
             status=ActiveStatus(
                 f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}"
-            )
+            ),
+            approved_critical_component=True,
         )
 
     @staticmethod
@@ -331,7 +333,8 @@ class UpgradeStatuses(Enum):
         return StatusObject(
             status=BlockedStatus(
                 f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
-            )
+            ),
+            approved_critical_component=True,
         )
 
 
