@@ -202,7 +202,7 @@ class ClusterRequirer(Object):
     def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
-        self.dependent.component_statuses.add(
+        self.dependent.component_statuses.set(
             MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value, scope=Scope.UNIT
         )
 
