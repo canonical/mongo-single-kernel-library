@@ -48,7 +48,8 @@ def test_snap_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
     )
     harness.set_leader(True)
-    harness.charm.on.start.emit()
+    with pytest.raises(WorkloadServiceError):
+        harness.charm.on.start.emit()
     open_ports_mock.assert_not_called()
     patched_mongo_initialise.assert_not_called()
 
@@ -71,8 +72,8 @@ def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
     )
     harness.set_leader(True)
-    harness.charm.on.start.emit()
-    assert harness.charm.unit.status == MaintenanceStatus("Starting MongoDB.")
+    with pytest.raises(WorkloadExecError):
+        harness.charm.on.start.emit()
     patched_mongo_initialise.assert_not_called()
 
 
@@ -90,7 +91,8 @@ def test_start_unable_to_open_tcp_doesnt_init(harness, mocker, mock_fs_interacti
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     harness.set_leader(True)
-    harness.charm.on.start.emit()
+    with pytest.raises(WorkloadExecError):
+        harness.charm.on.start.emit()
     patched_mongo_initialise.assert_not_called()
 
 

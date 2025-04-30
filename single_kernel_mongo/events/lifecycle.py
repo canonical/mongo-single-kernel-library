@@ -50,6 +50,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WorkloadExecError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
@@ -111,6 +112,9 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.on_start()
+        except (WorkloadServiceError, WorkloadExecError) as err:
+            logger.error("Failed to start mongodb: %s", err)
+            raise
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             event.defer()
