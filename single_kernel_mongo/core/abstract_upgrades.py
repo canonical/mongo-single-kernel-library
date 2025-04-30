@@ -416,7 +416,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
 
         if self.dependent.substrate == Substrates.K8S:
             self._on_kubernetes_always(during_upgrade)  # type: ignore
-        self._set_upgrade_status()
 
     def _on_kubernetes_always(self, during_upgrade: bool) -> None:
         """Always run this as part of kubernetes reconcile_upgade call."""
@@ -429,7 +428,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             and self.dependent.mongo_manager.mongod_ready()
         ):
             self._upgrade.unit_state = UnitState.HEALTHY
-            self.component_statuses.set(UpgradeStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 
@@ -451,7 +449,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             # Refresh status after upgrade
         else:
             logger.debug("Waiting to upgrade")
-        self._set_upgrade_status()
 
     # BEGIN: Helpers
     @mongodb_only
