@@ -176,7 +176,6 @@ class MongosOperator(OperatorProtocol, Object):
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
-            logger.error("Adding need conf server status")
             self.charm.status_handler.set_running_status(
                 MongosStatuses.NEED_CONF_SERVER.value,
                 scope=Scope.UNIT,
