@@ -67,6 +67,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
+    NotDrainedError,
     SetPasswordError,
     ShardAuthError,
     ShardingMigrationError,
@@ -664,6 +665,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning(f"Failed to perform self healing: {e}")
             except ShardAuthError:
                 logger.warning("Failed to add shard")
+            except NotDrainedError:
+                logger.warning("Still draining shard.")
 
     def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
         """Handler for the set password action."""
