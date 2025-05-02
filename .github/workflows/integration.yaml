@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Check commenter
         id: auth_check
-        uses: morfien101/actions-authorized-user@4a3cfbf0bcb3cafe4a71710a278920c5d94bb38b
+        uses: canonical/actions-authorized-user@4a3cfbf0bcb3cafe4a71710a278920c5d94bb38b
         with:
           username: ${{ github.event.comment.author.login }}
           org: "Canonical"
@@ -56,7 +56,7 @@ jobs:
       new_version: ${{ steps.compute_version.outputs.new_version }}
     steps:
       - name: Get PR branch
-        uses: xt0rted/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
+        uses: canonical/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
         id: comment-branch
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
         run: |
           poetry build
       - name: Publish to test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
         with:
           repository-url: https://test.pypi.org/legacy/
       - name: Sleep to avoid race conditions
@@ -107,11 +107,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Get PR branch
-        uses: xt0rted/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
+        uses: canonical/pull-request-comment-branch@e8b8daa837e8ea7331c0003c9c316a64c6d8b0b1
         id: comment-branch
       - name: Update python library and create PR on ${{ matrix.repository }}
         id: remoteupdater
-        uses: Gu1nness/poetry-remote-update@main
+        uses: canonical/poetry-remote-update@b29bb19cce253259dad93d7b189345765c036bf3
         with:
           library: 'mongo-charms-single-kernel'
           new_version: '${{ needs.publish_dev.outputs.new_version }}'
@@ -122,7 +122,7 @@ jobs:
           python_version: '3.10'
           pat: '${{ secrets.PAT }}'
       - name: Comment on PR
-        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b
+        uses: canonical/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b
         with:
           message: |
             * ${{ steps.remoteupdater.outputs.pull-request-operation }} [${{ matrix.repository }} PR](${{ steps.remoteupdater.outputs.pull-request-url }})
