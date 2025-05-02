@@ -3,7 +3,7 @@
 
 [project]
 name = "mongo-charms-single-kernel"
-version = "0.0.6"
+dynamic = ["version"]
 description = "Shared and reusable code for Mongo-related charms"
 readme = "README.md"
 license = "Apache-2.0"
@@ -54,14 +54,22 @@ packages = [
 ]
 include = ["single_kernel_mongo/templates/"]
 exclude = ["single_kernel_mongo/charmcraft.yaml"]
+version = "0.0.0" # overridden by poetry-dynamic-versioning
 
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+dirty = true
+strict = true
 
 
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=2.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry.group.charm-libs.dependencies]
 cryptography = "^42.0.5"  # tls_certificates lib v3
