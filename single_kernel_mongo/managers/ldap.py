@@ -141,6 +141,11 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
+        self.component_statuses.clear(scope=Scope.UNIT)
+        statuses = self.compute_statuses(scope=Scope.UNIT)
+        for status in statuses:
+            self.component_statuses.add(status, scope=Scope.UNIT)
+
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
         self.assert_pass_hook_checks()
