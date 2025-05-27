@@ -32,7 +32,7 @@ from single_kernel_mongo.config.literals import (
     UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
-from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -52,6 +52,7 @@ from single_kernel_mongo.events.backups import (
 )
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import (
@@ -86,6 +87,7 @@ from single_kernel_mongo.managers.config import (
     MongoDBExporterConfigManager,
     MongosConfigManager,
 )
+from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
@@ -202,6 +204,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
 
+        # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
+        self.ldap_manager = LDAPManager(
+            self,
+            self.state,
+            self.substrate,
+            ExternalRequirerRelations.LDAP,
+            ExternalRequirerRelations.LDAP_CERT,
+        )
+
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
@@ -216,6 +227,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
+        self.ldap_events = LDAPEventHandler(self)
 
     @property
     def config(self):
@@ -269,6 +281,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,
+            self.ldap_manager,
             self.upgrade_manager,
         )
 
@@ -419,6 +432,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
+        if self.state.upgrade_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
+
         if not self.state.is_role(self.config.role):
             logger.error(
                 f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
@@ -427,24 +446,22 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
             )
 
-        if self.state.upgrade_in_progress:
-            logger.warning(
-                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            raise UpgradeInProgressError
-
         if self.charm.unit.is_leader():
-            # Store in the databag so we never miss it.
-            if self.config.ldap_user_to_dn_mapping:
-                self.state.app_peer_data.ldap_user_to_dn_mapping = (
-                    self.config.ldap_user_to_dn_mapping
-                )
-            # TODO: Send this to mongos as well.
+            self._handle_ldap_config_changes()
 
-            if self.config.ldap_query_template:
-                self.state.app_peer_data.ldap_query_template = self.config.ldap_query_template
+    def _handle_ldap_config_changes(self):
+        """Helpful method to handle the ldap changes and a restart if necessary."""
+        # Store in the databag so we never miss it.
+        if self.config.ldap_user_to_dn_mapping:
+            self.state.ldap.ldap_user_to_dn_mapping = self.config.ldap_user_to_dn_mapping
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.cluster_manager.update_ldap_user_to_dn_mapping()
 
-            # TODO: Invalidate the cache and restart with those parameters if needed.
+        if self.config.ldap_query_template:
+            self.state.ldap.ldap_query_template = self.config.ldap_query_template
+
+        # This will restart only if the config was changed.
+        self.ldap_events.restart_if_ready_event.emit()
 
     @override
     def on_leader_elected(self) -> None:
@@ -845,17 +862,15 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self):
+    def restart_charm_services(self, force: bool = False):
         """Restarts the charm services with updated config.
 
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         try:
-            self.stop_charm_services()
-            self.config_manager.set_environment()
+            self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-                self.mongos_config_manager.set_environment()
-            self.start_charm_services()
+                self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
@@ -922,6 +937,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
+        self.ldap_manager.save_certificates(self.state.ldap.chain)
 
         # Update licenses
         self.handle_licenses()

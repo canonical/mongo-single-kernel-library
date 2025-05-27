@@ -27,7 +27,7 @@ from single_kernel_mongo.config.literals import (
     UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
-from single_kernel_mongo.config.relations import RelationNames
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
@@ -35,6 +35,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import ExposeExternal, MongosCharmConfig
 from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
@@ -49,6 +50,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
+from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongosUpgradeManager
@@ -120,6 +122,15 @@ class MongosOperator(OperatorProtocol, Object):
             self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
         )
 
+        # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
+        self.ldap_manager = LDAPManager(
+            self,
+            self.state,
+            self.substrate,
+            ExternalRequirerRelations.LDAP,
+            ExternalRequirerRelations.LDAP_CERT,
+        )
+
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
 
@@ -127,11 +138,12 @@ class MongosOperator(OperatorProtocol, Object):
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
         self.upgrade_events = UpgradeEventHandler(self)
+        self.ldap_events = LDAPEventHandler(self)
 
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self, self.upgrade_manager)
+        return (self, self.ldap_manager, self.upgrade_manager)
 
     @property
     def config(self) -> MongosCharmConfig:
@@ -151,6 +163,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     def _configure_workloads(self) -> None:
         self.tls_manager.push_tls_files_to_workload()
+        self.ldap_manager.save_certificates(self.state.ldap.chain)
         self.handle_licenses()
         self.set_permissions()
 
@@ -306,16 +319,13 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self) -> None:
+    def restart_charm_services(self, force: bool = False) -> None:
         """Restarts the charm with the new configuration."""
         try:
-            self.workload.stop()
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
                 raise MissingConfigServerError()
-
-            self.mongos_config_manager.set_environment()
-            self.workload.start()
+            self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(

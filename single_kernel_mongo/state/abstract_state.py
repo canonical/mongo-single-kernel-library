@@ -37,7 +37,7 @@ class AbstractRelationState(Generic[PData]):
         except AttributeError:
             return False
 
-    def update(self, items: dict[str, str]) -> None:
+    def update(self, items: dict[str, str | None]) -> None:
         """Updates the data in the databag.
 
         It will add/update/delete the data in the databag according to the following scheme:

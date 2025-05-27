@@ -205,7 +205,7 @@ class TLSManager:
         self.state.update_ca_secrets(new_ca=None)
 
         self.delete_certificates_from_workload()
-        self.dependent.restart_charm_services()
+        self.dependent.restart_charm_services(force=True)
 
     def enable_certificates_for_unit(self):
         """Enables the new certificates for this unit."""
@@ -223,7 +223,7 @@ class TLSManager:
             scope=Scope.UNIT,
         )
         try:
-            self.dependent.restart_charm_services()
+            self.dependent.restart_charm_services(force=True)
         except WorkloadServiceError:
             # TODO should we defer or just error
             return

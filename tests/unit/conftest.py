@@ -82,6 +82,7 @@ def mock_fs_interactions(mocker) -> None:
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.stop")
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.restart")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.update_env")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
@@ -95,6 +96,7 @@ def harness() -> Harness[MongoTestCharm]:
     harness = Harness(MongoTestCharm, meta=METADATA, actions=ACTIONS, config=CONFIG)
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
+    harness.add_relation("ldap-peers", "ldap-peers")
     harness.begin()
     with harness.hooks_disabled():
         harness.add_storage(storage_name="mongodb", count=1, attach=True)
@@ -106,5 +108,6 @@ def mongos_harness() -> Harness[MongosTestCharm]:
     harness = Harness(MongosTestCharm, meta=MONGOS_METADATA, actions=MONGOS_ACTIONS)
     harness.add_relation("router-peers", "router-peers")
     harness.add_relation("status-peers", "mongos")
+    harness.add_relation("ldap-peers", "ldap-peers")
     harness.begin()
     return harness

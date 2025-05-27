@@ -76,6 +76,7 @@ class FileBasedConfigManager(CommonConfigManager):
     @abstractmethod
     def build_config(self) -> dict[str, Any]:
         """Builds the config dict."""
+        ...
 
     def set_environment(self):
         """Write update parameters in the file."""
@@ -86,6 +87,17 @@ class FileBasedConfigManager(CommonConfigManager):
 
         if new_content != current_content:
             self.workload.write(self.file, safe_dump(new_content))
+
+    def configure_and_restart(self, force: bool = False) -> None:
+        """Re-configure if needed and restart the service if needed."""
+        current_config_file = "\n".join(self.workload.read(self.file))
+        current_config_file_content = safe_load(current_config_file)
+
+        new_content = self.build_config()
+
+        if force or not self.workload.active() or new_content != current_config_file_content:
+            self.workload.write(self.file, safe_dump(new_content))
+            self.workload.restart()
 
 
 class BackupConfigManager(CommonConfigManager):
@@ -246,6 +258,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.tls_parameters,
                 self.log_options,
                 self.audit_options,
+                self.ldap_parameters,
             ],
         )
 
@@ -345,6 +358,12 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             }
         return {}
 
+    @property
+    @abstractmethod
+    def ldap_parameters(self) -> dict[str, Any]:
+        """The LDAP configuration parameters."""
+        ...
+
 
 class MongoDBConfigManager(MongoConfigManager):
     """MongoDB Specifics config manager."""
@@ -393,6 +412,45 @@ class MongoDBConfigManager(MongoConfigManager):
     def port_parameter(self) -> dict[str, Any]:
         return {"net": {"port": MongoPorts.MONGODB_PORT.value}}
 
+    @property
+    @override
+    def ldap_parameters(self) -> dict[str, Any]:
+        # Don't write any config if we are not fully ready to connect to LDAP
+        # (meaning we have the relations + config + certs received)
+        if not self.state.ldap_relation or not self.state.ldap_cert_relation:
+            return {}
+        if not self.state.ldap.is_ready():
+            return {}
+        # We never configure shards for LDAP, see spec (DA-156).
+        if self.state.is_role(MongoDBRoles.SHARD):
+            return {}
+
+        # Fallback if no queryTemplate is provided.
+        user = "{USER}" if self.state.ldap.ldap_user_to_dn_mapping else "{PROVIDED_USER}"
+
+        ldap_params: dict[str, Any] = {
+            "security": {
+                "ldap": {
+                    "servers": ",".join(self.state.ldap.formatted_ldap_urls),
+                    "transportSecurity": "tls",
+                    "bind": {
+                        "queryUser": self.state.ldap.bind_user,
+                        "queryPassword": self.state.ldap.bind_password,
+                    },
+                    "authz": {
+                        "queryTemplate": self.state.ldap.ldap_query_template
+                        or f"{self.state.ldap.base_dn}??sub?(&(objectClass=posixGroup)(uniqueMember={user}))",
+                    },
+                }
+            },
+            "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
+        }
+        if self.state.ldap.ldap_user_to_dn_mapping:
+            ldap_params["security"]["ldap"]["userToDNMapping"] = (
+                self.state.ldap.ldap_user_to_dn_mapping
+            )
+        return ldap_params
+
     @override
     def build_config(self) -> dict[str, Any]:
         base = super().build_config()
@@ -429,6 +487,33 @@ class MongosConfigManager(MongoConfigManager):
     @override
     def port_parameter(self) -> dict[str, Any]:
         return {"net": {"port": MongoPorts.MONGOS_PORT.value}}
+
+    @property
+    @override
+    def ldap_parameters(self) -> dict[str, Any]:
+        if not self.state.ldap_relation or not self.state.ldap_cert_relation:
+            return {}
+        if not self.state.ldap.is_ready():
+            return {}
+
+        ldap_params: dict[str, Any] = {
+            "security": {
+                "ldap": {
+                    "servers": ",".join(self.state.ldap.formatted_ldap_urls),
+                    "transportSecurity": "tls",
+                    "bind": {
+                        "queryUser": self.state.ldap.bind_user,
+                        "queryPassword": self.state.ldap.bind_password,
+                    },
+                }
+            },
+            "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
+        }
+        if self.state.ldap.ldap_user_to_dn_mapping:
+            ldap_params["security"]["ldap"]["userToDNMapping"] = (
+                self.state.ldap.ldap_user_to_dn_mapping
+            )
+        return ldap_params
 
     @override
     def build_config(self) -> dict[str, Any]:

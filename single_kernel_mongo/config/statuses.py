@@ -347,3 +347,50 @@ class LdapStatuses(Enum):
     INVALID_LDAP_QUERY_TEMPLATE = StatusObject(
         status=BlockedStatus("Invalid LDAP Query template, please update your config"),
     )
+    CONFIGURING_LDAP = StatusObject(
+        status=MaintenanceStatus("Configuring LDAP"), running="blocking"
+    )
+    LDAP_REL_ON_SHARD = StatusObject(
+        status=BlockedStatus("Cannot integrate LDAP with shard."),
+    )
+    TLS_REQUIRED = StatusObject(
+        status=BlockedStatus("TLS is mandatory for LDAP transport."),
+    )
+    LDAP_REQUIRED = StatusObject(
+        status=BlockedStatus("GLauth TLS is integrated but LDAP is not."),
+    )
+    INVALID_HASH_STATUS = StatusObject(
+        status=BlockedStatus("mongos and config-server not integrated with the same ldap server."),
+    )
+    WAITING_FOR_DATA = StatusObject(
+        status=WaitingStatus("Waiting for both LDAP data and Glauth certificates."),
+    )
+    WAITING_FOR_CERTS = StatusObject(
+        status=WaitingStatus("Waiting for Glauth certificates."),
+    )
+    WAITING_FOR_LDAP_DATA = StatusObject(
+        status=WaitingStatus("Missing LDAP data from Glauth."),
+    )
+    MISSING_BASE_DN = StatusObject(
+        status=BlockedStatus("Missing base DN for LDAP."),
+    )
+    MISSING_CERT_CHAIN = StatusObject(
+        status=BlockedStatus("Missing chain for LDAP."),
+    )
+    MISSING_LDAPS_URLS = StatusObject(
+        status=BlockedStatus("Missing LDAPS URLs for LDAP."),
+    )
+    LDAPS_NOT_ENABLED = StatusObject(
+        status=BlockedStatus("LDAPS not enabled on LDAP application."),
+    )
+    UNABLE_TO_BIND = StatusObject(
+        status=BlockedStatus("Could not bind with ldap"),
+    )
+    ACTIVE_IDLE = StatusObject(
+        status=ActiveStatus(),
+    )
+
+    @staticmethod
+    def on_error_status(err: Exception):
+        """On error."""
+        return StatusObject(status=BlockedStatus(f"{err}"))

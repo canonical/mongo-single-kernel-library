@@ -4,11 +4,16 @@
 import json
 import logging
 import subprocess
+from pathlib import Path
 from typing import Any
+from urllib.parse import quote_plus
 
 import ops
 import yaml
 from dateutil.parser import parse
+from juju.application import Application
+from juju.client.client import FullStatus
+from juju.model import Model
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -22,13 +27,112 @@ from tenacity import (
 )
 
 MONGO_SHELL = "charmed-mongodb.mongosh"
-PORT = 27017
+MONGOD_PORT = 27017
+MONGOS_PORT = 27018
 UNIT_IDS = [0, 1, 2]
 SERIES = "jammy"
+TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
+
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
 logger = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
+
+def mongosh(substrate: str) -> str:
+    match substrate:
+        case "lxd":
+            return "charmed-mongodb.mongosh"
+        case "microk8s":
+            return "mongosh"
+        case _:
+            raise Exception("Invalid substrate")
+
+
+class ProcessError(Exception):
+    """Raised when a process fails."""
+
+
+async def deploy_charm(
+    ops_test: OpsTest,
+    charm: Path | str,
+    substrate: str,
+    mongod_resource: str,
+    app_name: str,
+    num_units: int = 3,
+    channel: str | None = None,
+    config: dict | None = None,
+    subordinate: bool = False,
+):
+    if substrate == "microk8s":
+        await ops_test.model.deploy(
+            charm,
+            resources=mongod_resource,
+            application_name=app_name,
+            num_units=0 if subordinate else num_units,
+            series="jammy",
+            trust=True,
+            config=config,
+            channel=channel,
+        )
+    else:
+        await ops_test.model.deploy(
+            charm,
+            num_units=0 if subordinate else num_units,
+            application_name=app_name,
+            config=config,
+            channel=channel,
+        )
+
+
+async def run_action(
+    kubernetes_model: Model, application_name: str, action_name: str, **params: Any
+) -> dict[str, str]:
+    app: Application = kubernetes_model.applications[application_name]
+    action = await app.units[0].run_action(action_name, **params)
+    await action.wait()
+    return action.results
+
+
+async def get_address_of_unit(
+    ops_test: OpsTest, substrate: str, unit_id: int, app_name: str
+) -> str:
+    """Retrieves the address of the unit based on provided id."""
+    status: FullStatus = await ops_test.model.get_status()
+    if substrate == "microk8s":
+        return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
+    return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["public-address"]
+
+
+async def generate_mongodb_client(
+    ops_test: OpsTest,
+    substrate: str,
+    app_name: str,
+    mongos: bool,
+    username: str = "operator",
+    password: str | None = None,
+):
+    """Returns a MongoDB client for mongos/mongod."""
+    hosts = [
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
+    password = password or await get_password(ops_test, app_name=app_name)
+    username = username
+    port = MONGOS_PORT if mongos else MONGOD_PORT
+    hosts = [f"{host}:{port}" for host in hosts]
+    hosts = ",".join(hosts)
+    database = "admin"
+
+    complement = ""
+    if not mongos:
+        complement = f"replicaSet={app_name}"
+
+    return (
+        f"mongodb://{username}:"
+        f"{quote_plus(password)}@"
+        f"{hosts}/{quote_plus(database)}?"
+        f"{complement}"
+    )
 
 
 class Status:
@@ -102,7 +206,7 @@ def unit_uri(ip_address: str, password, app) -> str:
         password: password of database.
         app: name of application which has the cluster.
     """
-    return f"mongodb://operator:{password}@{ip_address}:{PORT}/admin?replicaSet={app}"
+    return f"mongodb://operator:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
 async def get_password(ops_test: OpsTest, username="operator", app_name=None) -> str:
@@ -296,7 +400,9 @@ async def check_or_scale_app(ops_test: OpsTest, user_app_name: str, required_uni
     await ops_test.model.wait_for_idle()
 
 
-async def get_app_name(ops_test: OpsTest, test_deployments: list[str] = []) -> str:
+async def get_app_name(
+    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
+) -> str:
     """Returns the name of the cluster running MongoDB.
 
     This is important since not all deployments of the MongoDB charm have the application name
@@ -308,11 +414,13 @@ async def get_app_name(ops_test: OpsTest, test_deployments: list[str] = []) -> s
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mongodb" but instead takes the form
         # of `local:focal/mongodb-6`
-        if "mongodb" in status["applications"][app]["charm"]:
-            logger.debug("Found mongodb app named '%s'", app)
+        if charm_name in status["applications"][app]["charm"]:
+            logger.debug("Found %s app named '%s'", charm_name, app)
 
             if app in test_deployments:
-                logger.debug("mongodb app named '%s', was deployed by the test, not by user", app)
+                logger.debug(
+                    "%s app named '%s', was deployed by the test, not by user", charm_name, app
+                )
                 continue
 
             return app
@@ -438,34 +546,87 @@ async def get_application_units(ops_test: OpsTest, app: str) -> list[Unit]:
     return units
 
 
+async def assert_subordinate_blocked_with_status(
+    ops_test: OpsTest, app_name: str, status: str | None
+) -> None:
+    """Checks if all units are blocked with a provided status.
+
+    The command juju status --model {model-name} {app-name} --json does not provide information
+    for statuses for subordinate charms like it does for normal charms. Specifically when
+    converting to json it lose this information. To get this information we must parse the status
+    manually.
+    """
+    juju_status = (
+        subprocess.check_output(
+            f"juju status --model {ops_test.model.info.name} {app_name}".split()
+        )
+        .decode("utf-8")
+        .split("\n")
+    )
+
+    for status_line in juju_status:
+        if app_name not in status_line:
+            continue
+        # no need to check that status of the application since the application can have a
+        # different status than the units.
+        is_app = "/" not in status_line
+        if is_app:
+            continue
+
+        status_line = status_line.split()
+        unit_name = status_line[0]
+        status_type = status_line[1]
+        status_message = " ".join(status_line[4:])
+        assert status_type == "blocked", f"unit {unit_name} not in blocked state, in {status_type}"
+
+        if status:
+            # Port can be open and it would make parsing hard.
+            assert (
+                status in status_message
+            ), f"unit {unit_name} does not show the status '{status}',has message '{status_message}'"
+
+
 async def check_all_units_blocked_with_status(
-    ops_test: OpsTest, db_app_name: str, status: str | None
+    ops_test: OpsTest, db_app_name: str, status: str | None, subordinate: bool = False
 ) -> None:
     # this is necessary because ops_model.units does not update the unit statuses
+    if subordinate:
+        await assert_subordinate_blocked_with_status(ops_test, db_app_name, status)
+        return
     for unit in await get_application_units(ops_test, db_app_name):
         assert (
             unit.workload_status.value == "blocked"
         ), f"unit {unit.name} not in blocked state, in {unit.workload_status.value}"
         if status:
             assert (
-                unit.workload_status.message == status
+                status in unit.workload_status.message
             ), f"unit {unit.name} not in blocked state, in {unit.workload_status.value}"
 
 
 async def wait_for_mongodb_units_blocked(
-    ops_test: OpsTest, db_app_name: str, status: str | None = None, timeout=20
+    ops_test: OpsTest,
+    db_app_name: str,
+    status: str | None = None,
+    timeout=20,
+    subordinate: bool = False,
 ) -> None:
     """Waits for units of MongoDB to be in the blocked state.
 
     This is necessary because the MongoDB app can report a different status than the units.
     """
+    units = ops_test.model.applications[db_app_name].units
+    await ops_test.model.block_until(
+        *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
+    )
     hook_interval_key = "update-status-hook-interval"
     try:
         old_interval = (await ops_test.model.get_config())[hook_interval_key]
         await ops_test.model.set_config({hook_interval_key: "1m"})
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
             with attempt:
-                await check_all_units_blocked_with_status(ops_test, db_app_name, status)
+                await check_all_units_blocked_with_status(
+                    ops_test, db_app_name, status, subordinate
+                )
     finally:
         await ops_test.model.set_config({hook_interval_key: old_interval})
 
@@ -483,3 +644,26 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
         if endpoint_one in endpoints and endpoint_two in endpoints:
             return True
     return False
+
+
+async def execute_on_mongod(
+    ops_test: OpsTest,
+    app_name: str,
+    substrate: str,
+    uri: str,
+    command: str,
+    container_name: str = "mongod",
+):
+    """Executes the command with mongosh."""
+    leader_id = await get_leader_id(ops_test, app_name)
+    ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
+
+    formatted_string = f'"{uri}" --quiet --eval "{command}"'
+    cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
+
+    ret_code, stdout, stderr = await ops_test.juju(*(ssh_command + cmd))
+
+    logger.info("ret_code: %s, stdout: %s, stderr: %s", ret_code, stdout, stderr)
+
+    if ret_code != 0:
+        raise ProcessError(f"Failed to execute {command}", stderr, stdout)

@@ -570,10 +570,6 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_member_auth(keyfile, tls_ca)
 
-        if tls_ca is not None and self.dependent.tls_manager.is_waiting_for_both_certs():
-            logger.info("Waiting for requested certs before restarting and adding to cluster.")
-            raise WaitingForCertificatesError
-
         if not self.dependent.mongo_manager.mongod_ready():
             raise NotReadyError
 
@@ -665,9 +661,17 @@ class ShardManager(Object, ManagerStatusProtocol):
         # membership authentication. If TLS is disabled on the cluster this enables the cluster to
         # have the correct cluster KeyFile readily available.
         self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
-        self.dependent.restart_charm_services()
+
+        # Sets the keyfile anyway
         if self.charm.unit.is_leader():
             self.state.set_keyfile(keyfile)
+
+        # Prevents restarts if we haven't received certificates
+        if tls_ca is not None and self.dependent.tls_manager.is_waiting_for_both_certs():
+            logger.info("Waiting for requested certs before restarting and adding to cluster.")
+            raise WaitingForCertificatesError
+
+        self.dependent.restart_charm_services(force=True)
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""

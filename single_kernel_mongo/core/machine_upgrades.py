@@ -166,6 +166,7 @@ class MachineUpgrade(AbstractUpgrade):
         self.unit_state = UnitState.UPGRADING
         dependent.workload.install()
         # Start charm services if they were not running after refresh
+        dependent._configure_workloads()
         dependent.start_charm_services()
         if dependent.name == CharmKind.MONGOD:
             dependent._restart_related_services()  # type: ignore[attr-defined]

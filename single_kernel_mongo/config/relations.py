@@ -12,6 +12,7 @@ class PeerRelationNames(str, Enum):
     PEERS = "database-peers"
     ROUTER_PEERS = "router-peers"
     STATUS_PEERS = "status-peers"
+    LDAP_PEERS = "ldap-peers"
 
 
 class RelationNames(str, Enum):
@@ -37,6 +38,8 @@ class ExternalRequirerRelations(str, Enum):
 
     TLS = "certificates"
     S3_CREDENTIALS = "s3-credentials"
+    LDAP = "ldap"
+    LDAP_CERT = "ldap-certificate-transfer"
 
 
 class ExternalProviderRelations(str, Enum):
