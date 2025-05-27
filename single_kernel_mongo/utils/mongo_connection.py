@@ -120,16 +120,13 @@ class MongoConnection:
         reraise=True,
         before=before_log(logger, logging.DEBUG),
     )
-    def init_replset(self) -> None:
+    def init_replset(self, host: str) -> None:
         """Create replica set config the first time.
 
         Raises:
             ConfigurationError, ConfigurationError, OperationFailure
         """
-        config = {
-            "_id": self.config.replset,
-            "members": [{"_id": i, "host": h} for i, h in enumerate(self.config.hosts)],
-        }
+        config = {"_id": self.config.replset, "members": [{"_id": 0, "host": host}]}
         try:
             self.client.admin.command("replSetInitiate", config)
         except OperationFailure as e:

@@ -37,6 +37,7 @@ class Statuses:
     shard: StatusBase | None = field(default=None)
     config_server: StatusBase | None = field(default=None)
     pbm: StatusBase | None = field(default=None)
+    ldap: StatusBase | None = field(default=None)
 
 
 class StatusManager(Object):
@@ -98,23 +99,30 @@ class StatusManager(Object):
             shard_statuses = self.operator.shard_manager.get_statuses()
             config_server_statuses = self.operator.config_server_manager.get_statuses()
             pbm_statuses = self.operator.backup_manager.get_statuses()
+            ldap_status = self.operator.ldap_manager.get_status()
             return Statuses(
                 mongodb=next(iter(mongo_statuses), ActiveStatus()),
                 shard=next(iter(shard_statuses), None),
                 config_server=next(iter(config_server_statuses), None),
                 pbm=next(iter(pbm_statuses), None),
+                ldap=ldap_status,
             )
         # Mongos case
         mongos_statuses = self.operator.get_statuses()
-        return Statuses(mongodb=next(iter(mongos_statuses), ActiveStatus()))
+        ldap_status = self.operator.ldap_manager.get_status()
+        return Statuses(
+            mongodb=next(iter(mongos_statuses), ActiveStatus()),
+            ldap=ldap_status,
+        )
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
         """Prioritizes the statuses."""
-        mongodb_status, shard_status, config_server_status, pbm_status = (
+        mongodb_status, shard_status, config_server_status, pbm_status, ldap_status = (
             statuses.mongodb,
             statuses.shard,
             statuses.config_server,
             statuses.pbm,
+            statuses.ldap,
         )
         if not isinstance(mongodb_status, ActiveStatus):
             return mongodb_status
@@ -124,6 +132,9 @@ class StatusManager(Object):
 
         if config_server_status and not isinstance(config_server_status, ActiveStatus):
             return config_server_status
+
+        if ldap_status and not isinstance(ldap_status, ActiveStatus):
+            return ldap_status
 
         if pbm_status and not isinstance(pbm_status, ActiveStatus):
             return pbm_status
@@ -163,6 +174,7 @@ class StatusManager(Object):
             return
 
         main_status = self.prioritize_statuses(statuses)
+        logger.debug(f"Main status is {main_status}")
 
         logger.info(f"{' Charm Statuses ':=^40}")
         for key, value in asdict(statuses).items():

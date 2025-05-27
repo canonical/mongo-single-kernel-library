@@ -206,7 +206,7 @@ class TLSManager:
 
         self.charm.status_manager.set_and_share_status(TLSStatuses.DISABLING_TLS.value)
         self.delete_certificates_from_workload()
-        self.dependent.restart_charm_services()
+        self.dependent.restart_charm_services(force=True)
 
     def enable_certificates_for_unit(self):
         """Enables the new certificates for this unit."""
@@ -220,7 +220,7 @@ class TLSManager:
             return
         self.charm.status_manager.set_and_share_status(TLSStatuses.ENABLING_TLS.value)
         try:
-            self.dependent.restart_charm_services()
+            self.dependent.restart_charm_services(force=True)
         except WorkloadServiceError as e:
             # TODO should we defer or just error
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))

@@ -102,6 +102,14 @@ class ClusterProvider(Object):
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
+        if hashed_data := self.dependent.ldap_manager.get_hash():
+            relation_data[ClusterStateKeys.LDAP_HASH.value] = hashed_data
+
+        # We want to avoid having to configure both applications with the exact
+        # same string so the config-server shares it with the client.
+        if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
+            relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
+
         self.data_interface.update_relation_data(relation.id, relation_data)
 
     def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:
@@ -151,6 +159,59 @@ class ClusterProvider(Object):
                 relation.id,
                 {
                     ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
+                },
+            )
+
+    def update_ldap_hash_to_mongos(self, hashed_data: str) -> None:
+        """Sends the hash to mongos to confirm we are integrated with the same units."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not updating ldap hash now, not ready.")
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        for relation in self.state.cluster_relations:
+            self.data_interface.update_relation_data(
+                relation.id,
+                {ClusterStateKeys.LDAP_HASH.value: hashed_data},
+            )
+
+    def remove_ldap_hash(self) -> None:
+        """Removes the hash from all relations."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not removing ldap hash now, not ready.")
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        for relation in self.state.cluster_relations:
+            self.data_interface.delete_relation_data(
+                relation.id,
+                [ClusterStateKeys.LDAP_HASH.value],
+            )
+
+    def update_ldap_user_to_dn_mapping(self) -> None:
+        """Updates the ldap user to dn mapping value in the databag."""
+        try:
+            self.assert_pass_hook_checks()
+        except (DeferrableFailedHookChecksError, NonDeferrableFailedHookChecksError):
+            logger.info("Not updating ldap user to dn mapping now, not ready.")
+            return
+
+        if not self.charm.unit.is_leader():
+            return
+
+        for relation in self.state.cluster_relations:
+            self.data_interface.update_relation_data(
+                relation.id,
+                {
+                    ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value: self.state.ldap.ldap_user_to_dn_mapping
                 },
             )
 
@@ -231,6 +292,12 @@ class ClusterRequirer(Object):
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
+        if self.charm.unit.is_leader() and (
+            ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping
+        ):
+            logger.debug("Received a userToDNMapping, storing it in databag.")
+            self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+
         if not key_file_contents or not config_server_db_uri:
             raise WaitingForSecretsError("Waiting for keyfile or config server db uri")
 
@@ -257,9 +324,8 @@ class ClusterRequirer(Object):
 
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
-
-        # In the K8S case, create the user
-        self.update_users_for_k8s_routers()
+            # In the K8S case, create the user
+            self.update_users_for_k8s_routers()
 
         self.dependent.share_connection_info()
 

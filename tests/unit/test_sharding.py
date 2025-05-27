@@ -420,7 +420,11 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
-    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
+    # Simulate missing certs
+    mocker.patch(
+        "single_kernel_mongo.managers.sharding.ShardManager.update_member_auth",
+        side_effect=WaitingForCertificatesError,
+    )
 
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")

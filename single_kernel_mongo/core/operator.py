@@ -24,13 +24,19 @@ from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 
-from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
+    CharmKind,
+    Substrates,
+    TrustStoreFiles,
+)
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
-from single_kernel_mongo.managers.config import CommonConfigManager
+from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
@@ -41,6 +47,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.events.upgrades import UpgradeEventHandler
+    from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
 
@@ -66,15 +73,17 @@ class OperatorProtocol(ABC, Object):
     name: ClassVar[CharmKind]
     substrate: Substrates
     role: CharmSpec
-    config_manager: CommonConfigManager
+    config_manager: FileBasedConfigManager
     tls_manager: TLSManager
     state: CharmState
     mongo_manager: MongoManager
     upgrade_manager: MongoUpgradeManager
+    ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
     upgrade_events: UpgradeEventHandler
+    ldap_events: LDAPEventHandler
 
     if TYPE_CHECKING:
 
@@ -150,7 +159,7 @@ class OperatorProtocol(ABC, Object):
         ...
 
     @abstractmethod
-    def restart_charm_services(self) -> None:
+    def restart_charm_services(self, force: bool = False) -> None:
         """Restart the relevant services with updated config."""
         ...
 
@@ -248,9 +257,35 @@ class OperatorProtocol(ABC, Object):
                     f"{path}",
                 ]
             )
-
         for path in (
             self.workload.paths.config_file,
             self.workload.paths.mongos_config_file,
         ):
             self.workload.exec(["chmod", "600", f"{path}"])
+
+    def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: str) -> None:
+        """Saves the certificate in the trust store.
+
+        Raises:
+            WorkloadExecError: In that case, we should let the charm go into error state.
+        """
+        # Write the file with the right permissions
+        full_path = TRUST_STORE_PATH / file.value
+        self.workload.write(full_path, chain)
+        self.workload.exec(["chown", "root:root", f"{full_path}"])
+        self.workload.exec(["chmod", "644", f"{full_path}"])
+
+        # Update ca certificates.
+        self.workload.exec("update-ca-certificates")
+
+    def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
+        """Removes the certificate from the trust store."""
+        if not self.workload.exists(TRUST_STORE_PATH / file.value):
+            return
+
+        # Remove the file
+        self.workload.delete(TRUST_STORE_PATH / file.value)
+        # Update CA certificates to remove the certificate from the trust store
+        self.workload.exec("update-ca-certificates")
+        # Restart the service
+        self.restart_charm_services(force=True)
