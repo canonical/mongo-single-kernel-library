@@ -99,20 +99,20 @@ class StatusManager(Object):
             shard_statuses = self.operator.shard_manager.get_statuses()
             config_server_statuses = self.operator.config_server_manager.get_statuses()
             pbm_statuses = self.operator.backup_manager.get_statuses()
-            ldap_status = self.operator.ldap_manager.get_status()
+            ldap_status = self.operator.ldap_manager.get_statuses()
             return Statuses(
                 mongodb=next(iter(mongo_statuses), ActiveStatus()),
                 shard=next(iter(shard_statuses), None),
                 config_server=next(iter(config_server_statuses), None),
                 pbm=next(iter(pbm_statuses), None),
-                ldap=ldap_status,
+                ldap=next(iter(ldap_status), None),
             )
         # Mongos case
         mongos_statuses = self.operator.get_statuses()
-        ldap_status = self.operator.ldap_manager.get_status()
+        ldap_status = self.operator.ldap_manager.get_statuses()
         return Statuses(
             mongodb=next(iter(mongos_statuses), ActiveStatus()),
-            ldap=ldap_status,
+            ldap=next(iter(ldap_status), None),
         )
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:

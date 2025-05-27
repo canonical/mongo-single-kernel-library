@@ -241,3 +241,29 @@ class UpgradeStatuses(Enum):
         return BlockedStatus(
             f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision"
         )
+
+
+class LdapStatuses(Enum):
+    """LDAP Statuses."""
+
+    CONFIGURING_LDAP = MaintenanceStatus("Configuring LDAP")
+    LDAP_REL_ON_SHARD = BlockedStatus("Cannot integrate LDAP with shard.")
+    TLS_REQUIRED = BlockedStatus("TLS is mandatory for LDAP transport.")
+    LDAP_REQUIRED = BlockedStatus("GLauth TLS is integrated but LDAP is not.")
+    INVALID_HASH_STATUS = BlockedStatus(
+        "mongos and config-server not integrated with the same ldap server."
+    )
+    WAITING_FOR_DATA = WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
+    WAITING_FOR_CERTS = WaitingStatus("Waiting for Glauth certificates.")
+    WAITING_FOR_LDAP_DATA = WaitingStatus("Missing LDAP data from Glauth.")
+    MISSING_BASE_DN = BlockedStatus("Missing base DN for LDAP.")
+    MISSING_CERT_CHAIN = BlockedStatus("Missing chain for LDAP.")
+    MISSING_LDAPS_URLS = BlockedStatus("Missing LDAPS URLs for LDAP.")
+    LDAPS_NOT_ENABLED = BlockedStatus("LDAPS not enabled on LDAP application.")
+    UNABLE_TO_BIND = BlockedStatus("Could not bind with ldap")
+    ACTIVE_IDLE = ActiveStatus()
+
+    @staticmethod
+    def on_error_status(err: Exception):
+        """On error."""
+        return BlockedStatus(f"{err}")
