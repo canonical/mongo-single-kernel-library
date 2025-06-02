@@ -163,14 +163,28 @@ jobs:
             .empty
           if-no-files-found: error
 
+  build-helpers:
+    strategy:
+      matrix:
+        path:
+          - .
+          - tests/integration/applications/client_relations_charm
+          - tests/integration/applications/continuous_write_charm
+    name: Build charm | ${{ matrix.path }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.2.0
+    with:
+      path-to-charm-directory: ${{ matrix.path }}
+
   integration-test:
     name: Integration test charm
     needs:
       - tox-lint
       - unit-test
       - build
+      - build-helpers
     uses: ./.github/workflows/integration_test.yaml
     with:
       artifact-prefix: packed-charm
+    secrets: inherit
     permissions:
       contents: write  # Needed for Allure Report
