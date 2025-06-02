@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pytest_operator.plugin import OpsTest
 
-from .helpers import DEPLOYMENT_TIMEOUT, deploy_charm
+from ..helpers.common import DEPLOYMENT_TIMEOUT, deploy_charm
+from ..helpers.types import Substrate
 
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
@@ -19,7 +20,7 @@ CLUSTER_REL_NAME = "cluster"
 
 async def deploy_cluster_components(
     ops_test: OpsTest,
-    substrate: str,
+    substrate: Substrate,
     mongodb_charm: Path,
     mongod_resource: str,
     num_units_cluster_config: dict | None = None,

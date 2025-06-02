@@ -8,7 +8,7 @@ import pytest
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from ...helpers import (
+from ...helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
@@ -17,7 +17,7 @@ from ...helpers import (
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
-from ...ldap_helpers import (
+from ...helpers.ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -27,7 +27,7 @@ from ...ldap_helpers import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from ...sharding_helpers import (
+from ...helpers.sharding import (
     CLUSTER_COMPONENTS,
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
@@ -36,6 +36,7 @@ from ...sharding_helpers import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
+from ...helpers.types import Substrate
 
 TIMEOUT = 15 * 60
 
@@ -44,7 +45,7 @@ TIMEOUT = 15 * 60
 async def test_build_and_deploy_mongodb_cluster(
     ops_test: OpsTest,
     mongodb_charm: Path,
-    substrate: str,
+    substrate: Substrate,
     mongod_resource,
     kubernetes_model: Model,
 ) -> None:
@@ -87,7 +88,7 @@ async def test_build_and_deploy_mongodb_cluster(
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongos(
-    ops_test: OpsTest, mongos_charm: Path, substrate: str, mongod_resource, base_app_name
+    ops_test: OpsTest, mongos_charm: Path, substrate: Substrate, mongod_resource, base_app_name
 ) -> None:
     """Deploys mongos and data integrator, and integrates both.
 
@@ -141,7 +142,7 @@ async def test_build_and_deploy_mongos(
 
 
 @pytest.mark.abort_on_fail
-async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: str):
+async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: Substrate):
     """Integrate only mongos, it should go to a blocked state.
 
     This is because config server is not integrated with LDAP.
@@ -181,7 +182,7 @@ async def test_glauth_fully_integrated(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest, substrate: str):
+async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test, charm_name="mongos")
 
     # We create a client which should be able to write
@@ -195,7 +196,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         mongos=True,
     )
 
-    await execute_on_mongod(
+    result = await execute_on_mongod(
         ops_test,
         app_name,
         substrate,
@@ -203,6 +204,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         "db.test.insertOne({number: 1})",
         container_name="mongos",
     )
+    assert result.succeeded, "Failed to insert value with LDAP client"
 
     await execute_on_mongod(
         ops_test,
@@ -212,6 +214,7 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         "db.test.findOne({number: 1})",
         container_name="mongos",
     )
+    assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail

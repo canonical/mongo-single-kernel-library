@@ -10,7 +10,7 @@ from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from ...helpers import (
+from ...helpers.common import (
     ProcessError,
     check_or_scale_app,
     deploy_charm,
@@ -18,7 +18,7 @@ from ...helpers import (
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
-from ...ldap_helpers import (
+from ...helpers.ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -28,6 +28,7 @@ from ...ldap_helpers import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
+from ...helpers.types import Substrate
 
 TIMEOUT = 15 * 60
 ENDPOINT_LDAP = "ldap"
@@ -41,7 +42,7 @@ async def test_build_and_deploy(
     ops_test: OpsTest,
     kubernetes_model: Model,
     mongodb_charm: Path,
-    substrate: str,
+    substrate: Substrate,
     mongod_resource,
     base_app_name: str,
 ) -> None:
@@ -114,7 +115,7 @@ async def test_integrate_ldap_cert(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest, substrate: str):
+async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
     """Checks that the LDAP user can write to the DB.
 
     This checks both authentication and authorisation.
@@ -131,13 +132,19 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         password="dogood",
     )
 
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})"
+    )
+    assert result.succeeded, "Failed to insert value with LDAP client"
 
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 1})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 1})"
+    )
+    assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail
-async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
+async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
     """We want to ensure that we can log in using the ldap userToDNMapping.
 
     So we update the config for both and we log in with the user and check that we can
@@ -192,13 +199,19 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         username="johndoe@superheroes",
         password="dogood",
     )
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+    )
+    assert result.succeeded, "Failed to write value with LDAP client"
 
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 2})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.findOne({number: 2})"
+    )
+    assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
+async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = await get_app_name(ops_test)
 
@@ -230,17 +243,17 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: str):
         password="dogood",
     )
 
-    with pytest.raises(ProcessError):
-        # We expect this write to fail when the ldap relation is missing.
-        # As soon as one relation is removed, a restart is triggered and it
-        # should have disabled LDAP.
-        await execute_on_mongod(
-            ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
-        )
+    # We expect this write to fail when the ldap relation is missing.
+    # As soon as one relation is removed, a restart is triggered and it
+    # should have disabled LDAP.
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+    )
+    assert result.failed
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: str):
+async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
     """With only certs relation it should also go to blocked."""
     db_app_name = await get_app_name(ops_test)
 
@@ -271,13 +284,13 @@ async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: s
         password="dogood",
     )
 
-    with pytest.raises(ProcessError):
-        # We expect this write to fail when the ldap relation is missing.
-        # As soon as one relation is removed, a restart is triggered and it
-        # should have disabled LDAP.
-        await execute_on_mongod(
-            ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
-        )
+    # We expect this write to fail when the ldap relation is missing.
+    # As soon as one relation is removed, a restart is triggered and it
+    # should have disabled LDAP.
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+    )
+    assert result.failed
 
 
 @pytest.mark.abort_on_fail

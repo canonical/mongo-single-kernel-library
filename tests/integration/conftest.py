@@ -1,13 +1,25 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import time
 from logging import getLogger
 from pathlib import Path
 from typing import Any
 
 import pytest
 from _pytest.config.argparsing import Parser
+from pytest_operator.plugin import OpsTest
 from yaml import safe_load
+
+from tests.integration.helpers.common import deploy_application, get_app_name
+
+from .helpers.common import (
+    clear_continous_writes,
+    relate_mongodb_and_application,
+    start_continous_writes,
+    stop_continous_writes,
+)
+from .helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -21,10 +33,22 @@ def pytest_addoption(parser: Parser):
     )
 
 
-@pytest.fixture(autouse=True)
-def substrate(request):
+@pytest.fixture(scope="session")
+def substrate(request) -> Substrate:
     """The substrate that we are testing."""
     return request.config.option.substrate
+
+
+@pytest.fixture
+def application_path() -> str:
+    """The test application path."""
+    return "./tests/integration/applications/continuous_write_charm/application_ubuntu@22.04-amd64.charm"
+
+
+@pytest.fixture
+def client_relation_charm_path() -> str:
+    """The test application path."""
+    return "./tests/integration/applications/client_relations_charm/application_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
@@ -87,3 +111,32 @@ def mongos_resource(mongos_metadata) -> dict[str, Any]:
     if substrate == "microk8s":
         return {"mongodb-image": mongos_metadata["resources"]["mongodb-image"]["upstream-source"]}
     return {}
+
+
+@pytest.fixture
+async def continuous_writes_to_db(ops_test: OpsTest, application_path: str):
+    """Continuously writget_app_name the duration of the test."""
+    db_app_name = await get_app_name(ops_test)
+    app_name = "continuous-write"
+    await deploy_application(ops_test, application_path=application_path, app_name=app_name)
+    await relate_mongodb_and_application(ops_test, db_app_name, app_name)
+
+    await start_continous_writes(ops_test, app_name)
+    yield
+    await stop_continous_writes(ops_test, app_name)
+    await clear_continous_writes(ops_test, app_name)
+
+
+@pytest.fixture
+async def add_writes_to_db(ops_test: OpsTest, application_path: str):
+    """Adds writes to DB before test starts and clears writes at the end of the test."""
+    db_app_name = await get_app_name(ops_test)
+    app_name = "continuous-write"
+    await deploy_application(ops_test, application_path=application_path, app_name=app_name)
+    await relate_mongodb_and_application(ops_test, db_app_name, app_name)
+
+    await start_continous_writes(ops_test, app_name)
+    time.sleep(20)
+    await stop_continous_writes(ops_test, app_name)
+    yield
+    await clear_continous_writes(ops_test, app_name)

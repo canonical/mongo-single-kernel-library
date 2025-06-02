@@ -10,13 +10,13 @@ from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from ...helpers import (
+from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     ProcessError,
     execute_on_mongod,
     wait_for_mongodb_units_blocked,
 )
-from ...ldap_helpers import (
+from ...helpers.ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -26,12 +26,13 @@ from ...ldap_helpers import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from ...sharding_helpers import (
+from ...helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     deploy_cluster_components,
     integrate_sharding_components,
 )
+from ...helpers.types import Substrate
 
 TIMEOUT = 15 * 60
 ENDPOINT_LDAP = "ldap"
@@ -44,7 +45,7 @@ logger = logging.getLogger(__name__)
 async def test_build_and_deploy(
     ops_test: OpsTest,
     mongodb_charm: Path,
-    substrate: str,
+    substrate: Substrate,
     mongod_resource,
     kubernetes_model: Model,
 ) -> None:
@@ -111,7 +112,7 @@ async def test_integrate_also_ldap_cert(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_user_can_write(ops_test: OpsTest, substrate: str):
+async def test_user_can_write(ops_test: OpsTest, substrate: Substrate):
     db_app_name = CONFIG_SERVER_APP_NAME
     uri = await generate_mongodb_ldap_client(
         ops_test,
@@ -123,11 +124,14 @@ async def test_user_can_write(ops_test: OpsTest, substrate: str):
         mongos=True,
     )
 
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 1})"
+    )
+    assert result.succeeded, "Failed to insert value with LDAP client"
 
 
 @pytest.mark.abort_on_fail
-async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
+async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
     db_app_name = CONFIG_SERVER_APP_NAME
 
     await ops_test.model.applications[db_app_name].set_config(
@@ -171,7 +175,11 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: str):
         mongos=True,
     )
 
-    await execute_on_mongod(ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})")
+    result = await execute_on_mongod(
+        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+    )
+
+    assert result.succeeded, "Failed to read value with LDAP client"
 
 
 @pytest.mark.abort_on_fail

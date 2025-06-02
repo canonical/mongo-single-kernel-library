@@ -3,17 +3,23 @@
 
 import json
 import logging
+import math
 import subprocess
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from random import choices
+from string import ascii_lowercase, digits
 from typing import Any
 from urllib.parse import quote_plus
 
-import ops
 import yaml
+from bson.json_util import dumps as bson_dumps
 from dateutil.parser import parse
 from juju.application import Application
 from juju.client.client import FullStatus
 from juju.model import Model
+from juju.unit import Unit as JujuUnit
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -26,6 +32,8 @@ from tenacity import (
     wait_fixed,
 )
 
+from ..helpers.types import Substrate
+
 MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOD_PORT = 27017
 MONGOS_PORT = 27018
@@ -34,18 +42,36 @@ SERIES = "jammy"
 TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 
+MEDIAN_REELECTION_TIME = 12
+
+
+TEST_DOCUMENTS = """[
+    {
+        \"uid\": 123,
+        \"label\": \"Lorem\",
+        \"price\": 2.3,
+        \"currency\": \"eur\",
+        \"exp_date\": \"2022-12-12\"
+    },
+    {
+        \"uid\": 3456,
+        \"label\": \"Ipsum\",
+        \"price\": 18,
+        \"currency\": \"usd\",
+        \"exp_date\": \"2023-01-13\"
+    }
+]"""
+
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
 logger = logging.getLogger(__name__)
 
 
-def mongosh(substrate: str) -> str:
+def mongosh(substrate: Substrate) -> str:
     match substrate:
         case "lxd":
             return "charmed-mongodb.mongosh"
         case "microk8s":
             return "mongosh"
-        case _:
-            raise Exception("Invalid substrate")
 
 
 class ProcessError(Exception):
@@ -55,7 +81,7 @@ class ProcessError(Exception):
 async def deploy_charm(
     ops_test: OpsTest,
     charm: Path | str,
-    substrate: str,
+    substrate: Substrate,
     mongod_resource: str,
     app_name: str,
     num_units: int = 3,
@@ -84,17 +110,67 @@ async def deploy_charm(
         )
 
 
+async def deploy_application(
+    ops_test: OpsTest,
+    application_path: str,
+    app_name: str,
+):
+    application_name = await get_app_name(ops_test, app_name)
+    if application_name:
+        return
+    await ops_test.model.deploy(
+        application_path,
+        application_name=app_name,
+        num_units=1,
+        series="jammy",
+    )
+    # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name],
+        status="waiting",
+        raise_on_blocked=True,
+        raise_on_error=False,
+        timeout=DEPLOYMENT_TIMEOUT,
+    )
+
+
+async def relate_mongodb_and_application(
+    ops_test: OpsTest, mongodb_application_name: str, application_name: str
+) -> None:
+    """Relates the mongodb and application charms.
+
+    Args:
+        ops_test: The ops test framework
+        mongodb_application_name: The mongodb charm application name
+        application_name: The continuous writes test charm application name
+    """
+    if is_relation_joined(ops_test, "database", "database"):
+        return
+
+    await ops_test.model.integrate(
+        f"{application_name}:database", f"{mongodb_application_name}:database"
+    )
+    await ops_test.model.block_until(lambda: is_relation_joined(ops_test, "database", "database"))
+
+    await ops_test.model.wait_for_idle(
+        apps=[mongodb_application_name, application_name],
+        status="active",
+        raise_on_blocked=True,
+        timeout=TIMEOUT,
+    )
+
+
 async def run_action(
-    kubernetes_model: Model, application_name: str, action_name: str, **params: Any
+    model: Model, application_name: str, action_name: str, **params: Any
 ) -> dict[str, str]:
-    app: Application = kubernetes_model.applications[application_name]
+    app: Application = model.applications[application_name]
     action = await app.units[0].run_action(action_name, **params)
     await action.wait()
     return action.results
 
 
 async def get_address_of_unit(
-    ops_test: OpsTest, substrate: str, unit_id: int, app_name: str
+    ops_test: OpsTest, substrate: Substrate, unit_id: int, app_name: str
 ) -> str:
     """Retrieves the address of the unit based on provided id."""
     status: FullStatus = await ops_test.model.get_status()
@@ -105,17 +181,19 @@ async def get_address_of_unit(
 
 async def generate_mongodb_client(
     ops_test: OpsTest,
-    substrate: str,
+    substrate: Substrate,
     app_name: str,
     mongos: bool,
+    hosts: list[str] | None = None,
     username: str = "operator",
     password: str | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
-    hosts = [
+    hosts = hosts or [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
+
     password = password or await get_password(ops_test, app_name=app_name)
     username = username
     port = MONGOS_PORT if mongos else MONGOD_PORT
@@ -133,6 +211,30 @@ async def generate_mongodb_client(
         f"{hosts}/{quote_plus(database)}?"
         f"{complement}"
     )
+
+
+async def mongodb_uri(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    unit_ids: list[int] | None = None,
+    port: int = MONGOD_PORT,
+    username: str = "operator",
+    password: str | None = None,
+) -> str:
+    if unit_ids is None:
+        unit_ids = range(0, len(ops_test.model.applications[app_name].units))
+
+    addresses = [
+        await get_address_of_unit(ops_test, substrate, unit_id, app_name) for unit_id in unit_ids
+    ]
+
+    hosts = [f"{host}:{port}" for host in addresses]
+    hosts = ",".join(hosts)
+
+    password = password or await get_password(ops_test, username=username, app_name=app_name)
+
+    return f"mongodb://{username}:{password}@{hosts}/admin"
 
 
 class Status:
@@ -237,7 +339,7 @@ async def get_password(ops_test: OpsTest, username="operator", app_name=None) ->
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
-async def count_primaries(ops_test: OpsTest, password: str, app_name=None) -> int:
+async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=None) -> int:
     """Counts the number of primaries in a replica set.
 
     Will retry counting when the number of primaries is 0 at most 5 times.
@@ -246,12 +348,10 @@ async def count_primaries(ops_test: OpsTest, password: str, app_name=None) -> in
     number_of_primaries = 0
     for unit_id in UNIT_IDS:
         # get unit
-        unit = ops_test.model.applications[app_name].units[unit_id]
+        ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
 
         # connect to mongod
-        client = MongoClient(
-            unit_uri(unit.public_address, password, app_name), directConnection=True
-        )
+        client = MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
 
         # check primary status
         if client.is_primary:
@@ -260,7 +360,7 @@ async def count_primaries(ops_test: OpsTest, password: str, app_name=None) -> in
     return number_of_primaries
 
 
-async def find_unit(ops_test: OpsTest, leader: bool, app_name=None) -> ops.model.Unit:
+async def find_unit(ops_test: OpsTest, leader: bool, app_name: str | None = None) -> JujuUnit:
     """Helper function identifies the a unit, based on need for leader or non-leader."""
     app_name = app_name or await get_app_name(ops_test)
     ret_unit = None
@@ -304,8 +404,8 @@ async def get_application_relation_data(
     application_name: str,
     relation_name: str,
     key: str,
-    relation_id: str = None,
-    relation_alias: str = None,
+    relation_id: str | None = None,
+    relation_alias: str | None = None,
 ) -> str | None:
     """Get relation data for an application.
 
@@ -646,19 +746,41 @@ def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) 
     return False
 
 
+@dataclass(frozen=True)
+class CommandResult:
+    return_code: int
+    stdout: str
+    stderr: str
+    data: Any
+
+    @property
+    def succeeded(self):
+        return self.return_code == 0
+
+    @property
+    def failed(self):
+        return self.return_code != 0
+
+
 async def execute_on_mongod(
     ops_test: OpsTest,
     app_name: str,
-    substrate: str,
+    substrate: Substrate,
     uri: str,
     command: str,
     container_name: str = "mongod",
-):
+    stringify: bool = True,
+    expecting_output: bool = True,
+) -> CommandResult:
     """Executes the command with mongosh."""
     leader_id = await get_leader_id(ops_test, app_name)
     ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
 
-    formatted_string = f'"{uri}" --quiet --eval "{command}"'
+    if stringify:
+        formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})"'
+    else:
+        formatted_string = f'"{uri}" --quiet --eval "{command}"'
+
     cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
 
     ret_code, stdout, stderr = await ops_test.juju(*(ssh_command + cmd))
@@ -666,4 +788,147 @@ async def execute_on_mongod(
     logger.info("ret_code: %s, stdout: %s, stderr: %s", ret_code, stdout, stderr)
 
     if ret_code != 0:
-        raise ProcessError(f"Failed to execute {command}", stderr, stdout)
+        logger.error(f"Failed to execute {command}: {stderr=}, {stdout=}")
+
+    data = None
+    if expecting_output:
+        data = json.loads(stdout.split("\x07")[-1])
+
+    return CommandResult(
+        return_code=ret_code or 0,
+        stderr=stderr,
+        stdout=stdout,
+        data=data,
+    )
+
+
+async def start_continous_writes(ops_test: OpsTest, client_app_name: str):
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    start_writes_action = await application_unit.run_action("start-continuous-writes")
+    await start_writes_action.wait()
+
+
+async def stop_continous_writes(ops_test: OpsTest, client_app_name: str):
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    stop_writes_action = await application_unit.run_action("stop-continuous-writes")
+    await stop_writes_action.wait()
+
+
+async def clear_continous_writes(ops_test: OpsTest, client_app_name: str):
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    clear_writes_action = await application_unit.run_action("clear-continuous-writes")
+    await clear_writes_action.wait()
+
+
+def generate_collection_id() -> str:
+    new_id = "".join(choices(ascii_lowercase + digits, k=4)).replace("_", "")
+    return f"collection_{new_id}"
+
+
+async def check_if_test_documents_stored(
+    ops_test: OpsTest, app_name: str, substrate: Substrate, uri: str, collection: str
+) -> None:
+    # decide whether to pass a mongo_uri or replication set to the "run_mongo_op" function
+
+    # serialize the str test documents into json
+    o_test_docs = json.loads(TEST_DOCUMENTS)
+
+    # query filter
+    formatted_list = bson_dumps([{"uid": test_doc["uid"]} for test_doc in o_test_docs])
+    # Needed to escape the $ properly
+    query_filter = f"{{\\$or: {formatted_list}}}"
+
+    count_documents = await execute_on_mongod(
+        ops_test,
+        app_name,
+        substrate,
+        uri,
+        f"db.{collection}.countDocuments({query_filter})",
+    )
+    assert count_documents.data == 2
+
+    # descending order to match insertion order of the test documents
+    find_documents = await execute_on_mongod(
+        ops_test,
+        app_name,
+        substrate,
+        uri,
+        f"db.{collection}.find({query_filter}).sort({{uid: 1}}).toArray()",
+    )
+    assert len(find_documents.data) == 2
+
+    for index, test_doc in zip(range(len(o_test_docs)), o_test_docs):
+        db_doc = find_documents.data[index]
+
+        for key, val in test_doc.items():
+            assert db_doc[key] == val
+
+
+def get_unit_id(unit_name: str) -> int:
+    """Unit id from unit name."""
+    return int(unit_name.split("/")[1])
+
+
+def get_unit_id_from_host(units: dict[int, str], host: str) -> int:
+    for unit_id, _host in units.items():
+        if host == _host:
+            return unit_id
+    raise Exception("no host found", units, host)
+
+
+async def secondary_mongo_uris_with_sync_delay(
+    ops_test: OpsTest, substrate: Substrate, app_name: str, rs_status_data: dict
+):
+    """Returns the list of secondaries and their sync delay with the master.
+
+    Returns the ascending list of Secondaries, the first secondary is the
+    one with the lowest data sync delay.
+    """
+    hosts = {
+        get_unit_id(unit.name): await get_address_of_unit(
+            ops_test, substrate, get_unit_id(unit.name), app_name
+        )
+        for unit in ops_test.model.applications[app_name].units
+    }
+
+    primary_optime_date = [
+        datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        for member in rs_status_data["members"]
+        if member["stateStr"].upper() == "PRIMARY"
+    ][0]
+
+    secondaries = []
+    for member in rs_status_data["members"]:
+        if member["stateStr"].upper() != "SECONDARY":
+            continue
+
+        unit_id = get_unit_id_from_host(hosts, member["name"].split(":")[0])
+        member_optime_date = datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
+
+        host = await mongodb_uri(ops_test, substrate, app_name, unit_ids=[unit_id])
+        delay_seconds = (primary_optime_date - member_optime_date).total_seconds()
+
+        secondaries.append({"uri": host, "delay": math.fabs(delay_seconds)})
+
+    secondaries.sort(key=lambda o: o["delay"])
+
+    return secondaries
+
+
+async def get_secret_data(ops_test, secret_uri):
+    secret_unique_id = secret_uri.split("/")[-1]
+    complete_command = f"show-secret {secret_uri} --reveal --format=json"
+    _, stdout, _ = await ops_test.juju(*complete_command.split())
+    return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+async def get_connection_string(
+    ops_test: OpsTest, app_name, relation_name, relation_id=None, relation_alias=None
+) -> str:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name, "secret-user", relation_id, relation_alias
+    )
+    assert secret_uri, "No secret URI found"
+
+    first_relation_user_data = await get_secret_data(ops_test, secret_uri)
+    return first_relation_user_data.get("uris")
