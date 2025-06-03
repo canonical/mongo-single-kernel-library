@@ -65,8 +65,10 @@ class ClusterProvider(Object):
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
         if not self.is_valid_mongos_integration():
-            self.dependent.component_statuses.add(
-                MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value, scope=Scope.UNIT
+            self.state.statuses.add(
+                MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value,
+                scope=Scope.UNIT,
+                component=self.dependent.name,
             )
             raise NonDeferrableFailedHookChecksError(
                 "ClusterProvider is only executed by a config-server"
@@ -263,8 +265,10 @@ class ClusterRequirer(Object):
     def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
-        self.dependent.component_statuses.set(
-            MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value, scope=Scope.UNIT
+        self.state.statuses.set(
+            MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
+            scope=Scope.UNIT,
+            component=self.dependent.name,
         )
 
     def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
@@ -316,12 +320,16 @@ class ClusterRequirer(Object):
             # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
             if not self.dependent.is_mongos_running():
                 logger.info("Mongos has not started yet, deferring")
-                self.dependent.component_statuses.set(
-                    MongosStatuses.MONGOS_NOT_STARTED.value, scope=Scope.UNIT
+                self.state.statuses.set(
+                    MongosStatuses.MONGOS_NOT_STARTED.value,
+                    scope=Scope.UNIT,
+                    component=self.dependent.name,
                 )
                 raise DeferrableError
 
-        self.dependent.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+        self.state.statuses.set(
+            CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.dependent.name
+        )
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
             # In the K8S case, create the user

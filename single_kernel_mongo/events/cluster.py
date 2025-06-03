@@ -163,8 +163,10 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.charm.component_statuses.add(
-                CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value, scope=Scope.UNIT
+            self.dependent.state.statuses.add(
+                CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value,
+                scope=Scope.UNIT,
+                component=self.charm.name,
             )
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:

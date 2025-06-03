@@ -26,7 +26,6 @@ a DB Engine and storage), and the main peer relation name will be
 import logging
 from typing import ClassVar, Generic, TypeVar
 
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
@@ -70,7 +69,6 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     def __init__(self, *args):
         # Init the Juju object Object
         super(Generic, self).__init__(*args)
-        self.component_statuses = ComponentStatuses(self, "charm", self.status_peer_rel_name.value)
 
         # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)
@@ -122,6 +120,6 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
             self.operator.state.app_peer_data.role = self.parsed_config.role
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Returns a list of statuses."""
         return []

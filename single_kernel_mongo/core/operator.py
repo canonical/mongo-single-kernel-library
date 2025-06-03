@@ -21,7 +21,6 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
@@ -78,7 +77,6 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     name: ClassVar[CharmKind]
     substrate: Substrates
     role: CharmSpec
-    component_statuses: ComponentStatuses
     config_manager: FileBasedConfigManager
     tls_manager: TLSManager
     state: CharmState
@@ -186,7 +184,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def compute_statuses(self, scope: Scope) -> Sequence[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> Sequence[StatusObject]:
         """Recomputes the statuses for the given scope."""
         ...
 

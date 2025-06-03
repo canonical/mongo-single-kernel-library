@@ -11,7 +11,6 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 import jinja2
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ldap3 import Connection as LDAPConnection
@@ -59,7 +58,8 @@ class LDAPManager(Object, ManagerStatusProtocol):
         relation_name: ExternalRequirerRelations = ExternalRequirerRelations.LDAP,
         cert_relation_name: ExternalRequirerRelations = ExternalRequirerRelations.LDAP_CERT,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        self.name = relation_name.value
+        super().__init__(parent=dependent, key=self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.workload = self.dependent.workload
@@ -69,10 +69,6 @@ class LDAPManager(Object, ManagerStatusProtocol):
         self.cert_relation_name = cert_relation_name
         self.ldap_requirer = LdapRequirer(self.charm, self.relation_name)
         self.certificate_transfer = CertificateTransferRequires(self.charm, self.cert_relation_name)
-
-        self.component_statuses = ComponentStatuses(
-            self, name="ldap", status_relation_name=self.charm.status_peer_rel_name.value
-        )
 
     def assert_pass_hook_checks(self) -> None:
         """Runs some hook checks before allowing the hook to run."""
@@ -114,18 +110,20 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if not self.state.db_initialised:
             return
 
-        match self.compute_statuses(scope=Scope.UNIT):
+        match self.get_statuses(scope=Scope.UNIT, recompute=True):
             case []:
                 return
             case [LdapStatuses.ACTIVE_IDLE.value]:
                 self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
                 self.dependent.restart_charm_services()
-                self.component_statuses.set(LdapStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+                self.state.statuses.set(
+                    LdapStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
+                )
             case statuses:
-                self.component_statuses.clear(scope=Scope.UNIT)
+                self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
                 for status in statuses:
-                    self.component_statuses.add(status, scope=Scope.UNIT)
+                    self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
 
                 if LdapStatuses.INVALID_HASH_STATUS.value in statuses:
                     raise InvalidLdapHashError(
@@ -141,10 +139,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
-        self.component_statuses.clear(scope=Scope.UNIT)
-        statuses = self.compute_statuses(scope=Scope.UNIT)
+        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+        statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
         for status in statuses:
-            self.component_statuses.add(status, scope=Scope.UNIT)
+            self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
 
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
@@ -186,13 +184,16 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
-        statuses = self.compute_statuses(scope=Scope.UNIT)
-        self.component_statuses.clear(scope=Scope.UNIT)
+        statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
+        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
         for status in statuses:
-            self.component_statuses.add(status, scope=Scope.UNIT)
+            self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:  # noqa: C901
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Generates the status of a unit based on its status reported by mongod."""
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
+
         if not self.state.db_initialised:
             return []
 

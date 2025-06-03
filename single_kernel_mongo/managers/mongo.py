@@ -16,7 +16,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from dacite import from_dict
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import Object
@@ -67,16 +66,11 @@ class MongoManager(Object, ManagerStatusProtocol):
         substrate: Substrates,
     ) -> None:
         super().__init__(parent=dependent, key="managers")
+        self.name = "mongo"
         self.charm = dependent.charm
         self.workload = workload
         self.state = state
         self.substrate = substrate
-
-        self.component_statuses = ComponentStatuses(
-            self,
-            name="mongo",
-            status_relation_name=self.charm.status_peer_rel_name.value,
-        )
 
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
@@ -84,8 +78,10 @@ class MongoManager(Object, ManagerStatusProtocol):
             try:
                 self.k8s.get_pod()
             except DeployedWithoutTrustError:
-                self.charm.component_statuses.add(
-                    CharmStatuses.DEPLOYED_WITHOUT_TRUST.value, scope=Scope.UNIT
+                self.state.statuses.add(
+                    CharmStatuses.DEPLOYED_WITHOUT_TRUST.value,
+                    scope=Scope.UNIT,
+                    component=self.charm.name,
                 )
 
     def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
@@ -487,9 +483,12 @@ class MongoManager(Object, ManagerStatusProtocol):
 
             return draining_shards
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:  # noqa: C901 (this function is complex but we can't reduce its complexity easily enough)
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 (this function is complex but we can't reduce its complexity easily enough)
         """Generates the status of a unit based on its status reported by mongod."""
         charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
 
         if not self.state.db_initialised:
             return [MongodStatuses.WAITING_REPL_SET_INIT.value]

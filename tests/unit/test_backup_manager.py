@@ -3,8 +3,9 @@
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.utils import as_status
 from ops import ActiveStatus, MaintenanceStatus
-from ops.model import BlockedStatus, Relation, WaitingStatus
+from ops.model import BlockedStatus, Relation
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -59,7 +60,9 @@ def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    statuses = backup_manager.component_statuses.get(scope=Scope.UNIT).root
+    statuses = backup_manager.state.statuses.get(
+        scope=Scope.UNIT, component=backup_manager.name
+    ).root
 
     assert MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value in statuses
 
@@ -79,7 +82,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
 
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
     assert status is None
 
@@ -92,7 +95,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
 
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=False)
 
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
     assert status == BackupStatuses.PBM_NOT_STARTED.value
 
@@ -132,9 +135,9 @@ def test_get_status_pbm_error(
     )
 
     mock.return_value = pbm_status
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status.status == BlockedStatus(expected)
+    assert as_status(status) == BlockedStatus(expected)
 
 
 def test_get_status_success(
@@ -155,24 +158,26 @@ def test_get_status_success(
         new_callable=mocker.PropertyMock,
     )
     mock.return_value = '{"running":{"type":"resync","opID":"64f5cc22a73b330c3880e3b2"}}'
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
     assert status == BackupStatuses.PBM_WAITING_TO_SYNC.value
 
     mock.return_value = '{"running":{"type":"backup","name":"2024-11-25"}}'
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status.status == MaintenanceStatus("Backup started/running, backup id: '2024-11-25'")
+    assert as_status(status) == MaintenanceStatus("Backup started/running, backup id: '2024-11-25'")
 
     mock.return_value = '{"running":{"type":"restore","name":"2024-11-25"}}'
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status.status == MaintenanceStatus("Restore started/running, backup id: '2024-11-25'")
+    assert as_status(status) == MaintenanceStatus(
+        "Restore started/running, backup id: '2024-11-25'"
+    )
 
     mock.return_value = "{}"
-    statuses = backup_manager.compute_statuses(scope=Scope.UNIT)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status.status == ActiveStatus("")
+    assert as_status(status) == ActiveStatus("")
 
 
 def test_create_backup_success(
@@ -357,9 +362,9 @@ def test_get_backup_error_status(
 @pytest.mark.parametrize(
     ("pbm_status", "pattern"),
     (
-        ([StatusObject(status=MaintenanceStatus(""))], "Please wait for current.*"),
-        ([StatusObject(status=WaitingStatus(""))], "Sync-ing configurations needs more time.*"),
-        ([StatusObject(status=BlockedStatus("error"))], "error"),
+        ([StatusObject(status="maintenance", message="")], "Please wait for current.*"),
+        ([StatusObject(status="waiting", message="")], "Sync-ing configurations needs more time.*"),
+        ([StatusObject(status="blocked", message="error")], "error"),
     ),
 )
 def test_can_restore_fail_status(
@@ -373,7 +378,7 @@ def test_can_restore_fail_status(
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.compute_statuses",
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
     )
 
     mock.return_value = pbm_status
@@ -402,7 +407,7 @@ def test_can_restore_fail_params(
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.compute_statuses",
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
         return_value=[BackupStatuses.ACTIVE_IDLE.value],
     )
     mocker.patch(
@@ -418,9 +423,9 @@ def test_can_restore_fail_params(
 @pytest.mark.parametrize(
     ("pbm_status", "pattern"),
     (
-        ([StatusObject(status=MaintenanceStatus(""))], "Can only create one backup.*"),
-        ([StatusObject(status=WaitingStatus(""))], "Sync-ing configurations needs more time.*"),
-        ([StatusObject(status=BlockedStatus("error"))], "error"),
+        ([StatusObject(status="maintenance", message="")], "Can only create one backup.*"),
+        ([StatusObject(status="waiting", message="")], "Sync-ing configurations needs more time.*"),
+        ([StatusObject(status="blocked", message="error")], "error"),
     ),
 )
 def test_can_backup_fail(
@@ -434,7 +439,7 @@ def test_can_backup_fail(
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.compute_statuses",
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
     )
 
     mock.return_value = pbm_status
@@ -446,8 +451,8 @@ def test_can_backup_fail(
 @pytest.mark.parametrize(
     ("pbm_status", "pattern"),
     (
-        ([StatusObject(status=WaitingStatus(""))], "Sync-ing configurations needs more time.*"),
-        ([StatusObject(status=BlockedStatus("error"))], "error"),
+        ([StatusObject(status="waiting", message="")], "Sync-ing configurations needs more time.*"),
+        ([StatusObject(status="blocked", message="error")], "error"),
     ),
 )
 def test_can_list_backup_fail(
@@ -461,7 +466,7 @@ def test_can_list_backup_fail(
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.compute_statuses",
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
     )
 
     mock.return_value = pbm_status

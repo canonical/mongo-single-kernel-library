@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
-from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
+from data_platform_helpers.advanced_statuses.utils import as_status
+from ops.model import BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -60,8 +61,10 @@ def test_assert_pass_hook_checks_fail_invalid_mongos_integration(
 
     assert err.value.args[0] == "ClusterProvider is only executed by a config-server"
 
-    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
-    assert any(isinstance(status.status, BlockedStatus) for status in statuses)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert any(status.status == "blocked" for status in statuses)
 
 
 def test_assert_pass_hook_checks_fail_not_leader(harness: Harness[MongoTestCharm]):
@@ -271,10 +274,12 @@ def test_cluster_requirer_set_relation_created_status(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
-    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
 
-    assert isinstance(statuses[0].status, WaitingStatus)
-    assert statuses[0].status.message == "Connecting to config-server..."
+    assert statuses[0].status == "waiting"
+    assert statuses[0].message == "Connecting to config-server..."
 
 
 def test_cluster_requirer_share_credentials_to_clients(
@@ -335,8 +340,10 @@ def test_cluster_requirer_update_mongos_and_restart(
         {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
     )
 
-    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
-    assert isinstance(statuses[0].status, ActiveStatus)
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
+    assert statuses[0].status == "active"
     assert manager.state.db_initialised
 
     for relation in operator.state.client_relations:
@@ -418,8 +425,10 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status
-    statuses = mongos_harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
-    assert statuses[0].status == WaitingStatus("Waiting to start mongos...")
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
+    assert as_status(statuses[0]) == WaitingStatus("Waiting to start mongos...")
 
 
 def test_cluster_requirer_remove_users_and_cleanup_mongo(

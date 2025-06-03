@@ -82,23 +82,27 @@ class LDAPEventHandler(Object):
             )
             self.manager.store_ldap_credentials_and_uri(event.relation)
         except WaitingForLdapDataError as err:
-            self.manager.component_statuses.add(
-                LdapStatuses.WAITING_FOR_LDAP_DATA.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                LdapStatuses.WAITING_FOR_LDAP_DATA.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
             defer_event_with_info_log(logger, event, action, f"{err}")
         except (DeferrableError, DeferrableFailedHookChecksError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except LDAPSNotEnabledError:
-            self.manager.component_statuses.add(
-                LdapStatuses.LDAPS_NOT_ENABLED.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                LdapStatuses.LDAPS_NOT_ENABLED.value, scope=Scope.UNIT, component=self.manager.name
             )
         except InvalidLdapWithShardError:
-            self.manager.component_statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.manager.component_statuses.add(LdapStatuses.on_error_status(err), scope=Scope.UNIT)
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+            )
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable."""
@@ -111,12 +115,14 @@ class LDAPEventHandler(Object):
         except DeferrableFailedHookChecksError as err:
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except InvalidLdapWithShardError:
-            self.manager.component_statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.manager.component_statuses.add(LdapStatuses.on_error_status(err), scope=Scope.UNIT)
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+            )
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
@@ -130,9 +136,11 @@ class LDAPEventHandler(Object):
         except (DeferrableFailedHookChecksError, DeferrableError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
-            self.manager.component_statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.manager.component_statuses.add(LdapStatuses.on_error_status(err), scope=Scope.UNIT)
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+            )

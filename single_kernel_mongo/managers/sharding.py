@@ -14,13 +14,11 @@ import time
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import StatusBase
 from ops.framework import Object
 from ops.model import (
-    MaintenanceStatus,
     Relation,
 )
 from pymongo.errors import (
@@ -80,7 +78,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.CONFIG_SERVER,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        self.name = relation_name.value
+        super().__init__(parent=dependent, key=self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -88,10 +87,6 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         self.substrate = substrate
         self.relation_name = relation_name
         self.data_interface = self.state.config_server_data_interface
-
-        self.component_statuses = ComponentStatuses(
-            self, name="config-server", status_relation_name=self.charm.status_peer_rel_name.value
-        )
 
     def prepare_sharding_config(self, relation: Relation) -> None:
         """Handles the database requested event.
@@ -185,7 +180,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.component_statuses.add(revision_mismatch_status, scope=Scope.UNIT)
+            self.state.statuses.add(revision_mismatch_status, scope=Scope.UNIT, component=self.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
@@ -198,13 +193,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_statuses = self.dependent.backup_manager.compute_statuses(scope=Scope.UNIT)
+        pbm_statuses = self.dependent.backup_manager.get_statuses(scope=Scope.UNIT)
         pbm_status = next(iter(pbm_statuses), None)
 
         # TODO: future work will be to check the actual status of the backup and not the status.
         # Note: we permit this logic based on status since we aren't checking
         # `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
-        if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
+        if pbm_status and pbm_status.status == "maintenance":
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
             )
@@ -265,9 +260,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Returns the current status of the config-server."""
         charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
+
         if scope == Scope.APP:
             return []
 
@@ -321,7 +320,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
 
-        self.component_statuses.delete(ConfigServerStatuses.NEED_SHARDS.value, scope=Scope.UNIT)
+        self.state.statuses.delete(
+            ConfigServerStatuses.NEED_SHARDS.value, scope=Scope.UNIT, component=self.name
+        )
 
         self.charm.status_handler.set_running_status(
             ConfigServerStatuses.adding_shard(shard_name), scope=Scope.UNIT
@@ -382,7 +383,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 self.charm.status_handler.set_running_status(
                     ConfigServerStatuses.draining_shard(shard_name),
                     scope=Scope.UNIT,
-                    async_status_component=self.component_statuses,
+                    statuses_state=self.state.statuses,
+                    component_name=self.name,
                 )
                 logger.info("Attempting to removing shard: %s", shard_name)
                 mongo.pre_remove_shard_checks(shard_name)
@@ -463,7 +465,8 @@ class ShardManager(Object, ManagerStatusProtocol):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.SHARDING,
     ):
-        super().__init__(dependent, relation_name)
+        self.name = relation_name.value
+        super().__init__(dependent, self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -471,10 +474,6 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.substrate = substrate
         self.relation_name = relation_name
         self.data_requirer = self.state.shard_state_interface
-
-        self.component_statuses = ComponentStatuses(
-            self, name="sharding", status_relation_name=self.charm.status_peer_rel_name.value
-        )
 
     def assert_pass_sanity_hook_checks(self, is_leaving: bool) -> None:
         """Returns True if all the sanity hook checks for sharding pass."""
@@ -496,7 +495,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             revision_mismatch_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.component_statuses.add(revision_mismatch_status, scope=Scope.UNIT)
+            self.state.statuses.add(revision_mismatch_status, scope=Scope.UNIT, component=self.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")
@@ -522,12 +521,16 @@ class ShardManager(Object, ManagerStatusProtocol):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                self.component_statuses.add(ShardStatuses.REQUIRES_TLS.value, scope=Scope.UNIT)
+                self.state.statuses.add(
+                    ShardStatuses.REQUIRES_TLS.value, scope=Scope.UNIT, component=self.name
+                )
                 raise DeferrableFailedHookChecksError(
                     "Config-Server uses TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
-                self.component_statuses.add(ShardStatuses.REQUIRES_NO_TLS.value, scope=Scope.UNIT)
+                self.state.statuses.add(
+                    ShardStatuses.REQUIRES_NO_TLS.value, scope=Scope.UNIT, component=self.name
+                )
                 raise DeferrableFailedHookChecksError(
                     "Shard uses TLS but config-server does not. Please synchronise encryption method."
                 )
@@ -544,8 +547,12 @@ class ShardManager(Object, ManagerStatusProtocol):
         # if reusing an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
 
-        self.component_statuses.delete(ShardStatuses.NEED_CONF_SERVER.value, scope=Scope.UNIT)
-        self.component_statuses.add(ShardStatuses.ADDING_TO_CLUSTER.value, scope=Scope.UNIT)
+        self.state.statuses.delete(
+            ShardStatuses.NEED_CONF_SERVER.value, scope=Scope.UNIT, component=self.name
+        )
+        self.state.statuses.add(
+            ShardStatuses.ADDING_TO_CLUSTER.value, scope=Scope.UNIT, component=self.name
+        )
 
     def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
         """Retrieves secrets from config-server and updates them within the shard."""
@@ -574,7 +581,9 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise NotReadyError
 
         # By setting the status we ensure that the former statuses of this component are removed.
-        self.component_statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+        self.state.statuses.set(
+            ShardStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
+        )
 
         if not self.charm.unit.is_leader():
             return
@@ -631,7 +640,9 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.wait_for_draining(mongos_hosts)
 
-        self.component_statuses.set(ShardStatuses.SHARD_DRAINED.value, scope=Scope.UNIT)
+        self.state.statuses.set(
+            ShardStatuses.SHARD_DRAINED.value, scope=Scope.UNIT, component=self.name
+        )
 
     def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
@@ -897,9 +908,12 @@ class ShardManager(Object, ManagerStatusProtocol):
             return ShardStatuses.CA_MISMATCH.value
         return None
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:  # noqa: C901
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the shard."""
         charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
 
         if scope == Scope.APP:
             return []

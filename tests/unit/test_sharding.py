@@ -3,6 +3,7 @@
 
 import pytest
 from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.utils import as_status
 from ops.model import MaintenanceStatus, Relation
 from ops.testing import Harness
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
@@ -122,8 +123,8 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.compute_statuses",
-        return_value=[StatusObject(status=MaintenanceStatus(""))],
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[StatusObject(status="maintenance", message="")],
     )
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
@@ -336,9 +337,11 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
 
     assert not manager.state.unit_peer_data.drained
 
-    statuses = harness.charm.operator.shard_manager.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.shard_manager.name
+    )
 
-    assert statuses[0].status == MaintenanceStatus("Adding shard to config-server")
+    assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
 def test_shard_manager_synchronise_cluster_secrets_success(

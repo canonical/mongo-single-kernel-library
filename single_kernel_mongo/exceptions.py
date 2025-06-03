@@ -205,7 +205,7 @@ class StatusError(Exception):
     """Exception with ops status."""
 
     def __init__(self, status: StatusObject) -> None:
-        super().__init__(status.status.message)
+        super().__init__(status.message)
         self.status = status
 
 

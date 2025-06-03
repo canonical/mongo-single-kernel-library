@@ -130,8 +130,10 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.manager.component_statuses.add(
-                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
             event.defer()
 
@@ -147,7 +149,9 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.manager.component_statuses.add(
-                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope=Scope.UNIT
+            self.manager.state.statuses.add(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
             event.defer()

@@ -12,6 +12,7 @@ from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
+from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
 from ops import Object, Relation, Unit
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
@@ -89,7 +90,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger()
 
 
-class CharmState(Object):
+class CharmState(Object, StatusesStateProtocol):
     """The Charm State object.
 
     This object represents the charm state, including the different relations
@@ -116,6 +117,9 @@ class CharmState(Object):
         self.secrets = SecretCache(charm)
         self.peer_relation_name = charm.peer_rel_name.value
         self.ldap_peer_relation_name = PeerRelationNames.LDAP_PEERS.value
+        self.statuses_relation_name = PeerRelationNames.STATUS_PEERS.value
+
+        self.statuses = StatusesState(self, self.statuses_relation_name)
 
         self.peer_app_interface = DataPeerData(
             self.model,

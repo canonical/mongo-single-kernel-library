@@ -145,13 +145,17 @@ class LifecycleEventsHandler(Object):
             event.defer()
             return
         except InvalidLdapUserToDnMappingError:
-            self.dependent.component_statuses.add(
-                LdapStatuses.INVALID_LDAP_USER_MAPPING.value, scope=Scope.UNIT
+            self.dependent.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
+                scope=Scope.UNIT,
+                component=self.dependent.name,
             )
             return
         except InvalidLdapQueryTemplateError:
-            self.dependent.component_statuses.add(
-                LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value, scope=Scope.UNIT
+            self.dependent.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value,
+                scope=Scope.UNIT,
+                component=self.dependent.name,
             )
             return
 

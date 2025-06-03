@@ -4,6 +4,7 @@
 from pathlib import PosixPath
 
 import pytest
+from data_platform_helpers.advanced_statuses.utils import as_status
 from httpx import Request, Response
 from lightkube.core.exceptions import ApiError
 from ops.testing import Harness
@@ -19,7 +20,7 @@ def test_start(mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interac
     mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
 
     mongos_harness.charm.on.start.emit()
-    assert mongos_harness.charm.unit.status == MongosStatuses.NEED_CONF_SERVER.value.status
+    assert mongos_harness.charm.unit.status == as_status(MongosStatuses.NEED_CONF_SERVER.value)
 
     mocked_copy.assert_has_calls(
         [

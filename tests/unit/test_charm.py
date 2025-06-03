@@ -185,7 +185,9 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
 
     harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
 
-    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
     assert statuses[0] == LdapStatuses.INVALID_LDAP_USER_MAPPING.value
 
 
@@ -206,7 +208,9 @@ def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
             "ldap-query-template": "{PROVIDED_USER}",
         }
     )
-    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
     assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
@@ -219,7 +223,9 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
             "ldap-query-template": "{USER}",
         }
     )
-    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
     assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
@@ -455,7 +461,9 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     harness.add_relation_unit(rel.id, "mongodb/1")
     harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR)
 
-    statuses = harness.charm.operator.component_statuses.get(scope=Scope.UNIT)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
 
     assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
     mocked_add_replset_member.assert_not_called()

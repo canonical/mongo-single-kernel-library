@@ -18,7 +18,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject, StatusObjectList
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import Object
@@ -295,16 +294,13 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         *args,
         **kwargs,
     ):
+        self.name = "upgrade"
         super(Generic, self).__init__(dependent, *args, **kwargs)  # type: ignore[arg-type]
         self.dependent = dependent
         self.substrate = self.dependent.substrate
         self.upgrade_backend = upgrade_backend
         self.charm = dependent.charm
         self.state = dependent.state
-
-        self.component_statuses = ComponentStatuses(
-            self, name="upgrade", status_relation_name=self.charm.status_peer_rel_name.value
-        )
 
     @property
     def _upgrade(self) -> KubernetesUpgrade | MachineUpgrade | None:
@@ -324,27 +320,33 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         assert self._upgrade
         if self.charm.unit.is_leader():
             status_object = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
-            self.component_statuses.add(status_object, scope=Scope.APP)
+            self.state.statuses.add(status_object, scope=Scope.APP, component=self.name)
 
         # TODO future-work: for organisation of upgrade statuses we must find a stateless way for
         # determining statuses without checking the already set status.
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
-        statuses: StatusObjectList = self.component_statuses.get(scope=Scope.UNIT)
+        statuses: StatusObjectList = self.state.statuses.get(scope=Scope.UNIT, component=self.name)
         if (
             not statuses.root
             or UpgradeStatuses.WAITING_POST_UPGRADE_STATUS in statuses
             or statuses[0] == UpgradeStatuses.ACTIVE_IDLE  # Works because the list is sorted
-            or any("is not up-to date with" in status.status.message for status in statuses)
+            or any("is not up-to date with" in status.message for status in statuses)
         ):
-            self.component_statuses.set(
+            self.state.statuses.set(
                 self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value,
                 scope=Scope.UNIT,
+                component=self.name,
             )
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Gets statuses for upgrades statelessly."""
-        assert self._upgrade
+        if not self._upgrade:
+            return []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
+
         match scope:
             case Scope.UNIT:
                 return [
@@ -408,9 +410,10 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
                 logger.info(
                     f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
                 )
-                self.component_statuses.add(
+                self.state.statuses.add(
                     UpgradeStatuses.INCOMPATIBLE_UPGRADE.value,
                     scope=Scope.UNIT,
+                    component=self.name,
                 )
                 return
 
@@ -439,7 +442,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             authorized = self._upgrade.authorized  # type: ignore
         except PrecheckFailedError as exception:
             self._set_upgrade_status()
-            self.component_statuses.add(exception.status, scope=Scope.UNIT)
+            self.state.statuses.add(exception.status, scope=Scope.UNIT, component=self.name)
             logger.debug(f"Set unit status to {exception.status}")
             logger.error(exception.status.message)
             return

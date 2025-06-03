@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, final
 
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.version_check import (
@@ -135,10 +134,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm,
             self.substrate,
             self.role,
-        )
-
-        self.component_statuses = ComponentStatuses(
-            self, name="mongodb", status_relation_name=self.charm.status_peer_rel_name
         )
 
         container = (
@@ -335,17 +330,21 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.component_statuses.add(MongoDBStatuses.MONGODB_NOT_STARTED.value, scope=Scope.UNIT)
+            self.state.statuses.add(
+                MongoDBStatuses.MONGODB_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
+            )
             raise WorkloadNotReadyError
 
-        self.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+        self.state.statuses.set(
+            CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
+        )
 
         try:
             self._initialise_replica_set()
         except (NotReadyError, PyMongoError, WorkloadExecError) as e:
             logger.error(f"Deferring on start: error={e}")
-            self.component_statuses.add(
-                MongodStatuses.WAITING_REPL_SET_INIT.value, scope=Scope.UNIT
+            self.state.statuses.add(
+                MongodStatuses.WAITING_REPL_SET_INIT.value, scope=Scope.UNIT, component=self.name
             )
             raise
 
@@ -355,7 +354,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
-        self.component_statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT)
+        self.state.statuses.set(
+            CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
+        )
 
         if self.substrate == Substrates.K8S:
             # K8S upgrades result in the start hook getting fired following this pattern
@@ -528,7 +529,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongo_manager.process_added_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
-            self.component_statuses.add(MongodStatuses.WAITING_RECONFIG.value, scope=Scope.UNIT)
+            self.state.statuses.add(
+                MongodStatuses.WAITING_RECONFIG.value, scope=Scope.UNIT, component=self.name
+            )
             raise
 
     @override
@@ -655,7 +658,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
-        if self.compute_statuses(scope=Scope.UNIT):
+        if self.get_statuse(scope=Scope.UNIT, recompute=True):
             logger.info("Early return invalid statuses.")
             return
 
@@ -733,7 +736,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # todo future work - check status of pbm directly
-        pbm_statuses = self.backup_manager.compute_statuses(scope=Scope.UNIT)
+        pbm_statuses = self.backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
         pbm_status = next(iter(pbm_statuses), None)
         if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
             raise NonDeferrableFailedHookChecksError(
@@ -876,7 +879,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongoDBStatuses.MONGODB_NOT_STARTED.value,
                 running="async",
-                async_status_component=self.component_statuses,
+                statuses_state=self.state.statuses,
+                component_name=self.name,
             )
             raise
 
@@ -885,15 +889,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.component_statuses.add(
-                MongoDBStatuses.EXPORTER_NOT_STARTED.value, scope=Scope.UNIT
+            self.state.statuses.add(
+                MongoDBStatuses.EXPORTER_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
             )
             raise
 
         try:
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.component_statuses.add(BackupStatuses.PBM_NOT_STARTED.value, scope=Scope.UNIT)
+            self.state.statuses.add(
+                BackupStatuses.PBM_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
+            )
             raise
 
     @override
@@ -911,7 +917,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 rel_name,
             )
 
-            self.component_statuses.add(MongoDBStatuses.DB_REL_ON_SHARD.value, scope=Scope.UNIT)
+            self.state.statuses.add(
+                MongoDBStatuses.DB_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.name
+            )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
             logger.error(
@@ -919,7 +927,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.component_statuses.add(MongoDBStatuses.SHARDING_ON_REPLICA.value, scope=Scope.UNIT)
+            self.state.statuses.add(
+                MongoDBStatuses.SHARDING_ON_REPLICA.value, scope=Scope.UNIT, component=self.name
+            )
             return False
         return True
 
@@ -987,9 +997,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Returns True if the last replica (juju unit) is getting removed."""
         return self.state.planned_units == 0 and len(self.state.peers_units) == 0
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
 
         if scope == Scope.APP:
             return charm_statuses

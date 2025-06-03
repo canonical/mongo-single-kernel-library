@@ -10,7 +10,6 @@ import json
 import logging
 from typing import TYPE_CHECKING, final
 
-from data_platform_helpers.advanced_statuses.components import ComponentStatuses
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from lightkube.core.exceptions import ApiError
@@ -84,10 +83,6 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm,
             self.substrate,
             self.role,
-        )
-
-        self.component_statuses = ComponentStatuses(
-            self, name="mongos", status_relation_name=self.charm.status_peer_rel_name
         )
 
         container = (
@@ -192,7 +187,8 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongosStatuses.NEED_CONF_SERVER.value,
                 scope=Scope.UNIT,
-                async_status_component=self.component_statuses,
+                statuses_state=self.state.statuses,
+                component_name=self.name,
             )
 
     @override
@@ -217,13 +213,17 @@ class MongosOperator(OperatorProtocol, Object):
                     "['nodeport', 'none']",
                 )
 
-                self.component_statuses.add(
-                    MongosStatuses.INVALID_EXPOSE_EXTERNAL.value, scope=Scope.UNIT
+                self.state.statuses.add(
+                    MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
+                    scope=Scope.UNIT,
+                    component=self.name,
                 )
                 return
 
-            self.component_statuses.delete(
-                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value, scope=Scope.UNIT
+            self.state.statuses.delete(
+                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value,
+                scope=Scope.UNIT,
+                component=self.name,
             )
             self.update_k8s_external_services()
 
@@ -331,7 +331,8 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongosStatuses.MONGOS_NOT_STARTED.value,
                 running="async",
-                async_status_component=self.component_statuses,
+                statuses_state=self.state.statuses,
+                component_name=self.name,
             )
             raise
 
@@ -513,7 +514,7 @@ class MongosOperator(OperatorProtocol, Object):
             return False
 
         if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.status.message}")
+            logger.info(f"Invalid TLS integration: {status.message}")
             return False
 
         if not self.is_mongos_running():
@@ -522,9 +523,12 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def compute_statuses(self, scope: Scope) -> list[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name)
 
         if (
             self.substrate == Substrates.K8S
@@ -549,7 +553,7 @@ class MongosOperator(OperatorProtocol, Object):
             return charm_statuses
 
         if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.status.message}")
+            logger.info(f"Invalid TLS integration: {status.message}")
             # if TLS is misconfigured we will get redherrings on the remaining messages
             charm_statuses.append(status)
             return charm_statuses
