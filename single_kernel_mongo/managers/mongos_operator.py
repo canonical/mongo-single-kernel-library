@@ -71,7 +71,7 @@ logger = logging.getLogger(__name__)
 class MongosOperator(OperatorProtocol, Object):
     """Operator for Mongos Related Charms."""
 
-    name = CharmKind.MONGOS
+    name = CharmKind.MONGOS.value
     workload: MongosWorkload
 
     def __init__(self, charm: AbstractMongoCharm):

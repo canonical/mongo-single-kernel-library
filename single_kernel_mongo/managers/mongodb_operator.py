@@ -122,7 +122,7 @@ logger = logging.getLogger(__name__)
 class MongoDBOperator(OperatorProtocol, Object):
     """Operator for MongoDB Related Charms."""
 
-    name = CharmKind.MONGOD
+    name = CharmKind.MONGOD.value
     workload: MongoDBWorkload
 
     def __init__(self, charm: AbstractMongoCharm):

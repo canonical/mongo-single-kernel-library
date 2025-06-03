@@ -29,7 +29,6 @@ from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
-    CharmKind,
     Scope,
     Substrates,
     TrustStoreFiles,
@@ -74,7 +73,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[CharmKind]
+    name: ClassVar[str]
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager

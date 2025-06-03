@@ -77,7 +77,7 @@ class LifecycleEventsHandler(Object):
 
         if self.charm.substrate == Substrates.K8S:
             self.framework.observe(
-                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"),
+                getattr(self.charm.on, f"{dependent.name}_pebble_ready"),
                 self.on_start,
             )
 

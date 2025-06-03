@@ -72,6 +72,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
 
         # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)
+        self.state = self.operator.state
 
         # Status manager stores the operator locally
         self.status_handler = StatusHandler(self, self, *self.operator.components)
