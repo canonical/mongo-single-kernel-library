@@ -658,7 +658,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
-        if self.get_statuse(scope=Scope.UNIT, recompute=True):
+        if self.get_statuses(scope=Scope.UNIT, recompute=True):
             logger.info("Early return invalid statuses.")
             return
 
