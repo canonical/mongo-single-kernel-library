@@ -298,10 +298,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
             if unreachable_shards := self.get_unreachable_shards():
                 charm_statuses.append(ConfigServerStatuses.unreachable_shards(unreachable_shards))
-        except ServerSelectionTimeoutError as e:
-            # Usually it is du to ReplicaSetNoPrimary
-            logger.debug(f"Got error {e} while checking replica set status")
-            return [ConfigServerStatuses.WAITING_ELECTION.value]
+        except ServerSelectionTimeoutError:
+            return []
 
         return charm_statuses if charm_statuses else [ConfigServerStatuses.ACTIVE_IDLE.value]
 
