@@ -50,6 +50,8 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs', '--without-hashes']
+    build-environment:
+      - PIP_CONSTRAINT: constraints.txt # Workaround for typing-extensions / pydantic-core incompatibility
     build-packages:
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
@@ -90,5 +92,6 @@ parts:
     source: .
     stage:
       - LICENSE
+      - constraints.txt
       - charm_version
       - workload_version
