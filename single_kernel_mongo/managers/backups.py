@@ -336,6 +336,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         self.set_environment()
         self.workload.start()
 
+        # Clear statuses before resync as we want to update it anyway.
+        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+
         # pbm has a flakely resync and it is necessary to wait for no actions to be running before
         # resync-ing. See: https://jira.percona.com/browse/PBM-1038
         for attempt in Retrying(
