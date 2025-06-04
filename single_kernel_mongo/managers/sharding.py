@@ -954,7 +954,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         if not self.cluster_password_synced():
             charm_statuses.append(ShardStatuses.SYNCING_PASSWORDS.value)
 
-        if not self._is_shard_aware():
-            charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
+        try:
+            if not self._is_shard_aware():
+                charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
+        except (ServerSelectionTimeoutError, OperationFailure):
+            # A status is already raised by mongo manager.
+            return []
 
         return charm_statuses or [ShardStatuses.ACTIVE_IDLE.value]
