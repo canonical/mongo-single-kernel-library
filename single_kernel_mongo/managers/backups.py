@@ -26,11 +26,9 @@ from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtoc
 from ops import Container
 from ops.framework import Object
 from ops.model import (
-    ActiveStatus,
     MaintenanceStatus,
     Relation,
     StatusBase,
-    WaitingStatus,
 )
 from tenacity import (
     Retrying,
@@ -354,11 +352,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
                 # todo future work - check status of pbm directly
                 # wait for backup/restore to finish
-                if isinstance(pbm_status.status, (MaintenanceStatus)):
+                if pbm_status.status == "maintenance":
                     raise PBMBusyError
 
                 # if a resync is running restart the service
-                if isinstance(pbm_status.status, (WaitingStatus)):
+                if pbm_status.status == "waiting":
                     self.workload.restart()
                     raise PBMBusyError
 
@@ -654,7 +652,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if (
             current_pbm_status.status == previous_pbm_status.name
             and current_pbm_status.message == previous_pbm_status.message
-            and not isinstance(current_pbm_status, ActiveStatus)
+            and not current_pbm_status.status == "active"
         ):
             return f"Operation is still in progress: '{current_pbm_status.message}'"
 
