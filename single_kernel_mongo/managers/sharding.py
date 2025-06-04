@@ -260,7 +260,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the config-server."""
         charm_statuses: list[StatusObject] = []
 
@@ -291,12 +291,17 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if not self.cluster_password_synced():
             charm_statuses.append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
-        if shard_draining := self.dependent.mongo_manager.get_draining_shards():
-            draining = ",".join(shard_draining)
-            charm_statuses.append(ConfigServerStatuses.draining_shard(draining))
+        try:
+            if shard_draining := self.dependent.mongo_manager.get_draining_shards():
+                draining = ",".join(shard_draining)
+                charm_statuses.append(ConfigServerStatuses.draining_shard(draining))
 
-        if unreachable_shards := self.get_unreachable_shards():
-            charm_statuses.append(ConfigServerStatuses.unreachable_shards(unreachable_shards))
+            if unreachable_shards := self.get_unreachable_shards():
+                charm_statuses.append(ConfigServerStatuses.unreachable_shards(unreachable_shards))
+        except ServerSelectionTimeoutError as e:
+            # Usually it is du to ReplicaSetNoPrimary
+            logger.debug(f"Got error {e} while checking replica set status")
+            return [ConfigServerStatuses.WAITING_ELECTION.value]
 
         return charm_statuses if charm_statuses else [ConfigServerStatuses.ACTIVE_IDLE.value]
 

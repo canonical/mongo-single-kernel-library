@@ -162,6 +162,7 @@ class ConfigServerStatuses(Enum):
         status="waiting", message="Waiting to sync passwords across the cluster..."
     )
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    WAITING_ELECTION = StatusObject(status="waiting", message="Waiting for primary re-election...")
 
     @staticmethod
     def adding_shard(shard: str) -> StatusObject:
