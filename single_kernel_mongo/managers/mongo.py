@@ -20,7 +20,12 @@ from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops import Object
 from ops.model import Relation
-from pymongo.errors import AutoReconnect, PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import (
+    AutoReconnect,
+    OperationFailure,
+    PyMongoError,
+    ServerSelectionTimeoutError,
+)
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
@@ -528,6 +533,9 @@ class MongoManager(Object, ManagerStatusProtocol):
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
             return [MongodStatuses.WAITING_RECONNECT.value]
+        except OperationFailure as e:
+            logger.warning("Authentication Failed: %s", e, exc_info=True)
+            return [MongodStatuses.WAITING_RECONFIG.value]
         except MissingCredentialsError as e:
             logger.warning("Missing credentials: %s", e, exc_info=True)
             return [MongodStatuses.MISSING_CREDENTIALS]
