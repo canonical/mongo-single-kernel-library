@@ -330,7 +330,6 @@ class MongosOperator(OperatorProtocol, Object):
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
                 MongosStatuses.MONGOS_NOT_STARTED.value,
-                running="async",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
