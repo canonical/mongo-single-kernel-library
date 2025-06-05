@@ -435,6 +435,8 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
 
+        self._set_upgrade_status()
+
     def _on_vm_outdated(self) -> None:
         """This is run on VMs if the current unit is outdated."""
         try:

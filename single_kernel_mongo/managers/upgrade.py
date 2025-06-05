@@ -191,6 +191,11 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
 
         logger.debug("Cluster is healthy after refreshing unit %s", self.charm.unit.name)
 
+        if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
+            self.state.statuses.set(
+                status=UpgradeStatuses.ACTIVE_IDLE.value, scope=Scope.APP, component=self.name
+            )
+
         # Leader of config-server must wait for all shards to be upgraded before finalising the
         # upgrade.
         if not self.charm.unit.is_leader() or not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
@@ -255,9 +260,10 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
 
         self._upgrade.unit_state = UnitState.HEALTHY
-        self.state.statuses.set(
-            UpgradeStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
-        )
+
+        # Clear the statuses and set the new upgrade status.
+        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+        self._set_upgrade_status()
 
 
 class MongosUpgradeManager(MongoUpgradeManager[T]):
