@@ -1024,11 +1024,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
             charm_statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
-        elif (  # don't bother checking revision mismatch on sharding interface if replica
-            revision_mismatch_status
-            := self.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            charm_statuses.append(revision_mismatch_status)
+        elif self.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # don't bother checking revision mismatch on sharding interface if replica
+            return charm_statuses
 
         if not self.cluster_manager.is_valid_mongos_integration():
             charm_statuses.append(MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value)

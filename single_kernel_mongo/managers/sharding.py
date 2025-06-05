@@ -176,11 +176,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.state.statuses.add(revision_mismatch_status, scope=Scope.UNIT, component=self.name)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
@@ -273,11 +269,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if self.skip_config_server_status():
             return charm_statuses
 
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            charm_statuses.append(revision_mismatch_status)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            return charm_statuses
 
         uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
@@ -494,11 +487,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.state.statuses.add(revision_mismatch_status, scope=Scope.UNIT, component=self.name)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")
@@ -932,11 +921,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             if not self.state.unit_peer_data.drained:
                 return [ShardStatuses.NEED_CONF_SERVER.value]
 
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            charm_statuses.append(revision_mismatch_status)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # No need to go further if the revision is invalid
             return charm_statuses
 
