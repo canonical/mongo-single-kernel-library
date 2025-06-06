@@ -286,7 +286,11 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             charm_statuses[Scope.UNIT].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
         try:
-            if shard_draining := self.dependent.mongo_manager.get_draining_shards():
+            with MongoConnection(self.state.mongos_config) as mongo:
+                cluster_shards = mongo.get_shard_members()
+
+            relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+            if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
                 charm_statuses[Scope.UNIT].append(status)
@@ -802,7 +806,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 )
             except ShardNotPlannedForRemovalError:
                 logger.info(
-                    "Shard %s has not been identifies for removal. Must wait for mongos cluster-admin to remove shard."
+                    "Shard %s has not been identified for removal. Must wait for mongos cluster-admin to remove shard."
                 )
                 self.charm.status_handler.set_running_status(
                     ShardStatuses.WAITING_TO_REMOVE.value, scope=Scope.UNIT
