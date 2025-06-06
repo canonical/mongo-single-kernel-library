@@ -212,7 +212,7 @@ class ShardStatuses(Enum):
         status="active", message="Shard drained from cluster, ready for removal."
     )
     WAITING_TO_REMOVE = StatusObject(
-        status="waiting", message="Waiting for config-server to remove shard"
+        status="waiting", message="Waiting for config-server to remove shard", running="blocking"
     )
     SYNCING_PASSWORDS = StatusObject(
         status="waiting", message="Waiting to sync passwords across the cluster..."
