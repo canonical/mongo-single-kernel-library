@@ -806,7 +806,8 @@ class ShardManager(Object, ManagerStatusProtocol):
                 )
             except ShardNotPlannedForRemovalError:
                 logger.info(
-                    "Shard %s has not been identified for removal. Must wait for mongos cluster-admin to remove shard."
+                    "Shard %s has not been identified for removal. Must wait for mongos cluster-admin to remove shard.",
+                    self.charm.app.name,
                 )
                 self.charm.status_handler.set_running_status(
                     ShardStatuses.WAITING_TO_REMOVE.value, scope=Scope.UNIT
