@@ -258,7 +258,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the config-server."""
-        charm_statuses: list[StatusObject] = []
+        charm_statuses: dict[Scope, list[StatusObject]] = {Scope.APP: [], Scope.UNIT: []}
 
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name)
@@ -267,34 +267,43 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return []
 
         if self.skip_config_server_status():
-            return charm_statuses
+            return charm_statuses[scope]
 
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
-            return charm_statuses
+            return charm_statuses[scope]
 
         uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
-            charm_statuses.append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
+            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses.append(ConfigServerStatuses.NEED_SHARDS.value)
+            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.NEED_SHARDS.value)
+            charm_statuses[Scope.APP].append(ConfigServerStatuses.NEED_SHARDS.value)
             # return as other statuses require shard(s) to compute
-            return charm_statuses
+            return charm_statuses[scope]
 
         if not self.cluster_password_synced():
-            charm_statuses.append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
+            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
         try:
             if shard_draining := self.dependent.mongo_manager.get_draining_shards():
                 draining = ",".join(shard_draining)
-                charm_statuses.append(ConfigServerStatuses.draining_shard(draining))
+                status = ConfigServerStatuses.draining_shard(draining)
+                charm_statuses[Scope.UNIT].append(status)
+                charm_statuses[Scope.APP].append(status)
 
             if unreachable_shards := self.get_unreachable_shards():
-                charm_statuses.append(ConfigServerStatuses.unreachable_shards(unreachable_shards))
+                charm_statuses[Scope.UNIT].append(
+                    ConfigServerStatuses.unreachable_shards(unreachable_shards)
+                )
         except ServerSelectionTimeoutError:
             return []
 
-        return charm_statuses if charm_statuses else [ConfigServerStatuses.ACTIVE_IDLE.value]
+        return (
+            charm_statuses[scope]
+            if charm_statuses[scope]
+            else [ConfigServerStatuses.ACTIVE_IDLE.value]
+        )
 
     def add_shards(self):
         """Add shards on all relations."""
