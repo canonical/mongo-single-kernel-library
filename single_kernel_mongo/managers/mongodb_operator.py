@@ -618,7 +618,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 raise EarlyRemovalOfConfigServerError(early_removal_message)
             if self.state.is_role(MongoDBRoles.SHARD) and self.state.shard_relation is not None:
                 logger.info("Wait for shard to drain before detaching storage.")
-                self.charm.status_handler.set_running_status(ShardStatuses.DRAINING_SHARD.value)
+                self.charm.status_handler.set_running_status(
+                    ShardStatuses.DRAINING_SHARD.value, scope=Scope.UNIT
+                )
                 mongos_hosts = self.state.shard_state.mongos_hosts
                 self.shard_manager.wait_for_draining(mongos_hosts)
                 logger.info("Shard successfully drained storage.")
