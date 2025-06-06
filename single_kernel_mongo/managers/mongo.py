@@ -476,10 +476,12 @@ class MongoManager(Object, ManagerStatusProtocol):
                     raise NotReadyError
                 mongo.add_replset_member(member)
 
-    def get_draining_shards(self, config: MongoConfiguration | None = None) -> list[str]:
+    def get_draining_shards(
+        self, shard_name: str, config: MongoConfiguration | None = None
+    ) -> list[str]:
         """Returns the shard that is currently draining."""
         with MongoConnection(config or self.state.mongos_config) as mongo:
-            draining_shards = mongo.get_draining_shards()
+            draining_shards = mongo.get_draining_shards(shard_name=shard_name)
 
             # in theory, this should always be a list of one. But if something has gone wrong we
             # should take note and log it

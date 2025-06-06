@@ -834,7 +834,9 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         config = self.state.mongos_config_for_user(OperatorUser, set(mongos_hosts))
 
-        drained = shard_name not in self.dependent.mongo_manager.get_draining_shards(config=config)
+        drained = shard_name not in self.dependent.mongo_manager.get_draining_shards(
+            config=config, shard_name=shard_name
+        )
 
         self.state.unit_peer_data.drained = drained
         return drained

@@ -161,8 +161,8 @@ def test_config_server_get_status_internal_mongos_not_running(
     )
 
     mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
-        return_value=[],
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value={"shard"},
     )
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.get_unreachable_shards",
@@ -195,8 +195,8 @@ def test_config_server_get_status_password_not_synced(
         return_value=False,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
-        return_value=[],
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value={"shard"},
     )
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.get_unreachable_shards",
@@ -225,8 +225,8 @@ def test_config_server_get_status_shard_draining(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
-        return_value=["shard0"],
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value={"shard", "shard0"},
     )
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.cluster_password_synced",
@@ -255,8 +255,8 @@ def test_config_server_get_status_unreachable_shards(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
-        return_value=[],
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value={"shard"},
     )
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.cluster_password_synced",
@@ -286,8 +286,8 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_draining_shards",
-        return_value=[],
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value={"shard"},
     )
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ConfigServerManager.cluster_password_synced",
