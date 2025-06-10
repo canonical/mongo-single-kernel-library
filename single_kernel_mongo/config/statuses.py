@@ -27,8 +27,8 @@ class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
-    MONGODB_NOT_STARTED = WaitingStatus("Waiting to start mongod...")
-    EXPORTER_NOT_STARTED = WaitingStatus("Waiting to start mongodb-exporter...")
+    WAITING_FOR_MONGODB_START = WaitingStatus("Waiting to start mongod...")
+    WAITING_FOR_EXPORTER_START = WaitingStatus("Waiting to start mongodb-exporter...")
     SHARDING_ON_REPLICA = BlockedStatus("Sharding interface cannot be used by replicas.")
     UNSUPPORTED_MONGOS_REL = BlockedStatus(
         "Relation to mongos not supported, config role must be config-server."
@@ -46,8 +46,8 @@ class MongoDBStatuses(Enum):
 class MongosStatuses(Enum):
     """Mongos related statuses."""
 
-    INVALD_EXPOSE_EXTERNAL = BlockedStatus("Config option for expose-external not valid.")
-    NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
+    INVALID_EXPOSE_EXTERNAL = BlockedStatus("Config option for expose-external not valid.")
+    MISSING_CONF_SERVER_REL = BlockedStatus("Missing relation to config-server.")
     CONNECTING_TO_CONFIG_SERVER = WaitingStatus("Connecting to config-server...")
     WAITING_FOR_SECRETS = WaitingStatus("Waiting for secrets from config-server")
     REQUIRES_TLS = BlockedStatus("mongos requires TLS to be enabled.")
@@ -88,7 +88,7 @@ class BackupStatuses(Enum):
 
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
-    PBM_NOT_STARTED = WaitingStatus("Waiting for pbm to start...")
+    WAITING_FOR_PBM_START = WaitingStatus("Waiting for pbm to start...")
     PBM_MISSING_CONFIGS = BlockedStatus("s3 configurations missing.")
     PBM_INCORRECT_CREDS = BlockedStatus("s3 credentials are incorrect.")
     PBM_INCOMPATIBLE_CONF = BlockedStatus("s3 configurations are incompatible.")
@@ -113,7 +113,7 @@ class ConfigServerStatuses(Enum):
 
     # todo consider this status to be put in charm
     MONGOS_NOT_RUNNING = BlockedStatus("Internal mongos is not running.")
-    NEED_SHARDS = BlockedStatus("Missing relation to shard(s).")
+    MISSING_SHARDING_REL = BlockedStatus("Missing relation to shard(s).")
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
     ACTIVE_IDLE = ActiveStatus()
 
@@ -148,7 +148,7 @@ class ShardStatuses(Enum):
     REQUIRES_NO_TLS = BlockedStatus("Shard has TLS enabled, but config-server does not.")
     CA_MISMATCH = BlockedStatus("Shard CA and Config-Server CA don't match.")
 
-    NEED_CONF_SERVER = BlockedStatus("Missing relation to config-server.")
+    MISSING_CONF_SERVER_REL = BlockedStatus("Missing relation to config-server.")
     SHARD_DRAINED = ActiveStatus("Shard drained from cluster, ready for removal.")
     FAILED_TO_DRAIN = BlockedStatus("Failed to drain shard from cluster")
     WAITING_TO_REMOVE = WaitingStatus("Waiting for config-server to remove shard")
@@ -169,7 +169,7 @@ class ShardStatuses(Enum):
     ) -> StatusBase:
         """Returns needs shard upgrade status."""
         return BlockedStatus(
-            f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier})."
+            f"Charm revision ({current_charms_version}{local_identifier}) is not up to date with config-server ({config_server_revision}{remote_local_identifier})."
         )
 
     @staticmethod
@@ -179,7 +179,7 @@ class ShardStatuses(Enum):
     ) -> StatusBase:
         """Returns needs shard upgrade status."""
         return BlockedStatus(
-            f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server."
+            f"Charm revision ({current_charms_version}{local_identifier}) is not up to date with config-server."
         )
 
 
@@ -206,7 +206,7 @@ class UpgradeStatuses(Enum):
     )
     ACTIVE_IDLE = ActiveStatus()
     WAITING_POST_UPGRADE_STATUS = WaitingStatus("Waiting for post upgrade checks...")
-    REFRESH_IN_PROG = MaintenanceStatus(
+    REFRESH_IN_PROGRESS = MaintenanceStatus(
         "Refreshing. To rollback, `juju refresh` to the previous revision"
     )
 
@@ -250,7 +250,7 @@ class LdapStatuses(Enum):
     LDAP_REL_ON_SHARD = BlockedStatus("Cannot integrate LDAP with shard.")
     TLS_REQUIRED = BlockedStatus("TLS is mandatory for LDAP transport.")
     LDAP_REQUIRED = BlockedStatus("GLauth TLS is integrated but LDAP is not.")
-    INVALID_HASH_STATUS = BlockedStatus(
+    LDAP_SERVERS_MISMATCH = BlockedStatus(
         "mongos and config-server not integrated with the same ldap server."
     )
     WAITING_FOR_DATA = WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
@@ -264,6 +264,6 @@ class LdapStatuses(Enum):
     ACTIVE_IDLE = ActiveStatus()
 
     @staticmethod
-    def on_error_status(err: Exception):
+    def on_error_status(err: Exception) -> StatusBase:
         """On error."""
         return BlockedStatus(f"{err}")

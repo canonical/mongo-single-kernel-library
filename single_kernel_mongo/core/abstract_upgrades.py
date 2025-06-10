@@ -178,7 +178,7 @@ class AbstractUpgrade(ABC):
             if len(self.state.units_upgrade_peer_data) > 1:
                 resume_string = f"Verify highest unit is healthy & run `{UpgradeActions.RESUME_ACTION_NAME.value}` action. "
             return UpgradeStatuses.refreshing_needs_resume(resume_string)
-        return UpgradeStatuses.REFRESH_IN_PROG.value
+        return UpgradeStatuses.REFRESH_IN_PROGRESS.value
 
     def set_versions_in_app_databag(self) -> None:
         """Save current versions in app databag.
@@ -260,7 +260,7 @@ class AbstractUpgrade(ABC):
 
         self.add_status_data_for_legacy_upgrades()
 
-    def add_status_data_for_legacy_upgrades(self):
+    def add_status_data_for_legacy_upgrades(self) -> None:
         """Add dummy data for legacy upgrades.
 
         Upgrades supported on revision 212 and lower require status information from shards.
@@ -329,7 +329,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 )
             )
             or self.charm.unit.status == UpgradeStatuses.WAITING_POST_UPGRADE_STATUS
-            or "is not up-to date with" in self.charm.unit.status.message
+            or "is not up to date with" in self.charm.unit.status.message
         ):
             self.charm.status_manager.set_and_share_status(
                 self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value

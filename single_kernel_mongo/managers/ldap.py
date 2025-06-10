@@ -120,7 +120,7 @@ class LDAPManager(Object, StatusProvider):
             case statuses:
                 status = statuses[0]
                 self.charm.status_manager.set_and_share_status(status)
-                if status == LdapStatuses.INVALID_HASH_STATUS.value:
+                if status == LdapStatuses.LDAP_SERVERS_MISMATCH.value:
                     raise InvalidLdapHashError(
                         "mongos and config-server not integrated with the same ldap server."
                     )
@@ -209,7 +209,7 @@ class LDAPManager(Object, StatusProvider):
                     "Config Server and mongos integrations with LDAP have a different checksum."
                     "This usually means they are not integrated with the same LDAP application."
                 )
-                return [LdapStatuses.INVALID_HASH_STATUS.value]
+                return [LdapStatuses.LDAP_SERVERS_MISMATCH.value]
 
         ldap_relation_status = self.state.ldap.ldap_ready()
         ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()

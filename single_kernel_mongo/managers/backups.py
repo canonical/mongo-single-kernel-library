@@ -298,7 +298,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
         # PBM requires all configuration to be set in order to run.
         if not self.workload.active():
-            return [BackupStatuses.PBM_NOT_STARTED.value]
+            return [BackupStatuses.WAITING_FOR_PBM_START.value]
 
         try:
             previous_status = self.charm.unit.status

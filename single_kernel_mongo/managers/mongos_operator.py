@@ -177,7 +177,7 @@ class MongosOperator(OperatorProtocol, Object):
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
             self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongos.value.NEED_CONF_SERVER.value
+                CharmStatuses.mongos.value.MISSING_CONF_SERVER_REL.value
             )
 
     @override
@@ -203,12 +203,12 @@ class MongosOperator(OperatorProtocol, Object):
                 )
 
                 self.charm.status_manager.set_and_share_status(
-                    CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                    CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value
                 )
                 return
 
             self.charm.status_manager.clear_status(
-                CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value
+                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value
             )
             self.update_k8s_external_services()
 
@@ -520,7 +520,7 @@ class MongosOperator(OperatorProtocol, Object):
                 self.charm.config["expose-external"],
                 "['nodeport', 'none']",
             )
-            charm_statuses.append(CharmStatuses.mongos.value.INVALD_EXPOSE_EXTERNAL.value)
+            charm_statuses.append(CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value)
 
         if not self.workload.workload_present:
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
@@ -529,7 +529,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            charm_statuses.append(CharmStatuses.mongos.value.NEED_CONF_SERVER.value)
+            charm_statuses.append(CharmStatuses.mongos.value.MISSING_CONF_SERVER_REL.value)
             # don't bother checking remaining statuses if no config-server is present
             return charm_statuses
 

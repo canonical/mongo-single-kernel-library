@@ -270,7 +270,7 @@ class ConfigServerManager(Object, StatusProvider):
             charm_statuses.append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses.append(ConfigServerStatuses.NEED_SHARDS.value)
+            charm_statuses.append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses
 
@@ -875,7 +875,7 @@ class ShardManager(Object, StatusProvider):
                 return [ShardStatuses.SHARD_DRAINED.value]
 
             if not self.state.unit_peer_data.drained:
-                return [ShardStatuses.NEED_CONF_SERVER.value]
+                return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
 
         if tls_status := self.get_tls_status():
             charm_statuses.append(tls_status)

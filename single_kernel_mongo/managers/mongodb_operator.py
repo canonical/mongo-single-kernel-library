@@ -312,7 +312,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+                CharmStatuses.mongodb.value.WAITING_FOR_MONGODB_START.value
             )
             raise WorkloadNotReadyError
 
@@ -644,7 +644,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.mongo_manager.mongod_ready():
             self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value
+                CharmStatuses.mongodb.value.WAITING_FOR_MONGODB_START.value
             )
             return
 
@@ -855,14 +855,16 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
             self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.EXPORTER_NOT_STARTED.value
+                CharmStatuses.mongodb.value.WAITING_FOR_EXPORTER_START.value
             )
             raise
 
         try:
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
-            self.charm.status_manager.set_and_share_status(BackupStatuses.PBM_NOT_STARTED.value)
+            self.charm.status_manager.set_and_share_status(
+                BackupStatuses.WAITING_FOR_PBM_START.value
+            )
             raise
 
     @override
@@ -968,10 +970,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
         else:  # don't bother checking if started if not installed
             if not self.state.db_initialised:
-                charm_statuses.append(CharmStatuses.mongodb.value.MONGODB_NOT_STARTED.value)
+                charm_statuses.append(CharmStatuses.mongodb.value.WAITING_FOR_MONGODB_START.value)
 
             if not self.mongodb_exporter_config_manager.workload.active():
-                charm_statuses.append(CharmStatuses.mongodb.value.EXPORTER_NOT_STARTED.value)
+                charm_statuses.append(CharmStatuses.mongodb.value.WAITING_FOR_EXPORTER_START.value)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
             charm_statuses.append(CharmStatuses.mongodb.value.SHARDING_ON_REPLICA.value)
