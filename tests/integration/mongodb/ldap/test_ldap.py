@@ -86,7 +86,7 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-async def test_integrate_ldap_only(ops_test: OpsTest):
+async def test_integrate_ldap_only(ops_test: OpsTest, substrate: Substrate):
     """Only integrate ldap endpoint, should go into blocked state."""
     db_app_name = await get_app_name(ops_test)
 
@@ -95,6 +95,7 @@ async def test_integrate_ldap_only(ops_test: OpsTest):
 
     await wait_for_mongodb_units_blocked(
         ops_test,
+        substrate,
         db_app_name,
         status="TLS is mandatory for LDAP transport.",
         timeout=300,
@@ -228,6 +229,7 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
 
     await wait_for_mongodb_units_blocked(
         ops_test,
+        substrate,
         db_app_name,
         status="GLauth TLS is integrated but LDAP is not.",
         timeout=300,
@@ -269,6 +271,7 @@ async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: S
 
     await wait_for_mongodb_units_blocked(
         ops_test,
+        substrate,
         db_app_name,
         status="TLS is mandatory for LDAP transport.",
         timeout=300,

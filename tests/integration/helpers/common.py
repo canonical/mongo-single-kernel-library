@@ -300,7 +300,7 @@ async def destroy_cluster(
             assert finished, "old cluster not destroyed successfully"
 
 
-def unit_uri(ip_address: str, password, app) -> str:
+def unit_uri(ip_address: str, password: str, app: str) -> str:
     """Generates URI that is used by MongoDB to connect to a single replica.
 
     Args:
@@ -604,7 +604,7 @@ async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
     return json.loads(stdout)["applications"][app]
 
 
-async def get_application_units(ops_test: OpsTest, app: str) -> list[Unit]:
+async def get_application_units(ops_test: OpsTest, substrate: str, app: str) -> list[Unit]:
     """Get fully detailed units of an application."""
     # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
     # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
@@ -614,14 +614,18 @@ async def get_application_units(ops_test: OpsTest, app: str) -> list[Unit]:
     for u_name, unit in raw_app["units"].items():
         unit_id = int(u_name.split("/")[-1])
 
-        if not unit.get("public-address"):
+        if substrate == "lxd" and not (address := unit.get("public-address")):
+            # unit not ready yet...
+            continue
+
+        if substrate == "microk8s" and not (address := unit.get("address")):
             # unit not ready yet...
             continue
 
         unit = Unit(
             id=unit_id,
             name=u_name.replace("/", "-"),
-            ip=unit["public-address"],
+            ip=address,
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
             machine_id=int(unit["machine"]),
@@ -687,13 +691,17 @@ async def assert_subordinate_blocked_with_status(
 
 
 async def check_all_units_blocked_with_status(
-    ops_test: OpsTest, db_app_name: str, status: str | None, subordinate: bool = False
+    ops_test: OpsTest,
+    substrate: str,
+    db_app_name: str,
+    status: str | None,
+    subordinate: bool = False,
 ) -> None:
     # this is necessary because ops_model.units does not update the unit statuses
     if subordinate:
         await assert_subordinate_blocked_with_status(ops_test, db_app_name, status)
         return
-    for unit in await get_application_units(ops_test, db_app_name):
+    for unit in await get_application_units(ops_test, substrate, db_app_name):
         assert (
             unit.workload_status.value == "blocked"
         ), f"unit {unit.name} not in blocked state, in {unit.workload_status.value}"
@@ -705,6 +713,7 @@ async def check_all_units_blocked_with_status(
 
 async def wait_for_mongodb_units_blocked(
     ops_test: OpsTest,
+    substrate: str,
     db_app_name: str,
     status: str | None = None,
     timeout=20,
@@ -725,7 +734,7 @@ async def wait_for_mongodb_units_blocked(
         for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(1), reraise=True):
             with attempt:
                 await check_all_units_blocked_with_status(
-                    ops_test, db_app_name, status, subordinate
+                    ops_test, substrate, db_app_name, status, subordinate
                 )
     finally:
         await ops_test.model.set_config({hook_interval_key: old_interval})

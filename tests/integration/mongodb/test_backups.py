@@ -66,7 +66,7 @@ async def test_deploy_charms(
 
 
 @pytest.mark.abort_on_fail
-async def test_blocked_missing_config(ops_test: OpsTest) -> None:
+async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test that when charm is missing pbm information that it reports that."""
     db_app_name = await get_app_name(ops_test)
     await ops_test.model.integrate(S3_APP_NAME, db_app_name)
@@ -76,12 +76,12 @@ async def test_blocked_missing_config(ops_test: OpsTest) -> None:
     )
 
     await wait_for_mongodb_units_blocked(
-        ops_test, db_app_name, status="s3 configurations missing.", timeout=300
+        ops_test, substrate, db_app_name, status="s3 configurations missing.", timeout=300
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_blocked_incorrect_creds(ops_test: OpsTest) -> None:
+async def test_blocked_incorrect_creds(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verifies that the charm goes into blocked status when s3 creds are incorrect."""
     db_app_name = await get_app_name(ops_test)
 
@@ -98,12 +98,14 @@ async def test_blocked_incorrect_creds(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active")
 
     await wait_for_mongodb_units_blocked(
-        ops_test, db_app_name, status="s3 credentials are incorrect.", timeout=300
+        ops_test, substrate, db_app_name, status="s3 credentials are incorrect.", timeout=300
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_blocked_incorrect_conf(ops_test: OpsTest, cloud_configs) -> None:
+async def test_blocked_incorrect_conf(
+    ops_test: OpsTest, substrate: Substrate, cloud_configs
+) -> None:
     """Verifies that the charm goes into blocked status when s3 config options are incorrect."""
     db_app_name = await get_app_name(ops_test)
 
@@ -113,7 +115,7 @@ async def test_blocked_incorrect_conf(ops_test: OpsTest, cloud_configs) -> None:
     # wait for both applications to be idle with the correct statuses
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active")
     await wait_for_mongodb_units_blocked(
-        ops_test, db_app_name, status="s3 configurations are incompatible.", timeout=300
+        ops_test, substrate, db_app_name, status="s3 configurations are incompatible.", timeout=300
     )
 
 

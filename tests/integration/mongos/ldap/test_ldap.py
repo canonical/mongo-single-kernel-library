@@ -123,6 +123,7 @@ async def test_build_and_deploy_mongos(
     # verify that Charmed Mongos is blocked and reports incorrect credentials
     await wait_for_mongodb_units_blocked(
         ops_test,
+        substrate,
         app_name,
         status="Missing relation to config-server.",
         timeout=300,
@@ -156,6 +157,7 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
     # We go to blocked because config server is not integrated with ldap.
     await wait_for_mongodb_units_blocked(
         ops_test,
+        substrate,
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
         timeout=300,
