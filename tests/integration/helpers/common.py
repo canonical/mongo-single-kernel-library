@@ -23,6 +23,7 @@ from juju.unit import Unit as JujuUnit
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import (
+    RetryError,
     Retrying,
     retry,
     retry_if_result,
@@ -43,7 +44,6 @@ TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 
 MEDIAN_REELECTION_TIME = 12
-
 
 TEST_DOCUMENTS = """[
     {
@@ -88,6 +88,7 @@ async def deploy_charm(
     channel: str | None = None,
     config: dict | None = None,
     subordinate: bool = False,
+    storage: dict | None = None,
 ):
     if substrate == "microk8s":
         await ops_test.model.deploy(
@@ -99,6 +100,7 @@ async def deploy_charm(
             trust=True,
             config=config,
             channel=channel,
+            storage=storage,
         )
     else:
         await ops_test.model.deploy(
@@ -107,6 +109,7 @@ async def deploy_charm(
             application_name=app_name,
             config=config,
             channel=channel,
+            storage=storage,
         )
 
 
@@ -360,6 +363,17 @@ async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=
     return number_of_primaries
 
 
+async def get_direct_mongo_client(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+):
+    unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
+    password = await get_password(ops_test, app_name=app_name)
+    return MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
+
+
 async def find_unit(ops_test: OpsTest, leader: bool, app_name: str | None = None) -> JujuUnit:
     """Helper function identifies the a unit, based on need for leader or non-leader."""
     app_name = app_name or await get_app_name(ops_test)
@@ -593,6 +607,19 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
     return hostname.strip()
 
 
+async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
+    if substrate == "microk8s":
+        return [
+            f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
+            for unit in ops_test.model.applications[app_name].units
+        ]
+
+    return [
+        await get_unit_hostname(ops_test, get_unit_id(unit.name), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
+
+
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
     """Get raw application details."""
     ret_code, stdout, stderr = await ops_test.juju(
@@ -817,16 +844,32 @@ async def start_continous_writes(ops_test: OpsTest, client_app_name: str):
     await start_writes_action.wait()
 
 
-async def stop_continous_writes(ops_test: OpsTest, client_app_name: str):
+async def stop_continous_writes(ops_test: OpsTest, client_app_name: str) -> int:
     application_unit = ops_test.model.applications[client_app_name].units[0]
     stop_writes_action = await application_unit.run_action("stop-continuous-writes")
     await stop_writes_action.wait()
+    return int(stop_writes_action.results["writes"])
 
 
 async def clear_continous_writes(ops_test: OpsTest, client_app_name: str):
     application_unit = ops_test.model.applications[client_app_name].units[0]
     clear_writes_action = await application_unit.run_action("clear-continuous-writes")
     await clear_writes_action.wait()
+
+
+async def count_writes(
+    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
+) -> int:
+    """New versions of pymongo no longer support the count operation, instead find is used."""
+    host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
+    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False, hosts=[host])
+
+    client = MongoClient(uri, directConnection=True)
+    db = client["new-db"]
+    test_collection = db["test_collection"]
+    count = test_collection.count_documents({})
+    client.close()
+    return count
 
 
 def generate_collection_id() -> str:
@@ -941,3 +984,31 @@ async def get_connection_string(
 
     first_relation_user_data = await get_secret_data(ops_test, secret_uri)
     return first_relation_user_data.get("uris")
+
+
+def mongodb_log_path(substrate: Substrate) -> str:
+    """The path of mongodb log file."""
+    if substrate == "lxd":
+        mongodb_common_dir = "/var/snap/charmed-mongodb/common"
+    else:
+        mongodb_common_dir = ""
+
+    return f"{mongodb_common_dir}/var/log/mongodb/mongodb.log"
+
+
+async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
+    """Verifies replica is running and available."""
+    app_name = app_name or await get_app_name(ops_test)
+    password = await get_password(ops_test, app_name)
+    client = MongoClient(unit_uri(unit_ip, password, app_name), directConnection=True)
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+            with attempt:
+                # The ping command is cheap and does not require auth.
+                client.admin.command("ping")
+    except RetryError:
+        return False
+    finally:
+        client.close()
+
+    return True

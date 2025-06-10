@@ -61,21 +61,6 @@ async def count_failed_backups(db_unit: JujuUnit) -> int:
     return failed_backups
 
 
-async def count_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
-) -> int:
-    """New versions of pymongo no longer support the count operation, instead find is used."""
-    host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False, hosts=[host])
-
-    client = MongoClient(uri, directConnection=True)
-    db = client["new-db"]
-    test_collection = db["test_collection"]
-    count = test_collection.count_documents({})
-    client.close()
-    return count
-
-
 async def insert_unwanted_data(
     ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
 ) -> None:

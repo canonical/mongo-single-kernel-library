@@ -118,8 +118,9 @@ async def continuous_writes_to_db(ops_test: OpsTest, application_path: str):
     """Continuously writget_app_name the duration of the test."""
     db_app_name = await get_app_name(ops_test)
     app_name = "continuous-write"
-    await deploy_application(ops_test, application_path=application_path, app_name=app_name)
-    await relate_mongodb_and_application(ops_test, db_app_name, app_name)
+    if app_name not in ops_test.model.applications.keys():
+        await deploy_application(ops_test, application_path=application_path, app_name=app_name)
+        await relate_mongodb_and_application(ops_test, db_app_name, app_name)
 
     await start_continous_writes(ops_test, app_name)
     yield
