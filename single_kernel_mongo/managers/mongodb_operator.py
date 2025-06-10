@@ -296,8 +296,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
         for attempt in Retrying(
-            stop=stop_after_attempt(120),
-            wait=wait_fixed(1),
+            stop=stop_after_attempt(5),
+            wait=wait_fixed(5),
             reraise=True,
         ):
             with attempt:
@@ -711,8 +711,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # todo future work - check status of pbm directly
-        pbm_statuses = self.backup_manager.get_statuses()
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.backup_manager.get_main_status()
         if isinstance(pbm_status, MaintenanceStatus):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
@@ -883,7 +882,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
             self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.DB_REl_ON_SHARD.value
+                CharmStatuses.mongodb.value.INVALID_DB_REL_ON_SHARD.value
             )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
@@ -995,6 +994,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm_statuses.append(CharmStatuses.mongodb.value.SHARDING_ON_REPLICA.value)
 
         if self.state.client_relations and self.state.is_sharding_component:
-            charm_statuses.append(CharmStatuses.mongodb.value.DB_REl_ON_SHARD.value)
+            charm_statuses.append(CharmStatuses.mongodb.value.INVALID_DB_REL_ON_SHARD.value)
 
         return charm_statuses

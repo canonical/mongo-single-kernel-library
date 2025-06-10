@@ -4,7 +4,6 @@
 import json
 
 import pytest
-from ops import MaintenanceStatus
 from ops.model import BlockedStatus, WaitingStatus
 from ops.testing import ActionFailed, Harness
 
@@ -25,12 +24,6 @@ def test_install_blocks_snap_install_failure(harness, mocker):
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=False)
     harness.charm.on.install.emit()
     assert harness.charm.unit.status == BlockedStatus("couldn't install MongoDB")
-
-
-def test_install_snap_install_success(harness, mocker):
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=True)
-    harness.charm.on.install.emit()
-    assert harness.charm.unit.status == MaintenanceStatus("Installed MongoDB")
 
 
 def test_snap_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
@@ -71,7 +64,7 @@ def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     )
     harness.set_leader(True)
     harness.charm.on.start.emit()
-    assert harness.charm.unit.status == MaintenanceStatus("Starting MongoDB.")
+    assert harness.charm.unit.status == BlockedStatus("Failed to start services.")
     patched_mongo_initialise.assert_not_called()
 
 

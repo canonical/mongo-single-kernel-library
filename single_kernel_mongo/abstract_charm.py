@@ -96,7 +96,6 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
             if not self.workload.install():
                 self.status_manager.set_and_share_status(CharmStatuses.FAILED_TO_INSTALL.value)
                 return
-            self.status_manager.set_and_share_status(CharmStatuses.MONGODB_INSTALLED.value)
 
     def on_leader_elected(self, _):
         """First leader elected handler."""

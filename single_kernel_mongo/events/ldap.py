@@ -84,7 +84,9 @@ class LDAPEventHandler(Object):
         except LDAPSNotEnabledError:
             self.charm.status_manager.set_and_share_status(LdapStatuses.LDAPS_NOT_ENABLED.value)
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(LdapStatuses.LDAP_REL_ON_SHARD.value)
+            self.charm.status_manager.set_and_share_status(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))
@@ -100,7 +102,9 @@ class LDAPEventHandler(Object):
         except DeferrableFailedHookChecksError as err:
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(LdapStatuses.LDAP_REL_ON_SHARD.value)
+            self.charm.status_manager.set_and_share_status(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))
@@ -117,7 +121,9 @@ class LDAPEventHandler(Object):
         except (DeferrableFailedHookChecksError, DeferrableError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(LdapStatuses.LDAP_REL_ON_SHARD.value)
+            self.charm.status_manager.set_and_share_status(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))

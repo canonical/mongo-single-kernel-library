@@ -192,8 +192,7 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_statuses = self.dependent.backup_manager.get_statuses()
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.dependent.backup_manager.get_main_status()
 
         # TODO: future work will be to check the actual status of the backup and not the status.
         # Note: we permit this logic based on status since we aren't checking

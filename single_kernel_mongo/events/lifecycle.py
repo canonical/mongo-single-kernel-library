@@ -42,6 +42,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -112,6 +113,9 @@ class LifecycleEventsHandler(Object):
             self.dependent.on_start()
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.FAILED_SERVICES_START.value
+            )
             event.defer()
             return
 

@@ -284,6 +284,11 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
             raise RestoreError(fail_message)
 
+    def get_main_status(self) -> StatusBase | None:
+        """Gets the first status of the list."""
+        pbm_statuses = self.get_statuses()
+        return next(iter(pbm_statuses), None)
+
     def get_statuses(self) -> list[StatusBase]:
         """Gets the PBM statuses."""
         if not self.state.s3_relation:
@@ -331,8 +336,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             reraise=True,
         ):
             with attempt:
-                pbm_statuses = self.get_statuses()
-                pbm_status = next(iter(pbm_statuses), None)
+                pbm_status = self.get_main_status()
 
                 # todo future work - check status of pbm directly
                 # wait for backup/restore to finish
@@ -503,8 +507,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
         """
-        pbm_statuses = self.get_statuses()
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
 
         # todo future work - check status of pbm directly
         match pbm_status:
@@ -532,8 +535,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses()
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
 
         match pbm_status:
             case MaintenanceStatus():
@@ -555,8 +557,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses()
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
         match pbm_status:
             case WaitingStatus():
                 raise InvalidPBMStatusError(

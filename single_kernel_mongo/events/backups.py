@@ -128,7 +128,8 @@ class BackupEventsHandler(Object):
             return
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
-            raise
+            self.charm.status_manager.set_and_share_status(BackupStatuses.WAITING_FOR_PBM_START)
+            return
         except ResyncError:
             self.charm.status_manager.set_and_share_status(BackupStatuses.PBM_WAITING_TO_SYNC)
             defer_event_with_info_log(

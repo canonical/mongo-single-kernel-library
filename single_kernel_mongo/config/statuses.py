@@ -37,7 +37,7 @@ class MongoDBStatuses(Enum):
         "Relation to s3-integrator is not supported, config role must be config-server."
     )
 
-    DB_REl_ON_SHARD = BlockedStatus("Sharding roles do not support database interface.")
+    INVALID_DB_REL_ON_SHARD = BlockedStatus("Sharding roles do not support database interface.")
 
     # RUNNING statuses:
     STARTING_MONGODB = MaintenanceStatus("Starting MongoDB.")
@@ -62,8 +62,8 @@ class CharmStatuses(Enum):
     """Charm Statuses."""
 
     ACTIVE_IDLE = ActiveStatus()
+    FAILED_SERVICES_START = BlockedStatus("Failed to start services.")
     MONGODB_NOT_INSTALLED = BlockedStatus("MongoDB not installed.")
-    MONGODB_INSTALLED = MaintenanceStatus("Installed MongoDB")
     MONGOS_NOT_STARTED = WaitingStatus("Waiting to start mongos...")
     FAILED_TO_INSTALL = BlockedStatus("couldn't install MongoDB")
     mongodb = MongoDBStatuses
@@ -111,7 +111,6 @@ class BackupStatuses(Enum):
 class ConfigServerStatuses(Enum):
     """Config server statuses."""
 
-    # todo consider this status to be put in charm
     MONGOS_NOT_RUNNING = BlockedStatus("Internal mongos is not running.")
     MISSING_SHARDING_REL = BlockedStatus("Missing relation to shard(s).")
     SYNCING_PASSWORDS = WaitingStatus("Waiting to sync passwords across the cluster...")
@@ -247,7 +246,7 @@ class LdapStatuses(Enum):
     """LDAP Statuses."""
 
     CONFIGURING_LDAP = MaintenanceStatus("Configuring LDAP")
-    LDAP_REL_ON_SHARD = BlockedStatus("Cannot integrate LDAP with shard.")
+    INVALID_LDAP_REL_ON_SHARD = BlockedStatus("Cannot integrate LDAP with shard.")
     TLS_REQUIRED = BlockedStatus("TLS is mandatory for LDAP transport.")
     LDAP_REQUIRED = BlockedStatus("GLauth TLS is integrated but LDAP is not.")
     LDAP_SERVERS_MISMATCH = BlockedStatus(
