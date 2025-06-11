@@ -42,6 +42,8 @@ UNIT_IDS = [0, 1, 2]
 SERIES = "jammy"
 TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
+OPERATOR_USERNAME = "operator"
+OPERATOR_PASSWORD = "operator-password"
 
 MEDIAN_REELECTION_TIME = 12
 
@@ -303,7 +305,7 @@ async def destroy_cluster(
             assert finished, "old cluster not destroyed successfully"
 
 
-def unit_uri(ip_address: str, password: str, app: str) -> str:
+def unit_uri(ip_address: str, password: str, app: str, mongos: bool = False) -> str:
     """Generates URI that is used by MongoDB to connect to a single replica.
 
     Args:
@@ -311,6 +313,8 @@ def unit_uri(ip_address: str, password: str, app: str) -> str:
         password: password of database.
         app: name of application which has the cluster.
     """
+    if mongos:
+        return f"mongodb://operator:{password}@{ip_address}:{MONGOS_PORT}/admin"
     return f"mongodb://operator:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
@@ -364,14 +368,14 @@ async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=
 
 
 async def get_direct_mongo_client(
-    ops_test: OpsTest,
-    substrate: Substrate,
-    app_name: str,
+    ops_test: OpsTest, substrate: Substrate, app_name: str, mongos: bool = False
 ):
     unit = await find_unit(ops_test, leader=True, app_name=app_name)
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     password = await get_password(ops_test, app_name=app_name)
-    return MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
+    return MongoClient(
+        unit_uri(ip_address, password, app_name, mongos=mongos), directConnection=True
+    )
 
 
 async def find_unit(ops_test: OpsTest, leader: bool, app_name: str | None = None) -> JujuUnit:
@@ -865,8 +869,8 @@ async def count_writes(
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False, hosts=[host])
 
     client = MongoClient(uri, directConnection=True)
-    db = client["new-db"]
-    test_collection = db["test_collection"]
+    db = client["continuous_writes_database"]
+    test_collection = db["continuous_writes_collection"]
     count = test_collection.count_documents({})
     client.close()
     return count

@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from ..helpers.common import (
+from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     UNIT_IDS,
@@ -31,7 +31,7 @@ from ..helpers.common import (
     unit_hostname,
     unit_uri,
 )
-from ..helpers.ha import (
+from ...helpers.ha import (
     all_db_processes_down,
     cut_network_from_unit,
     db_step_down,
@@ -54,7 +54,7 @@ from ..helpers.ha import (
     verify_writes,
     wait_network_restore,
 )
-from ..helpers.types import Substrate
+from ...helpers.types import Substrate
 
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
 RESTART_DELAY = 60 * 3
@@ -134,7 +134,7 @@ async def test_storage_re_use(ops_test, substrate: Substrate, continuous_writes_
     await verify_writes(ops_test, substrate, app_name)
 
 
-async def test_scale_up_capablities(
+async def test_scale_up_capabilities(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests juju add-unit functionality.
@@ -160,7 +160,7 @@ async def test_scale_up_capablities(
 
 
 @pytest.mark.abort_on_fail
-async def test_scale_down_capablities_lxd(
+async def test_scale_down_capabilities_lxd(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica.
@@ -243,7 +243,7 @@ async def test_scale_down_capablities_lxd(
 
 
 @pytest.mark.abort_on_fail
-async def test_scale_down_capablities_microk8s(
+async def test_scale_down_capabilities_microk8s(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""

@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from ..helpers.backups import (
+from ...helpers.backups import (
     NEW_CLUSTER,
     S3_APP_NAME,
     S3_ENDPOINT,
@@ -19,7 +19,7 @@ from ..helpers.backups import (
     insert_unwanted_data,
     set_credentials,
 )
-from ..helpers.common import (
+from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     UNIT_IDS,
@@ -33,7 +33,7 @@ from ..helpers.common import (
     is_relation_joined,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.types import Substrate
+from ...helpers.types import Substrate
 
 logger = getLogger(__name__)
 

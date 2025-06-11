@@ -35,6 +35,14 @@ async def set_credentials(ops_test: OpsTest, cloud_configs, cloud: str) -> None:
     await action.wait()
 
 
+async def get_backup_list(ops_test: OpsTest, app_name=None) -> str:
+    """Count the number of logical backups."""
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    action = await leader_unit.run_action(action_name="list-backups")
+    list_result = await action.wait()
+    return list_result.results["backups"]
+
+
 async def count_logical_backups(db_unit: JujuUnit) -> int:
     """Count the number of logical backups."""
     action = await db_unit.run_action(action_name="list-backups")

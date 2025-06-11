@@ -15,6 +15,7 @@ from ...helpers.common import (
     get_app_name,
 )
 from ...helpers.tls import (
+    SNAP_MONGOD_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
     check_certs_correctly_distributed,
     check_tls,
@@ -101,7 +102,7 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
             ops_test, substrate, unit.name, internal_cert_path(substrate)
         )
         original_tls_times[unit.name]["mongod_service"] = await time_process_started(
-            ops_test, substrate, unit.name, "snap.charmed-mongodb.mongod.service"
+            ops_test, substrate, unit.name, SNAP_MONGOD_SERVICE
         )
 
         await check_certs_correctly_distributed(ops_test, substrate, app_name, unit)

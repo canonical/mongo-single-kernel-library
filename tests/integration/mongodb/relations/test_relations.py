@@ -11,7 +11,7 @@ from tenacity import RetryError
 
 from tests.integration.helpers.ha import replica_set_primary
 
-from ..helpers.common import (
+from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     check_or_scale_app,
@@ -23,8 +23,8 @@ from ..helpers.common import (
     is_relation_joined,
     run_action,
 )
-from ..helpers.relations import assert_created_user_can_connect, verify_application_data
-from ..helpers.types import Substrate
+from ...helpers.relations import assert_created_user_can_connect, verify_application_data
+from ...helpers.types import Substrate
 
 APPLICATION_APP_NAME = "application"
 DATABASE_RELATION_NAME = "database"

@@ -28,8 +28,13 @@ logger = getLogger(__name__)
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_RELATION_NAME = "certificates"
 
+DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
+
 MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
 MONGODB_ROCK_CONF_DIR = "/etc/mongod"
+
+SNAP_MONGOD_SERVICE = "snap.charmed-mongodb.mongod.service"
+SNAP_MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"
 
 
 def external_cert_path(substrate: Substrate):
@@ -256,14 +261,7 @@ async def check_certs_correctly_distributed(
         ][0]
 
         # Read the content of the cert file stored in the unit
-        cert_file_copy_path = await scp_file_preserve_ctime(
-            ops_test, substrate, unit.name, cert_path
-        )
-        with open(cert_file_copy_path) as f:
-            cert_file_content = f.read()
-
-        # cleanup the file
-        os.remove(cert_file_copy_path)
+        cert_file_content = await get_file_content(ops_test, substrate, unit.name, cert_path)
 
         # Get the external cert value from the relation
         relation_cert = "\n".join(tls_item["chain"]).strip()
@@ -272,3 +270,17 @@ async def check_certs_correctly_distributed(
         assert (
             relation_cert == cert_file_content
         ), f"Relation Content for {cert_type}-cert:\n{relation_cert}\nFile Content:\n{cert_file_content}\nMismatch."
+
+
+async def get_file_content(
+    ops_test: OpsTest, substrate: Substrate, unit_name: str, filepath: str
+) -> str:
+    # Read the content of the cert file stored in the unit
+    cert_file_copy_path = await scp_file_preserve_ctime(ops_test, substrate, unit_name, filepath)
+    with open(cert_file_copy_path) as f:
+        cert_file_content = f.read()
+
+    # cleanup the file
+    os.remove(cert_file_copy_path)
+
+    return cert_file_content

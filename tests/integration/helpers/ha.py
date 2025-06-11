@@ -424,12 +424,12 @@ async def scale_application(
         raise_on_blocked: Should the wait raise on blocked?
     """
     current_count = len(ops_test.model.applications[application_name].units)
+    desired_count = count + current_count
 
     if count == 0:
         return
 
     if substrate == "microk8s":
-        desired_count = count + current_count
         await ops_test.model.applications[application_name].scale(desired_count)
 
     else:
@@ -499,6 +499,8 @@ async def verify_writes(
     assert primary_unit, "No primary unit"
 
     actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=primary_unit)
+
+    logger.warning(f"Verifying writes: {total_expected_writes=} ?= {actual_writes=}")
 
     assert total_expected_writes == actual_writes
 

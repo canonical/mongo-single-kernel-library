@@ -153,6 +153,7 @@ class ContinuousWritesApplication(CharmBase):
             return -1
 
         os.remove(self.last_written_filename(db_name, coll_name))
+        logger.info(f"Stopped writing at {last_written_value=}")
         return last_written_value
 
     def proc_id_key(self, db_name: str, coll_name: str) -> str:
