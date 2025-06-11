@@ -26,15 +26,15 @@ def test_get_password_action_fail(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
 
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
-        return_value=MaintenanceStatus(""),
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[MaintenanceStatus("")],
     )
     with pytest.raises(ActionFailed):
         harness.run_action("set-password")
 
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
-        return_value=ActiveStatus(""),
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[ActiveStatus("")],
     )
     with pytest.raises(ActionFailed):
         harness.run_action("set-password", {"username": "notfound"})
@@ -48,8 +48,8 @@ def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, u
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
-        return_value=ActiveStatus(""),
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[ActiveStatus("")],
     )
     mock_exporter_connect = mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
@@ -81,8 +81,8 @@ def test_set_password_action_fail_too_long(harness: Harness[MongoTestCharm], moc
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
-        return_value=ActiveStatus(""),
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[ActiveStatus("")],
     )
     with pytest.raises(ActionFailed):
         harness.run_action("set-password", {"password": 40 * "a"})
@@ -92,8 +92,8 @@ def test_get_password_action_success(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
-        return_value=ActiveStatus(""),
+        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
+        return_value=[ActiveStatus("")],
     )
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
 

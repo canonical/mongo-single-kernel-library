@@ -118,21 +118,21 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.db_initialised = True
     # Case 1: No integration
-    assert harness.charm.operator.ldap_manager.get_status() is None
+    assert harness.charm.operator.ldap_manager.get_statuses() == []
 
     # Case 2, wrong role
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
 
-    assert harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
         "Cannot integrate LDAP with shard."
     )
 
     # Case 3, correct role, but missing ldap_cert_relation
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
-    assert harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
         "TLS is mandatory for LDAP transport."
     )
 
@@ -141,7 +141,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )
 
-    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
         "Waiting for both LDAP data and Glauth certificates."
     )
 
@@ -165,7 +165,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     harness.charm.operator.ldap_manager.store_ldap_credentials_and_uri(relation)
 
-    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
         "Waiting for Glauth certificates."
     )
 
@@ -185,7 +185,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
         "beefdead", "deadbeef", ["feeddead"]
     )
 
-    assert harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == ActiveStatus()
 
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
@@ -200,7 +200,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     # Case 7: Begin of sundown, remove data from databag
     harness.charm.operator.state.ldap.clean_databag()
-    assert harness.charm.operator.ldap_manager.get_status() == WaitingStatus(
+    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
         "Missing LDAP data from Glauth."
     )
 
@@ -450,7 +450,7 @@ def test_ldaps_mongos_invalid_hash(
         },
     )
 
-    assert mongos_harness.charm.operator.ldap_manager.get_status() == BlockedStatus(
+    assert mongos_harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
         "mongos and config-server not integrated with the same ldap server."
     )
 
@@ -467,4 +467,4 @@ def test_ldaps_mongos_invalid_hash(
         },
     )
 
-    assert mongos_harness.charm.operator.ldap_manager.get_status() == ActiveStatus()
+    assert mongos_harness.charm.operator.ldap_manager.get_statuses()[0] == ActiveStatus()

@@ -42,6 +42,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -75,7 +76,8 @@ class LifecycleEventsHandler(Object):
 
         if self.charm.substrate == Substrates.K8S:
             self.framework.observe(
-                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"), self.on_start
+                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"),
+                self.on_start,
             )
 
         self.framework.observe(getattr(self.charm.on, "config_changed"), self.on_config_changed)
@@ -94,10 +96,12 @@ class LifecycleEventsHandler(Object):
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_attached"), self.on_storage_attached
+                getattr(self.charm.on, "mongodb_storage_attached"),
+                self.on_storage_attached,
             )
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_detaching"), self.on_storage_detaching
+                getattr(self.charm.on, "mongodb_storage_detaching"),
+                self.on_storage_detaching,
             )
 
         if self.charm.substrate == Substrates.VM and self.dependent.name == CharmKind.MONGOD:
@@ -109,6 +113,9 @@ class LifecycleEventsHandler(Object):
             self.dependent.on_start()
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.FAILED_SERVICES_START.value
+            )
             event.defer()
             return
 
@@ -142,10 +149,7 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        try:
-            self.dependent.on_update_status()
-        except Exception:
-            return
+        self.dependent.on_update_status()
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""

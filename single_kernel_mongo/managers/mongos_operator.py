@@ -12,20 +12,20 @@ from typing import TYPE_CHECKING, final
 
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation, StatusBase, Unit, WaitingStatus
+from ops.model import Relation, StatusBase, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
-    INCOMPATIBLE_UPGRADE,
-    UNHEALTHY_UPGRADE,
     CharmKind,
     MongoPorts,
+    Scope,
     Substrates,
     UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatuses
 from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -50,6 +50,7 @@ from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade import MongosUpgradeManager
+from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import unit_number
 from single_kernel_mongo.workload import (
@@ -61,8 +62,6 @@ if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
 logger = logging.getLogger(__name__)
-
-INVALID_EXTERNAL_CONFIG = "Config option for expose-external not valid."
 
 
 @final
@@ -177,7 +176,9 @@ class MongosOperator(OperatorProtocol, Object):
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
-            self.charm.status_manager.to_blocked("Missing relation to config-server.")
+            self.charm.status_manager.set_and_share_status(
+                CharmStatuses.mongos.value.MISSING_CONF_SERVER_REL.value
+            )
 
     @override
     def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
@@ -200,9 +201,15 @@ class MongosOperator(OperatorProtocol, Object):
                     self.charm.config["expose-external"],
                     "['nodeport', 'none']",
                 )
-                self.charm.status_manager.to_blocked(INVALID_EXTERNAL_CONFIG)
+
+                self.charm.status_manager.set_and_share_status(
+                    CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value
+                )
                 return
-            self.charm.status_manager.clear_status(BlockedStatus(INVALID_EXTERNAL_CONFIG))
+
+            self.charm.status_manager.clear_status(
+                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value
+            )
             self.update_k8s_external_services()
 
             self.tls_manager.update_tls_sans()
@@ -236,32 +243,26 @@ class MongosOperator(OperatorProtocol, Object):
         Then we ensure the integration to config server before doing anything else.
         We proceed to update client connections if needed and renew certificates as well if needed.
         """
-        if self.substrate == Substrates.K8S:
-            if self.config.expose_external == ExposeExternal.UNKNOWN:
-                logger.error(
-                    "External configuration: %s for expose-external is not valid, should be one of: %s",
-                    self.charm.config["expose-external"],
-                    "['nodeport', 'none']",
-                )
-                self.charm.status_manager.to_blocked("Config option for expose-external not valid.")
-                return
-
-        if self.get_sanity_check_status() is None:
+        if self.can_self_heal():
             # In case any information was changed, we proceed to update the
             # connection information on the client databag.
             self.share_connection_info()
 
-        # in K8s mongos charms which are exposed externally it is possible for
-        # the node port to change. This can invalidate our current
-        # certificates. when this happens we do not receive any notifications
-        # from Juju so we must monitor it and request TLS integration to update
-        # our SANS as necessary.
-        # The connection info will be updated when we receive the new certificates.
-        if self.substrate == Substrates.K8S:
-            self.tls_manager.update_tls_sans()
-            self.upgrade_manager._reconcile_upgrade()
+            # in K8s mongos charms which are exposed externally it is possible for
+            # the node port to change. This can invalidate our current
+            # certificates. when this happens we do not receive any notifications
+            # from Juju so we must monitor it and request TLS integration to update
+            # our SANS as necessary.
+            # The connection info will be updated when we receive the new certificates.
+            if self.substrate == Substrates.K8S:
+                self.tls_manager.update_tls_sans()
+                self.upgrade_manager._reconcile_upgrade()
 
-        if self.charm.unit.status in (UNHEALTHY_UPGRADE, INCOMPATIBLE_UPGRADE):
+        # TODO remove this in the future when we bring advanced statuses over
+        if self.charm.unit.status in (
+            UpgradeStatuses.UNHEALTHY_UPGRADE,
+            UpgradeStatuses.INCOMPATIBLE_UPGRADE,
+        ):
             return
 
         self.charm.status_manager.process_and_share_statuses()
@@ -474,26 +475,83 @@ class MongosOperator(OperatorProtocol, Object):
 
         return self.mongo_manager.mongod_ready(uri=uri)
 
-    def get_sanity_check_status(self) -> StatusBase | None:
+    def can_self_heal(self) -> bool:
         """Retrieve statuses that directly relate to states of mongos.
 
         Those status would prevent other more advanced mongos statuses from
         being checked.
         """
+        if (
+            self.substrate == Substrates.K8S
+            and self.config.expose_external == ExposeExternal.UNKNOWN
+        ):
+            logger.error(
+                "External configuration: %s for expose-external is not valid, should be one of: %s",
+                self.charm.config["expose-external"],
+                "['nodeport', 'none']",
+            )
+            return False
+
+        if not self.workload.workload_present or not self.state.mongos_cluster_relation:
+            logger.info(
+                "Missing integration to config-server. mongos cannot run unless connected to config-server."
+            )
+            return False
+
+        if status := self.cluster_manager.get_tls_statuses():
+            logger.info(f"Invalid TLS integration: {status.message}")
+            return False
+
+        if not self.is_mongos_running():
+            logger.info("mongos has not started yet")
+            return False
+
+        return True
+
+    def get_statuses(self) -> list[StatusBase]:
+        """Returns the statuses of the charm manager."""
+        charm_statuses: list[StatusBase] = []
+        if (
+            self.substrate == Substrates.K8S
+            and self.config.expose_external == ExposeExternal.UNKNOWN
+        ):
+            logger.error(
+                "External configuration: %s for expose-external is not valid, should be one of: %s",
+                self.charm.config["expose-external"],
+                "['nodeport', 'none']",
+            )
+            charm_statuses.append(CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value)
+
+        if not self.workload.workload_present:
+            charm_statuses.append(CharmStatuses.MONGODB_NOT_INSTALLED.value)
+
         if not self.state.mongos_cluster_relation:
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            return BlockedStatus("Missing relation to config-server.")
+            charm_statuses.append(CharmStatuses.mongos.value.MISSING_CONF_SERVER_REL.value)
+            # don't bother checking remaining statuses if no config-server is present
+            return charm_statuses
 
         if status := self.cluster_manager.get_tls_statuses():
             logger.info(f"Invalid TLS integration: {status.message}")
-            return status
+            # if TLS is misconfigured we will get redherrings on the remaining messages
+            charm_statuses.append(status)
+            return charm_statuses
+
+        if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
+            charm_statuses.append(CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value)
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
-            return WaitingStatus("Waiting for mongos to start.")
+            charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
+            return charm_statuses
 
-        return None
+        username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
+        password = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)
+        if not username or not password:
+            charm_statuses.append(CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value)
+
+        return charm_statuses if charm_statuses else [CharmStatuses.ACTIVE_IDLE.value]
 
     # END: Helpers

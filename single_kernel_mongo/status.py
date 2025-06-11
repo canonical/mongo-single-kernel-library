@@ -51,10 +51,12 @@ class StatusManager(Object):
         self.charm_kind = self.operator.name
 
     def set_and_share_status(self, status: StatusBase) -> None:
-        """Sets the unit status."""
+        """Sets the unit status.
+
+        Even though this function no longer shares the status - we kept the naming as the future
+        work will remove this altogether.
+        """
         self.charm.unit.status = status
-        if self.state.is_role(MongoDBRoles.SHARD):
-            self.state.share_status_with_config_server(status)
 
     def to_active(self, message: str | None = None) -> None:
         """Sets status to active."""
@@ -91,17 +93,26 @@ class StatusManager(Object):
     def get_statuses(self) -> Statuses:
         """Collects the statuses of all managers."""
         if self.operator.name == CharmKind.MONGOD:
+            # Getting first status is a temporary work around for using our current get_statuses
+            #  functions. When advacned statuses are implemented they will prioritised + shown.
+            mongo_statuses = self.operator.mongo_manager.get_statuses()
+            shard_statuses = self.operator.shard_manager.get_statuses()
+            config_server_statuses = self.operator.config_server_manager.get_statuses()
+            pbm_statuses = self.operator.backup_manager.get_statuses()
+            ldap_status = self.operator.ldap_manager.get_statuses()
             return Statuses(
-                mongodb=self.operator.mongo_manager.get_status(),
-                shard=self.operator.shard_manager.get_status(),
-                config_server=self.operator.config_server_manager.get_status(),
-                pbm=self.operator.backup_manager.get_status(),
-                ldap=self.operator.ldap_manager.get_status(),
+                mongodb=next(iter(mongo_statuses), ActiveStatus()),
+                shard=next(iter(shard_statuses), None),
+                config_server=next(iter(config_server_statuses), None),
+                pbm=next(iter(pbm_statuses), None),
+                ldap=next(iter(ldap_status), None),
             )
         # Mongos case
+        mongos_statuses = self.operator.get_statuses()
+        ldap_status = self.operator.ldap_manager.get_statuses()
         return Statuses(
-            mongodb=self.operator.get_sanity_check_status() or ActiveStatus(),
-            ldap=self.operator.ldap_manager.get_status(),
+            mongodb=next(iter(mongos_statuses), ActiveStatus()),
+            ldap=next(iter(ldap_status), None),
         )
 
     def prioritize_statuses(self, statuses: Statuses) -> StatusBase:
@@ -146,7 +157,10 @@ class StatusManager(Object):
         try:
             statuses = self.get_statuses()
         except OperationFailure as e:
-            if e.code in (MongoErrorCodes.UNAUTHORIZED, MongoErrorCodes.AUTHENTICATION_FAILED):
+            if e.code in (
+                MongoErrorCodes.UNAUTHORIZED,
+                MongoErrorCodes.AUTHENTICATION_FAILED,
+            ):
                 waiting_status = f"Waiting to sync passwords across the {deployment_mode}"
             elif e.code == MongoErrorCodes.FAILED_TO_SATISFY_READ_PREFERENCE:
                 waiting_status = f"Waiting to sync internal membership across the {deployment_mode}"
