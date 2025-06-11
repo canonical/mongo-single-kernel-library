@@ -23,16 +23,18 @@ from ...helpers.common import (
     is_relation_joined,
     run_action,
 )
-from ...helpers.relations import assert_created_user_can_connect, verify_application_data
+from ...helpers.relations import (
+    APPLICATION_APP_NAME,
+    FIRST_DATABASE_RELATION_NAME,
+    SECOND_DATABASE_RELATION_NAME,
+    assert_created_user_can_connect,
+    verify_application_data,
+)
 from ...helpers.types import Substrate
 
-APPLICATION_APP_NAME = "application"
 DATABASE_RELATION_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
 ANOTHER_APPLICATION_NAME = "another-application"
-
-FIRST_DATABASE_RELATION_NAME = "first-database"
-SECOND_DATABASE_RELATION_NAME = "second-database"
 
 USER_CREATED_FROM_APP1 = "test_user_1"
 PW_CREATED_FROM_APP1 = "test_user_pass_1"

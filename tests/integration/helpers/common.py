@@ -64,6 +64,9 @@ TEST_DOCUMENTS = """[
     }
 ]"""
 
+
+MONGOS_APP_NAME = "mongos"
+
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
 logger = logging.getLogger(__name__)
 

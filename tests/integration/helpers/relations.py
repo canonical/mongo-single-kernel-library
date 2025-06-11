@@ -16,6 +16,11 @@ from ..helpers.common import (
 )
 from ..helpers.types import Substrate
 
+REPLICATION_APP_NAME = "replication"
+APPLICATION_APP_NAME = "application"
+FIRST_DATABASE_RELATION_NAME = "first-database"
+SECOND_DATABASE_RELATION_NAME = "second-database"
+
 
 async def verify_application_data(
     ops_test: OpsTest,
