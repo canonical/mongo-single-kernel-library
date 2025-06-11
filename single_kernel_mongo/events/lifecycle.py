@@ -42,7 +42,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Scope, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import LdapStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, LdapStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -50,7 +50,6 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
     WaitingForLeaderError,
-    WorkloadExecError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
@@ -112,11 +111,13 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.on_start()
-        except (WorkloadServiceError, WorkloadExecError) as err:
-            logger.error("Failed to start mongodb: %s", err)
-            raise
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
+            self.dependent.state.statuses.add(
+                CharmStatuses.FAILED_SERVICES_START.value,
+                scope=Scope.UNIT,
+                component=self.dependent.name,
+            )
             event.defer()
             return
 

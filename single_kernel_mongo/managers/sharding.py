@@ -189,8 +189,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_statuses = self.dependent.backup_manager.get_statuses(scope=Scope.UNIT)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.dependent.backup_manager.get_main_status()
 
         # TODO: future work will be to check the actual status of the backup and not the status.
         # Note: we permit this logic based on status since we aren't checking
@@ -277,8 +276,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             charm_statuses[Scope.UNIT].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.NEED_SHARDS.value)
-            charm_statuses[Scope.APP].append(ConfigServerStatuses.NEED_SHARDS.value)
+            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses[Scope.APP].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses[scope]
 
@@ -330,7 +329,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return
 
         self.state.statuses.delete(
-            ConfigServerStatuses.NEED_SHARDS.value, scope=Scope.UNIT, component=self.name
+            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope=Scope.UNIT, component=self.name
         )
 
         self.charm.status_handler.set_running_status(
@@ -553,7 +552,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.unit_peer_data.drained = False
 
         self.state.statuses.delete(
-            ShardStatuses.NEED_CONF_SERVER.value, scope=Scope.UNIT, component=self.name
+            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope=Scope.UNIT, component=self.name
         )
         self.state.statuses.add(
             ShardStatuses.ADDING_TO_CLUSTER.value, scope=Scope.UNIT, component=self.name
@@ -935,7 +934,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 return [ShardStatuses.SHARD_DRAINED.value]
 
             if not self.state.unit_peer_data.drained:
-                return [ShardStatuses.NEED_CONF_SERVER.value]
+                return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
 
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # No need to go further if the revision is invalid

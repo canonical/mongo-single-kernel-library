@@ -20,7 +20,9 @@ def test_start(mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interac
     mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
 
     mongos_harness.charm.on.start.emit()
-    assert mongos_harness.charm.unit.status == as_status(MongosStatuses.NEED_CONF_SERVER.value)
+    assert mongos_harness.charm.unit.status == as_status(
+        MongosStatuses.MISSING_CONF_SERVER_REL.value
+    )
 
     mocked_copy.assert_has_calls(
         [

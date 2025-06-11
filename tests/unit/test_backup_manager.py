@@ -10,7 +10,7 @@ from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import BackupStatuses, CharmStatuses, MongoDBStatuses
+from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
@@ -42,9 +42,7 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert (
-        harness.charm.unit.status != CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value
-    )
+    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value
 
 
 def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
@@ -97,7 +95,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
 
     statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status == BackupStatuses.PBM_NOT_STARTED.value
+    assert status == BackupStatuses.WAITING_FOR_PBM_START.value
 
 
 @pytest.mark.parametrize(

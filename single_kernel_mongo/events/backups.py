@@ -14,7 +14,7 @@ from ops.framework import Object
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import BackupStatuses, CharmStatuses
+from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
@@ -88,7 +88,7 @@ class BackupEventsHandler(Object):
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
             self.manager.state.statuses.add(
-                CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value,
+                MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
                 scope=Scope.UNIT,
                 component=self.manager.name,
             )
@@ -106,7 +106,7 @@ class BackupEventsHandler(Object):
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
             self.manager.state.statuses.add(
-                CharmStatuses.mongodb.value.INVALID_S3_INTEGRATION_STATUS.value,
+                MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
                 scope=Scope.UNIT,
                 component=self.manager.name,
             )
@@ -135,7 +135,12 @@ class BackupEventsHandler(Object):
             return
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
-            raise
+            self.manager.state.statuses.add(
+                BackupStatuses.WAITING_FOR_PBM_START.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
+            )
+            return
         except ResyncError:
             self.manager.state.statuses.add(
                 BackupStatuses.PBM_WAITING_TO_SYNC.value,
@@ -166,8 +171,7 @@ class BackupEventsHandler(Object):
                 )
             return
 
-        pbm_statuses = self.manager.get_statuses(scope=Scope.UNIT, recompute=True)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.manager.get_main_status()
         # Safer here, don't add a status if we don't have a status to add…
         if pbm_status:
             self.manager.state.statuses.add(

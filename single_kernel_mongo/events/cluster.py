@@ -13,7 +13,7 @@ from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreated
 from ops.framework import Object
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
@@ -164,7 +164,7 @@ class ClusterMongosEventHandler(Object):
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             self.dependent.state.statuses.add(
-                CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value,
+                MongosStatuses.WAITING_FOR_SECRETS.value,
                 scope=Scope.UNIT,
                 component=self.charm.name,
             )

@@ -307,7 +307,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         # PBM requires all configuration to be set in order to run.
         if not self.workload.active():
-            return [BackupStatuses.PBM_NOT_STARTED.value]
+            return [BackupStatuses.WAITING_FOR_PBM_START.value]
 
         try:
             pbm_status = self.pbm_status
@@ -330,6 +330,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.error(f"Failed to get pbm status: {e}")
             return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
 
+    def get_main_status(self) -> StatusObject | None:
+        """Returns the first status of the list."""
+        pbm_statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
+        return next(iter(pbm_statuses), None)
+
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
         # Set environment before starting
@@ -347,8 +352,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             reraise=True,
         ):
             with attempt:
-                pbm_statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
-                pbm_status = next(iter(pbm_statuses), None)
+                pbm_status = self.get_main_status()
 
                 if not pbm_status:
                     continue
@@ -522,8 +526,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
         """
-        pbm_statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
 
         # todo future work - check status of pbm directly
         if pbm_status:
@@ -552,8 +555,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
 
         if not pbm_status:
             return
@@ -578,8 +580,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_statuses = self.get_statuses(Scope.UNIT, recompute=True)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.get_main_status()
 
         if not pbm_status:
             return

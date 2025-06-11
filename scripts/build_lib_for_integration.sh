@@ -29,8 +29,16 @@ for directory in "${TEST_CHARMS[@]}"; do
 
     pushd $directory
 
+    # Backup files
     cp pyproject.toml pyproject.toml.backup
     cp poetry.lock poetry.lock.backup
+
+    # Disable strict mode for build test lib.
+    pushd "${LIB_PATH}"
+    git init
+    sed 's/strict = true/strict = false/' -i "pyproject.toml"
+    cat pyproject.toml
+    popd
 
     poetry add "${LIB_PATH}/"
     poetry lock

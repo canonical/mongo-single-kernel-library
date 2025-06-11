@@ -214,7 +214,7 @@ class PrecheckFailedError(StatusError):
 
     def __init__(self, message: str):
         self.message = message
-        super().__init__(UpgradeStatuses.REFRESH_IN_PROG.value)
+        super().__init__(UpgradeStatuses.REFRESH_IN_PROGRESS.value)
 
 
 class FailedToElectNewPrimaryError(Exception):

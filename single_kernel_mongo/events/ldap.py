@@ -96,7 +96,9 @@ class LDAPEventHandler(Object):
             )
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
@@ -116,7 +118,9 @@ class LDAPEventHandler(Object):
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
@@ -137,7 +141,9 @@ class LDAPEventHandler(Object):
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
-                LdapStatuses.LDAP_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope=Scope.UNIT,
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")

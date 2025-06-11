@@ -185,7 +185,7 @@ class MongosOperator(OperatorProtocol, Object):
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
             self.charm.status_handler.set_running_status(
-                MongosStatuses.NEED_CONF_SERVER.value,
+                MongosStatuses.MISSING_CONF_SERVER_REL.value,
                 scope=Scope.UNIT,
                 statuses_state=self.state.statuses,
                 component_name=self.name,
@@ -221,7 +221,7 @@ class MongosOperator(OperatorProtocol, Object):
                 return
 
             self.state.statuses.delete(
-                CharmStatuses.mongos.value.INVALID_EXPOSE_EXTERNAL.value,
+                MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
                 scope=Scope.UNIT,
                 component=self.name,
             )
@@ -548,7 +548,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info(
                 "Missing integration to config-server. mongos cannot run unless connected to config-server."
             )
-            charm_statuses.append(MongosStatuses.NEED_CONF_SERVER.value)
+            charm_statuses.append(MongosStatuses.MISSING_CONF_SERVER_REL.value)
             # don't bother checking remaining statuses if no config-server is present
             return charm_statuses
 

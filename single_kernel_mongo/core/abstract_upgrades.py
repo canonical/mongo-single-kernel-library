@@ -182,7 +182,7 @@ class AbstractUpgrade(ABC):
             if len(self.state.units_upgrade_peer_data) > 1:
                 resume_string = f"Verify highest unit is healthy & run `{UpgradeActions.RESUME_ACTION_NAME.value}` action. "
             return UpgradeStatuses.refreshing_needs_resume(resume_string)
-        return UpgradeStatuses.REFRESH_IN_PROG.value
+        return UpgradeStatuses.REFRESH_IN_PROGRESS.value
 
     def set_versions_in_app_databag(self) -> None:
         """Save current versions in app databag.
@@ -321,9 +321,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         if self.charm.unit.is_leader():
             status_object = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
             self.state.statuses.add(status_object, scope=Scope.APP, component=self.name)
-
-        # TODO future-work: for organisation of upgrade statuses we must find a stateless way for
-        # determining statuses without checking the already set status.
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
         statuses: StatusObjectList = self.state.statuses.get(scope=Scope.UNIT, component=self.name)
@@ -434,7 +431,6 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             self._upgrade.unit_state = UnitState.HEALTHY
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
-
         self._set_upgrade_status()
 
     def _on_vm_outdated(self) -> None:

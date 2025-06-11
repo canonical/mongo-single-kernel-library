@@ -125,7 +125,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
                 for status in statuses:
                     self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
 
-                if LdapStatuses.INVALID_HASH_STATUS.value in statuses:
+                if LdapStatuses.LDAP_SERVERS_MISMATCH.value in statuses:
                     raise InvalidLdapHashError(
                         "mongos and config-server not integrated with the same ldap server."
                     )
@@ -204,7 +204,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             return []
 
         if self.state.is_role(MongoDBRoles.SHARD):
-            return [LdapStatuses.LDAP_REL_ON_SHARD.value]
+            return [LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value]
 
         if self.state.ldap_cert_relation is None:
             logger.info(
@@ -226,7 +226,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
                     "Config Server and mongos integrations with LDAP have a different checksum."
                     "This usually means they are not integrated with the same LDAP application."
                 )
-                return [LdapStatuses.INVALID_HASH_STATUS.value]
+                return [LdapStatuses.LDAP_SERVERS_MISMATCH.value]
 
         ldap_relation_status = self.state.ldap.ldap_ready()
         ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()

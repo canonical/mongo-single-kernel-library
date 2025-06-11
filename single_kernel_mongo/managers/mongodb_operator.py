@@ -315,8 +315,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
         for attempt in Retrying(
-            stop=stop_after_attempt(120),
-            wait=wait_fixed(1),
+            stop=stop_after_attempt(5),
+            wait=wait_fixed(5),
             reraise=True,
         ):
             with attempt:
@@ -331,7 +331,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.mongo_manager.mongod_ready():
             self.state.statuses.add(
-                MongoDBStatuses.MONGODB_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                scope=Scope.UNIT,
+                component=self.name,
             )
             raise WorkloadNotReadyError
 
@@ -734,10 +736,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot set password on shard, please set password on config-server."
             )
-
-        # todo future work - check status of pbm directly
-        pbm_statuses = self.backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
-        pbm_status = next(iter(pbm_statuses), None)
+        pbm_status = self.backup_manager.get_main_status()
         if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
@@ -877,7 +876,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
-                MongoDBStatuses.MONGODB_NOT_STARTED.value,
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
@@ -889,7 +888,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongodb_exporter_config_manager.configure_and_restart()
         except WorkloadServiceError:
             self.state.statuses.add(
-                MongoDBStatuses.EXPORTER_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
+                MongoDBStatuses.WAITING_FOR_EXPORTER_START.value,
+                scope=Scope.UNIT,
+                component=self.name,
             )
             raise
 
@@ -897,7 +898,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
             self.state.statuses.add(
-                BackupStatuses.PBM_NOT_STARTED.value, scope=Scope.UNIT, component=self.name
+                BackupStatuses.WAITING_FOR_PBM_START.value, scope=Scope.UNIT, component=self.name
             )
             raise
 
@@ -917,7 +918,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
             self.state.statuses.add(
-                MongoDBStatuses.DB_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.name
+                MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value, scope=Scope.UNIT, component=self.name
             )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
@@ -1019,10 +1020,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if not self.state.db_initialised:
-            charm_statuses.append(MongoDBStatuses.MONGODB_NOT_STARTED.value)
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_MONGODB_START.value)
 
         if not self.mongodb_exporter_config_manager.workload.active():
-            charm_statuses.append(MongoDBStatuses.EXPORTER_NOT_STARTED.value)
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_EXPORTER_START.value)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
             charm_statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
@@ -1042,6 +1043,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm_statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
 
         if self.state.client_relations and self.state.is_sharding_component:
-            charm_statuses.append(MongoDBStatuses.DB_REL_ON_SHARD.value)
+            charm_statuses.append(MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value)
 
         return charm_statuses

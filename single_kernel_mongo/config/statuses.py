@@ -21,8 +21,8 @@ class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
-    MONGODB_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongod...")
-    EXPORTER_NOT_STARTED = StatusObject(
+    WAITING_FOR_MONGODB_START = StatusObject(status="waiting", message="Waiting to start mongod...")
+    WAITING_FOR_EXPORTER_START = StatusObject(
         status="waiting", message="Waiting to start mongodb-exporter..."
     )
     SHARDING_ON_REPLICA = StatusObject(
@@ -37,7 +37,7 @@ class MongoDBStatuses(Enum):
         message="Relation to s3-integrator is not supported, config role must be config-server.",
     )
 
-    DB_REL_ON_SHARD = StatusObject(
+    INVALID_DB_REL_ON_SHARD = StatusObject(
         status="blocked", message="Sharding roles do not support database interface."
     )
 
@@ -69,7 +69,7 @@ class MongosStatuses(Enum):
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
 
     # Running statuses:
-    NEED_CONF_SERVER = StatusObject(
+    MISSING_CONF_SERVER_REL = StatusObject(
         status="blocked", message="Missing relation to config-server.", running="async"
     )
     STARTING_MONGOS = StatusObject(
@@ -81,16 +81,11 @@ class CharmStatuses(Enum):
     """Charm Statuses."""
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    FAILED_SERVICES_START = StatusObject(status="blocked", message="Failed to start services.")
     MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
 
-    mongodb = MongoDBStatuses
-    mongos = MongosStatuses
-
     # RUNNING Statuses
-    MONGODB_INSTALLED = StatusObject(
-        status="maintenance", message="Installed MongoDB", running="blocking"
-    )
     INSTALLING_MONGODB = StatusObject(
         status="maintenance", message="installing MongoDB", running="blocking"
     )
@@ -118,7 +113,7 @@ class BackupStatuses(Enum):
 
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
-    PBM_NOT_STARTED = StatusObject(status="waiting", message="Waiting for pbm to start...")
+    WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for pbm to start...")
     PBM_MISSING_CONFIGS = StatusObject(status="blocked", message="s3 configurations missing.")
     PBM_INCORRECT_CREDS = StatusObject(status="blocked", message="s3 credentials are incorrect.")
     PBM_INCOMPATIBLE_CONF = StatusObject(
@@ -157,7 +152,7 @@ class ConfigServerStatuses(Enum):
 
     # todo consider this status to be put in charm
     MONGOS_NOT_RUNNING = StatusObject(status="blocked", message="Internal mongos is not running.")
-    NEED_SHARDS = StatusObject(status="blocked", message="Missing relation to shard(s).")
+    MISSING_SHARDING_REL = StatusObject(status="blocked", message="Missing relation to shard(s).")
     SYNCING_PASSWORDS = StatusObject(
         status="waiting", message="Waiting to sync passwords across the cluster..."
     )
@@ -207,7 +202,9 @@ class ShardStatuses(Enum):
         status="blocked", message="Shard CA and Config-Server CA don't match."
     )
 
-    NEED_CONF_SERVER = StatusObject(status="blocked", message="Missing relation to config-server.")
+    MISSING_CONF_SERVER_REL = StatusObject(
+        status="blocked", message="Missing relation to config-server."
+    )
     SHARD_DRAINED = StatusObject(
         status="active", message="Shard drained from cluster, ready for removal."
     )
@@ -296,7 +293,7 @@ class UpgradeStatuses(Enum):
     WAITING_POST_UPGRADE_STATUS = StatusObject(
         status="waiting", message="Waiting for post upgrade checks..."
     )
-    REFRESH_IN_PROG = StatusObject(
+    REFRESH_IN_PROGRESS = StatusObject(
         status="maintenance",
         message="Refreshing. To rollback, `juju refresh` to the previous revision",
         approved_critical_component=True,
@@ -357,7 +354,7 @@ class LdapStatuses(Enum):
     CONFIGURING_LDAP = StatusObject(
         status="maintenance", message="Configuring LDAP", running="blocking"
     )
-    LDAP_REL_ON_SHARD = StatusObject(
+    INVALID_LDAP_REL_ON_SHARD = StatusObject(
         status="blocked",
         message="Cannot integrate LDAP with shard.",
     )
@@ -369,7 +366,7 @@ class LdapStatuses(Enum):
         status="blocked",
         message="GLauth TLS is integrated but LDAP is not.",
     )
-    INVALID_HASH_STATUS = StatusObject(
+    LDAP_SERVERS_MISMATCH = StatusObject(
         status="blocked",
         message="mongos and config-server not integrated with the same ldap server.",
     )

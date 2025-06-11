@@ -143,7 +143,7 @@ def test_config_server_get_status_client_relation(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.DB_REL_ON_SHARD.value
+    assert status == MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value
 
 
 def test_config_server_get_status_internal_mongos_not_running(
@@ -359,7 +359,7 @@ def test_shard_get_status_charm_client_relation(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.DB_REL_ON_SHARD.value
+    assert status == MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value
 
 
 def test_shard_get_status_charm_missing_relation_not_drained(
@@ -374,7 +374,7 @@ def test_shard_get_status_charm_missing_relation_not_drained(
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == ShardStatuses.NEED_CONF_SERVER.value
+    assert status == ShardStatuses.MISSING_CONF_SERVER_REL.value
 
 
 def test_shard_get_status_charm_missing_relation_drained(
@@ -525,7 +525,7 @@ def test_shard_get_status_all_ok(harness: Harness[MongoTestCharm], mocker, mock_
 def test_mongos_get_status_no_relation(mongos_harness: Harness[MongosTestCharm], mocker):
     mongos_operator = mongos_harness.charm.operator
 
-    expected_status = MongosStatuses.NEED_CONF_SERVER.value
+    expected_status = MongosStatuses.MISSING_CONF_SERVER_REL.value
 
     mocker.patch(
         "single_kernel_mongo.workload.VMMongosWorkload.workload_present",

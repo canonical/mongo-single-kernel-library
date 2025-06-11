@@ -224,8 +224,9 @@ class TLSManager:
         )
         try:
             self.dependent.restart_charm_services(force=True)
-        except WorkloadServiceError:
+        except WorkloadServiceError as e:
             # TODO should we defer or just error
+            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             return
 
     def delete_certificates_from_workload(self):
