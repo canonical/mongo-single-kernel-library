@@ -391,6 +391,7 @@ async def reused_storage(
         # Get newstate and oldstate if present
         newstate = item["attr"].get("newState", "")
         oldstate = item["attr"].get("oldState", "")
+
         if newstate == "STARTUP2" and oldstate == "REMOVED" and re_use_time > removal_time:
             return True
 
@@ -499,8 +500,10 @@ async def verify_writes(
 
     actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=primary_unit)
 
-    assert total_expected_writes["number"] == actual_writes
-    return total_expected_writes["number"]
+    assert total_expected_writes == actual_writes
+
+    # Return it in case we need it later
+    return total_expected_writes
 
 
 async def kubectl_delete(ops_test: OpsTest, unit: JujuUnit, wait: bool = True) -> None:
