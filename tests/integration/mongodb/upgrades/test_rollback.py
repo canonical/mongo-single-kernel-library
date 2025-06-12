@@ -27,10 +27,10 @@ UPGRADE_TIMEOUT = 15 * 60
 
 
 @pytest.fixture
-async def faulty_upgrade_charm(mongodb_base_path: Path, mongodb_charm: str, tmp_path: Path):
+async def faulty_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
     fault_charm = tmp_path / "fault_charm.charm"
     shutil.copy(mongodb_charm, fault_charm)
-    initial_version_path = mongodb_base_path / Path("workload_version")
+    initial_version_path = mongod_base_path / Path("workload_version")
     workload_version = initial_version_path.read_text().strip()
 
     [major, minor, patch] = workload_version.split(".")
@@ -57,13 +57,13 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 
 @pytest.mark.abort_on_fail
 async def test_rollback(
-    ops_test: OpsTest, mongodb_base_path: Path, mongodb_charm: str, faulty_upgrade_charm: Path
+    ops_test: OpsTest, mongod_base_path: Path, mongodb_charm: str, faulty_upgrade_charm: Path
 ) -> None:
     app_name = await get_app_name(ops_test)
 
     mongodb_application = ops_test.model.applications[app_name]
 
-    initial_version_path = mongodb_base_path / Path("workload_version")
+    initial_version_path = mongod_base_path / Path("workload_version")
     initial_version = initial_version_path.read_text().strip()
 
     await mongodb_application.refresh(path=faulty_upgrade_charm)
