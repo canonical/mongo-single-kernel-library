@@ -44,7 +44,7 @@ async def test_build_and_deploy(
     substrate: Substrate,
     mongod_resource,
     mongos_resource,
-    client_relations_charm_path: str,
+    client_relation_charm_path: str,
 ) -> None:
     """Build and deploy 2 config servers, one shard and one mongos."""
     await deploy_charm(
@@ -97,7 +97,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=1,
     )
-    await deploy_application(ops_test, client_relations_charm_path, APPLICATION_APP_NAME)
+    await deploy_application(ops_test, client_relation_charm_path, APPLICATION_APP_NAME)
 
     await ops_test.model.wait_for_idle(
         apps=[
