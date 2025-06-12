@@ -546,6 +546,9 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
             )
 
+        if is_leaving:
+            self.dependent.assert_proceed_on_broken_event(relation)
+
     def prepare_to_add_shard(self) -> None:
         """Sets status and flags in relation data relevant to sharding."""
         # if reusing an old shard, re-set flags.
