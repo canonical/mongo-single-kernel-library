@@ -210,6 +210,13 @@ def shard_has_databases(
     return set(databases_on_shard) == set(expected_databases_on_shard)
 
 
+def count_users(mongos_client: MongoClient) -> int:
+    """Returns the number of users using the cluster."""
+    admin_db = mongos_client["admin"]
+    users_collection = admin_db.system.users
+    return users_collection.count_documents({})
+
+
 async def integrate_with_tls(ops_test: OpsTest, applications: list[str] | None = None) -> None:
     """Integrates cluster components with self-signed certs operator."""
     if not applications:

@@ -318,7 +318,9 @@ async def destroy_cluster(
             assert finished, "old cluster not destroyed successfully"
 
 
-def unit_uri(ip_address: str, password: str, app: str, mongos: bool = False) -> str:
+def unit_uri(
+    ip_address: str, password: str, app: str, username: str = "operator", mongos: bool = False
+) -> str:
     """Generates URI that is used by MongoDB to connect to a single replica.
 
     Args:
@@ -327,8 +329,8 @@ def unit_uri(ip_address: str, password: str, app: str, mongos: bool = False) -> 
         app: name of application which has the cluster.
     """
     if mongos:
-        return f"mongodb://operator:{password}@{ip_address}:{MONGOS_PORT}/admin"
-    return f"mongodb://operator:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
+        return f"mongodb://{username}:{password}@{ip_address}:{MONGOS_PORT}/admin"
+    return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
 async def get_password(ops_test: OpsTest, username="operator", app_name=None) -> str:
@@ -386,12 +388,25 @@ async def get_direct_mongo_client(
     app_name: str,
     mongos: bool = False,
     unit: JujuUnit | None = None,
+    username: str | None = None,
+    password: str | None = None,
 ):
     unit = unit or await find_unit(ops_test, leader=True, app_name=app_name)
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
-    password = await get_password(ops_test, app_name=app_name)
+    match username, password:
+        case None, None:
+            username = "operator"
+            password = await get_password(ops_test, app_name=app_name)
+        case _, None:
+            raise Exception("Please provide username and password")
+        case None, _:
+            raise Exception("Please provide username and password")
+        case _:
+            pass
+
     return MongoClient(
-        unit_uri(ip_address, password, app_name, mongos=mongos), directConnection=True
+        unit_uri(ip_address, password, app_name, username=username, mongos=mongos),
+        directConnection=True,
     )
 
 
@@ -1060,3 +1075,15 @@ def get_juju_status(model_name: str, app_name: str) -> str:
     return subprocess.check_output(f"juju status --model {model_name} {app_name}".split()).decode(
         "utf-8"
     )
+
+
+async def get_username_password(
+    ops_test: OpsTest, app_name: str, relation_name: str
+) -> tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name, "secret-user"
+    )
+    relation_user_data = await get_secret_data(ops_test, secret_uri)
+    username = relation_user_data.get("username")
+    password = relation_user_data.get("password")
+    return (username, password)
