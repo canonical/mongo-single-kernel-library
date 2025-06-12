@@ -58,7 +58,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=1,
+        num_units=(1 if substrate == "microk8s" else 0),
     )
     await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="jammy")
 
