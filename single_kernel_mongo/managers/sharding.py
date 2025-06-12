@@ -299,7 +299,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 charm_statuses[Scope.UNIT].append(
                     ConfigServerStatuses.unreachable_shards(unreachable_shards)
                 )
-        except ServerSelectionTimeoutError:
+        except (ServerSelectionTimeoutError, OperationFailure):
             return []
 
         return (
