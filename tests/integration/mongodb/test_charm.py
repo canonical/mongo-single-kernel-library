@@ -105,12 +105,14 @@ async def test_status(ops_test: OpsTest) -> None:
 
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
-async def test_unit_is_running_as_replica_set(ops_test: OpsTest, unit_id: int) -> None:
+async def test_unit_is_running_as_replica_set(
+    ops_test: OpsTest, substrate: Substrate, unit_id: int
+) -> None:
     """Tests that mongodb is running as a replica set for the application unit."""
     # connect to mongo replica set
     app_name = await get_app_name(ops_test)
-    unit = ops_test.model.applications[app_name].units[unit_id]
-    connection = unit.public_address + ":" + str(MONGOD_PORT)
+    address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+    connection = address + ":" + str(MONGOD_PORT)
     client = MongoClient(connection, replicaset=app_name, directConnection=True)
 
     # check mongo replica set is ready
