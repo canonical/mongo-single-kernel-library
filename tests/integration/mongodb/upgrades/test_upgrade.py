@@ -15,6 +15,7 @@ from ...helpers.common import (
 )
 from ...helpers.ha import cut_network_from_unit, verify_writes
 from ...helpers.types import Substrate
+from ...helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +35,21 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 
 
 @pytest.mark.abort_on_fail
-async def test_upgrade(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db) -> None:
+async def test_upgrade(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict,
+    continuous_writes_to_db,
+) -> None:
     """Verifies that the upgrade can run successfully."""
     app_name = await get_app_name(ops_test)
 
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
 
     logger.info("Calling pre-refresh-check")
-    try:
-        action = await leader_unit.run_action("pre-refresh-check")
-        await action.wait()
-    # Catch renaming of pre-upgrade-check to pre-refresh-check
-    except Exception:
-        action = await leader_unit.run_action("pre-upgrade-check")
-        await action.wait()
+    action = await leader_unit.run_action("pre-refresh-check")
+    await action.wait()
 
     assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
 
@@ -55,9 +57,8 @@ async def test_upgrade(ops_test: OpsTest, substrate: Substrate, continuous_write
         apps=[app_name], status="active", timeout=1000, idle_period=120
     )
 
-    new_charm = await ops_test.build_charm(".")
     app_name = await get_app_name(ops_test)
-    await ops_test.model.applications[app_name].refresh(path=new_charm)
+    await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
     if (

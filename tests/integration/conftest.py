@@ -14,6 +14,7 @@ from yaml import safe_load
 from tests.integration.helpers.common import deploy_application, get_app_name
 
 from .helpers.common import (
+    CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
     clear_continous_writes,
     get_direct_mongo_client,
@@ -131,7 +132,7 @@ def mongos_resource(mongos_metadata) -> dict[str, Any]:
 async def continuous_writes_to_db(ops_test: OpsTest, application_path: str):
     """Continuously writget_app_name the duration of the test."""
     db_app_name = await get_app_name(ops_test)
-    app_name = "continuous-write"
+    app_name = CONTINUOUS_WRITE_APPLICATION
     if app_name not in ops_test.model.applications.keys():
         await deploy_application(ops_test, application_path=application_path, app_name=app_name)
         await relate_mongodb_and_application(ops_test, db_app_name, app_name)
@@ -146,7 +147,7 @@ async def continuous_writes_to_db(ops_test: OpsTest, application_path: str):
 async def add_writes_to_db(ops_test: OpsTest, application_path: str):
     """Adds writes to DB before test starts and clears writes at the end of the test."""
     db_app_name = await get_app_name(ops_test)
-    app_name = "continuous-write"
+    app_name = CONTINUOUS_WRITE_APPLICATION
     if app_name not in ops_test.model.applications.keys():
         await deploy_application(ops_test, application_path=application_path, app_name=app_name)
         await relate_mongodb_and_application(ops_test, db_app_name, app_name)
@@ -159,9 +160,9 @@ async def add_writes_to_db(ops_test: OpsTest, application_path: str):
 
 
 @pytest.fixture
-async def add_writes_to_shard(ops_test: OpsTest, substrate, application_path: str):
+async def add_writes_to_shard(ops_test: OpsTest, substrate: Substrate, application_path: str):
     """Adds writes to DB before test starts and clears writes at the end of the test."""
-    app_name = "continuous-write"
+    app_name = CONTINUOUS_WRITE_APPLICATION
 
     if app_name not in ops_test.model.applications.keys():
         await deploy_application(ops_test, application_path=application_path, app_name=app_name)
@@ -200,3 +201,39 @@ async def add_writes_to_shard(ops_test: OpsTest, substrate, application_path: st
     )
     remove_db_writes(mongos_client, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
     remove_db_writes(mongos_client, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
+
+
+@pytest.fixture
+async def add_continuous_writes_to_shards(
+    ops_test: OpsTest, substrate: Substrate, application_path: str
+):
+    """Generates continuous writes on two shards."""
+    app_name = CONTINUOUS_WRITE_APPLICATION
+
+    if app_name not in ops_test.model.applications.keys():
+        await deploy_application(ops_test, application_path=application_path, app_name=app_name)
+    # configure write app to use mongos uri
+    mongos_uri: str = await mongodb_uri(
+        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, port=MONGOS_PORT
+    )
+    await ops_test.model.applications[app_name].set_config({"mongos-uri": mongos_uri})
+    await start_continous_writes(
+        ops_test, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    await start_continous_writes(
+        ops_test, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
+    )
+
+    mongos_client = await get_direct_mongo_client(
+        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True
+    )
+    mongos_client.admin.command("movePrimary", SHARD_ONE_DB_NAME, to=SHARD_ONE_APP_NAME)
+    mongos_client.admin.command("movePrimary", SHARD_TWO_DB_NAME, to=SHARD_TWO_APP_NAME)
+    yield
+
+    await clear_continous_writes(
+        ops_test, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
+    await clear_continous_writes(
+        ops_test, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
+    )

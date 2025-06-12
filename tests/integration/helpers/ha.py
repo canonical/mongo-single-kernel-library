@@ -33,6 +33,7 @@ from tenacity import (
 )
 
 from ..helpers.common import (
+    CONTINUOUS_WRITE_APPLICATION,
     TIMEOUT,
     ProcessError,
     count_primaries,
@@ -486,7 +487,7 @@ async def verify_writes(
 ) -> int:
     # verify that no writes to the db were missed
     total_expected_writes = await stop_continous_writes(
-        ops_test, client_app_name="continuous-write"
+        ops_test, client_app_name=CONTINUOUS_WRITE_APPLICATION
     )
 
     hosts = [

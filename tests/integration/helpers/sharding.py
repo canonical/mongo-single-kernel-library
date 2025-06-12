@@ -88,7 +88,7 @@ async def deploy_cluster_components(
     if channel is None:
         my_charm = mongodb_charm
     else:
-        my_charm = MONGODB_CHARM_NAME
+        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,

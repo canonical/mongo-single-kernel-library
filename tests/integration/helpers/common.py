@@ -45,6 +45,11 @@ DEPLOYMENT_TIMEOUT = 2000
 OPERATOR_USERNAME = "operator"
 OPERATOR_PASSWORD = "operator-password"
 
+CONTINUOUS_WRITE_APPLICATION = "continuous-write"
+# Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
+DEFAULT_DATABASE_NAME = "continuous_writes_database"
+DEFAULT_COLLECTION_NAME = "continuous_writes_collection"
+
 MEDIAN_REELECTION_TIME = 12
 
 TEST_DOCUMENTS = """[
@@ -229,13 +234,18 @@ async def mongodb_uri(
     port: int = MONGOD_PORT,
     username: str = "operator",
     password: str | None = None,
+    hostnames: bool = False,
 ) -> str:
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
-    addresses = [
-        await get_address_of_unit(ops_test, substrate, unit_id, app_name) for unit_id in unit_ids
-    ]
+    if substrate == "microk8s" and hostnames:
+        addresses = [f"{app_name}-{unit_id}.{app_name}-endpoints" for unit_id in unit_ids]
+    else:
+        addresses = [
+            await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+            for unit_id in unit_ids
+        ]
 
     hosts = [f"{host}:{port}" for host in addresses]
     hosts = ",".join(hosts)
@@ -371,9 +381,13 @@ async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=
 
 
 async def get_direct_mongo_client(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, mongos: bool = False
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    mongos: bool = False,
+    unit: JujuUnit | None = None,
 ):
-    unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    unit = unit or await find_unit(ops_test, leader=True, app_name=app_name)
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     password = await get_password(ops_test, app_name=app_name)
     return MongoClient(
@@ -845,22 +859,43 @@ async def execute_on_mongod(
     )
 
 
-async def start_continous_writes(ops_test: OpsTest, client_app_name: str):
+async def start_continous_writes(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+):
     application_unit = ops_test.model.applications[client_app_name].units[0]
-    start_writes_action = await application_unit.run_action("start-continuous-writes")
+    start_writes_action = await application_unit.run_action(
+        "start-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+    )
     await start_writes_action.wait()
 
 
-async def stop_continous_writes(ops_test: OpsTest, client_app_name: str) -> int:
+async def stop_continous_writes(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+) -> int:
     application_unit = ops_test.model.applications[client_app_name].units[0]
-    stop_writes_action = await application_unit.run_action("stop-continuous-writes")
+    stop_writes_action = await application_unit.run_action(
+        "stop-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+    )
     await stop_writes_action.wait()
     return int(stop_writes_action.results["writes"])
 
 
-async def clear_continous_writes(ops_test: OpsTest, client_app_name: str):
+async def clear_continous_writes(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+):
     application_unit = ops_test.model.applications[client_app_name].units[0]
-    clear_writes_action = await application_unit.run_action("clear-continuous-writes")
+    clear_writes_action = await application_unit.run_action(
+        "clear-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+    )
     await clear_writes_action.wait()
 
 
@@ -1019,3 +1054,9 @@ async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
         client.close()
 
     return True
+
+
+def get_juju_status(model_name: str, app_name: str) -> str:
+    return subprocess.check_output(f"juju status --model {model_name} {app_name}".split()).decode(
+        "utf-8"
+    )
