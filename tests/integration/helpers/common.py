@@ -103,7 +103,7 @@ async def deploy_charm(
     if substrate == "microk8s":
         await ops_test.model.deploy(
             charm,
-            resources=mongod_resource,
+            resources=(mongod_resource if not channel else None),
             application_name=app_name,
             num_units=0 if subordinate else num_units,
             series="jammy",
