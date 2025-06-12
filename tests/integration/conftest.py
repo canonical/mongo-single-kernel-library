@@ -57,7 +57,7 @@ def substrate(request) -> Substrate:
 @pytest.fixture
 def application_path() -> str:
     """The test application path."""
-    return "./tests/integration/applications/continuous_write_charm/application_ubuntu@22.04-amd64.charm"
+    return "./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
