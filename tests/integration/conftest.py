@@ -179,9 +179,13 @@ async def add_writes_to_shard(ops_test: OpsTest, substrate: Substrate, applicati
     )
     await ops_test.model.applications[app_name].set_config({"mongos-uri": mongos_uri})
 
-    await start_continous_writes(ops_test, app_name)
+    await start_continous_writes(
+        ops_test, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
     time.sleep(20)
-    await stop_continous_writes(ops_test, app_name)
+    await stop_continous_writes(
+        ops_test, app_name, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME
+    )
 
     mongos_client = await get_direct_mongo_client(
         ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True
