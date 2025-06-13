@@ -428,6 +428,7 @@ async def test_replication_member_scaling(
     await verify_writes(ops_test, substrate, app_name)
 
 
+@pytest.mark.abort_on_fail
 async def test_kill_db_process(ops_test, substrate: Substrate, continuous_writes_to_db):
     # locate primary unit
     app_name = await get_app_name(ops_test)

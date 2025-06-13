@@ -1054,7 +1054,7 @@ def mongodb_log_path(substrate: Substrate) -> str:
 async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
     """Verifies replica is running and available."""
     app_name = app_name or await get_app_name(ops_test)
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
     client = MongoClient(unit_uri(unit_ip, password, app_name), directConnection=True)
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
