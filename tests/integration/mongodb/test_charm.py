@@ -323,15 +323,17 @@ async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/audit.log"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader"
+            base_command = (
+                f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader -- sudo"
+            )
         case "microk8s":
             audit_log_path = "/var/log/mongodb/audit.log"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader --"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
     audit_log = check_output(
-        f"{base_command} 'sudo cat {audit_log_path}'",
+        f"{base_command} cat {audit_log_path}",
         stderr=subprocess.PIPE,
         shell=True,
         universal_newlines=True,
@@ -359,15 +361,17 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader"
+            base_command = (
+                f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader -- sudo"
+            )
         case "microk8s":
             audit_log_path = "/var/log/mongodb/"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader --"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
     log_files = check_output(
-        f"{base_command} 'sudo ls {audit_log_path}'",
+        f"{base_command} ls {audit_log_path}",
         stderr=subprocess.PIPE,
         shell=True,
         universal_newlines=True,
@@ -383,7 +387,7 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     await clear_continous_writes(ops_test, client_app_name=application_name)
 
     log_files = check_output(
-        f"{base_command} 'sudo ls {audit_log_path}'",
+        f"{base_command} ls {audit_log_path}",
         stderr=subprocess.PIPE,
         shell=True,
         universal_newlines=True,

@@ -72,7 +72,7 @@ async def mongo_tls_command(
 
     status_comand = "rs.status()" if not mongos else "sh.status()"
     return (
-        f'sudo {mongosh(substrate)} "{replica_set_uri}"  --eval "{status_comand}"'
+        f'{mongosh(substrate)} "{replica_set_uri}"  --eval "{status_comand}"'
         f" --tls --tlsCAFile {external_cert_path(substrate)}"
         f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
     )
@@ -107,7 +107,7 @@ async def check_tls(
                 ssh_command = (
                     ["ssh", "--container", "mongod", unit.name]
                     if substrate == "microk8s"
-                    else ["ssh", unit.name]
+                    else ["ssh", unit.name, "sudo"]
                 )
                 mongod_tls_check = await mongo_tls_command(
                     ops_test, substrate=substrate, app_name=app_name, mongos=mongos
@@ -131,7 +131,7 @@ async def time_file_created(
 ) -> datetime:
     """Returns the unix timestamp of when a file was created on a specified unit."""
     if substrate == "lxd":
-        time_cmd = f"ssh {unit_name} ls -l --time-style=full-iso {path} "
+        time_cmd = f"ssh {unit_name} sudo ls -l --time-style=full-iso {path} "
     else:
         time_cmd = f"ssh --container mongod {unit_name} ls -l --time-style=full-iso {path} "
     return_code, ls_output, _ = await ops_test.juju(*time_cmd.split())

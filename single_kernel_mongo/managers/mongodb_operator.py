@@ -474,8 +474,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
         # work.
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.state.db_initialised:
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
