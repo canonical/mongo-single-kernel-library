@@ -501,8 +501,6 @@ async def verify_writes(
 
     actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=primary_unit)
 
-    logger.warning(f"Verifying writes: {total_expected_writes=} ?= {actual_writes=}")
-
     assert total_expected_writes == actual_writes
 
     # Return it in case we need it later
@@ -545,7 +543,7 @@ async def insert_release_to_cluster(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
     db = client["new-db"]
     test_collection = db["test_ubuntu_collection"]
@@ -572,7 +570,7 @@ async def retrieve_entries(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
 
     db = client[db_name]
@@ -874,7 +872,7 @@ async def verify_replica_set_configuration(
     member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
     assert set(member_ips) == set(ip_addresses), "all members not running under the same replset"
 
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
 
     # verify there is only one primary
     assert (
