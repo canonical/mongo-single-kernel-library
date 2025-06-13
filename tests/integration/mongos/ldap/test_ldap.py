@@ -95,7 +95,7 @@ async def test_build_and_deploy_mongos(
     Then integrate mongos and sharded cluster.
     """
     if app_name := await get_app_name(ops_test, charm_name="mongos"):
-        await check_or_scale_app(ops_test, app_name, 3)
+        await check_or_scale_app(ops_test, substrate, app_name, 3)
     else:
         await deploy_charm(
             ops_test=ops_test,

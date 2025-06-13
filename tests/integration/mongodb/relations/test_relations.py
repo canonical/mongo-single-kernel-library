@@ -67,7 +67,7 @@ async def test_deploy_charms(
                 application_name=APPLICATION_APP_NAME,
                 num_units=required_units,
             ),
-            check_or_scale_app(ops_test, app_name, required_units),
+            check_or_scale_app(ops_test, substrate, app_name, required_units),
             deploy_charm(
                 ops_test=ops_test,
                 charm=mongodb_charm,

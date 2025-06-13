@@ -532,13 +532,22 @@ async def get_secret_content(ops_test, secret_id) -> dict[str, str]:
     return data[secret_id]["content"]["Data"]
 
 
-async def check_or_scale_app(ops_test: OpsTest, user_app_name: str, required_units: int) -> None:
+async def check_or_scale_app(
+    ops_test: OpsTest, substrate: Substrate, user_app_name: str, required_units: int
+) -> None:
     """A helper function that scales existing cluster if necessary."""
     # check if we need to scale
     current_units = len(ops_test.model.applications[user_app_name].units)
 
     if current_units == required_units:
         return
+
+    if substrate == "microk8s":
+        count = required_units - current_units
+        await ops_test.model.applications[user_app_name].scale(scale_change=count)
+        await ops_test.model.wait_for_idle()
+        return
+
     if current_units > required_units:
         for i in range(0, current_units):
             unit_to_remove = [ops_test.model.applications[user_app_name].units[i].name]
@@ -546,8 +555,8 @@ async def check_or_scale_app(ops_test: OpsTest, user_app_name: str, required_uni
             await ops_test.model.wait_for_idle()
     else:
         units_to_add = required_units - current_units
-    await ops_test.model.applications[user_app_name].add_unit(count=units_to_add)
-    await ops_test.model.wait_for_idle()
+        await ops_test.model.applications[user_app_name].add_unit(count=units_to_add)
+        await ops_test.model.wait_for_idle()
 
 
 async def get_app_name(
