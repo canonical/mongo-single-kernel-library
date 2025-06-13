@@ -37,7 +37,6 @@ for directory in "${TEST_CHARMS[@]}"; do
     pushd "${LIB_PATH}"
     git init
     sed 's/strict = true/strict = false/' -i "pyproject.toml"
-    cat pyproject.toml
     popd
 
     poetry add "${LIB_PATH}/"
