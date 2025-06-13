@@ -7,6 +7,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers.common import (
+    DEFAULT_COLLECTION_NAME,
+    DEFAULT_DATABASE_NAME,
     find_unit,
     generate_mongodb_client,
     get_address_of_unit,
@@ -78,8 +80,8 @@ async def insert_unwanted_data(
 
     client = MongoClient(uri, directConnection=True)
 
-    db = client["new-db"]
-    test_collection = db["test_collection"]
+    db = client[DEFAULT_DATABASE_NAME]
+    test_collection = db[DEFAULT_COLLECTION_NAME]
     test_collection.insert_one({"unwanted_data": "bad data 1"})
     test_collection.insert_one({"unwanted_data": "bad data 2"})
     test_collection.insert_one({"unwanted_data": "bad data 3"})
