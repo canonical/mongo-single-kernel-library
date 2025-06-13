@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,7 @@ from ...helpers.common import (
     find_unit,
     get_address_of_unit,
     get_app_name,
+    get_highest_unit,
     get_password,
     get_unit_hostnames,
     get_unit_id,
@@ -86,13 +88,15 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-async def test_storage_re_use(ops_test, substrate: Substrate, continuous_writes_to_db):
+async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
     properly uses the storage that was provided. (ie. doesn't just re-sync everything from
     primary, but instead computes a diff between current storage and primary storage.)
     """
+    if substrate == "microk8s":
+        pytest.skip("This only runs on lxd")
     app_name = await get_app_name(ops_test)
     if storage_type(ops_test, app_name) == "rootfs":
         pytest.skip(
@@ -130,6 +134,64 @@ async def test_storage_re_use(ops_test, substrate: Substrate, continuous_writes_
         ops_test, substrate, new_unit.name, removal_time
     ), "attached storage not properly reused by MongoDB."
 
+    await verify_writes(ops_test, substrate, app_name)
+
+
+@pytest.mark.abort_on_fail
+async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuous_writes_to_db):
+    """Verifies that database units with attached storage correctly repurpose storage.
+
+    It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
+    properly uses the storage that was provided. (ie. doesn't just re-sync everything from
+    primary, but instead computes a diff between current storage and primary storage.)
+    """
+    if substrate == "lxd":
+        pytest.skip("This only runs on microk8s")
+
+    app_name = await get_app_name(ops_test)
+
+    # removing the only replica can be disastrous
+    if len(ops_test.model.applications[app_name].units) < 2:
+        await ops_test.model.applications[app_name].add_unit(count=1)
+        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+
+    # remove a unit and attach it's storage to a new unit
+    current_number_units = len(ops_test.model.applications[app_name].units)
+    await scale_application(ops_test, substrate, app_name, -1)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=(current_number_units - 1),
+    )
+    # k8s will automatically use the old storage from the storage pool
+    removal_time = datetime.now(timezone.utc).timestamp()
+    await scale_application(ops_test, substrate, app_name, current_number_units)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=(current_number_units),
+    )
+    # for this test, we only scaled up the application by one unit. So it the highest unit will be
+    # the newest unit.
+    new_unit = get_highest_unit(ops_test, app_name)
+    assert new_unit, "No highest unit found"
+    assert await reused_storage(
+        ops_test, substrate, new_unit.name, removal_time
+    ), "attached storage not properly reused by MongoDB."
+
+    # verify presence of primary, replica set member configuration, and number of primaries
+    hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
+    member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
+    assert set(member_hosts) == set(hostnames)
+
+    password = await get_password(ops_test, app_name=app_name)
+    assert (
+        await count_primaries(ops_test, substrate, password, app_name=app_name) == 1
+    ), "there is more than one primary in the replica set."
+
+    # verify all units are up to date.
     await verify_writes(ops_test, substrate, app_name)
 
 

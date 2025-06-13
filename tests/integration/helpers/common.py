@@ -1085,3 +1085,13 @@ async def get_username_password(
     username = relation_user_data.get("username")
     password = relation_user_data.get("password")
     return (username, password)
+
+
+def get_highest_unit(ops_test: OpsTest, app_name: str) -> JujuUnit | None:
+    """Retrieves the most recently added unit to the MongoDB application."""
+    num_units = len(ops_test.model.applications[app_name].units)
+    highest_unit_name = f"{app_name}/{num_units - 1}"
+    for unit in ops_test.model.applications[app_name].units:
+        if unit.name == highest_unit_name:
+            return unit
+    return None
