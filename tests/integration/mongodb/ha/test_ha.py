@@ -309,7 +309,7 @@ async def test_replication_across_members(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
 
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
 
     secondaries = set(ip_addresses) - {primary.public_address}
     for secondary in secondaries:
@@ -406,7 +406,7 @@ async def test_replication_member_scaling(
 
     new_member_ip = list(set(new_ip_addresses) - set(original_ip_addresses))[0]
 
-    password = await get_password(ops_test, app_name)
+    password = await get_password(ops_test, app_name=app_name)
 
     client = MongoClient(unit_uri(new_member_ip, password, app_name), directConnection=True)
 
