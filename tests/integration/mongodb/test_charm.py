@@ -323,12 +323,10 @@ async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/audit.log"
-            base_command = (
-                f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader -- sudo"
-            )
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
         case "microk8s":
             audit_log_path = "/var/log/mongodb/audit.log"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader --"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
@@ -361,12 +359,10 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/"
-            base_command = (
-                f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader -- sudo"
-            )
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
         case "microk8s":
             audit_log_path = "/var/log/mongodb/"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader --"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
