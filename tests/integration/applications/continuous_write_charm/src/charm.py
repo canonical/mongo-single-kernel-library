@@ -12,6 +12,7 @@ import logging
 import os
 import signal
 import subprocess
+import sys
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
@@ -112,7 +113,7 @@ class ContinuousWritesApplication(CharmBase):
         # Run continuous writes in the background
         proc = subprocess.Popen(
             [
-                "/usr/bin/python3",
+                sys.executable,
                 "src/continuous_writes.py",
                 uris,
                 str(starting_number),

@@ -911,8 +911,8 @@ async def count_writes(
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False, hosts=[host])
 
     client = MongoClient(uri, directConnection=True)
-    db = client["continuous_writes_database"]
-    test_collection = db["continuous_writes_collection"]
+    db = client[DEFAULT_DATABASE_NAME]
+    test_collection = db[DEFAULT_COLLECTION_NAME]
     count = test_collection.count_documents({})
     client.close()
     return count
