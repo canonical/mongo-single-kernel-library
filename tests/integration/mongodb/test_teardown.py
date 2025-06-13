@@ -74,7 +74,7 @@ async def scale_and_verify(ops_test: OpsTest, substrate: Substrate, count: int):
 
     hosts = [
         await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
-        for unit in ops_test.model.applications[app_name]
+        for unit in ops_test.model.applications[app_name].units
     ]
 
     primary = await replica_set_primary(
