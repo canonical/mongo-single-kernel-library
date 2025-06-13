@@ -25,7 +25,6 @@ from ...helpers.common import (
     get_password,
     get_unit_hostnames,
     get_unit_id,
-    get_unit_ip,
     instance_ip,
     mongod_ready,
     unit_hostname,
@@ -774,7 +773,9 @@ async def test_network_cut(ops_test: OpsTest, substrate: Substrate, continuous_w
     model_name = ops_test.model.info.name
 
     primary_hostname = await unit_hostname(ops_test, primary.name)
-    primary_unit_ip = await get_unit_ip(ops_test, primary.name)
+    primary_unit_ip = await get_address_of_unit(
+        ops_test, substrate, get_unit_id(primary.name), primary.name.split("/")[0]
+    )
 
     # before cutting network verify that connection is possible
     assert await mongod_ready(

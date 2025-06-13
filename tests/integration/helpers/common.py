@@ -611,23 +611,6 @@ def instance_ip(model: str, instance: str) -> str:
     return ""
 
 
-async def get_unit_ip(ops_test: OpsTest, unit_name: str) -> str:
-    """Wrapper for getting unit ip.
-
-    Juju incorrectly reports the IP addresses after the network is restored this is reported as a
-    bug here: https://github.com/juju/python-libjuju/issues/738 . Once this bug is resolved use of
-    `get_unit_ip` should be replaced with `.public_address`
-
-    Args:
-        ops_test: The ops test object passed into every test case
-        unit_name: The name of the unit to be tested
-
-    Returns:
-        The (str) ip of the unit
-    """
-    return instance_ip(ops_test.model.info.name, await unit_hostname(ops_test, unit_name))
-
-
 def audit_log_line_sanity_check(entry) -> bool:
     fields = ["atype", "ts", "local", "remote", "users", "roles", "param", "result"]
     for field in fields:
@@ -669,9 +652,6 @@ async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
 
 async def get_application_units(ops_test: OpsTest, substrate: str, app: str) -> list[Unit]:
     """Get fully detailed units of an application."""
-    # Juju incorrectly reports the IP addresses after the network is restored this is reported as a
-    # bug here: https://github.com/juju/python-libjuju/issues/738. Once this bug is resolved use of
-    # `get_unit_ip` should be replaced with `.public_address`
     raw_app = await get_raw_application(ops_test, app)
     units = []
     for u_name, unit in raw_app["units"].items():

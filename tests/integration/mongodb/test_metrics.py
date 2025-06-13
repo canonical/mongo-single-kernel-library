@@ -15,8 +15,9 @@ from ..helpers.common import (
     check_or_scale_app,
     deploy_charm,
     find_unit,
+    get_address_of_unit,
     get_app_name,
-    get_unit_ip,
+    get_unit_id,
     unit_hostname,
 )
 from ..helpers.ha import cut_network_from_unit, restore_network_for_unit, wait_network_restore
@@ -47,16 +48,16 @@ async def test_build_and_deploy(
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
 
 
-async def test_endpoints(ops_test: OpsTest):
+async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
     """Sanity check that endpoints are running."""
     app_name = await get_app_name(ops_test)
     application = ops_test.model.applications[app_name]
 
     for unit in application.units:
-        await verify_endpoints(ops_test, unit)
+        await verify_endpoints(ops_test, substrate, unit)
 
 
-async def test_endpoints_new_password(ops_test: OpsTest):
+async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
     """Verify that endpoints still function correctly after the monitor user password changes."""
     app_name = await get_app_name(ops_test)
     application = ops_test.model.applications[app_name]
@@ -67,14 +68,16 @@ async def test_endpoints_new_password(ops_test: OpsTest):
     time.sleep(3)
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", idle_period=15)
     for unit in application.units:
-        await verify_endpoints(ops_test, unit)
+        await verify_endpoints(ops_test, substrate, unit)
 
 
 async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate):
     """Verify that endpoint still function correctly after a network cut."""
     app_name = await get_app_name(ops_test)
     unit = ops_test.model.applications[app_name].units[0]
-    unit_ip = await get_unit_ip(ops_test, unit.name)
+    unit_ip = await get_address_of_unit(
+        ops_test, substrate, get_unit_id(unit.name), unit.name.split("/")[0]
+    )
     if substrate == "lxd":
         hostname = await unit_hostname(ops_test, unit.name)
     else:
@@ -89,15 +92,17 @@ async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate):
     await wait_network_restore(
         ops_test, substrate, ops_test.model.info.name, app_name, hostname, unit_ip
     )
-    await verify_endpoints(ops_test, unit)
+    await verify_endpoints(ops_test, substrate, unit)
 
 
 # helpers
 
 
-async def verify_endpoints(ops_test: OpsTest, unit: JujuUnit) -> str:
+async def verify_endpoints(ops_test: OpsTest, substrate: Substrate, unit: JujuUnit) -> str:
     """Verifies mongodb endpoint is functional on a given unit."""
-    unit_address = await get_unit_ip(ops_test, unit.name)
+    unit_address = await get_address_of_unit(
+        ops_test, substrate, get_unit_id(unit.name), unit.name.split("/")[0]
+    )
     mongodb_exporter_url = f"http://{unit_address}:{MONGODB_EXPORTER_PORT}/metrics"
     mongo_resp = httpx.get(mongodb_exporter_url)
 
