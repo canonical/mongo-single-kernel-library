@@ -813,7 +813,9 @@ async def test_full_cluster_restart(
 
 
 @pytest.mark.abort_on_fail
-async def test_network_cut(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
+async def test_network_cut(
+    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db, chaos_mesh
+):
     # locate primary unit
     app_name = await get_app_name(ops_test)
     ip_addresses = [

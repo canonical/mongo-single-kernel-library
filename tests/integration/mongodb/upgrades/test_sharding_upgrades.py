@@ -144,7 +144,9 @@ async def test_pre_upgrade_check_success(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_pre_upgrade_check_failure(ops_test: OpsTest, substrate: Substrate) -> None:
+async def test_pre_upgrade_check_failure(
+    ops_test: OpsTest, substrate: Substrate, chaos_mesh
+) -> None:
     """Verify that the pre-refresh check fails if there is a problem with one of the shards."""
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,

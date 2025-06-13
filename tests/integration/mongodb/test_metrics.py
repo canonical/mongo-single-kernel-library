@@ -72,7 +72,7 @@ async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
         await verify_endpoints(ops_test, substrate, unit)
 
 
-async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate):
+async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate, chaos_mesh):
     """Verify that endpoint still function correctly after a network cut."""
     app_name = await get_app_name(ops_test)
     unit = ops_test.model.applications[app_name].units[0]

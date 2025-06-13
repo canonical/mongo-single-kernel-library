@@ -80,7 +80,7 @@ async def test_upgrade(
         )
 
     # verify that the no writes were skipped
-    assert verify_writes(ops_test, substrate, app_name)
+    await verify_writes(ops_test, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
@@ -104,7 +104,7 @@ async def test_preflight_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_preflight_check_failure(ops_test: OpsTest, substrate: Substrate) -> None:
+async def test_preflight_check_failure(ops_test: OpsTest, substrate: Substrate, chaos_mesh) -> None:
     """Verifies that the preflight check can run successfully."""
     app_name = await get_app_name(ops_test)
     unit = await find_unit(ops_test, leader=False, app_name=app_name)
