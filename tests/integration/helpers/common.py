@@ -92,7 +92,7 @@ async def deploy_charm(
     ops_test: OpsTest,
     charm: Path | str,
     substrate: Substrate,
-    mongod_resource: str,
+    mongod_resource: dict,
     app_name: str,
     num_units: int = 3,
     channel: str | None = None,
@@ -643,7 +643,7 @@ async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: 
         ]
 
     return [
-        await get_unit_hostname(ops_test, get_unit_id(unit.name), app_name)
+        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
 

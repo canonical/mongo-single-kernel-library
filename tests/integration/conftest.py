@@ -67,6 +67,12 @@ def client_relation_charm_path() -> str:
 
 
 @pytest.fixture
+def mongos_client_application_path() -> str:
+    """The mongos test application path."""
+    return "./tests/integration/applications/mongos_client_charm/mongos-test-application_ubuntu@22.04-amd64.charm"
+
+
+@pytest.fixture
 def mongod_base_path(substrate) -> Path:
     """The base path for the files of the mongodb charms, according to the substrate."""
     if substrate == "microk8s":
