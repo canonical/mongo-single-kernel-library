@@ -87,7 +87,12 @@ async def test_build_and_deploy(
     )
     await ops_test.model.deploy(S3_APP_NAME, channel="edge")
 
-    await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="jammy")
+    await ops_test.model.deploy(
+        DATA_INTEGRATOR_APP_NAME,
+        channel="latest/stable",
+        series="jammy",
+        config={"extra-user-roles": "admin"},
+    )
 
     await deploy_charm(
         ops_test,

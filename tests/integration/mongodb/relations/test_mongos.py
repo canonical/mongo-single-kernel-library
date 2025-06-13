@@ -60,7 +60,12 @@ async def test_build_and_deploy(
         mongod_resource=mongos_resource,
         num_units=(1 if substrate == "microk8s" else 0),
     )
-    await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="jammy")
+    await ops_test.model.deploy(
+        DATA_INTEGRATOR_APP_NAME,
+        channel="latest/stable",
+        series="jammy",
+        config={"extra-user-roles": "admin"},
+    )
 
 
 @pytest.mark.abort_on_fail
