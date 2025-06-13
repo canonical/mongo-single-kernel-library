@@ -650,7 +650,7 @@ async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
     return json.loads(stdout)["applications"][app]
 
 
-async def get_application_units(ops_test: OpsTest, substrate: str, app: str) -> list[Unit]:
+async def get_application_units(ops_test: OpsTest, substrate: Substrate, app: str) -> list[Unit]:
     """Get fully detailed units of an application."""
     raw_app = await get_raw_application(ops_test, app)
     units = []
@@ -671,7 +671,7 @@ async def get_application_units(ops_test: OpsTest, substrate: str, app: str) -> 
             ip=address,
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
-            machine_id=int(unit["machine"]),
+            machine_id=int(unit["machine"]) if substrate == "lxd" else -1,
             workload_status=Status(
                 value=unit["workload-status"]["current"],
                 since=unit["workload-status"]["since"],
