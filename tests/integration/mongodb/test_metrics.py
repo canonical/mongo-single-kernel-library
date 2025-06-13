@@ -17,6 +17,7 @@ from ..helpers.common import (
     find_unit,
     get_address_of_unit,
     get_app_name,
+    get_unit_app,
     get_unit_id,
     unit_hostname,
 )
@@ -100,9 +101,8 @@ async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate):
 
 async def verify_endpoints(ops_test: OpsTest, substrate: Substrate, unit: JujuUnit) -> str:
     """Verifies mongodb endpoint is functional on a given unit."""
-    unit_address = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(unit.name), unit.name.split("/")[0]
-    )
+    unit_id, app_name = get_unit_app(unit.name)
+    unit_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
     mongodb_exporter_url = f"http://{unit_address}:{MONGODB_EXPORTER_PORT}/metrics"
     mongo_resp = httpx.get(mongodb_exporter_url)
 

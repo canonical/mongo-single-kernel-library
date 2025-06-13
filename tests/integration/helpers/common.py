@@ -958,6 +958,15 @@ def get_unit_id(unit_name: str) -> int:
     return int(unit_name.split("/")[1])
 
 
+def get_app_name_from_unit(unit_name: str) -> str:
+    return unit_name.split("/")[0]
+
+
+def get_unit_app(unit_name) -> tuple[int, str]:
+    """Returns the unit id and app name from the unit name."""
+    return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
+
+
 def get_unit_id_from_host(units: dict[int, str], host: str) -> int:
     for unit_id, _host in units.items():
         if host == _host:

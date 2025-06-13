@@ -774,7 +774,7 @@ async def test_network_cut(ops_test: OpsTest, substrate: Substrate, continuous_w
 
     primary_hostname = await unit_hostname(ops_test, primary.name)
     primary_unit_ip = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(primary.name), primary.name.split("/")[0]
+        ops_test, substrate, get_unit_id(primary.name), app_name
     )
 
     # before cutting network verify that connection is possible
