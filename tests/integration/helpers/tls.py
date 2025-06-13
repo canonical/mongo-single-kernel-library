@@ -72,7 +72,7 @@ async def mongo_tls_command(
 
     status_comand = "rs.status()" if not mongos else "sh.status()"
     return (
-        f'{mongosh(substrate)} "{replica_set_uri}"  --eval "{status_comand}"'
+        f'sudo {mongosh(substrate)} "{replica_set_uri}"  --eval "{status_comand}"'
         f" --tls --tlsCAFile {external_cert_path(substrate)}"
         f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
     )
@@ -113,10 +113,11 @@ async def check_tls(
                     ops_test, substrate=substrate, app_name=app_name, mongos=mongos
                 )
                 check_tls_cmd = ssh_command + [mongod_tls_check]
-                return_code, _, _ = await ops_test.juju(*check_tls_cmd)
+                return_code, stdout, stderr = await ops_test.juju(*check_tls_cmd)
 
                 tls_enabled = return_code == 0
                 if enabled != tls_enabled:
+                    logger.warning("TLS disabled: STDOUT=%s STDERR=%s", stdout, stderr)
                     raise ValueError(
                         f"TLS is{' not' if not tls_enabled else ''} enabled on {unit.name}"
                     )
