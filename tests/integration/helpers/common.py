@@ -141,7 +141,6 @@ async def deploy_application(
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
         apps=[app_name],
-        status="active",
         raise_on_blocked=True,
         raise_on_error=False,
         timeout=DEPLOYMENT_TIMEOUT,
