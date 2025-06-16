@@ -132,3 +132,18 @@ class LdapState(Enum):
     MISSING_LDAPS_URLS = auto()
     UNABLE_TO_BIND = auto()
     ACTIVE = auto()
+
+
+class BackupState(Enum):
+    """Backup state that can be mapped to a status."""
+
+    EMPTY = auto()
+    MISSING_CONFIG = auto()
+    WAITING_PBM_START = auto()
+    INCORRECT_CREDS = auto()
+    INCOMPATIBLE_CONF = auto()
+    UNKNOWN_ERROR = auto()
+    BACKUP_RUNNING = auto()
+    RESTORE_RUNNING = auto()
+    WAITING_TO_SYNC = auto()
+    ACTIVE = auto()

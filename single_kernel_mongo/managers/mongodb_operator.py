@@ -16,7 +16,7 @@ from data_platform_helpers.version_check import (
     get_charm_revision,
 )
 from ops.framework import Object
-from ops.model import Container, MaintenanceStatus, Unit
+from ops.model import Container, Unit
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -30,7 +30,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     UnitState,
 )
-from single_kernel_mongo.config.models import ROLES
+from single_kernel_mongo.config.models import ROLES, BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
@@ -736,8 +736,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot set password on shard, please set password on config-server."
             )
-        pbm_status = self.backup_manager.get_main_status()
-        if pbm_status and isinstance(pbm_status.status, MaintenanceStatus):
+        pbm_status = self.backup_manager.backup_state()
+        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
             raise NonDeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
             )

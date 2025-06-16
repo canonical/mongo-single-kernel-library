@@ -2,13 +2,13 @@
 # See LICENSE file for licensing details.
 
 import pytest
-from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.utils import as_status
 from ops.model import MaintenanceStatus, Relation
 from ops.testing import Harness
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -123,8 +123,8 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
-        return_value=[StatusObject(status="maintenance", message="")],
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        return_value=BackupState.BACKUP_RUNNING,
     )
 
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")

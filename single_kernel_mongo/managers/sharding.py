@@ -30,6 +30,7 @@ from pymongo.errors import (
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Scope, Substrates
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     ConfigServerStatuses,
@@ -189,12 +190,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_status = self.dependent.backup_manager.get_main_status()
+        pbm_status = self.dependent.backup_manager.backup_state()
 
-        # TODO: future work will be to check the actual status of the backup and not the status.
-        # Note: we permit this logic based on status since we aren't checking
-        # `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
-        if pbm_status and pbm_status.status == "maintenance":
+        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
             )
