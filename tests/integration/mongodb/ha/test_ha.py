@@ -13,6 +13,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from ...helpers.common import (
+    DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     UNIT_IDS,
@@ -421,7 +422,7 @@ async def test_unique_cluster_dbs(
         ops_test,
         substrate,
         app_name=ANOTHER_DATABASE_APP_NAME,
-        db_name="new-db",
+        db_name=DEFAULT_DATABASE_NAME,
         collection_name="test_ubuntu_collection",
         query_field="release_name",
     )
@@ -430,7 +431,7 @@ async def test_unique_cluster_dbs(
         ops_test,
         substrate,
         app_name=app_name,
-        db_name="new-db",
+        db_name=DEFAULT_DATABASE_NAME,
         collection_name="test_ubuntu_collection",
         query_field="release_name",
     )

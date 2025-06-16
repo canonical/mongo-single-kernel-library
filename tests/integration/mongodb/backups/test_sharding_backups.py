@@ -204,9 +204,7 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_restore_backup(
-    ops_test: OpsTest, substrate: Substrate, add_writes_to_shards
-) -> None:
+async def test_restore_backup(ops_test: OpsTest, substrate: Substrate, add_writes_to_shard) -> None:
     """Tests that sharded Charmed MongoDB cluster supports restores."""
     # count total writes
     cluster_writes = await get_cluster_writes_count(

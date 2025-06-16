@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 DATABASE_NAME = "continuous_writes_database"
 COLLECTION_NAME = "continuous_writes_collection"
+REPLICATION_COLL_NAME = "test_ubuntu_collection"
 PEER = "application-peers"
 PROC_PID_KEY = "proc-pid"
 LAST_WRITTEN_FILE = "last_written_value"
@@ -184,14 +185,14 @@ class ContinuousWritesApplication(CharmBase):
         self._stop_continuous_writes(db_name, coll_name)
 
         client = MongoClient(self._database_config["uris"])
-        db = client[DATABASE_NAME]
+        db = client[db_name]
 
         # collection for continuous writes
         test_collection = db[coll_name]
         test_collection.drop()
 
         # collection for replication tests
-        test_collection = db[db_name]
+        test_collection = db[REPLICATION_COLL_NAME]
         test_collection.drop()
 
         client.close()
