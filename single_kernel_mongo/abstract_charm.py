@@ -30,7 +30,6 @@ from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import CharmBase
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -38,7 +37,6 @@ from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
-from single_kernel_mongo.exceptions import WorkloadNotReadyError
 
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
@@ -101,14 +99,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
             self.status_handler.set_running_status(
                 CharmStatuses.INSTALLING_MONGODB.value, scope=Scope.UNIT
             )
-            for attempt in Retrying(
-                stop=stop_after_attempt(20),
-                wait=wait_fixed(1),
-                reraise=True,
-            ):
-                with attempt:
-                    if not self.workload.install():
-                        raise WorkloadNotReadyError("Failed to install mongodb")
+            self.workload.install()
 
     def on_leader_elected(self, _):
         """First leader elected handler."""

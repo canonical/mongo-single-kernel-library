@@ -19,6 +19,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -168,6 +169,10 @@ class ClusterMongosEventHandler(Object):
                 scope=Scope.UNIT,
                 component=self.charm.name,
             )
+        except WorkloadServiceError:
+            # Some status was already set and a log was already displayed in
+            # `restart_charm_services`
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

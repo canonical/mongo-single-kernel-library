@@ -171,9 +171,8 @@ class BackupEventsHandler(Object):
                 )
             return
 
-        pbm_status = self.manager.get_main_status()
         # Safer here, don't add a status if we don't have a status to add…
-        if pbm_status:
+        if pbm_status := self.manager.get_main_status():
             self.manager.state.statuses.add(
                 pbm_status, scope=Scope.UNIT, component=self.manager.name
             )

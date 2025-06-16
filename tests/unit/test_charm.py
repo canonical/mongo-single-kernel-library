@@ -22,7 +22,9 @@ PEER_ADDR = {"private-address": "127.4.5.6"}
 
 
 def test_install_blocks_snap_install_failure(harness, mocker):
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=False)
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.install", side_effect=WorkloadNotReadyError
+    )
     with pytest.raises(WorkloadNotReadyError):
         harness.charm.on.install.emit()
 

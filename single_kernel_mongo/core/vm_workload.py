@@ -22,7 +22,11 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
+from single_kernel_mongo.exceptions import (
+    WorkloadExecError,
+    WorkloadNotReadyError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 
 logger = getLogger(__name__)
@@ -179,13 +183,11 @@ class VMWorkload(WorkloadBase):
 
     @override
     @retry(
+        stop=stop_after_attempt(20),
         wait=wait_fixed(1),
-        stop=stop_after_attempt(5),
-        retry=retry_if_result(lambda result: result is False),
-        retry_error_callback=lambda _: False,
         reraise=True,
     )
-    def install(self) -> bool:
+    def install(self) -> None:
         """Loads the MongoDB snap from LP.
 
         Returns:
@@ -198,11 +200,9 @@ class VMWorkload(WorkloadBase):
                 revision=self.snap.revision,
             )
             self.mongod_snap.hold()
-
-            return True
         except snap.SnapError as err:
             logger.error(f"Failed to install {self.snap.name}. Reason: {err}.")
-            return False
+            raise WorkloadNotReadyError("Failed to install mongodb")
 
     @override
     def setup_cron(self, lines: list[str]) -> None:  # pragma: nocover

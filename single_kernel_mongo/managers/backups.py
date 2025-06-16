@@ -352,9 +352,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             reraise=True,
         ):
             with attempt:
-                pbm_status = self.get_main_status()
-
-                if not pbm_status:
+                if not (pbm_status := self.get_main_status()):
                     continue
 
                 # todo future work - check status of pbm directly
@@ -555,9 +553,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_status = self.get_main_status()
-
-        if not pbm_status:
+        if not (pbm_status := self.get_main_status()):
             return
 
         match pbm_status.status:
@@ -580,9 +576,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_status = self.get_main_status()
-
-        if not pbm_status:
+        if not (pbm_status := self.get_main_status()):
             return
 
         match pbm_status.status:

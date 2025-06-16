@@ -144,21 +144,18 @@ class LifecycleEventsHandler(Object):
             self.dependent.on_config_changed()
         except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
-            return
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
                 scope=Scope.UNIT,
                 component=self.dependent.name,
             )
-            return
         except InvalidLdapQueryTemplateError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value,
                 scope=Scope.UNIT,
                 component=self.dependent.name,
             )
-            return
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
