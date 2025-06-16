@@ -28,6 +28,8 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
         deploy_chaos_mesh(ops_test.model.info.name)
         yield
         destroy_chaos_mesh(ops_test.model.info.name)
+    else:
+        yield
 
 
 @pytest.fixture(scope="session")

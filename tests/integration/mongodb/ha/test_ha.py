@@ -74,7 +74,10 @@ async def test_build_and_deploy(
         await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
         return
 
-    storage = {"mongodb": {"pool": "lxd", "size": 2048}}
+    if substrate == "lxd":
+        storage = {"mongodb": {"pool": "lxd", "size": 2048}}
+    else:
+        storage = None
 
     await deploy_charm(
         ops_test=ops_test,

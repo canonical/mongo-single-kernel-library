@@ -86,8 +86,12 @@ async def deploy_cluster_components(
         series="jammy",
     )
 
+    apps_to_wait_for = [config_server_name, shard_one_name, MONGOS_CLIENT_APPLICATION]
+    if substrate == "microk8s":
+        apps_to_wait_for.append(MONGOS_APP_NAME)
+
     await ops_test.model.wait_for_idle(
-        apps=[config_server_name, shard_one_name, MONGOS_APP_NAME, MONGOS_CLIENT_APPLICATION],
+        apps=apps_to_wait_for,
         idle_period=20,
         timeout=DEPLOYMENT_TIMEOUT,
     )

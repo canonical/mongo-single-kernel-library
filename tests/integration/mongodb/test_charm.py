@@ -40,6 +40,7 @@ from ..helpers.common import (
     get_leader_id,
     get_password,
     relate_mongodb_and_application,
+    remove_units,
     secondary_mongo_uris_with_sync_delay,
     set_password,
     start_continous_writes,
@@ -465,8 +466,8 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     n_units = len(ops_test.model.applications[app_name].units)
     units = ops_test.model.applications[app_name].units[-2:]
-    # add two units and wait for idle
-    await ops_test.model.applications[app_name].destroy_unit(*(unit.name for unit in units))
+    # remove two units and wait for idle
+    await remove_units(ops_test, substrate, app_name, units)
     # TODO: Remove the `raise_on_error` when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
         apps=[app_name],

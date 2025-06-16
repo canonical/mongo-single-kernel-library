@@ -559,6 +559,16 @@ async def check_or_scale_app(
         await ops_test.model.wait_for_idle()
 
 
+async def remove_units(
+    ops_test: OpsTest, substrate: Substrate, app_name: str, units: list[JujuUnit]
+):
+    if substrate == "lxd":
+        await ops_test.model.applications[app_name].destroy_unit(*(unit.name for unit in units))
+    else:
+        count = len(units)
+        await ops_test.model.applications[app_name].scale(-count)
+
+
 async def get_app_name(
     ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
 ) -> str:
