@@ -867,7 +867,10 @@ async def execute_on_mongod(
 
     data = None
     if expecting_output:
-        data = json.loads(stdout.split("\x07")[-1])
+        try:
+            data = json.loads(stdout.split("\x07")[-1])
+        except json.JSONDecodeError:
+            pass
 
     return CommandResult(
         return_code=ret_code,
