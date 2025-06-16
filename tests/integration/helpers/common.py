@@ -49,6 +49,7 @@ CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
 DEFAULT_DATABASE_NAME = "continuous_writes_database"
 DEFAULT_COLLECTION_NAME = "continuous_writes_collection"
+DEFAULT_REPLICATION_COLL_NAME = "test_ubuntu_collection"
 
 MEDIAN_REELECTION_TIME = 12
 
@@ -140,7 +141,7 @@ async def deploy_application(
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
         apps=[app_name],
-        status="waiting",
+        status="active",
         raise_on_blocked=True,
         raise_on_error=False,
         timeout=DEPLOYMENT_TIMEOUT,
@@ -566,7 +567,7 @@ async def remove_units(
         await ops_test.model.applications[app_name].destroy_unit(*(unit.name for unit in units))
     else:
         count = len(units)
-        await ops_test.model.applications[app_name].scale(-count)
+        await ops_test.model.applications[app_name].scale(scale_change=-count)
 
 
 async def get_app_name(
@@ -861,12 +862,15 @@ async def execute_on_mongod(
     if ret_code != 0:
         logger.error(f"Failed to execute {command}: {stderr=}, {stdout=}")
 
+    if not ret_code:
+        ret_code = 0
+
     data = None
     if expecting_output:
         data = json.loads(stdout.split("\x07")[-1])
 
     return CommandResult(
-        return_code=ret_code or 0,
+        return_code=ret_code,
         stderr=stderr,
         stdout=stdout,
         data=data,

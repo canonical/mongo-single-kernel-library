@@ -35,6 +35,7 @@ from tenacity import (
 from ..helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
+    DEFAULT_REPLICATION_COLL_NAME,
     TIMEOUT,
     ProcessError,
     count_primaries,
@@ -547,7 +548,7 @@ async def insert_release_to_cluster(
     password = await get_password(ops_test, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
     db = client[DEFAULT_DATABASE_NAME]
-    test_collection = db["test_ubuntu_collection"]
+    test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
     test_collection.insert_one(RELEASES[release])
     client.close()
 

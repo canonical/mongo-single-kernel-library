@@ -78,7 +78,11 @@ async def test_upgrade(
     """Verify that the sharded cluster can be safely upgraded without losing writes."""
     for sharding_component in CLUSTER_COMPONENTS:
         await assert_successful_run_upgrade_sequence(
-            ops_test, sharding_component, new_charm=mongodb_charm, mongod_resource=mongod_resource
+            ops_test,
+            substrate,
+            app_name=sharding_component,
+            new_charm=mongodb_charm,
+            mongod_resource=mongod_resource,
         )
 
     await ops_test.model.wait_for_idle(

@@ -20,6 +20,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
 from ..helpers.common import (
+    DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOD_PORT,
     TEST_DOCUMENTS,
@@ -198,7 +199,7 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
             unit_uri(ip_address, new_password, user_app_name),
             directConnection=True,
         )
-        client["new-db"].list_collection_names()
+        client[DEFAULT_DATABASE_NAME].list_collection_names()
     except PyMongoError as e:
         assert False, f"Failed to access collection with new password, error: {e}"
     finally:
@@ -219,7 +220,7 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
             unit_uri(ip_address, "safe_pass", user_app_name),
             directConnection=True,
         )
-        client["new-db"].list_collection_names()
+        client[DEFAULT_DATABASE_NAME].list_collection_names()
     except PyMongoError as e:
         assert False, f"Failed to access collection with new password, error: {e}"
     finally:

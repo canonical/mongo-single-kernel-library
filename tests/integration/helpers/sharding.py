@@ -14,6 +14,7 @@ from ..helpers.common import (
     MONGOS_PORT,
     deploy_charm,
     get_direct_mongo_client,
+    get_leader_id,
     mongodb_uri,
 )
 from ..helpers.tls import (
@@ -373,8 +374,9 @@ async def count_shard_writes(
     collection_name: str,
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
+    leader_id = await get_leader_id(ops_test, config_server_name)
     connection_string = await mongodb_uri(
-        ops_test, substrate, app_name=config_server_name, port=MONGOS_PORT
+        ops_test, substrate, unit_ids=[leader_id], app_name=config_server_name, port=MONGOS_PORT
     )
 
     client = MongoClient(connection_string, directConnection=True)

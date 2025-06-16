@@ -152,7 +152,10 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
         assert False, "Hosts are not correct in application data."
 
     # verify application metadata is correct after adding units.
-    await ops_test.model.applications[db_app_name].add_units(count=2)
+    if substrate == "lxd":
+        await ops_test.model.applications[db_app_name].add_units(count=2)
+    else:
+        await ops_test.model.applications[db_app_name].scale(scale_change=2)
     await ops_test.model.wait_for_idle(
         apps=app_names,
         status="active",

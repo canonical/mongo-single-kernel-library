@@ -14,6 +14,7 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from ...helpers.common import (
     DEFAULT_DATABASE_NAME,
+    DEFAULT_REPLICATION_COLL_NAME,
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     UNIT_IDS,
@@ -170,7 +171,7 @@ async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuou
     )
     # k8s will automatically use the old storage from the storage pool
     removal_time = datetime.now(timezone.utc).timestamp()
-    await scale_application(ops_test, substrate, app_name, current_number_units)
+    await scale_application(ops_test, substrate, app_name, 1)
     await ops_test.model.wait_for_idle(
         apps=[app_name],
         status="active",
@@ -381,8 +382,8 @@ async def test_replication_across_members(
     for secondary in secondaries:
         client = MongoClient(unit_uri(secondary, password, app_name), directConnection=True)
 
-        db = client["new-db"]
-        test_collection = db["test_ubuntu_collection"]
+        db = client[DEFAULT_DATABASE_NAME]
+        test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
         query = test_collection.find({}, {"release_name": 1})
         assert query[0]["release_name"] == "Focal Fossa"
 
@@ -426,7 +427,7 @@ async def test_unique_cluster_dbs(
         substrate,
         app_name=ANOTHER_DATABASE_APP_NAME,
         db_name=DEFAULT_DATABASE_NAME,
-        collection_name="test_ubuntu_collection",
+        collection_name=DEFAULT_REPLICATION_COLL_NAME,
         query_field="release_name",
     )
 
@@ -435,7 +436,7 @@ async def test_unique_cluster_dbs(
         substrate,
         app_name=app_name,
         db_name=DEFAULT_DATABASE_NAME,
-        collection_name="test_ubuntu_collection",
+        collection_name=DEFAULT_REPLICATION_COLL_NAME,
         query_field="release_name",
     )
 
@@ -480,8 +481,8 @@ async def test_replication_member_scaling(
     try:
         for attempt in Retrying(stop=stop_after_delay(2 * 60), wait=wait_fixed(3)):
             with attempt:
-                db = client["new-db"]
-                test_collection = db["test_ubuntu_collection"]
+                db = client[DEFAULT_DATABASE_NAME]
+                test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
                 query = test_collection.find({}, {"release_name": 1})
                 assert query[0]["release_name"] == "Focal Fossa"
 

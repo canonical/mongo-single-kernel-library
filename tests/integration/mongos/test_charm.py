@@ -64,6 +64,7 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
         MONGOS_APP_NAME,
         status="Missing relation to config-server.",
         timeout=300,
+        subordinate=(substrate == "lxd"),
     )
 
 

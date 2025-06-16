@@ -249,7 +249,12 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
     # As soon as one relation is removed, a restart is triggered and it
     # should have disabled LDAP.
     result = await execute_on_mongod(
-        ops_test, db_app_name, substrate, uri, "db.test.insertOne({number: 2})"
+        ops_test,
+        db_app_name,
+        substrate,
+        uri,
+        "db.test.insertOne({number: 2})",
+        expecting_output=False,
     )
     assert result.failed
 
