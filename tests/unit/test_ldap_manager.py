@@ -10,8 +10,8 @@ from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
-from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -182,7 +182,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=LdapStatuses.ACTIVE_IDLE.value,
+        return_value=LdapState.ACTIVE,
     )
     harness.charm.operator.ldap_manager.store_ldap_certificates(
         "beefdead", "deadbeef", ["feeddead"]
@@ -299,7 +299,7 @@ def test_ldap_full_integration_cycle(
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=LdapStatuses.ACTIVE_IDLE.value,
+        return_value=LdapState.ACTIVE,
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
@@ -476,7 +476,7 @@ def test_ldaps_mongos_invalid_hash(
 
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=LdapStatuses.ACTIVE_IDLE.value,
+        return_value=LdapState.ACTIVE,
     )
 
     mongos_harness.update_relation_data(

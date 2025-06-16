@@ -8,6 +8,7 @@ The models specify the dataclasses and roles used to configure and fully specify
 """
 
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from importlib import resources as impresources
 from importlib.abc import Traversable
 from pathlib import Path
@@ -113,3 +114,21 @@ ROLES = {
     "vm": {"mongod": VM_MONGOD, "mongos": VM_MONGOS},
     "k8s": {"mongod": K8S_MONGOD, "mongos": K8S_MONGOS},
 }
+
+
+class LdapState(Enum):
+    """Ldap State that can be mapped to a status."""
+
+    EMPTY = auto()
+    WRONG_ROLE = auto()
+    MISSING_CERT_REL = auto()
+    MISSING_LDAP_REL = auto()
+    LDAP_SERVERS_MISMATCH = auto()
+    WAITING_FOR_DATA = auto()
+    WAITING_FOR_CERTS = auto()
+    WAITING_FOR_LDAP_DATA = auto()
+    MISSING_BASE_DN = auto()
+    MISSING_CERT_CHAIN = auto()
+    MISSING_LDAPS_URLS = auto()
+    UNABLE_TO_BIND = auto()
+    ACTIVE = auto()
