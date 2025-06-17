@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 import poetry.core.constraints.version as poetry_version
 from data_platform_helpers.advanced_statuses.models import StatusObject, StatusObjectList
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
@@ -28,7 +29,6 @@ from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
     SNAP,
     CharmKind,
-    Scope,
     Substrates,
     UnitState,
 )
@@ -320,10 +320,10 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         assert self._upgrade
         if self.charm.unit.is_leader():
             status_object = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
-            self.state.statuses.add(status_object, scope=Scope.APP, component=self.name)
+            self.state.statuses.add(status_object, scope="app", component=self.name)
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
-        statuses: StatusObjectList = self.state.statuses.get(scope=Scope.UNIT, component=self.name)
+        statuses: StatusObjectList = self.state.statuses.get(scope="unit", component=self.name)
         if (
             not statuses.root
             or UpgradeStatuses.WAITING_POST_UPGRADE_STATUS in statuses
@@ -332,7 +332,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         ):
             self.state.statuses.set(
                 self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.name,
             )
 
@@ -342,15 +342,17 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             return []
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         match scope:
-            case Scope.UNIT:
+            case "unit":
                 return [
                     self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
                 ]
-            case Scope.APP:
+            case "app":
                 return [self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value]
+            case _:
+                raise ValueError(f"Invalid scope {scope}")
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
@@ -409,7 +411,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
                 )
                 self.state.statuses.add(
                     UpgradeStatuses.INCOMPATIBLE_UPGRADE.value,
-                    scope=Scope.UNIT,
+                    scope="unit",
                     component=self.name,
                 )
                 return
@@ -440,7 +442,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             authorized = self._upgrade.authorized  # type: ignore
         except PrecheckFailedError as exception:
             self._set_upgrade_status()
-            self.state.statuses.add(exception.status, scope=Scope.UNIT, component=self.name)
+            self.state.statuses.add(exception.status, scope="unit", component=self.name)
             logger.debug(f"Set unit status to {exception.status}")
             logger.error(exception.status.message)
             return

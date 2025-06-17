@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 from dacite import from_dict
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
 from ops.model import Relation
 from pymongo.errors import (
@@ -27,7 +28,7 @@ from pymongo.errors import (
     ServerSelectionTimeoutError,
 )
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -85,7 +86,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             except DeployedWithoutTrustError:
                 self.state.statuses.add(
                     CharmStatuses.DEPLOYED_WITHOUT_TRUST.value,
-                    scope=Scope.UNIT,
+                    scope="unit",
                     component=self.charm.name,
                 )
 
@@ -495,12 +496,12 @@ class MongoManager(Object, ManagerStatusProtocol):
         charm_statuses: list[StatusObject] = []
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         if not self.state.db_initialised:
             return [MongodStatuses.WAITING_REPL_SET_INIT.value]
 
-        if scope == Scope.APP:
+        if scope == "app":
             return []
 
         try:

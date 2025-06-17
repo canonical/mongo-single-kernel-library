@@ -67,7 +67,7 @@ class ClusterProvider(Object):
         if not self.is_valid_mongos_integration():
             self.state.statuses.add(
                 MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.dependent.name,
             )
             raise NonDeferrableFailedHookChecksError(
@@ -267,7 +267,7 @@ class ClusterRequirer(Object):
         logger.info("Integrating to config-server")
         self.state.statuses.set(
             MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
-            scope=Scope.UNIT,
+            scope="unit",
             component=self.dependent.name,
         )
 
@@ -312,7 +312,7 @@ class ClusterRequirer(Object):
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
             self.charm.status_handler.set_running_status(
-                MongosStatuses.STARTING_MONGOS.value, scope=Scope.UNIT
+                MongosStatuses.STARTING_MONGOS.value, scope="unit"
             )
 
             self.dependent.restart_charm_services()
@@ -322,13 +322,13 @@ class ClusterRequirer(Object):
                 logger.info("Mongos has not started yet, deferring")
                 self.state.statuses.set(
                     MongosStatuses.MONGOS_NOT_STARTED.value,
-                    scope=Scope.UNIT,
+                    scope="unit",
                     component=self.dependent.name,
                 )
                 raise DeferrableError
 
         self.state.statuses.set(
-            CharmStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.dependent.name
+            CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
         )
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True

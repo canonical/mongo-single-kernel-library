@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 from ops.framework import EventBase, EventSource, Object
 
-from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, PeerRelationNames
 from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.exceptions import (
@@ -78,13 +77,13 @@ class LDAPEventHandler(Object):
         try:
             self.charm.status_handler.set_running_status(
                 LdapStatuses.CONFIGURING_LDAP.value,
-                scope=Scope.UNIT,
+                scope="unit",
             )
             self.manager.store_ldap_credentials_and_uri(event.relation)
         except WaitingForLdapDataError as err:
             self.manager.state.statuses.add(
                 LdapStatuses.WAITING_FOR_LDAP_DATA.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             defer_event_with_info_log(logger, event, action, f"{err}")
@@ -92,18 +91,18 @@ class LDAPEventHandler(Object):
             defer_event_with_info_log(logger, event, action, f"{err}")
         except LDAPSNotEnabledError:
             self.manager.state.statuses.add(
-                LdapStatuses.LDAPS_NOT_ENABLED.value, scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.LDAPS_NOT_ENABLED.value, scope="unit", component=self.manager.name
             )
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.manager.state.statuses.add(
-                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
@@ -119,13 +118,13 @@ class LDAPEventHandler(Object):
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.manager.state.statuses.add(
-                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
@@ -142,11 +141,11 @@ class LDAPEventHandler(Object):
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
             self.manager.state.statuses.add(
-                LdapStatuses.on_error_status(err), scope=Scope.UNIT, component=self.manager.name
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )

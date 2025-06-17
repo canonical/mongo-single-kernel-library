@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import jinja2
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ldap3 import Connection as LDAPConnection
 from ldap3 import Server as LDAPServer
 from ldap3 import Tls as LDAPTls
@@ -21,7 +22,6 @@ from ops.framework import Object
 from ops.model import Relation
 
 from single_kernel_mongo.config.literals import (
-    Scope,
     Substrates,
 )
 from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
@@ -118,12 +118,12 @@ class LDAPManager(Object, ManagerStatusProtocol):
                 logger.info("Restarting mongodb server for LDAP integration")
                 self.dependent.restart_charm_services()
                 self.state.statuses.set(
-                    LdapStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
+                    LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
                 )
             case state:
-                self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+                self.state.statuses.clear(scope="unit", component=self.name)
                 for status in self.map_state_to_statuses(state):
-                    self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
+                    self.state.statuses.add(status, scope="unit", component=self.name)
 
                 if state == LdapState.LDAP_SERVERS_MISMATCH:
                     raise InvalidLdapHashError(
@@ -139,10 +139,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
-        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
-        statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
+        self.state.statuses.clear(scope="unit", component=self.name)
+        statuses = self.get_statuses(scope="unit", recompute=True)
         for status in statuses:
-            self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
+            self.state.statuses.add(status, scope="unit", component=self.name)
 
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
@@ -184,10 +184,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
-        statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
-        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+        statuses = self.get_statuses(scope="unit", recompute=True)
+        self.state.statuses.clear(scope="unit", component=self.name)
         for status in statuses:
-            self.state.statuses.add(status, scope=Scope.UNIT, component=self.name)
+            self.state.statuses.add(status, scope="unit", component=self.name)
 
     def ldap_state(self) -> LdapState:
         """Returns an enum object indicating the state of the LDAP integration."""
@@ -266,12 +266,12 @@ class LDAPManager(Object, ManagerStatusProtocol):
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Generates the status of a unit based on its status reported by mongod."""
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         if not self.state.db_initialised:
             return []
 
-        if scope == Scope.APP:
+        if scope == "app":
             return []
 
         return self.map_state_to_statuses(self.ldap_state())

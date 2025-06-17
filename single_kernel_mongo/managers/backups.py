@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, NewType
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Container
 from ops.framework import Object
 from ops.model import (
@@ -40,7 +41,6 @@ from tenacity import (
 
 from single_kernel_mongo.config.literals import (
     MongoPorts,
-    Scope,
     Substrates,
     TrustStoreFiles,
 )
@@ -200,7 +200,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     def list_backup_action(self) -> str:
         """List the backups entries."""
-        backup_list: BackupListType = BackupListType([])
         try:
             pbm_status_output = self.pbm_status
         except WorkloadExecError as e:
@@ -351,19 +350,19 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Gets the PBM statuses."""
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         if not self.state.db_initialised:
             return []
 
-        if scope == Scope.APP:
+        if scope == "app":
             return []
 
         return self.map_backup_state_to_status(self.backup_state())
 
     def get_main_status(self) -> StatusObject | None:
         """Returns the first status of the list."""
-        pbm_statuses = self.get_statuses(scope=Scope.UNIT, recompute=True)
+        pbm_statuses = self.get_statuses(scope="unit", recompute=True)
         return next(iter(pbm_statuses), None)
 
     def resync_config_options(self):  # pragma: nocover
@@ -373,7 +372,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         self.workload.start()
 
         # Clear statuses before resync as we want to update it anyway.
-        self.state.statuses.clear(scope=Scope.UNIT, component=self.name)
+        self.state.statuses.clear(scope="unit", component=self.name)
 
         # pbm has a flakely resync and it is necessary to wait for no actions to be running before
         # resync-ing. See: https://jira.percona.com/browse/PBM-1038
@@ -476,22 +475,32 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Instead, it is in the log messages. pbm_agent also shows all the error messages for other
         replicas in the set. This method tries to handle both cases at once.
         """
-        try:
-            clusters = pbm_status["cluster"]
-            for cluster in clusters:
-                if cluster["rs"] == self.charm.app.name:
-                    break
+        replica_info = (
+            f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+        )
 
-            for host_info in cluster["nodes"]:
-                replica_info = (
-                    f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
-                )
-                if host_info["host"] == replica_info:
-                    break
+        clusters = pbm_status.get("cluster")
 
-            return str(host_info["errors"])
-        except KeyError:
+        # No clusters means no error message
+        if not clusters:
             return ""
+
+        app_name = self.charm.app.name
+
+        cluster: dict | None = next(
+            (_cluster for _cluster in clusters if _cluster.get("rs") == app_name), None
+        )
+
+        # No matching cluster means no error message
+        if not cluster:
+            return ""
+
+        for host_info in cluster.get("nodes", []):
+            if host_info.get("host") == replica_info:
+                return str(host_info.get("errors", ""))
+
+        # Default case, no error message
+        return ""
 
     def get_backup_error_status(self, backup_id: str) -> str:
         """Get the error status for a provided backup."""
@@ -504,7 +513,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return ""
 
-    def process_pbm_error(self, pbm_status: str) -> StatusObject | None:
+    def process_pbm_error(self, pbm_status: str) -> BackupState | None:
         """Look up PBM status for errors."""
         error_message: str
 
@@ -654,14 +663,14 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 # immediately.
                 self.charm.status_handler.set_running_status(
                     BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                    scope=Scope.UNIT,
+                    scope="unit",
                     statuses_state=self.state.statuses,
                     component_name=self.name,
                 )
                 raise ResyncError
         except WorkloadExecError as e:
             if status := self.process_pbm_error(e.stdout):
-                self.state.statuses.set(status, scope=Scope.UNIT, component=self.name)
+                self.state.statuses.set(status, scope="unit", component=self.name)
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.
@@ -682,7 +691,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         TODO: Rework this and integrate it with COS - see DPE-6868 on JIRA for more info.
         """
         previous_pbm_statuses = self.state.statuses.get(
-            scope=Scope.UNIT,
+            scope="unit",
             component=self.name,
             running_status_only=True,
             running_status_type="async",

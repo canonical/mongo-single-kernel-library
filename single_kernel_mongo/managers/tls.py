@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -220,7 +220,7 @@ class TLSManager:
 
         self.charm.status_handler.set_running_status(
             TLSStatuses.ENABLING_TLS.value,
-            scope=Scope.UNIT,
+            scope="unit",
         )
         try:
             self.dependent.restart_charm_services(force=True)

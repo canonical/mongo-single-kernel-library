@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import StatusBase
 from ops.framework import Object
 from ops.model import (
@@ -29,7 +30,7 @@ from pymongo.errors import (
 )
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from single_kernel_mongo.config.literals import MongoPorts, Scope, Substrates
+from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
@@ -255,12 +256,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the config-server."""
-        charm_statuses: dict[Scope, list[StatusObject]] = {Scope.APP: [], Scope.UNIT: []}
+        charm_statuses: dict[Scope, list[StatusObject]] = {"app": [], "unit": []}
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
-        if scope == Scope.APP:
+        if scope == "app":
             return []
 
         if self.skip_config_server_status():
@@ -271,16 +272,16 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
         uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
-            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
-            charm_statuses[Scope.APP].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["app"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses[scope]
 
         if not self.cluster_password_synced():
-            charm_statuses[Scope.UNIT].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
         try:
             with MongoConnection(self.state.mongos_config) as mongo:
@@ -290,11 +291,11 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
-                charm_statuses[Scope.UNIT].append(status)
-                charm_statuses[Scope.APP].append(status)
+                charm_statuses["unit"].append(status)
+                charm_statuses["app"].append(status)
 
             if unreachable_shards := self.get_unreachable_shards():
-                charm_statuses[Scope.UNIT].append(
+                charm_statuses["unit"].append(
                     ConfigServerStatuses.unreachable_shards(unreachable_shards)
                 )
         except (ServerSelectionTimeoutError, OperationFailure):
@@ -327,11 +328,11 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return
 
         self.state.statuses.delete(
-            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope=Scope.UNIT, component=self.name
+            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
         )
 
         self.charm.status_handler.set_running_status(
-            ConfigServerStatuses.adding_shard(shard_name), scope=Scope.UNIT
+            ConfigServerStatuses.adding_shard(shard_name), scope="unit"
         )
 
         with MongoConnection(self.state.mongos_config) as mongo:
@@ -388,7 +389,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             try:
                 self.charm.status_handler.set_running_status(
                     ConfigServerStatuses.draining_shard(shard_name),
-                    scope=Scope.UNIT,
+                    scope="unit",
                     statuses_state=self.state.statuses,
                     component_name=self.name,
                 )
@@ -524,14 +525,14 @@ class ShardManager(Object, ManagerStatusProtocol):
         match (shard_has_tls, config_server_has_tls):
             case False, True:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_TLS.value, scope=Scope.UNIT, component=self.name
+                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
                     "Config-Server uses TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_NO_TLS.value, scope=Scope.UNIT, component=self.name
+                    ShardStatuses.REQUIRES_NO_TLS.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
                     "Shard uses TLS but config-server does not. Please synchronise encryption method."
@@ -553,10 +554,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.unit_peer_data.drained = False
 
         self.state.statuses.delete(
-            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope=Scope.UNIT, component=self.name
+            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
         )
         self.state.statuses.add(
-            ShardStatuses.ADDING_TO_CLUSTER.value, scope=Scope.UNIT, component=self.name
+            ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
         )
 
     def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
@@ -586,9 +587,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise NotReadyError
 
         # By setting the status we ensure that the former statuses of this component are removed.
-        self.state.statuses.set(
-            ShardStatuses.ACTIVE_IDLE.value, scope=Scope.UNIT, component=self.name
-        )
+        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
         if not self.charm.unit.is_leader():
             return
@@ -646,7 +645,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.wait_for_draining(mongos_hosts)
 
         self.state.statuses.set(
-            ShardStatuses.SHARD_DRAINED.value, scope=Scope.UNIT, component=self.name
+            ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
     def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
@@ -785,7 +784,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         # Blocking status
         self.charm.status_handler.set_running_status(
-            ShardStatuses.DRAINING_SHARD.value, scope=Scope.UNIT
+            ShardStatuses.DRAINING_SHARD.value, scope="unit"
         )
         while not drained:
             try:
@@ -796,13 +795,13 @@ class ShardManager(Object, ManagerStatusProtocol):
                     "Shard is still draining" if not drained else "Shard is fully drained."
                 )
                 self.charm.status_handler.set_running_status(
-                    ShardStatuses.DRAINING_SHARD.value, scope=Scope.UNIT
+                    ShardStatuses.DRAINING_SHARD.value, scope="unit"
                 )
                 logger.debug(draining_status)
             except PyMongoError as e:
                 logger.error("Error occurred while draining shard: %s", e)
                 self.charm.status_handler.set_running_status(
-                    ShardStatuses.FAILED_TO_DRAIN.value, scope=Scope.UNIT
+                    ShardStatuses.FAILED_TO_DRAIN.value, scope="unit"
                 )
             except ShardNotPlannedForRemovalError:
                 logger.info(
@@ -810,7 +809,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                     self.charm.app.name,
                 )
                 self.charm.status_handler.set_running_status(
-                    ShardStatuses.WAITING_TO_REMOVE.value, scope=Scope.UNIT
+                    ShardStatuses.WAITING_TO_REMOVE.value, scope="unit"
                 )
             except ShardNotInClusterError:
                 logger.info(
@@ -921,9 +920,9 @@ class ShardManager(Object, ManagerStatusProtocol):
         charm_statuses: list[StatusObject] = []
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
-        if scope == Scope.APP:
+        if scope == "app":
             return []
 
         if self.should_skip_shard_status():

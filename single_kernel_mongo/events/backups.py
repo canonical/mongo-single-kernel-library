@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
@@ -89,7 +88,7 @@ class BackupEventsHandler(Object):
             )
             self.manager.state.statuses.add(
                 MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
 
@@ -107,7 +106,7 @@ class BackupEventsHandler(Object):
             )
             self.manager.state.statuses.add(
                 MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             return
@@ -129,7 +128,7 @@ class BackupEventsHandler(Object):
         except SetPBMConfigError:
             logger.error("Failed to configure s3 backup options")
             self.manager.state.statuses.add(
-                BackupStatuses.CANT_CONFIGURE.value, scope=Scope.UNIT, component=self.manager.name
+                BackupStatuses.CANT_CONFIGURE.value, scope="unit", component=self.manager.name
             )
             event.defer()
             return
@@ -137,14 +136,14 @@ class BackupEventsHandler(Object):
             logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
             self.manager.state.statuses.add(
                 BackupStatuses.WAITING_FOR_PBM_START.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             return
         except ResyncError:
             self.manager.state.statuses.add(
                 BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             defer_event_with_info_log(
@@ -154,7 +153,7 @@ class BackupEventsHandler(Object):
         except PBMBusyError:
             self.manager.state.statuses.add(
                 BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             defer_event_with_info_log(
@@ -166,16 +165,12 @@ class BackupEventsHandler(Object):
             return
         except WorkloadExecError as e:
             if status := self.manager.process_pbm_error(e.stdout):
-                self.manager.state.statuses.add(
-                    status, scope=Scope.UNIT, component=self.manager.name
-                )
+                self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
             return
 
         # Safer here, don't add a status if we don't have a status to add…
         if pbm_status := self.manager.get_main_status():
-            self.manager.state.statuses.add(
-                pbm_status, scope=Scope.UNIT, component=self.manager.name
-            )
+            self.manager.state.statuses.add(pbm_status, scope="unit", component=self.manager.name)
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
@@ -195,7 +190,7 @@ class BackupEventsHandler(Object):
             backup_id = self.manager.create_backup_action()
             self.charm.status_handler.set_running_status(
                 BackupStatuses.backup_running(backup_id),
-                scope=Scope.UNIT,
+                scope="unit",
                 is_action=True,
                 statuses_state=self.manager.state.statuses,
                 component_name=self.manager.name,
@@ -259,7 +254,7 @@ class BackupEventsHandler(Object):
             self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_handler.set_running_status(
                 BackupStatuses.restore_running(backup_id),
-                scope=Scope.UNIT,
+                scope="unit",
                 is_action=True,
                 statuses_state=self.manager.state.statuses,
                 component_name=self.manager.name,

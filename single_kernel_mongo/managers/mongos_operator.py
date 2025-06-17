@@ -186,7 +186,7 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.state.mongos_cluster_relation:
             self.charm.status_handler.set_running_status(
                 MongosStatuses.MISSING_CONF_SERVER_REL.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
@@ -215,14 +215,14 @@ class MongosOperator(OperatorProtocol, Object):
 
                 self.state.statuses.add(
                     MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
-                    scope=Scope.UNIT,
+                    scope="unit",
                     component=self.name,
                 )
                 return
 
             self.state.statuses.delete(
                 MongosStatuses.INVALID_EXPOSE_EXTERNAL.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.name,
             )
             self.update_k8s_external_services()
@@ -330,7 +330,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
                 MongosStatuses.MONGOS_NOT_STARTED.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
@@ -528,7 +528,7 @@ class MongosOperator(OperatorProtocol, Object):
         charm_statuses: list[StatusObject] = []
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name)
+            return self.state.statuses.get(scope=scope, component=self.name).root
 
         if (
             self.substrate == Substrates.K8S

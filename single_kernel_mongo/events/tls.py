@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -133,7 +132,7 @@ class TLSEventsHandler(Object):
         logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
         self.charm.status_handler.set_running_status(
             TLSStatuses.DISABLING_TLS.value,
-            scope=Scope.UNIT,
+            scope="unit",
         )
         self.manager.disable_certificates_for_unit()
 

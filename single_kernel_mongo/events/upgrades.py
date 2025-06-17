@@ -13,7 +13,7 @@ from ops.charm import ActionEvent, RelationCreatedEvent, UpgradeCharmEvent
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ModelError
 
-from single_kernel_mongo.config.literals import CharmKind, Scope
+from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import UpgradeActions
@@ -132,7 +132,7 @@ class UpgradeEventHandler(Object):
             logger.info(ROLLBACK_INSTRUCTIONS)
             self.manager.state.statuses.add(
                 UpgradeStatuses.UNHEALTHY_UPGRADE.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             event.defer()
@@ -151,7 +151,7 @@ class UpgradeEventHandler(Object):
             logger.info(ROLLBACK_INSTRUCTIONS)
             self.manager.state.statuses.add(
                 UpgradeStatuses.UNHEALTHY_UPGRADE.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.manager.name,
             )
             event.defer()

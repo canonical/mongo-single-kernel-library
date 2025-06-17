@@ -29,9 +29,10 @@ from typing import ClassVar, Generic, TypeVar
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -97,7 +98,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         """First install event handler."""
         if self.substrate == Substrates.VM:
             self.status_handler.set_running_status(
-                CharmStatuses.INSTALLING_MONGODB.value, scope=Scope.UNIT
+                CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
             self.workload.install()
 

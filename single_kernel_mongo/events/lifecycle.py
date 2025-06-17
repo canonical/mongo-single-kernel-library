@@ -40,7 +40,7 @@ from ops.charm import (
 from ops.framework import Object
 from pymongo.errors import PyMongoError
 
-from single_kernel_mongo.config.literals import CharmKind, Scope, Substrates
+from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses, LdapStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -115,7 +115,7 @@ class LifecycleEventsHandler(Object):
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(
                 CharmStatuses.FAILED_SERVICES_START.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.dependent.name,
             )
             event.defer()
@@ -147,13 +147,13 @@ class LifecycleEventsHandler(Object):
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.dependent.name,
             )
         except InvalidLdapQueryTemplateError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.dependent.name,
             )
 

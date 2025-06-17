@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -166,7 +165,7 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             self.dependent.state.statuses.add(
                 MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope=Scope.UNIT,
+                scope="unit",
                 component=self.charm.name,
             )
         except WorkloadServiceError:
