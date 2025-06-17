@@ -5,6 +5,7 @@
 import pytest
 from pymongo.errors import OperationFailure
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ...helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
@@ -163,21 +164,25 @@ async def test_disconnect_from_cluster_removes_user(
         ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True
     )
     num_users = count_users(mongos_client)
+
     await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
         f"{MONGOS_APP_NAME}:cluster",
         f"{CONFIG_SERVER_APP_NAME}:cluster",
     )
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME],
-        idle_period=20,
+        status="active",
+        idle_period=30,
         timeout=TIMEOUT,
         raise_on_error=False,
     )
-    num_users_after_removal = count_users(mongos_client)
 
-    assert (
-        num_users > num_users_after_removal
-    ), "Cluster did not remove user after integration removal."
+    for attempt in Retrying(stop=stop_after_delay(300), wait=wait_fixed(10), reraise=True):
+        with attempt:
+            num_users_after_removal = count_users(mongos_client)
+            assert (
+                num_users > num_users_after_removal
+            ), "Cluster did not remove user after integration removal."
 
     with pytest.raises(OperationFailure) as pymongo_error:
         mongos_user_client.admin.command("dbStats")

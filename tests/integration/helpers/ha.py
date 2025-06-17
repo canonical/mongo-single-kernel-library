@@ -57,7 +57,8 @@ from ..helpers.types import Substrate
 
 logger = getLogger(__name__)
 
-DB_PROCESS = "/usr/bin/mongod"
+VM_DB_PROCESS = "/usr/bin/mongod"
+K8S_DB_PROCESS = "mongod"
 MONGOD_SERVICE_DEFAULT_PATH = "/etc/systemd/system/snap.charmed-mongodb.mongod.service"
 
 
@@ -82,6 +83,9 @@ def cut_network_from_unit(ops_test: OpsTest, substrate: Substrate, machine_name:
             with open(
                 "tests/integration/helpers/manifests/chaos_network_loss.yml"
             ) as chaos_network_loss_file:
+                logger.info(
+                    "Calling network loss on ns={ops_test.model.info.name} and pod={machine_name.replace('/', '-')}"
+                )
                 template = string.Template(chaos_network_loss_file.read())
                 chaos_network_loss = template.substitute(
                     namespace=ops_test.model.info.name,
@@ -196,6 +200,25 @@ def destroy_chaos_mesh(namespace: str) -> None:
     )
 
 
+@retry(stop=stop_after_attempt(10), wait=wait_fixed(5), reraise=True)
+async def wait_until_unit_in_status(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_to_check: JujuUnit,
+    online_unit: JujuUnit,
+    status: str,
+    app_name: str,
+):
+    with await get_direct_mongo_client(ops_test, substrate, app_name, unit=online_unit) as client:
+        data = client.admin.command("replSetGetStatus")
+        for member in data["members"]:
+            if unit_to_check.name == host_to_unit(member["name"].split(":")[0]):
+                assert (
+                    member["stateStr"] == status
+                ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
+        assert False, f"{unit_to_check.name} not found in {data['members']}"
+
+
 async def fetch_primary(
     replica_set_hosts: list[str],
     ops_test: OpsTest,
@@ -222,6 +245,7 @@ async def fetch_primary(
         if member["stateStr"] == "PRIMARY":
             # get member ip without ":PORT"
             primary = member["name"].split(":")[0]
+            break
 
     return primary
 
@@ -596,18 +620,16 @@ async def kill_unit_process(
     app_name = app_name or await get_app_name(ops_test)
 
     if substrate == "lxd":
-        kill_cmd = f"exec --unit {unit_name} -- pkill --signal {kill_code} -f {DB_PROCESS}"
+        kill_cmd = f"exec --unit {unit_name} -- pkill --signal {kill_code} -f {VM_DB_PROCESS}"
     else:
-        kill_cmd = (
-            f"ssh --container mongod {unit_name} --  pkill --signal {kill_code} -f {DB_PROCESS}"
+        kill_cmd = f"ssh --container mongod {unit_name} pkill --signal {kill_code} {K8S_DB_PROCESS}"
+
+    return_code, _, _ = await ops_test.juju(*kill_cmd.split())
+
+    if return_code != 0:
+        raise ProcessError(
+            f"Expected kill command {kill_cmd} to succeed instead it failed: {return_code}"
         )
-
-        return_code, _, _ = await ops_test.juju(*kill_cmd.split())
-
-        if return_code != 0:
-            raise ProcessError(
-                f"Expected kill command {kill_cmd} to succeed instead it failed: {return_code}"
-            )
 
 
 async def db_step_down(

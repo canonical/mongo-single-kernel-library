@@ -7,7 +7,6 @@ import math
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from random import choices
 from string import ascii_lowercase, digits
 from typing import Any
@@ -91,7 +90,7 @@ class ProcessError(Exception):
 
 async def deploy_charm(
     ops_test: OpsTest,
-    charm: Path | str,
+    charm: str,
     substrate: Substrate,
     mongod_resource: dict,
     app_name: str,

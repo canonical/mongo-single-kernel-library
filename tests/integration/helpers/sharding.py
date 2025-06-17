@@ -42,7 +42,7 @@ SHARD_TWO_APP_NAME = "shard-two"
 SHARD_THREE_APP_NAME = "shard-tree"
 CONFIG_SERVER_APP_NAME = "config-server"
 CONFIG_SERVER_BIS_APP_NAME = "config-server-bis"
-CLUSTER_COMPONENTS = [SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, CONFIG_SERVER_APP_NAME]
+CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
 CONFIG_SERVER_REL_NAME = "config-server"
 SHARD_REL_NAME = "sharding"
 CLUSTER_REL_NAME = "cluster"
@@ -75,7 +75,7 @@ async def deploy_cluster_components(
     ops_test: OpsTest,
     substrate: Substrate,
     mongodb_charm: str,
-    mongod_resource: str,
+    mongod_resource: dict,
     num_units_cluster_config: dict | None = None,
     config_server_name: str = CONFIG_SERVER_APP_NAME,
     shard_one_name: str = SHARD_ONE_APP_NAME,
@@ -160,7 +160,7 @@ def get_cluster_shards(mongos_client: MongoClient) -> set:
 def has_correct_shards(mongos_client: MongoClient, expected_shards: list[str]) -> bool:
     """Returns true if the cluster config has the expected shards."""
     shard_names = get_cluster_shards(mongos_client)
-    logger.info("Expecting {expected_shards}, got {shard_names}")
+    logger.info(f"Expecting {expected_shards}, got {shard_names}")
     return shard_names == set(expected_shards)
 
 

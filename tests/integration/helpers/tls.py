@@ -85,6 +85,7 @@ async def check_tls(
     enabled: bool,
     app_name: str,
     mongos: bool = False,
+    container: str = "mongod",
 ) -> bool:
     """Returns whether TLS is enabled on the specific MongoDB instance.
 
@@ -104,7 +105,6 @@ async def check_tls(
             wait=wait_exponential(multiplier=1, min=2, max=30),
         ):
             with attempt:
-                container = "mongos" if mongos else "mongod"
                 ssh_command = (
                     ["ssh", "--container", container, unit.name]
                     if substrate == "microk8s"

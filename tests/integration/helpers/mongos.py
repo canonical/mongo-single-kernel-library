@@ -44,7 +44,7 @@ logger = getLogger(__name__)
 
 MONGOS_CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME]
 
-MONGOS_CLIENT_APPLICATION = "mongos-test-application"
+MONGOS_CLIENT_APPLICATION = "test-routing-application"
 MONGOS_SOCKET = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
 
 PING_CMD = "db.runCommand({ping: 1})"
@@ -238,7 +238,7 @@ async def check_mongos(
 
     # since mongos is communicating only via the unix domain socket, we cannot connect to it via
     # traditional pymongo methods
-    ssh_command = (
+    ssh_command = "".join(
         ["ssh", "--container", "mongos", unit.name]
         if substrate == "microk8s"
         else ["ssh", unit.name, "sudo"]
@@ -255,14 +255,22 @@ async def check_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate):
     # check mongos is running with TLS enabled
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
         await check_tls(
-            ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False, mongos=True
+            ops_test,
+            substrate,
+            unit,
+            app_name=MONGOS_APP_NAME,
+            enabled=False,
+            mongos=True,
+            container="mongos",
         )
 
 
 async def check_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
     # check mongos is running with TLS enabled
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        await check_tls(ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False)
+        await check_tls(
+            ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False, container="mongos"
+        )
 
 
 async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_name: str) -> None:

@@ -184,7 +184,7 @@ async def test_pre_upgrade_check_failure(
         assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     # restore network after test
-    restore_network_for_unit(ops_test, substrate, non_leader_unit.name)
+    restore_network_for_unit(ops_test, substrate, hostname)
     await ops_test.model.wait_for_idle(
         apps=[SHARD_TWO_APP_NAME],
         status="active",

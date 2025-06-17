@@ -13,7 +13,7 @@ from ...helpers.common import (
     get_app_name,
     unit_hostname,
 )
-from ...helpers.ha import cut_network_from_unit, verify_writes
+from ...helpers.ha import cut_network_from_unit, verify_writes, wait_until_unit_in_status
 from ...helpers.types import Substrate
 from ...helpers.upgrade import refresh_charm
 
@@ -110,6 +110,10 @@ async def test_preflight_check_failure(ops_test: OpsTest, substrate: Substrate, 
     unit = await find_unit(ops_test, leader=False, app_name=app_name)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     cut_network_from_unit(ops_test, substrate, await unit_hostname(ops_test, unit.name))
+
+    await wait_until_unit_in_status(
+        ops_test, substrate, unit, leader_unit, "(not reachable/healthy)", app_name
+    )
 
     logger.info("Calling pre-refresh-check")
     action = await leader_unit.run_action("pre-refresh-check")
