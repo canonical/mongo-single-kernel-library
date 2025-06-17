@@ -11,6 +11,7 @@ from ...helpers.common import (
     TIMEOUT,
     find_unit,
     stop_continous_writes,
+    unit_hostname,
 )
 from ...helpers.ha import cut_network_from_unit, restore_network_for_unit
 from ...helpers.sharding import (
@@ -170,7 +171,11 @@ async def test_pre_upgrade_check_failure(
 
     assert non_leader_unit, "No non leader unit found"
 
-    cut_network_from_unit(ops_test, substrate, non_leader_unit.name)
+    if substrate == "lxd":
+        hostname = await unit_hostname(ops_test, non_leader_unit.name)
+    else:
+        hostname = non_leader_unit.name
+    cut_network_from_unit(ops_test, substrate, hostname)
 
     for sharding_component in CLUSTER_COMPONENTS:
         leader_unit = await find_unit(ops_test, leader=True, app_name=sharding_component)

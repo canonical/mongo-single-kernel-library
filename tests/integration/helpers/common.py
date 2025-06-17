@@ -658,6 +658,14 @@ async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: 
     ]
 
 
+async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate, unit_name: str):
+    """Get the hostname for a unit in mongodb."""
+    unit_id, app_name = get_unit_app(unit_name)
+    if substrate == "lxd":
+        return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+    return f"{unit_name.replace('/', '-')}.mongodb-k8s-endpoints"
+
+
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
     """Get raw application details."""
     ret_code, stdout, stderr = await ops_test.juju(

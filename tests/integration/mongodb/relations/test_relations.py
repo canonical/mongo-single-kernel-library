@@ -20,6 +20,7 @@ from ...helpers.common import (
     get_app_name,
     get_application_relation_data,
     get_connection_string,
+    get_mongodb_hostname_for_unit,
     is_relation_joined,
     run_action,
 )
@@ -222,9 +223,8 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
     except RetryError:
         assert False, "replica set has no primary"
 
-    assert primary.public_address in endpoints_str.split(
-        ","
-    ), "Primary is not present in DB endpoints."
+    mongodb_hostname = await get_mongodb_hostname_for_unit(ops_test, substrate, primary.name)
+    assert mongodb_hostname in endpoints_str.split(","), "Primary is not present in DB endpoints."
 
     database = await get_application_relation_data(
         ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "database"

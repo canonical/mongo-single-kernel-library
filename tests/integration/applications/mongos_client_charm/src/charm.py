@@ -38,6 +38,12 @@ class ApplicationCharm(CharmBase):
             database_name="my-test-db",
             extra_user_roles=EXTRA_USER_ROLES,
         )
+        self.database_bis = DatabaseRequires(
+            self,
+            relation_name="mongos_proxy",
+            database_name="my-test-db",
+            extra_user_roles=EXTRA_USER_ROLES,
+        )
 
     def _on_start(self, _) -> None:
         """Only sets an Active status."""
