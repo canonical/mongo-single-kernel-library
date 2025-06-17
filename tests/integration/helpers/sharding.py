@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 
 
+from logging import getLogger
+
 from juju.unit import Unit as JujuUnit
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
@@ -31,6 +33,8 @@ from ..helpers.tls import (
     time_process_started,
 )
 from ..helpers.types import Substrate
+
+logger = getLogger(__name__)
 
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
@@ -156,6 +160,7 @@ def get_cluster_shards(mongos_client: MongoClient) -> set:
 def has_correct_shards(mongos_client: MongoClient, expected_shards: list[str]) -> bool:
     """Returns true if the cluster config has the expected shards."""
     shard_names = get_cluster_shards(mongos_client)
+    logger.info("Expecting {expected_shards}, got {shard_names}")
     return shard_names == set(expected_shards)
 
 

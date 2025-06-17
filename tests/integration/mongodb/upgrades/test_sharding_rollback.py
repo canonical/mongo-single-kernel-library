@@ -63,6 +63,7 @@ async def test_build_and_deploy(
         idle_period=20,
         raise_on_blocked=False,
         raise_on_error=False,
+        status="active",
     )
 
 

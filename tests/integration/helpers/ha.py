@@ -454,7 +454,7 @@ async def scale_application(
 
     if desired_count > 0 and wait:
         logger.info("Waiting for idle")
-        async with ops_test.fast_forward():
+        async with ops_test.fast_forward("1m"):
             # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
             await ops_test.model.wait_for_idle(
                 apps=[application_name],
