@@ -10,18 +10,39 @@ from ..helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
     MONGOS_PORT,
+    TIMEOUT,
     deploy_charm,
     get_address_of_unit,
     get_application_relation_data,
     get_secret_data,
     get_unit_id,
     mongosh,
+    wait_for_mongodb_units_blocked,
 )
-from ..helpers.sharding import CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME
+from ..helpers.sharding import (
+    CLUSTER_REL_NAME,
+    CONFIG_SERVER_APP_NAME,
+    CONFIG_SERVER_REL_NAME,
+    SHARD_ONE_APP_NAME,
+    SHARD_REL_NAME,
+)
+from ..helpers.tls import (
+    SNAP_MONGOS_SERVICE,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_RELATION_NAME,
+    check_certs_correctly_distributed,
+    check_tls,
+    external_cert_path,
+    get_file_content,
+    internal_cert_path,
+    time_file_created,
+    time_process_started,
+)
 from ..helpers.types import Substrate
 
 logger = getLogger(__name__)
 
+MONGOS_CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME]
 
 MONGOS_CLIENT_APPLICATION = "mongos-test-application"
 MONGOS_SOCKET = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
@@ -45,6 +66,7 @@ async def deploy_cluster_components(
     config_server_name: str = CONFIG_SERVER_APP_NAME,
     shard_one_name: str = SHARD_ONE_APP_NAME,
     mongos_units: int = 1,
+    channel: str | None = None,
 ) -> None:
     if not num_units_cluster_config:
         num_units_cluster_config = {
@@ -77,6 +99,7 @@ async def deploy_cluster_components(
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
         num_units=0 if substrate == "lxd" else mongos_units,
+        channel=channel,
     )
 
     await ops_test.model.deploy(
@@ -94,6 +117,67 @@ async def deploy_cluster_components(
         apps=apps_to_wait_for,
         idle_period=20,
         timeout=DEPLOYMENT_TIMEOUT,
+    )
+
+
+async def build_cluster(
+    ops_test: OpsTest, substrate: Substrate, integrate_with_mongos: bool = True
+) -> None:
+    """Connects the cluster components to each other."""
+    await ops_test.model.integrate(MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME)
+    await wait_for_mongodb_units_blocked(
+        ops_test, substrate, MONGOS_APP_NAME, timeout=TIMEOUT, subordinate=(substrate == "lxd")
+    )
+
+    # prepare sharded cluster
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
+        idle_period=10,
+        raise_on_blocked=False,
+        timeout=TIMEOUT,
+    )
+    await ops_test.model.integrate(
+        f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
+        idle_period=20,
+        raise_on_blocked=False,
+        timeout=TIMEOUT,
+    )
+
+    apps = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME]
+    if integrate_with_mongos:
+        # connect sharded cluster to mongos
+        await ops_test.model.integrate(
+            f"{MONGOS_APP_NAME}:{CLUSTER_REL_NAME}",
+            f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
+        )
+        apps.append(MONGOS_APP_NAME)
+
+    await ops_test.model.wait_for_idle(
+        apps=apps,
+        idle_period=20,
+        status="active",
+        timeout=TIMEOUT,
+    )
+
+
+async def integrate_cluster_with_tls(ops_test: OpsTest) -> None:
+    """Integrate cluster components to the TLS interface."""
+    for cluster_component in MONGOS_CLUSTER_COMPONENTS:
+        await ops_test.model.integrate(
+            f"{cluster_component}:{TLS_RELATION_NAME}",
+            f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
+        )
+
+    await ops_test.model.wait_for_idle(
+        apps=MONGOS_CLUSTER_COMPONENTS,
+        idle_period=20,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+        status="active",
     )
 
 
@@ -130,10 +214,11 @@ async def generate_mongos_command(
     app_name: str,
     uri: str | None = None,
     external: bool = False,
+    cmd: str = PING_CMD,
 ) -> str:
     """Generates a command which verifies mongos is running."""
     mongodb_uri = uri or await generate_mongos_uri(ops_test, substrate, auth, app_name, external)
-    return f"{mongosh(substrate)} '{mongodb_uri}'  --eval '{PING_CMD}'"
+    return f"{mongosh(substrate)} '{mongodb_uri}'  --eval '{cmd}'"
 
 
 async def check_mongos(
@@ -144,9 +229,12 @@ async def check_mongos(
     app_name: str,
     uri: str | None = None,
     external: bool = False,
+    cmd: str = PING_CMD,
 ) -> bool:
     """Returns whether mongos is running on the provided unit."""
-    mongos_check = await generate_mongos_command(ops_test, substrate, auth, app_name, uri, external)
+    mongos_check = await generate_mongos_command(
+        ops_test, substrate, auth, app_name, uri, external, cmd
+    )
 
     # since mongos is communicating only via the unix domain socket, we cannot connect to it via
     # traditional pymongo methods
@@ -161,3 +249,111 @@ async def check_mongos(
     if not return_code == 0:
         logger.warning("check mongos STDOUT=%s, STDERR=%s", stdout, stderr)
     return return_code == 0
+
+
+async def check_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate):
+    # check mongos is running with TLS enabled
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        await check_tls(
+            ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False, mongos=True
+        )
+
+
+async def check_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
+    # check mongos is running with TLS enabled
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        await check_tls(ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False)
+
+
+async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_name: str) -> None:
+    """Verify provided app can rotate its TLS certs."""
+    original_tls_info = {}
+
+    ext_cert_path = external_cert_path(substrate)
+    int_cert_path = internal_cert_path(substrate)
+
+    for unit in ops_test.model.applications[app_name].units:
+        original_tls_info[unit.name] = {}
+        original_tls_info[unit.name]["external_cert_contents"] = await get_file_content(
+            ops_test, substrate, unit.name, ext_cert_path
+        )
+        original_tls_info[unit.name]["internal_cert_contents"] = await get_file_content(
+            ops_test, substrate, unit.name, int_cert_path
+        )
+        original_tls_info[unit.name]["external_cert"] = await time_file_created(
+            ops_test, substrate, unit.name, ext_cert_path
+        )
+        original_tls_info[unit.name]["internal_cert"] = await time_file_created(
+            ops_test, substrate, unit.name, int_cert_path
+        )
+        original_tls_info[unit.name]["mongos_service"] = await time_process_started(
+            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE
+        )
+        await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
+
+    # set external and internal key using auto-generated key for each unit
+    for unit in ops_test.model.applications[app_name].units:
+        action = await unit.run_action(action_name="set-tls-private-key")
+        action = await action.wait()
+        assert action.status == "completed", "setting external and internal key failed."
+
+    # wait for certificate to be available and processed. Can get receive two certificate
+    # available events and restart twice so we want to ensure we are idle for at least 1 minute
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", timeout=1000, idle_period=60
+    )
+
+    # After updating both the external key and the internal key a new certificate request will be
+    # made; then the certificates should be available and updated.
+    for unit in ops_test.model.applications[app_name].units:
+        new_external_cert = await get_file_content(ops_test, substrate, unit.name, ext_cert_path)
+        new_internal_cert = await get_file_content(ops_test, substrate, unit.name, int_cert_path)
+        new_external_cert_time = await time_file_created(
+            ops_test, substrate, unit.name, ext_cert_path
+        )
+        new_internal_cert_time = await time_file_created(
+            ops_test, substrate, unit.name, int_cert_path
+        )
+        new_mongos_service_time = await time_process_started(
+            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE
+        )
+
+        await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
+        assert (
+            new_external_cert != original_tls_info[unit.name]["external_cert_contents"]
+        ), "external cert not rotated"
+
+        assert (
+            new_internal_cert != original_tls_info[unit.name]["external_cert_contents"]
+        ), "external cert not rotated"
+        assert (
+            new_external_cert_time > original_tls_info[unit.name]["external_cert"]
+        ), f"external cert for {unit.name} was not updated."
+        assert (
+            new_internal_cert_time > original_tls_info[unit.name]["internal_cert"]
+        ), f"internal cert for {unit.name} was not updated."
+
+        # Once the certificate requests are processed and updated the .service file should be
+        # restarted
+        assert (
+            new_mongos_service_time > original_tls_info[unit.name]["mongos_service"]
+        ), f"mongod service for {unit.name} was not restarted."
+
+    # Verify that TLS is functioning on all units.
+    await check_mongos_tls_enabled(ops_test, substrate)
+
+
+async def toggle_tls_mongos(
+    ops_test: OpsTest, enable: bool, certs_app_name: str = TLS_CERTIFICATES_APP_NAME
+) -> None:
+    """Toggles TLS on mongos application to the specified enabled state."""
+    if enable:
+        await ops_test.model.integrate(
+            f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
+            f"{certs_app_name}:{TLS_RELATION_NAME}",
+        )
+    else:
+        await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
+            f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
+            f"{certs_app_name}:{TLS_RELATION_NAME}",
+        )

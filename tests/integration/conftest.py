@@ -1,7 +1,10 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import re
+import shutil
 import time
+import zipfile
 from logging import getLogger
 from pathlib import Path
 from typing import Any
@@ -248,3 +251,63 @@ async def add_continuous_writes_to_shards(
     await clear_continous_writes(
         ops_test, app_name, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME
     )
+
+
+@pytest.fixture
+async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
+    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
+    fault_charm = f"{tmp_path}/mongodb_fault_charm.charm"
+    shutil.copy(mongodb_charm, fault_charm)
+    initial_version_path = mongod_base_path / Path("workload_version")
+    workload_version = initial_version_path.read_text().strip()
+
+    [major, minor, patch] = workload_version.split(".")
+
+    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
+        with charm_zip.open(literals_path) as literals_file:
+            file_data = literals_file.read().decode().split("\n")
+
+    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+    for index, line in enumerate(file_data):
+        if entry := regex.findall(line):
+            current_rev = entry[0]
+            new_rev = int(current_rev) - 1
+            new_line = line.replace(current_rev, str(new_rev))
+            file_data[index] = new_line
+            break
+
+    with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
+        charm_zip.writestr(literals_path, "\n".join(file_data))
+        charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
+
+    yield fault_charm
+
+
+@pytest.fixture
+async def faulty_mongos_upgrade_charm(mongod_base_path: Path, mongos_charm: str, tmp_path: Path):
+    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
+    fault_charm = f"{tmp_path}/mongos_fault_charm.charm"
+    shutil.copy(mongos_charm, fault_charm)
+    initial_version_path = mongod_base_path / Path("workload_version")
+    workload_version = initial_version_path.read_text().strip()
+
+    [major, minor, patch] = workload_version.split(".")
+
+    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
+        with charm_zip.open(literals_path) as literals_file:
+            file_data = literals_file.read().decode().split("\n")
+
+    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+    for index, line in enumerate(file_data):
+        if entry := regex.findall(line):
+            current_rev = entry[0]
+            new_rev = int(current_rev) - 1
+            new_line = line.replace(current_rev, str(new_rev))
+            file_data[index] = new_line
+            break
+
+    with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
+        charm_zip.writestr(literals_path, "\n".join(file_data))
+        charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
+
+    yield fault_charm

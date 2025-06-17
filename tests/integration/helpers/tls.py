@@ -104,8 +104,9 @@ async def check_tls(
             wait=wait_exponential(multiplier=1, min=2, max=30),
         ):
             with attempt:
+                container = "mongos" if mongos else "mongod"
                 ssh_command = (
-                    ["ssh", "--container", "mongod", unit.name]
+                    ["ssh", "--container", container, unit.name]
                     if substrate == "microk8s"
                     else ["ssh", unit.name, "sudo"]
                 )

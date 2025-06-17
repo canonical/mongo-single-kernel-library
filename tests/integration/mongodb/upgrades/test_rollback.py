@@ -3,9 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
-import shutil
 import time
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -26,21 +24,6 @@ logger = logging.getLogger(__name__)
 UPGRADE_TIMEOUT = 15 * 60
 
 
-@pytest.fixture
-async def faulty_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
-    fault_charm = tmp_path / "fault_charm.charm"
-    shutil.copy(mongodb_charm, fault_charm)
-    initial_version_path = mongod_base_path / Path("workload_version")
-    workload_version = initial_version_path.read_text().strip()
-
-    [major, minor, patch] = workload_version.split(".")
-
-    with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
-        charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
-
-    yield fault_charm
-
-
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""
@@ -57,7 +40,10 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 
 @pytest.mark.abort_on_fail
 async def test_rollback(
-    ops_test: OpsTest, mongod_base_path: Path, mongodb_charm: str, faulty_upgrade_charm: Path
+    ops_test: OpsTest,
+    mongod_base_path: Path,
+    mongodb_charm: str,
+    faulty_mongodb_upgrade_charm: Path,
 ) -> None:
     app_name = await get_app_name(ops_test)
 
@@ -66,7 +52,7 @@ async def test_rollback(
     initial_version_path = mongod_base_path / Path("workload_version")
     initial_version = initial_version_path.read_text().strip()
 
-    await mongodb_application.refresh(path=faulty_upgrade_charm)
+    await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm)
     logger.info("Wait for refresh to fail")
 
     for attempt in Retrying(
