@@ -536,6 +536,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return None
 
+    def process_pbm_error_as_status(self, pbm_status: str) -> StatusObject | None:
+        """Processes the pbm error and returns it as an optional status object."""
+        if state := self.manager.process_pbm_error(pbm_status):
+            return next(iter(self.manager.map_backup_state_to_status(state)), None)
+        return None
+
     def process_pbm_status(self, pbm_status: str) -> BackupState:
         """Processes the pbm status if there's no error."""
         pbm_as_dict: dict[str, dict] = json.loads(pbm_status)
@@ -669,8 +675,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 )
                 raise ResyncError
         except WorkloadExecError as e:
-            if status := self.process_pbm_error(e.stdout):
-                self.state.statuses.set(status, scope="unit", component=self.name)
+            if status := self.manager.process_pbm_error_as_status(e.stdout):
+                self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.

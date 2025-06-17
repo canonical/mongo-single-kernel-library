@@ -164,7 +164,7 @@ class BackupEventsHandler(Object):
             )
             return
         except WorkloadExecError as e:
-            if status := self.manager.process_pbm_error(e.stdout):
+            if status := self.manager.process_pbm_error_as_status(e.stdout):
                 self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
             return
 
