@@ -538,8 +538,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     def process_pbm_error_as_status(self, pbm_status: str) -> StatusObject | None:
         """Processes the pbm error and returns it as an optional status object."""
-        if state := self.manager.process_pbm_error(pbm_status):
-            return next(iter(self.manager.map_backup_state_to_status(state)), None)
+        if state := self.process_pbm_error(pbm_status):
+            return next(iter(self.map_backup_state_to_status(state)), None)
         return None
 
     def process_pbm_status(self, pbm_status: str) -> BackupState:
