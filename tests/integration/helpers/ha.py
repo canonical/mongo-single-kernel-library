@@ -362,9 +362,9 @@ async def reused_storage(
     """
     match substrate:
         case "lxd":
-            base_command = f"ssh {unit_name} -- sudo"
+            base_command = f"ssh {unit_name} sudo"
         case "microk8s":
-            base_command = f"ssh --container mongod {unit_name} --"
+            base_command = f"ssh --container mongod {unit_name}"
 
     cat_cmd = f"{base_command} cat {mongodb_log_path(substrate)}"
     return_code, output, _ = await ops_test.juju(*cat_cmd.split())

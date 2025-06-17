@@ -7,7 +7,6 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
 from ...helpers.common import (
-    TIMEOUT,
     deploy_charm,
     find_unit,
     generate_mongodb_client,
@@ -24,6 +23,8 @@ from ...helpers.sharding import (
     has_correct_shards,
 )
 from ...helpers.types import Substrate
+
+RC_TIMEOUT = 60 * 30
 
 
 @pytest.mark.abort_on_fail
@@ -101,7 +102,7 @@ async def test_immediate_relate(ops_test: OpsTest, substrate: Substrate) -> None
             ],
             idle_period=20,
             status="active",
-            timeout=TIMEOUT,
+            timeout=RC_TIMEOUT,
             raise_on_error=False,
         )
 

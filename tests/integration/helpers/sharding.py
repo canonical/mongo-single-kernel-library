@@ -174,8 +174,6 @@ def remove_db_writes(client: MongoClient, db_name: str, coll_name: str):
     test_collection = db[coll_name]
     test_collection.drop()
 
-    client.close()
-
 
 def verify_data_mongodb(
     client: MongoClient, db_name: str, coll_name: str, key: str, value: str
@@ -421,7 +419,9 @@ async def add_and_verify_unwanted_writes(
 
     Note: this test also verifies every shard has unwanted writes.
     """
-    await insert_unwanted_data(ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, unit=unit)
+    await insert_unwanted_data(
+        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, unit=unit, mongos=True
+    )
 
     # new writes added to cluster in `insert_unwanted_data` get sent to shard-one - add more
     # writes to shard-two

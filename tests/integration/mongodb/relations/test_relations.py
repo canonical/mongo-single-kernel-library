@@ -169,22 +169,37 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
     except RetryError:
         assert False, "Hosts not updated in application data after adding units."
 
-    # verify application metadata is correct after removing the pre-existing units. This is
-    # this is important since we want to test that the application related will work with
-    # only the newly added units from above.
-    await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/0")
-    await ops_test.model.wait_for_idle(
-        apps=app_names,
-        status="active",
-        timeout=1000,
-    )
+    if substrate == "lxd":
+        # verify application metadata is correct after removing the pre-existing units. This is
+        # this is important since we want to test that the application related will work with
+        # only the newly added units from above.
+        await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/0")
+        await ops_test.model.wait_for_idle(
+            apps=app_names,
+            status="active",
+            timeout=1000,
+        )
 
-    await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/1")
-    await ops_test.model.wait_for_idle(
-        apps=app_names,
-        status="active",
-        timeout=1000,
-    )
+        await ops_test.model.applications[db_app_name].destroy_units(f"{db_app_name}/1")
+        await ops_test.model.wait_for_idle(
+            apps=app_names,
+            status="active",
+            timeout=1000,
+        )
+    else:
+        await ops_test.model.applications[db_app_name].scale(scale_change=-1)
+        await ops_test.model.wait_for_idle(
+            apps=app_names,
+            status="active",
+            timeout=1000,
+        )
+
+        await ops_test.model.applications[db_app_name].scale(scale_change=-1)
+        await ops_test.model.wait_for_idle(
+            apps=app_names,
+            status="active",
+            timeout=1000,
+        )
 
     try:
         await verify_application_data(

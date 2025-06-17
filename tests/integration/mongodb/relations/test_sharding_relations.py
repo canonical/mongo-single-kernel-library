@@ -33,7 +33,7 @@ from ...helpers.types import Substrate
 
 SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
 
-RELATION_LIMIT_MESSAGE = 'cannot add relation "shard:sharding config-server-bis:config-server": establishing a new relation for shard:sharding would exceed its maximum relation limit of 1'
+RELATION_LIMIT_MESSAGE = 'cannot add relation "shard-one:sharding config-server-bis:config-server": establishing a new relation for shard-one:sharding would exceed its maximum relation limit of 1'
 
 
 @pytest.mark.abort_on_fail

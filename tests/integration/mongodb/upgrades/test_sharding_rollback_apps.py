@@ -152,8 +152,8 @@ async def test_rollback_on_shard_and_config_server(
         collection_name=SHARD_TWO_COLL_NAME,
     )
     assert (
-        shard_one_actual_writes >= shard_one_expected_writes["number"]
+        shard_one_actual_writes >= shard_one_expected_writes
     ), "continuous writes to shard one failed during upgrade"
     assert (
-        shard_two_actual_writes >= shard_two_expected_writes["number"]
+        shard_two_actual_writes >= shard_two_expected_writes
     ), "continuous writes to shard two failed during upgrade"

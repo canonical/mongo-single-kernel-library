@@ -44,7 +44,7 @@ TIMEOUT = 15 * 60
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongodb_cluster(
     ops_test: OpsTest,
-    mongodb_charm: Path,
+    mongodb_charm: str,
     substrate: Substrate,
     mongod_resource,
     kubernetes_model: Model,

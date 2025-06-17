@@ -69,7 +69,7 @@ def client_relation_charm_path() -> str:
 @pytest.fixture
 def mongos_client_application_path() -> str:
     """The mongos test application path."""
-    return "./tests/integration/applications/mongos_client_charm/mongos-test-application_ubuntu@22.04-amd64.charm"
+    return "./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@22.04-amd64.charm"
 
 
 @pytest.fixture
@@ -127,7 +127,7 @@ def mongos_metadata(mongos_base_path) -> dict[str, Any]:
 
 
 @pytest.fixture
-def mongos_resource(mongos_metadata) -> dict[str, Any]:
+def mongos_resource(mongos_metadata, substrate) -> dict[str, Any]:
     """The Mongos charm resources for k8s charms."""
     if substrate == "microk8s":
         return {"mongodb-image": mongos_metadata["resources"]["mongodb-image"]["upstream-source"]}
@@ -211,6 +211,7 @@ async def add_writes_to_shard(ops_test: OpsTest, substrate: Substrate, applicati
     )
     remove_db_writes(mongos_client, db_name=SHARD_ONE_DB_NAME, coll_name=SHARD_ONE_COLL_NAME)
     remove_db_writes(mongos_client, db_name=SHARD_TWO_DB_NAME, coll_name=SHARD_TWO_COLL_NAME)
+    mongos_client.close()
 
 
 @pytest.fixture

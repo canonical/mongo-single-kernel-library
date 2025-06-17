@@ -76,6 +76,14 @@ async def test_connect_to_cluster_creates_user(ops_test: OpsTest, substrate: Sub
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
+    await ops_test.model.wait_for_idle(
+        apps=[SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME],
+        idle_period=20,
+        raise_on_blocked=False,
+        timeout=TIMEOUT,
+        status="active",
+    )
+
     await ops_test.model.integrate(
         f"{MONGOS_APP_NAME}",
         f"{DATA_INTEGRATOR_APP_NAME}",
