@@ -45,7 +45,11 @@ for directory in "${TEST_CHARMS[@]}"; do
     python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
 
     # Pack the charm
-    charmcraft -v pack
+    if $CI_CACHE; then
+        ccc pack -v
+    else
+        charmcraft pack -v
+    fi
 
     # Cleanup
     echo "removing copied files from single kernel charm."
