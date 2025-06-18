@@ -12,12 +12,13 @@ from typing import TYPE_CHECKING
 from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -162,9 +163,15 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongos.value.WAITING_FOR_SECRETS.value
+            self.dependent.state.statuses.add(
+                MongosStatuses.WAITING_FOR_SECRETS.value,
+                scope="unit",
+                component=self.charm.name,
             )
+        except WorkloadServiceError:
+            # Some status was already set and a log was already displayed in
+            # `restart_charm_services`
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

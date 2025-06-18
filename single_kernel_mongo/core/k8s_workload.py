@@ -39,8 +39,8 @@ class KubernetesWorkload(WorkloadBase):
         return self.container.can_connect()
 
     @override
-    def install(self) -> bool:
-        return True
+    def install(self) -> None:
+        return None
 
     @override
     def start(self) -> None:

@@ -8,8 +8,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses import StatusObject
 from data_platform_helpers.version_check import NoVersionError, get_charm_revision
-from ops.model import StatusBase
 
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -30,7 +30,7 @@ class VersionChecker:
         self.state = dependent.state
         self.version_checker = dependent.cross_app_version_checker
 
-    def get_cluster_mismatched_revision_status(self) -> StatusBase | None:
+    def get_cluster_mismatched_revision_status(self) -> StatusObject | None:
         """Returns a Status if the cluster has mismatched revisions."""
         # check for invalid versions in sharding integrations, i.e. a shard running on
         # revision  88 and a config-server running on revision 110

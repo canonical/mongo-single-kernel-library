@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
-from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
+from data_platform_helpers.advanced_statuses.utils import as_status
+from ops.model import BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -12,6 +13,7 @@ from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
 )
+from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -58,7 +60,11 @@ def test_assert_pass_hook_checks_fail_invalid_mongos_integration(
         manager.assert_pass_hook_checks()
 
     assert err.value.args[0] == "ClusterProvider is only executed by a config-server"
-    assert isinstance(harness.charm.unit.status, BlockedStatus)
+
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert any(status.status == "blocked" for status in statuses)
 
 
 def test_assert_pass_hook_checks_fail_not_leader(harness: Harness[MongoTestCharm]):
@@ -268,8 +274,12 @@ def test_cluster_requirer_set_relation_created_status(
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
-    assert isinstance(mongos_harness.charm.unit.status, WaitingStatus)
-    assert mongos_harness.charm.unit.status.message == "Connecting to config-server..."
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
+
+    assert statuses[0].status == "waiting"
+    assert statuses[0].message == "Connecting to config-server..."
 
 
 def test_cluster_requirer_share_credentials_to_clients(
@@ -330,7 +340,10 @@ def test_cluster_requirer_update_mongos_and_restart(
         {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
     )
 
-    assert isinstance(mongos_harness.charm.unit.status, ActiveStatus)
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
+    assert statuses[0].status == "active"
     assert manager.state.db_initialised
 
     for relation in operator.state.client_relations:
@@ -412,7 +425,10 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status
-    assert mongos_harness.charm.unit.status == WaitingStatus("Waiting to start mongos...")
+    statuses = mongos_harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+    )
+    assert as_status(statuses[0]) == WaitingStatus("Waiting to start mongos...")
 
 
 def test_cluster_requirer_remove_users_and_cleanup_mongo(
@@ -585,18 +601,18 @@ def test_cluster_requirer_tls_status(
 @pytest.mark.parametrize(
     ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
-        (None, "deadbeef", BlockedStatus("mongos requires TLS to be enabled.")),
+        (None, "deadbeef", MongosStatuses.REQUIRES_TLS.value),
         (
             "deadbeef",
             None,
-            BlockedStatus("mongos has TLS enabled, but config-server does not."),
+            MongosStatuses.REQUIRES_NO_TLS.value,
         ),
         (None, None, None),
         ("deadbeef", "deadbeef", None),
         (
             "feeddead",
             "deadbeef",
-            BlockedStatus("mongos CA and Config-Server CA don't match."),
+            MongosStatuses.CA_MISMATCH.value,
         ),
     ),
 )

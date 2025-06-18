@@ -5,9 +5,12 @@ import json
 from pathlib import Path
 
 import pytest
+from data_platform_helpers.advanced_statuses.utils import as_status
 from ops.model import ActiveStatus, BlockedStatus, Relation, WaitingStatus
 from ops.testing import Harness
 
+from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -118,32 +121,32 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.db_initialised = True
     # Case 1: No integration
-    assert harness.charm.operator.ldap_manager.get_statuses() == []
+    assert harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True) == []
 
     # Case 2, wrong role
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
 
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
-        "Cannot integrate LDAP with shard."
-    )
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == BlockedStatus("Cannot integrate LDAP with shard.")
 
     # Case 3, correct role, but missing ldap_cert_relation
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
-        "TLS is mandatory for LDAP transport."
-    )
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == BlockedStatus("TLS is mandatory for LDAP transport.")
 
     # Case 4: Both relations good but not valid data.
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )
 
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
-        "Waiting for both LDAP data and Glauth certificates."
-    )
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
 
     # Case 5: We received data from LDAP integration but not from cert integration
     harness.update_relation_data(
@@ -165,9 +168,9 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     harness.charm.operator.ldap_manager.store_ldap_credentials_and_uri(relation)
 
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
-        "Waiting for Glauth certificates."
-    )
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == WaitingStatus("Waiting for Glauth certificates.")
 
     # Case 6: We received data from both integrations
     harness.add_relation_unit(ldap_cert_relation_id, "glauth-k8s/0")
@@ -179,13 +182,15 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=ActiveStatus(),
+        return_value=LdapState.ACTIVE,
     )
     harness.charm.operator.ldap_manager.store_ldap_certificates(
         "beefdead", "deadbeef", ["feeddead"]
     )
 
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == ActiveStatus()
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == ActiveStatus("")
 
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
@@ -200,9 +205,9 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     # Case 7: Begin of sundown, remove data from databag
     harness.charm.operator.state.ldap.clean_databag()
-    assert harness.charm.operator.ldap_manager.get_statuses()[0] == WaitingStatus(
-        "Missing LDAP data from Glauth."
-    )
+    assert as_status(
+        harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == WaitingStatus("Missing LDAP data from Glauth.")
 
 
 def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
@@ -294,7 +299,7 @@ def test_ldap_full_integration_cycle(
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=ActiveStatus(),
+        return_value=LdapState.ACTIVE,
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
@@ -313,7 +318,11 @@ def test_ldap_full_integration_cycle(
         },
     )
 
-    assert harness.charm.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
+    # Empty cache because harness does not reinstantiate a context for each event
+    harness.charm.status_handler._get_sorted_statuses.cache_clear()
+    harness.evaluate_status()
+
+    assert harness.model.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
 
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
@@ -326,8 +335,11 @@ def test_ldap_full_integration_cycle(
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
 
+    # Empty cache because harness does not reinstantiate a context for each event
+    harness.charm.status_handler._get_sorted_statuses.cache_clear()
+    harness.evaluate_status()
     # All is good, we are green
-    assert harness.charm.unit.status == ActiveStatus("")
+    assert harness.model.unit.status == ActiveStatus("")
 
     assert (
         harness.charm.operator.ldap_manager.get_hash()
@@ -391,7 +403,11 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
         },
     )
 
-    assert harness.charm.unit.status == BlockedStatus("LDAPS not enabled on LDAP application.")
+    # Empty cache because harness does not reinstantiate a context for each event
+    harness.charm.status_handler._get_sorted_statuses.cache_clear()
+    harness.evaluate_status()
+
+    assert harness.model.unit.status == BlockedStatus("LDAPS not enabled on LDAP application.")
     mock_restart.assert_not_called()
 
 
@@ -426,7 +442,11 @@ def test_ldaps_mongos_invalid_hash(
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
 
-    assert mongos_harness.charm.unit.status == BlockedStatus(
+    # Empty cache because harness does not reinstantiate a context for each event
+    mongos_harness.charm.status_handler._get_sorted_statuses.cache_clear()
+    mongos_harness.evaluate_status()
+
+    assert mongos_harness.model.unit.status == BlockedStatus(
         "mongos and config-server not integrated with the same ldap server."
     )
 
@@ -450,13 +470,13 @@ def test_ldaps_mongos_invalid_hash(
         },
     )
 
-    assert mongos_harness.charm.operator.ldap_manager.get_statuses()[0] == BlockedStatus(
-        "mongos and config-server not integrated with the same ldap server."
-    )
+    assert as_status(
+        mongos_harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
+    ) == BlockedStatus("mongos and config-server not integrated with the same ldap server.")
 
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=ActiveStatus(),
+        return_value=LdapState.ACTIVE,
     )
 
     mongos_harness.update_relation_data(
@@ -467,4 +487,11 @@ def test_ldaps_mongos_invalid_hash(
         },
     )
 
-    assert mongos_harness.charm.operator.ldap_manager.get_statuses()[0] == ActiveStatus()
+    assert (
+        as_status(
+            mongos_harness.charm.operator.ldap_manager.get_statuses(
+                scope=Scope.UNIT, recompute=True
+            )[0]
+        )
+        == ActiveStatus()
+    )

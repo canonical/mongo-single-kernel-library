@@ -130,7 +130,11 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UpgradeStatuses.UNHEALTHY_UPGRADE.value)
+            self.manager.state.statuses.add(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             event.defer()
 
     def _run_post_cluster_upgrade_task(self, event: _PostUpgradeCheckMongoDB) -> None:
@@ -145,5 +149,9 @@ class UpgradeEventHandler(Object):
             defer_event_with_info_log(logger, event, "post cluster upgrade checks", str(e))
         except UnhealthyUpgradeError:
             logger.info(ROLLBACK_INSTRUCTIONS)
-            self.charm.status_manager.set_and_share_status(UpgradeStatuses.UNHEALTHY_UPGRADE.value)
+            self.manager.state.statuses.add(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             event.defer()

@@ -21,15 +21,13 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, NewType
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Container
 from ops.framework import Object
 from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
     Relation,
-    StatusBase,
-    WaitingStatus,
 )
 from tenacity import (
     Retrying,
@@ -46,9 +44,8 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import CharmSpec
+from single_kernel_mongo.config.models import BackupState, CharmSpec
 from single_kernel_mongo.config.statuses import BackupStatuses
-from single_kernel_mongo.core.status_provider import StatusProvider
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
@@ -105,7 +102,7 @@ def _backup_restore_retry_before_sleep(retry_state) -> None:
     )
 
 
-class BackupManager(Object, BackupConfigManager, StatusProvider):
+class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     """Manager for the S3 integrator and backups."""
 
     def __init__(
@@ -116,7 +113,8 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         state: CharmState,
         container: Container | None,
     ) -> None:
-        super().__init__(parent=dependent, key="backup")
+        self.name = "backup"
+        super().__init__(parent=dependent, key=self.name)
         super(Object, self).__init__(
             role=role,
             substrate=substrate,
@@ -131,6 +129,16 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             role=role, container=container
         )
         self.state = state
+        self._backup_id: str = ""
+
+    @property
+    def backup_id(self) -> str:
+        """The current backup id."""
+        return self._backup_id
+
+    @backup_id.setter
+    def backup_id(self, value: str):
+        self._backup_id = value
 
     @cached_property
     def environment(self) -> dict[str, str]:
@@ -192,7 +200,6 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
     def list_backup_action(self) -> str:
         """List the backups entries."""
-        backup_list: BackupListType = BackupListType([])
         try:
             pbm_status_output = self.pbm_status
         except WorkloadExecError as e:
@@ -284,49 +291,88 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
             raise RestoreError(fail_message)
 
-    def get_main_status(self) -> StatusBase | None:
-        """Gets the first status of the list."""
-        pbm_statuses = self.get_statuses()
-        return next(iter(pbm_statuses), None)
-
-    def get_statuses(self) -> list[StatusBase]:
-        """Gets the PBM statuses."""
+    def backup_state(self) -> BackupState:
+        """Gets the backup state that can be mapped to a status."""
+        if not self.state.db_initialised:
+            return BackupState.EMPTY
         if not self.state.s3_relation:
             logger.info("No configuration for backups, not relation to s3-charm")
-            return []
-
+            return BackupState.EMPTY
         if not self.validate_s3_config():
             logger.info(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
-            return [BackupStatuses.PBM_MISSING_CONFIGS.value]
-
-        # PBM requires all configuration to be set in order to run.
+            return BackupState.MISSING_CONFIG
         if not self.workload.active():
-            return [BackupStatuses.WAITING_FOR_PBM_START.value]
+            return BackupState.WAITING_PBM_START
 
         try:
-            previous_status = self.charm.unit.status
             pbm_status = self.pbm_status
+        except WorkloadExecError as err:
+            pbm_status = err.stdout
 
+        try:
             if pbm_error := self.process_pbm_error(pbm_status):
-                return [pbm_error]
-
-            processed_status = self.process_pbm_status(pbm_status)
-            operation_result = self._get_backup_restore_operation_result(
-                processed_status, previous_status
-            )
-            logger.info(operation_result)
-            return [processed_status]
+                return pbm_error
+            return self.process_pbm_status(pbm_status)
         except Exception as e:
             logger.error(f"Failed to get pbm status: {e}")
-            return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
+            return BackupState.UNKNOWN_ERROR
+
+    def map_backup_state_to_status(self, state: BackupState) -> list[StatusObject]:  # noqa: C901
+        """Maps the state to a list of statuses."""
+        match state:
+            case BackupState.EMPTY:
+                return []
+            case BackupState.MISSING_CONFIG:
+                return [BackupStatuses.PBM_MISSING_CONFIGS.value]
+            case BackupState.WAITING_PBM_START:
+                return [BackupStatuses.WAITING_FOR_PBM_START.value]
+            case BackupState.INCORRECT_CREDS:
+                return [BackupStatuses.PBM_INCORRECT_CREDS.value]
+            case BackupState.INCOMPATIBLE_CONF:
+                return [BackupStatuses.PBM_INCOMPATIBLE_CONF.value]
+            case BackupState.UNKNOWN_ERROR:
+                return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
+            case BackupState.WAITING_TO_SYNC:
+                return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
+            case BackupState.BACKUP_RUNNING:
+                if operation_result := self._get_backup_restore_operation_result(state):
+                    logger.info(operation_result)
+                return [BackupStatuses.backup_running(self.backup_id)]
+            case BackupState.RESTORE_RUNNING:
+                if operation_result := self._get_backup_restore_operation_result(state):
+                    logger.info(operation_result)
+                return [BackupStatuses.restore_running(self.backup_id)]
+            case BackupState.ACTIVE:
+                return [BackupStatuses.ACTIVE_IDLE.value]
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Gets the PBM statuses."""
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        if not self.state.db_initialised:
+            return []
+
+        if scope == "app":
+            return []
+
+        return self.map_backup_state_to_status(self.backup_state())
+
+    def get_main_status(self) -> StatusObject | None:
+        """Returns the first status of the list."""
+        pbm_statuses = self.get_statuses(scope="unit", recompute=True)
+        return next(iter(pbm_statuses), None)
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
         # Set environment before starting
         self.set_environment()
         self.workload.start()
+
+        # Clear statuses before resync as we want to update it anyway.
+        self.state.statuses.clear(scope="unit", component=self.name)
 
         # pbm has a flakely resync and it is necessary to wait for no actions to be running before
         # resync-ing. See: https://jira.percona.com/browse/PBM-1038
@@ -336,17 +382,14 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             reraise=True,
         ):
             with attempt:
-                pbm_status = self.get_main_status()
-
-                # todo future work - check status of pbm directly
-                # wait for backup/restore to finish
-                if isinstance(pbm_status, (MaintenanceStatus)):
-                    raise PBMBusyError
-
-                # if a resync is running restart the service
-                if isinstance(pbm_status, (WaitingStatus)):
-                    self.workload.restart()
-                    raise PBMBusyError
+                match self.backup_state():
+                    case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
+                        raise PBMBusyError
+                    case BackupState.WAITING_TO_SYNC:
+                        self.workload.restart()
+                        raise PBMBusyError
+                    case _:
+                        continue
 
         # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
         # 2 seconds for pbm_agent to receive the resync command before verifying.
@@ -432,22 +475,31 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Instead, it is in the log messages. pbm_agent also shows all the error messages for other
         replicas in the set. This method tries to handle both cases at once.
         """
-        try:
-            clusters = pbm_status["cluster"]
-            for cluster in clusters:
-                if cluster["rs"] == self.charm.app.name:
-                    break
+        app_name = self.charm.app.name
+        replica_info = (
+            f"{app_name}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
+        )
 
-            for host_info in cluster["nodes"]:
-                replica_info = (
-                    f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
-                )
-                if host_info["host"] == replica_info:
-                    break
+        clusters = pbm_status.get("cluster")
 
-            return str(host_info["errors"])
-        except KeyError:
+        # No clusters means no error message
+        if not clusters:
             return ""
+
+        cluster: dict | None = next(
+            (_cluster for _cluster in clusters if _cluster.get("rs") == app_name), None
+        )
+
+        # No matching cluster means no error message
+        if not cluster:
+            return ""
+
+        for host_info in cluster.get("nodes", []):
+            if host_info.get("host") == replica_info:
+                return str(host_info.get("errors", ""))
+
+        # Default case, no error message
+        return ""
 
     def get_backup_error_status(self, backup_id: str) -> str:
         """Get the error status for a provided backup."""
@@ -460,7 +512,7 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
         return ""
 
-    def process_pbm_error(self, pbm_status: str) -> StatusBase | None:
+    def process_pbm_error(self, pbm_status: str) -> BackupState | None:
         """Look up PBM status for errors."""
         error_message: str
 
@@ -471,54 +523,65 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             error_message = pbm_status
 
         if StatusCodeError.FORBIDDEN in error_message:
-            return BackupStatuses.PBM_INCORRECT_CREDS.value
+            return BackupState.INCORRECT_CREDS
         if StatusCodeError.NOTFOUND in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
+            return BackupState.INCOMPATIBLE_CONF
         if StatusCodeError.MOVED_PERMANENTLY in error_message:
-            return BackupStatuses.PBM_INCOMPATIBLE_CONF.value
+            return BackupState.INCOMPATIBLE_CONF
 
         if error_message:
             logger.info("PBM error: %s", error_message)
-            return BackupStatuses.UNKNOWN_PBM_ERROR.value
+            return BackupState.UNKNOWN_ERROR
 
         return None
 
-    def process_pbm_status(self, pbm_status: str) -> StatusBase:
+    def process_pbm_error_as_status(self, pbm_status: str) -> StatusObject | None:
+        """Processes the pbm error and returns it as an optional status object."""
+        if state := self.process_pbm_error(pbm_status):
+            return next(iter(self.map_backup_state_to_status(state)), None)
+        return None
+
+    def process_pbm_status(self, pbm_status: str) -> BackupState:
         """Processes the pbm status if there's no error."""
         pbm_as_dict: dict[str, dict] = json.loads(pbm_status)
         current_op = pbm_as_dict.get("running", {})
         match current_op:
             case {"type": "backup", "name": backup_id}:
-                return BackupStatuses.backup_running(backup_id)
+                self.backup_id = backup_id
+                return BackupState.BACKUP_RUNNING
             case {"type": "restore", "name": backup_id}:
-                return BackupStatuses.restore_running(backup_id)
+                self.backup_id = backup_id
+                return BackupState.RESTORE_RUNNING
             case {"type": "resync"}:
-                return BackupStatuses.PBM_WAITING_TO_SYNC.value
+                return BackupState.WAITING_TO_SYNC
             case _:
-                return BackupStatuses.ACTIVE_IDLE.value
+                return BackupState.ACTIVE
 
     def assert_can_restore(self, backup_id: str, remapping_pattern: str) -> None:
         """Does the status allow to restore.
-
-        Note: we permit this logic based on status since we aren't checking
-        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
 
         Returns:
             check: boolean telling if the status allows to restore.
             reason: The reason if it is not possible to restore yet.
         """
-        pbm_status = self.get_main_status()
+        backup_state = self.backup_state()
 
-        # todo future work - check status of pbm directly
-        match pbm_status:
-            case MaintenanceStatus():
+        match backup_state:
+            case BackupState.EMPTY:
+                return
+            case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                 raise InvalidPBMStatusError("Please wait for current backup/restore to finish.")
-            case WaitingStatus():
+            case BackupState.WAITING_TO_SYNC:
                 raise InvalidPBMStatusError(
-                    "Sync-ing configurations needs more time, must wait before listing backups."
+                    "Sync-ing configurations needs more time, must wait before restoring backups."
                 )
-            case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
+            case (
+                BackupState.MISSING_CONFIG
+                | BackupState.INCORRECT_CREDS
+                | BackupState.INCOMPATIBLE_CONF
+                | BackupState.UNKNOWN_ERROR
+            ):
+                raise InvalidPBMStatusError(self.map_backup_state_to_status(backup_state)[0])
             case _:
                 pass
 
@@ -530,24 +593,27 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             )
 
     def assert_can_backup(self) -> None:
-        """Is PBM is a state where it can backup?
+        """Is PBM is a state where it can backup?"""
+        backup_state = self.backup_state()
 
-        Note: we permit this logic based on status since we aren't checking
-        `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
-        """
-        pbm_status = self.get_main_status()
-
-        match pbm_status:
-            case MaintenanceStatus():
+        match backup_state:
+            case BackupState.EMPTY:
+                return
+            case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                 raise InvalidPBMStatusError(
                     "Can only create one backup at a time, please wait for current backup to finish."
                 )
-            case WaitingStatus():
+            case BackupState.WAITING_TO_SYNC:
                 raise InvalidPBMStatusError(
                     "Sync-ing configurations needs more time, must wait before creating backups."
                 )
-            case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
+            case (
+                BackupState.MISSING_CONFIG
+                | BackupState.INCORRECT_CREDS
+                | BackupState.INCOMPATIBLE_CONF
+                | BackupState.UNKNOWN_ERROR
+            ):
+                raise InvalidPBMStatusError(self.map_backup_state_to_status(backup_state)[0])
             case _:
                 return
 
@@ -557,14 +623,19 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
         Note: we permit this logic based on status since we aren't checking
         `self.charm.unit.status`, instead `get_status` directly computes the status of pbm.
         """
-        pbm_status = self.get_main_status()
-        match pbm_status:
-            case WaitingStatus():
+        backup_state = self.backup_state()
+        match backup_state:
+            case BackupState.WAITING_TO_SYNC:
                 raise InvalidPBMStatusError(
                     "Sync-ing configurations needs more time, must wait before listing backups."
                 )
-            case BlockedStatus():
-                raise InvalidPBMStatusError(pbm_status.message)
+            case (
+                BackupState.MISSING_CONFIG
+                | BackupState.INCORRECT_CREDS
+                | BackupState.INCOMPATIBLE_CONF
+                | BackupState.UNKNOWN_ERROR
+            ):
+                raise InvalidPBMStatusError(self.map_backup_state_to_status(backup_state)[0])
             case _:
                 return
 
@@ -595,16 +666,18 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
             if current_pbm_op.get("type", "") == "resync":
                 # since this process takes several minutes we should let the user know
                 # immediately.
-                self.charm.status_manager.set_and_share_status(
-                    BackupStatuses.PBM_WAITING_TO_SYNC.value
+                self.charm.status_handler.set_running_status(
+                    BackupStatuses.PBM_WAITING_TO_SYNC.value,
+                    scope="unit",
+                    statuses_state=self.state.statuses,
+                    component_name=self.name,
                 )
                 raise ResyncError
         except WorkloadExecError as e:
-            self.charm.status_manager.set_and_share_status(self.process_pbm_error(e.stdout))
+            if status := self.process_pbm_error_as_status(e.stdout):
+                self.state.statuses.add(status, scope="unit", component=self.name)
 
-    def _get_backup_restore_operation_result(
-        self, current_pbm_status: StatusBase, previous_pbm_status: StatusBase
-    ) -> str:
+    def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.
 
         Note: current_pbm_status is a freshly calculated status from PBM directly, so we allow
@@ -622,24 +695,34 @@ class BackupManager(Object, BackupConfigManager, StatusProvider):
 
         TODO: Rework this and integrate it with COS - see DPE-6868 on JIRA for more info.
         """
-        if (
-            current_pbm_status.name == previous_pbm_status.name
-            and current_pbm_status.message == previous_pbm_status.message
-            and not isinstance(current_pbm_status, ActiveStatus)
-        ):
-            return f"Operation is still in progress: '{current_pbm_status.message}'"
+        previous_pbm_statuses = self.state.statuses.get(
+            scope="unit",
+            component=self.name,
+            running_status_only=True,
+            running_status_type="async",
+        ).root
+        # No previous PBM status, we can return.
+        if previous_pbm_statuses == []:
+            return None
 
-        if (
-            isinstance(previous_pbm_status, MaintenanceStatus)
-            and "backup id:" in previous_pbm_status.message
-        ):
-            backup_id = previous_pbm_status.message.split("backup id:")[-1].strip()
-            if "restore" in previous_pbm_status.message:
-                return f"Restore from backup {backup_id} completed successfully"
-            if "backup" in previous_pbm_status.message:
-                return f"Backup {backup_id} completed successfully"
+        previous_pbm_status = previous_pbm_statuses[0]
+        previous_operation = (
+            BackupState.BACKUP_RUNNING
+            if "Backup" in previous_pbm_status.message
+            else BackupState.RESTORE_RUNNING
+        )
+        previous_backup_id = previous_pbm_status.message.split("backup id:")[-1].strip()
 
-        return "Unknown operation result"
+        # Same operation and same backup ID.
+        if previous_operation == current_pbm_status and previous_backup_id == self.backup_id:
+            return f"Operation is still in progress: '{previous_pbm_status.message}'"
+
+        # Backup finished successfully.
+        if previous_operation == BackupState.BACKUP_RUNNING:
+            return f"Backup {previous_backup_id} completed successfully"
+
+        # Restore finished successfully.
+        return f"Restore from backup {previous_backup_id} completed successfully"
 
     def _is_backup_from_different_cluster(self, backup_status: str) -> bool:
         """Returns if a given backup was made on a different cluster."""

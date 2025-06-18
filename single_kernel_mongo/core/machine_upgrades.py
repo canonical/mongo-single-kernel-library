@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.model import StatusBase
+from data_platform_helpers.advanced_statuses.models import StatusObject
 
 from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
 from single_kernel_mongo.config.statuses import UpgradeStatuses
@@ -47,7 +47,7 @@ class MachineUpgrade(AbstractUpgrade):
         # Super call
         AbstractUpgrade.unit_state.fset(self, value)  # type: ignore[attr-defined]
 
-    def _get_unit_healthy_status(self) -> StatusBase:
+    def _get_unit_healthy_status(self) -> StatusObject:
         if self.state.unit_workload_container_version == self.state.app_workload_container_version:
             return UpgradeStatuses.vm_active_upgrade(
                 self._unit_workload_version,
@@ -63,7 +63,7 @@ class MachineUpgrade(AbstractUpgrade):
         )
 
     @property
-    def app_status(self) -> StatusBase | None:
+    def app_status(self) -> StatusObject | None:
         """App upgrade status."""
         if not self.is_compatible:
             logger.info(

@@ -18,8 +18,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 import poetry.core.constraints.version as poetry_version
+from data_platform_helpers.advanced_statuses.models import StatusObject, StatusObjectList
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
@@ -155,18 +157,20 @@ class AbstractUpgrade(ABC):
             return False
 
     @abstractmethod
-    def _get_unit_healthy_status(self) -> StatusBase:
+    def _get_unit_healthy_status(self) -> StatusObject:
         """Status shown during upgrade if unit is healthy."""
         raise NotImplementedError()
 
-    def get_upgrade_unit_status(self) -> StatusBase | None:
+    def get_upgrade_unit_status(self) -> StatusObject | None:
         """Unit upgrade status."""
         if self.state.upgrade_in_progress:
+            if not self.is_compatible:
+                return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
             return self._get_unit_healthy_status()
         return None
 
     @property
-    def app_status(self) -> StatusBase | None:
+    def app_status(self) -> StatusObject | None:
         """App upgrade status."""
         if not self.state.upgrade_in_progress:
             return None
@@ -260,7 +264,7 @@ class AbstractUpgrade(ABC):
 
         self.add_status_data_for_legacy_upgrades()
 
-    def add_status_data_for_legacy_upgrades(self) -> None:
+    def add_status_data_for_legacy_upgrades(self):
         """Add dummy data for legacy upgrades.
 
         Upgrades supported on revision 212 and lower require status information from shards.
@@ -280,7 +284,7 @@ class AbstractUpgrade(ABC):
 # END: Useful classes
 
 
-class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
+class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, ABC):
     """Substrate agnostif, abstract handler for upgrade events."""
 
     def __init__(
@@ -290,7 +294,8 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         *args,
         **kwargs,
     ):
-        super().__init__(dependent, *args, **kwargs)
+        self.name = "upgrade"
+        super(Generic, self).__init__(dependent, *args, **kwargs)  # type: ignore[arg-type]
         self.dependent = dependent
         self.substrate = self.dependent.substrate
         self.upgrade_backend = upgrade_backend
@@ -314,31 +319,40 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
         """Sets the upgrade status in the unit and app status."""
         assert self._upgrade
         if self.charm.unit.is_leader():
-            self.charm.app.status = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
-
-        # TODO future-work: for organisation of upgrade statuses we must find a stateless way for
-        # determining statuses without checking the already set status.
+            status_object = self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value
+            self.state.statuses.add(status_object, scope="app", component=self.name)
         # Set/clear upgrade unit status if no other unit status - upgrade status for units should
         # have the lowest priority.
+        statuses: StatusObjectList = self.state.statuses.get(scope="unit", component=self.name)
         if (
-            isinstance(self.charm.unit.status, ActiveStatus)
-            or (
-                isinstance(self.charm.unit.status, BlockedStatus)
-                and self.charm.unit.status.message.startswith(
-                    "Rollback with `juju refresh`. Pre-refresh check failed:"
-                )
-            )
-            or self.charm.unit.status == UpgradeStatuses.WAITING_POST_UPGRADE_STATUS
-            or "is not up to date with" in self.charm.unit.status.message
+            not statuses.root
+            or UpgradeStatuses.WAITING_POST_UPGRADE_STATUS in statuses
+            or statuses[0] == UpgradeStatuses.ACTIVE_IDLE  # Works because the list is sorted
+            or any("is not up-to date with" in status.message for status in statuses)
         ):
-            self.charm.status_manager.set_and_share_status(
-                self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
+            self.state.statuses.set(
+                self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value,
+                scope="unit",
+                component=self.name,
             )
 
-    def get_statuses(self) -> list[StatusBase]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Gets statuses for upgrades statelessly."""
-        assert self._upgrade
-        return [self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value]
+        if not self._upgrade:
+            return []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        match scope:
+            case "unit":
+                return [
+                    self._upgrade.get_upgrade_unit_status() or UpgradeStatuses.ACTIVE_IDLE.value
+                ]
+            case "app":
+                return [self._upgrade.app_status or UpgradeStatuses.ACTIVE_IDLE.value]
+            case _:
+                raise ValueError(f"Invalid scope {scope}")
 
     def on_upgrade_peer_relation_created(self) -> None:
         """Handle peer relation created event."""
@@ -395,8 +409,10 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
                 logger.info(
                     f"Refresh incompatible. If you accept potential *data loss* and *downtime*, you can continue with `{UpgradeActions.RESUME_ACTION_NAME.value} force=true`"
                 )
-                self.charm.status_manager.set_and_share_status(
-                    UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
+                self.state.statuses.add(
+                    UpgradeStatuses.INCOMPATIBLE_UPGRADE.value,
+                    scope="unit",
+                    component=self.name,
                 )
                 return
 
@@ -415,9 +431,9 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             and self.dependent.mongo_manager.mongod_ready()
         ):
             self._upgrade.unit_state = UnitState.HEALTHY
-            self.charm.status_manager.set_and_share_status(UpgradeStatuses.ACTIVE_IDLE.value)
         if self.charm.unit.is_leader():
             self._upgrade.reconcile_partition()
+        self._set_upgrade_status()
 
     def _on_vm_outdated(self) -> None:
         """This is run on VMs if the current unit is outdated."""
@@ -426,7 +442,7 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
             authorized = self._upgrade.authorized  # type: ignore
         except PrecheckFailedError as exception:
             self._set_upgrade_status()
-            self.charm.status_manager.set_and_share_status(exception.status)
+            self.state.statuses.add(exception.status, scope="unit", component=self.name)
             logger.debug(f"Set unit status to {exception.status}")
             logger.error(exception.status.message)
             return
@@ -461,22 +477,6 @@ class GenericMongoDBUpgradeManager(Generic[T], Object, ABC):
 
             logger.debug("Moving primary to unit: %s", unit_with_lowest_id)
             mongod.move_primary(new_primary_ip=unit_host)
-
-    @mongodb_only
-    def are_all_units_ready_for_upgrade(self, unit_to_ignore: str = "") -> bool:
-        """Returns True if all charm units status's show that they are ready for upgrade."""
-        goal_state = self.charm.model._backend._run("goal-state", return_output=True, use_json=True)
-        for unit_name, unit_state in goal_state["units"].items():  # type: ignore
-            if unit_name == unit_to_ignore:
-                continue
-            if unit_state["status"] == "active":
-                continue
-            if not self.dependent.cluster_version_checker.is_status_related_to_mismatched_revision(  # type: ignore
-                unit_state["status"]
-            ):
-                return False
-
-        return True
 
     @mongodb_only
     def wait_for_cluster_healthy(

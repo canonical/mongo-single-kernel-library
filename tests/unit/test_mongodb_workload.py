@@ -7,7 +7,11 @@ from ops.pebble import Layer
 from single_kernel_mongo.config.literals import VmUser
 from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS
 from single_kernel_mongo.core.workload import MongoPaths
-from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
+from single_kernel_mongo.exceptions import (
+    WorkloadExecError,
+    WorkloadNotReadyError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import SnapError
 from single_kernel_mongo.workload import (
     VMLogRotateDBWorkload,
@@ -166,7 +170,8 @@ def test_snap_install_failure(monkeypatch):
 
     monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap_ensure)
 
-    assert not workload.install()
+    with pytest.raises(WorkloadNotReadyError):
+        workload.install()
 
 
 def test_install_success(monkeypatch):
@@ -178,7 +183,7 @@ def test_install_success(monkeypatch):
     monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap)
     monkeypatch.setattr(workload.mongod_snap, "hold", mock_snap)
 
-    assert workload.install()
+    assert workload.install() is None
 
 
 def test_read_file_fail():

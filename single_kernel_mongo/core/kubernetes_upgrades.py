@@ -13,8 +13,8 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from lightkube.core.exceptions import ApiError
-from ops.model import StatusBase
 from overrides import override
 
 from single_kernel_mongo.config.literals import CharmKind, UnitState
@@ -50,7 +50,7 @@ class KubernetesUpgrade(AbstractUpgrade):
             raise
 
     @override
-    def _get_unit_healthy_status(self) -> StatusBase:
+    def _get_unit_healthy_status(self) -> StatusObject:
         version = self.state.unit_workload_container_version
         if version == self.state.app_workload_container_version:
             return UpgradeStatuses.k8s_active_upgrade(
@@ -64,7 +64,7 @@ class KubernetesUpgrade(AbstractUpgrade):
         )
 
     @property
-    def app_status(self) -> StatusBase | None:
+    def app_status(self) -> StatusObject | None:
         """App upgrade status."""
         if not self.is_compatible:
             logger.info(

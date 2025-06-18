@@ -42,7 +42,7 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, LdapStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -76,7 +76,7 @@ class LifecycleEventsHandler(Object):
 
         if self.charm.substrate == Substrates.K8S:
             self.framework.observe(
-                getattr(self.charm.on, f"{dependent.name.value}_pebble_ready"),
+                getattr(self.charm.on, f"{dependent.name}_pebble_ready"),
                 self.on_start,
             )
 
@@ -113,8 +113,10 @@ class LifecycleEventsHandler(Object):
             self.dependent.on_start()
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.FAILED_SERVICES_START.value
+            self.dependent.state.statuses.add(
+                CharmStatuses.FAILED_SERVICES_START.value,
+                scope="unit",
+                component=self.dependent.name,
             )
             event.defer()
             return
@@ -142,10 +144,18 @@ class LifecycleEventsHandler(Object):
             self.dependent.on_config_changed()
         except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
-            return
-        except (InvalidLdapUserToDnMappingError, InvalidLdapQueryTemplateError) as err:
-            self.charm.status_manager.to_blocked(f"{err}")
-            return
+        except InvalidLdapUserToDnMappingError:
+            self.dependent.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+        except InvalidLdapQueryTemplateError:
+            self.dependent.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""

@@ -9,13 +9,14 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
-from ops.model import Relation, StatusBase
+from ops.model import Relation
 from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses, MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -64,8 +65,10 @@ class ClusterProvider(Object):
             raise DeferrableFailedHookChecksError("DB is not initialised")
 
         if not self.is_valid_mongos_integration():
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongodb.value.UNSUPPORTED_MONGOS_REL.value
+            self.state.statuses.add(
+                MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value,
+                scope="unit",
+                component=self.dependent.name,
             )
             raise NonDeferrableFailedHookChecksError(
                 "ClusterProvider is only executed by a config-server"
@@ -262,8 +265,10 @@ class ClusterRequirer(Object):
     def set_relation_created_status(self) -> None:
         """Just sets a status on relation created."""
         logger.info("Integrating to config-server")
-        self.charm.status_manager.set_and_share_status(
-            CharmStatuses.mongos.value.CONNECTING_TO_CONFIG_SERVER.value
+        self.state.statuses.set(
+            MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
+            scope="unit",
+            component=self.dependent.name,
         )
 
     def share_credentials_to_clients(self, username: str | None, password: str | None) -> None:
@@ -306,8 +311,8 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            self.charm.status_manager.set_and_share_status(
-                CharmStatuses.mongos.value.STARTING_MONGOS.value
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.STARTING_MONGOS.value, scope="unit"
             )
 
             self.dependent.restart_charm_services()
@@ -315,13 +320,16 @@ class ClusterRequirer(Object):
             # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
             if not self.dependent.is_mongos_running():
                 logger.info("Mongos has not started yet, deferring")
-                self.charm.status_manager.set_and_share_status(
-                    CharmStatuses.MONGOS_NOT_STARTED.value
+                self.state.statuses.set(
+                    MongosStatuses.MONGOS_NOT_STARTED.value,
+                    scope="unit",
+                    component=self.dependent.name,
                 )
                 raise DeferrableError
 
-        self.charm.status_manager.set_and_share_status(CharmStatuses.ACTIVE_IDLE.value)
-
+        self.state.statuses.set(
+            CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
+        )
         if self.charm.unit.is_leader():
             self.state.app_peer_data.db_initialised = True
             # In the K8S case, create the user
@@ -436,19 +444,19 @@ class ClusterRequirer(Object):
 
         return False, False
 
-    def get_tls_statuses(self) -> StatusBase | None:
+    def get_tls_statuses(self) -> StatusObject | None:
         """Return statuses relevant to TLS."""
         mongos_has_tls, config_server_has_tls = self.tls_status()
         match (mongos_has_tls, config_server_has_tls):
             case False, True:
-                return CharmStatuses.mongos.value.REQUIRES_TLS.value
+                return MongosStatuses.REQUIRES_TLS.value
             case True, False:
-                return CharmStatuses.mongos.value.REQUIRES_NO_TLS.value
+                return MongosStatuses.REQUIRES_NO_TLS.value
             case _:
                 pass
         if not self.is_ca_compatible():
             logger.error(
                 "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return CharmStatuses.mongos.value.CA_MISMATCH.value
+            return MongosStatuses.CA_MISMATCH.value
         return None

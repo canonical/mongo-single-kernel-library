@@ -16,17 +16,20 @@ this operator like backups or cluster event handlers, etc.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
-    CharmKind,
+    Scope,
     Substrates,
     TrustStoreFiles,
 )
@@ -56,7 +59,7 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object):
+class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -70,7 +73,7 @@ class OperatorProtocol(ABC, Object):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[CharmKind]
+    name: ClassVar[str]
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager
@@ -88,6 +91,12 @@ class OperatorProtocol(ABC, Object):
     if TYPE_CHECKING:
 
         def __init__(self, dependent: AbstractMongoCharm): ...
+
+    @property
+    @abstractmethod
+    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+        """The ordered list of components reporting statuses."""
+        ...
 
     @abstractmethod
     def on_install(self) -> None:
@@ -171,6 +180,11 @@ class OperatorProtocol(ABC, Object):
     @abstractmethod
     def _configure_workloads(self) -> None:
         """Configures the workload."""
+        ...
+
+    @abstractmethod
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> Sequence[StatusObject]:
+        """Recomputes the statuses for the given scope."""
         ...
 
     def assert_proceed_on_broken_event(self, relation: Relation) -> None:

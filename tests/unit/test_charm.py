@@ -4,14 +4,15 @@
 import json
 
 import pytest
-from ops.model import BlockedStatus, WaitingStatus
 from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.statuses import LdapStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
     WorkloadExecError,
+    WorkloadNotReadyError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
@@ -21,9 +22,11 @@ PEER_ADDR = {"private-address": "127.4.5.6"}
 
 
 def test_install_blocks_snap_install_failure(harness, mocker):
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install", return_value=False)
-    harness.charm.on.install.emit()
-    assert harness.charm.unit.status == BlockedStatus("couldn't install MongoDB")
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.install", side_effect=WorkloadNotReadyError
+    )
+    with pytest.raises(WorkloadNotReadyError):
+        harness.charm.on.install.emit()
 
 
 def test_snap_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
@@ -64,7 +67,6 @@ def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     )
     harness.set_leader(True)
     harness.charm.on.start.emit()
-    assert harness.charm.unit.status == BlockedStatus("Failed to start services.")
     patched_mongo_initialise.assert_not_called()
 
 
@@ -174,9 +176,11 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
 
     harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LdapUserToDnMapping, please update your config."
+
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
     )
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_USER_MAPPING.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
@@ -196,9 +200,10 @@ def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
             "ldap-query-template": "{PROVIDED_USER}",
         }
     )
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LDAP Query template, please update your config."
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
     )
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_user(harness):
@@ -210,9 +215,10 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
             "ldap-query-template": "{USER}",
         }
     )
-    assert harness.charm.unit.status == BlockedStatus(
-        "Invalid LDAP Query template, please update your config."
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
     )
+    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_valid_ldap_query_template(harness, mocker):
@@ -447,7 +453,11 @@ def test_mongodb_relation_joined_all_replicas_not_ready(harness: Harness[MongoTe
     harness.add_relation_unit(rel.id, "mongodb/1")
     harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR)
 
-    assert isinstance(harness.charm.unit.status, WaitingStatus)
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+
+    assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
     mocked_add_replset_member.assert_not_called()
 
 

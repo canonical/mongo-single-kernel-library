@@ -75,21 +75,35 @@ class LDAPEventHandler(Object):
         """Handles the ops event that indicates that ldap relation is ready."""
         action = "ldap-ready"
         try:
+            self.charm.status_handler.set_running_status(
+                LdapStatuses.CONFIGURING_LDAP.value,
+                scope="unit",
+            )
             self.manager.store_ldap_credentials_and_uri(event.relation)
         except WaitingForLdapDataError as err:
-            self.charm.status_manager.set_and_share_status(LdapStatuses.WAITING_FOR_LDAP_DATA.value)
+            self.manager.state.statuses.add(
+                LdapStatuses.WAITING_FOR_LDAP_DATA.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             defer_event_with_info_log(logger, event, action, f"{err}")
         except (DeferrableError, DeferrableFailedHookChecksError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except LDAPSNotEnabledError:
-            self.charm.status_manager.set_and_share_status(LdapStatuses.LDAPS_NOT_ENABLED.value)
+            self.manager.state.statuses.add(
+                LdapStatuses.LDAPS_NOT_ENABLED.value, scope="unit", component=self.manager.name
+            )
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(
-                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            self.manager.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope="unit",
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
+            )
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
         """Handles the ops event that indicates that ldap relation is now unavailable."""
@@ -102,12 +116,16 @@ class LDAPEventHandler(Object):
         except DeferrableFailedHookChecksError as err:
             defer_event_with_info_log(logger, event, "ldap-cert-ready", f"{err}")
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(
-                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            self.manager.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope="unit",
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
+            )
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
@@ -121,9 +139,13 @@ class LDAPEventHandler(Object):
         except (DeferrableFailedHookChecksError, DeferrableError) as err:
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
-            self.charm.status_manager.set_and_share_status(
-                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value
+            self.manager.state.statuses.add(
+                LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value,
+                scope="unit",
+                component=self.manager.name,
             )
         except NonDeferrableFailedHookChecksError as err:
             logger.error(f"{err}")
-            self.charm.status_manager.set_and_share_status(LdapStatuses.on_error_status(err))
+            self.manager.state.statuses.add(
+                LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
+            )
