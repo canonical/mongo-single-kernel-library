@@ -46,6 +46,7 @@ from ..helpers.common import (
     get_address_of_unit,
     get_app_name,
     get_direct_mongo_client,
+    get_mongodb_hostname_for_unit,
     get_password,
     get_unit_id,
     instance_ip,
@@ -212,7 +213,15 @@ async def wait_until_unit_in_status(
     with await get_direct_mongo_client(ops_test, substrate, app_name, unit=online_unit) as client:
         data = client.admin.command("replSetGetStatus")
         for member in data["members"]:
-            if unit_to_check.name == host_to_unit(member["name"].split(":")[0]):
+            unit_name = host_to_unit(member["name"].split(":")[0])
+            unit_hostname = await get_mongodb_hostname_for_unit(
+                ops_test, substrate, unit_to_check.name
+            )
+            if substrate == "microk8s" and unit_to_check.name == unit_name:
+                assert (
+                    member["stateStr"] == status
+                ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
+            if substrate == "lxd" and unit_hostname == member["name"].split(":")[0]:
                 assert (
                     member["stateStr"] == status
                 ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"

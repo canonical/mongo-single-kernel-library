@@ -66,9 +66,10 @@ async def test_build_and_deploy(
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
         timeout=TIMEOUT,
-        idle_period=20,
+        idle_period=120,
         raise_on_blocked=False,
         raise_on_error=False,
+        status="active",
     )
 
 

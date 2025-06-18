@@ -8,7 +8,6 @@ from pytest_operator.plugin import OpsTest
 from ...helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
     find_unit,
     stop_continous_writes,
     unit_hostname,
@@ -61,7 +60,8 @@ async def test_build_and_deploy(
     await integrate_sharding_components(ops_test)
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
         idle_period=20,
         raise_on_blocked=False,
         raise_on_error=False,

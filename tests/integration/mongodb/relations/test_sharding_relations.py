@@ -207,7 +207,7 @@ async def test_replication_config_server_relation(ops_test: OpsTest, substrate: 
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas",
+        status="sharding interface cannot be used by replicas",
         timeout=300,
     )
 

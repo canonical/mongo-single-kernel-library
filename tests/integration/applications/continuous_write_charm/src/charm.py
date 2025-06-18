@@ -106,6 +106,7 @@ class ContinuousWritesApplication(CharmBase):
     def _start_continuous_writes(self, starting_number: int, db_name: str, coll_name: str) -> None:
         """Start continuous writes to the MongoDB cluster."""
         if not self._database_config:
+            logger.warning("No database configured.")
             return
 
         self._stop_continuous_writes(db_name, coll_name)
@@ -129,6 +130,7 @@ class ContinuousWritesApplication(CharmBase):
     def _stop_continuous_writes(self, db_name: str, coll_name: str) -> int | None:
         """Stop continuous writes to the MongoDB cluster and return the last written value."""
         if not self._database_config:
+            logger.warning("No database configured.")
             return None
 
         if not self.app_peer_data.get(self.proc_id_key(db_name, coll_name)):
@@ -177,6 +179,7 @@ class ContinuousWritesApplication(CharmBase):
     def _on_clear_continuous_writes_action(self, event) -> None:
         """Handle the clear continuous writes action event."""
         if not self._database_config:
+            logger.warning("No database configured.")
             return
 
         db_name = event.params.get("db-name") or DATABASE_NAME
