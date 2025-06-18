@@ -475,8 +475,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Instead, it is in the log messages. pbm_agent also shows all the error messages for other
         replicas in the set. This method tries to handle both cases at once.
         """
+        app_name = self.charm.app.name
         replica_info = (
-            f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
+            f"{app_name}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
         )
 
         clusters = pbm_status.get("cluster")
@@ -484,8 +485,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         # No clusters means no error message
         if not clusters:
             return ""
-
-        app_name = self.charm.app.name
 
         cluster: dict | None = next(
             (_cluster for _cluster in clusters if _cluster.get("rs") == app_name), None
