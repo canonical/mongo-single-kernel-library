@@ -192,11 +192,12 @@ async def generate_mongos_uri(
     mongos_unit = ops_test.model.applications[app_name].units[0]
     mongos_unit_id = get_unit_id(mongos_unit.name)
 
-    host = (
-        f"{await get_address_of_unit(ops_test, substrate, mongos_unit_id, app_name)}:{MONGOS_PORT}"
-    )
     if not external and substrate == "lxd":
         host = MONGOS_SOCKET
+    elif external and substrate == "lxd":
+        host = f"{await mongos_unit.get_public_address()}:{MONGOS_PORT}"
+    else:
+        host = f"{await get_address_of_unit(ops_test, substrate, mongos_unit_id, app_name)}:{MONGOS_PORT}"
 
     if not auth:
         return f"mongodb://{host}"
@@ -238,7 +239,7 @@ async def check_mongos(
 
     # since mongos is communicating only via the unix domain socket, we cannot connect to it via
     # traditional pymongo methods
-    ssh_command = "".join(
+    ssh_command = " ".join(
         ["ssh", "--container", "mongos", unit.name]
         if substrate == "microk8s"
         else ["ssh", unit.name, "sudo"]
@@ -283,10 +284,10 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
     for unit in ops_test.model.applications[app_name].units:
         original_tls_info[unit.name] = {}
         original_tls_info[unit.name]["external_cert_contents"] = await get_file_content(
-            ops_test, substrate, unit.name, ext_cert_path
+            ops_test, substrate, unit.name, ext_cert_path, container="mongos"
         )
         original_tls_info[unit.name]["internal_cert_contents"] = await get_file_content(
-            ops_test, substrate, unit.name, int_cert_path
+            ops_test, substrate, unit.name, int_cert_path, container="mongos"
         )
         original_tls_info[unit.name]["external_cert"] = await time_file_created(
             ops_test, substrate, unit.name, ext_cert_path
@@ -314,8 +315,12 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
     # After updating both the external key and the internal key a new certificate request will be
     # made; then the certificates should be available and updated.
     for unit in ops_test.model.applications[app_name].units:
-        new_external_cert = await get_file_content(ops_test, substrate, unit.name, ext_cert_path)
-        new_internal_cert = await get_file_content(ops_test, substrate, unit.name, int_cert_path)
+        new_external_cert = await get_file_content(
+            ops_test, substrate, unit.name, ext_cert_path, container="mongos"
+        )
+        new_internal_cert = await get_file_content(
+            ops_test, substrate, unit.name, int_cert_path, container="mongos"
+        )
         new_external_cert_time = await time_file_created(
             ops_test, substrate, unit.name, ext_cert_path
         )

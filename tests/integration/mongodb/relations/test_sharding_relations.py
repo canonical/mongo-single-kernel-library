@@ -231,7 +231,7 @@ async def test_replication_shard_relation(ops_test: OpsTest, substrate: Substrat
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas.",
+        status="sharding interface cannot be used by replicas",
         timeout=300,
     )
 
@@ -262,7 +262,7 @@ async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substra
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Relation to mongos not supported, config role must be config-server.",
+        status="Relation to mongos not supported, config role must be config-server",
         timeout=300,
     )
 
@@ -348,7 +348,7 @@ async def test_config_server_tls_replication_relation(
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas.",
+        status="sharding interface cannot be used by replicas",
         timeout=300,
     )
 

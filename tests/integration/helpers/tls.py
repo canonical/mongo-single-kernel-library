@@ -213,7 +213,7 @@ def process_systemctl_time(systemctl_output) -> datetime:
 
 
 async def scp_file_preserve_ctime(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str
+    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> str:
     """Returns the unix timestamp of when a file was created on a specified unit."""
     # Retrieving the file
@@ -224,7 +224,7 @@ async def scp_file_preserve_ctime(
         with open(filename, mode="w") as fd:
             fd.write(stdout.strip())
     else:
-        complete_command = f"scp --container mongod {unit_name}:{path} {filename}"
+        complete_command = f"scp --container {container} {unit_name}:{path} {filename}"
         return_code, _, stderr = await ops_test.juju(*complete_command.split())
 
     if return_code != 0:
@@ -280,10 +280,16 @@ async def check_certs_correctly_distributed(
 
 
 async def get_file_content(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, filepath: str
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
 ) -> str:
     # Read the content of the cert file stored in the unit
-    cert_file_copy_path = await scp_file_preserve_ctime(ops_test, substrate, unit_name, filepath)
+    cert_file_copy_path = await scp_file_preserve_ctime(
+        ops_test, substrate, unit_name, filepath, container=container
+    )
     with open(cert_file_copy_path) as f:
         cert_file_content = f.read()
 

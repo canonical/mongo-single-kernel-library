@@ -76,6 +76,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         MONGOS_APP_NAME,
         status="mongos has TLS enabled, but config-server does not.",
         timeout=TIMEOUT,
+        subordinate=(substrate == "lxd"),
     )
 
     await integrate_cluster_with_tls(ops_test)
@@ -156,4 +157,5 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         MONGOS_APP_NAME,
         status="mongos CA and Config-Server CA don't match.",
         timeout=TIMEOUT,
+        subordinate=(substrate == "lxd"),
     )

@@ -221,11 +221,13 @@ async def wait_until_unit_in_status(
                 assert (
                     member["stateStr"] == status
                 ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
+                return
             if substrate == "lxd" and unit_hostname == member["name"].split(":")[0]:
                 assert (
                     member["stateStr"] == status
                 ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
-        assert False, f"{unit_to_check.name} not found in {data['members']}"
+                return
+        assert False, f"{unit_to_check.name} not found"
 
 
 async def fetch_primary(
@@ -466,7 +468,7 @@ async def scale_application(
         return
 
     if substrate == "microk8s":
-        await ops_test.model.applications[application_name].scale(desired_count)
+        await ops_test.model.applications[application_name].scale(scale_change=count)
 
     else:
         if count > 0:

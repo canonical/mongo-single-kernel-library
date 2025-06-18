@@ -40,7 +40,7 @@ async def test_build_and_deploy(
         mongos_resource,
         mongos_client_application_path,
     )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=True)
+    await build_cluster(ops_test, substrate, integrate_with_mongos=False)
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
     )

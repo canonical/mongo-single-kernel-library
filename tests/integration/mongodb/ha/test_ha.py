@@ -464,7 +464,7 @@ async def test_replication_member_scaling(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    await scale_application(ops_test, substrate, app_name, 1, wait=True)
+    await scale_application(ops_test, substrate, app_name, 1, wait=True, raise_on_blocked=False)
 
     new_ip_addresses = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)

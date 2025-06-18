@@ -61,18 +61,10 @@ async def test_upgrade(
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
-    if (
-        "resume-refresh" in ops_test.model.applications[app_name].status_message
-        or "resume-upgrade" in ops_test.model.applications[app_name].status_message
-    ):
+    if "resume-refresh" in ops_test.model.applications[app_name].status_message:
         logger.info("Calling resume refresh")
-        try:
-            action = await leader_unit.run_action("resume-refresh")
-            await action.wait()
-        # Catch renaming of resume-upgrade to resume-refresh
-        except Exception:
-            action = await leader_unit.run_action("resume-upgrade")
-            await action.wait()
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
         assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
         await ops_test.model.wait_for_idle(
