@@ -520,10 +520,10 @@ async def test_kill_db_process(ops_test, substrate: Substrate, continuous_writes
         ops_test, substrate, primary.name, kill_code="SIGKILL", app_name=app_name
     )
 
-    # verify new writes are continuing by counting the number of writes before and after a 5 second
-    # wait
+    # verify new writes are continuing by counting the number of writes before
+    # and after a 10 second wait
     writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
-    time.sleep(5)
+    time.sleep(10)
     more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
     assert more_writes > writes, "writes not continuing to DB"
 
