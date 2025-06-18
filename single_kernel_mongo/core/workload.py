@@ -149,10 +149,10 @@ class WorkloadBase(ABC):  # pragma: nocover
         self.role = role
 
     @abstractmethod
-    def install(self) -> bool:
-        """Installs the workload snap.
+    def install(self) -> None:
+        """Installs the workload snap or raises an error.
 
-        VM-only: on k8s, just returns True.
+        VM-only: on k8s, just returns None.
         """
 
     @property

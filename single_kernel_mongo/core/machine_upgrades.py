@@ -12,9 +12,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
+from data_platform_helpers.advanced_statuses.models import StatusObject
 
 from single_kernel_mongo.config.literals import SNAP, CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -46,21 +47,23 @@ class MachineUpgrade(AbstractUpgrade):
         # Super call
         AbstractUpgrade.unit_state.fset(self, value)  # type: ignore[attr-defined]
 
-    def _get_unit_healthy_status(self) -> StatusBase:
+    def _get_unit_healthy_status(self) -> StatusObject:
         if self.state.unit_workload_container_version == self.state.app_workload_container_version:
-            return ActiveStatus(
-                f'MongoDB {self._unit_workload_version} running; '
-                f'Snap revision {self.state.unit_workload_container_version}; '
-                f'Charm revision {self._current_versions["charm"]}'
+            return UpgradeStatuses.vm_active_upgrade(
+                self._unit_workload_version,
+                self.state.unit_workload_container_version,
+                self._current_versions["charm"],
             )
-        return ActiveStatus(
-            f'MongoDB {self._unit_workload_version} running; '
-            f'Snap revision {self.state.unit_workload_container_version} (outdated); '
-            f'Charm revision {self._current_versions["charm"]}'
+
+        return UpgradeStatuses.vm_active_upgrade(
+            self._unit_workload_version,
+            self.state.unit_workload_container_version,
+            self._current_versions["charm"],
+            outdated=True,
         )
 
     @property
-    def app_status(self) -> StatusBase | None:
+    def app_status(self) -> StatusObject | None:
         """App upgrade status."""
         if not self.is_compatible:
             logger.info(
@@ -68,9 +71,7 @@ class MachineUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return BlockedStatus(
-                "Refresh incompatible. Rollback to previous revision with `juju refresh`"
-            )
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property
@@ -164,10 +165,12 @@ class MachineUpgrade(AbstractUpgrade):
         logger.debug(f"Upgrading {self.unit_name=}")
         self.unit_state = UnitState.UPGRADING
         dependent.workload.install()
+        # Start charm services if they were not running after refresh
         dependent._configure_workloads()
         dependent.start_charm_services()
         if dependent.name == CharmKind.MONGOD:
             dependent._restart_related_services()  # type: ignore[attr-defined]
+
         self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
         logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
 

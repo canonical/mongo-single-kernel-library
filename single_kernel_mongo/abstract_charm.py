@@ -26,14 +26,18 @@ a DB Engine and storage), and the main peer relation name will be
 import logging
 from typing import ClassVar, Generic, TypeVar
 
+from data_platform_helpers.advanced_statuses.handler import StatusHandler
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
-from single_kernel_mongo.status import StatusManager
 
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
@@ -41,7 +45,7 @@ U = TypeVar("U", bound=OperatorProtocol)
 logger = logging.getLogger(__name__)
 
 
-class AbstractMongoCharm(Generic[T, U], CharmBase):
+class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     """An abstract mongo charm.
 
     This class is meant to be inherited from to define an actual charm.
@@ -58,17 +62,19 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
     operator_type: type[U]
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[PeerRelationNames]
+    status_peer_rel_name: ClassVar[PeerRelationNames] = PeerRelationNames.STATUS_PEERS
     name: ClassVar[str]
 
     def __init__(self, *args):
         # Init the Juju object Object
-        super().__init__(*args)
+        super(Generic, self).__init__(*args)
 
         # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)
+        self.state = self.operator.state
 
         # Status manager stores the operator locally
-        self.status_manager = StatusManager(self)
+        self.status_handler = StatusHandler(self, self, *self.operator.components)
 
         # We will use the main workload of the Charm to install the snap.
         # A workload represents a service, and the main workload represents the
@@ -91,11 +97,10 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
     def on_install(self, _):
         """First install event handler."""
         if self.substrate == Substrates.VM:
-            self.status_manager.to_maintenance("installing MongoDB")
-            if not self.workload.install():
-                self.status_manager.to_blocked("couldn't install MongoDB")
-                return
-            self.status_manager.to_maintenance("Installed MongoDB")
+            self.status_handler.set_running_status(
+                CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
+            )
+            self.workload.install()
 
     def on_leader_elected(self, _):
         """First leader elected handler."""
@@ -104,3 +109,7 @@ class AbstractMongoCharm(Generic[T, U], CharmBase):
         # don't allow role changing yet.
         if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
             self.operator.state.app_peer_data.role = self.parsed_config.role
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Returns a list of statuses."""
+        return []

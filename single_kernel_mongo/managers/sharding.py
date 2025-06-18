@@ -14,9 +14,14 @@ import time
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops import StatusBase
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, WaitingStatus
+from ops.model import (
+    Relation,
+)
 from pymongo.errors import (
     NotPrimaryError,
     OperationFailure,
@@ -26,8 +31,12 @@ from pymongo.errors import (
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.core.status_provider import StatusProvider
+from single_kernel_mongo.config.statuses import (
+    ConfigServerStatuses,
+    ShardStatuses,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
@@ -47,7 +56,11 @@ from single_kernel_mongo.state.config_server_state import AppShardingComponentKe
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MongoDBUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    BackupUser,
+    MongoDBUser,
+    OperatorUser,
+)
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
@@ -56,7 +69,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class ConfigServerManager(Object, StatusProvider):
+class ConfigServerManager(Object, ManagerStatusProtocol):
     """Manage relations between the config server and the shard, on the config-server's side."""
 
     def __init__(
@@ -67,7 +80,8 @@ class ConfigServerManager(Object, StatusProvider):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.CONFIG_SERVER,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        self.name = relation_name.value
+        super().__init__(parent=dependent, key=self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -160,11 +174,11 @@ class ConfigServerManager(Object, StatusProvider):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if not self.charm.unit.is_leader():
             raise NonDeferrableFailedHookChecksError
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
@@ -177,8 +191,9 @@ class ConfigServerManager(Object, StatusProvider):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_status = self.dependent.backup_manager.get_status()
-        if isinstance(pbm_status, MaintenanceStatus):
+        pbm_status = self.dependent.backup_manager.backup_state()
+
+        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
             raise DeferrableFailedHookChecksError(
                 "Cannot add/remove shards while a backup/restore is in progress."
             )
@@ -229,43 +244,68 @@ class ConfigServerManager(Object, StatusProvider):
         if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.config_server_relation:
             return True
 
-        return False
-
-    def get_status(self) -> StatusBase | None:
-        """Returns the current status of the config-server."""
-        if self.skip_config_server_status():
-            return None
-
         if self.state.is_role(MongoDBRoles.REPLICATION) and self.state.config_server_relation:
-            return BlockedStatus("sharding interface cannot be used by replicas")
+            logger.error("Cannot operate as a config-server when deployed as a bare replica set")
+            return True
 
         if self.state.client_relations:
-            return BlockedStatus(
-                f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
-            )
+            logger.error("Cannot operate as a config-server when deployed as a bare replica set")
+            return True
+
+        return False
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
+        """Returns the current status of the config-server."""
+        charm_statuses: dict[Scope, list[StatusObject]] = {"app": [], "unit": []}
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        if scope == "app":
+            return []
+
+        if self.skip_config_server_status():
+            return charm_statuses[scope]
+
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            return charm_statuses[scope]
 
         uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
         if not self.dependent.mongo_manager.mongod_ready(uri):
-            return BlockedStatus("Internal mongos is not running.")
+            charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            return BlockedStatus("missing relation to shard(s)")
+            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["app"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            # return as other statuses require shard(s) to compute
+            return charm_statuses[scope]
 
         if not self.cluster_password_synced():
-            return WaitingStatus("Waiting to sync passwords across the cluster")
+            charm_statuses["unit"].append(ConfigServerStatuses.SYNCING_PASSWORDS.value)
 
-        if shard_draining := self.dependent.mongo_manager.get_draining_shards():
-            draining = ",".join(shard_draining)
-            return MaintenanceStatus(f"Draining shard {draining}")
+        try:
+            with MongoConnection(self.state.mongos_config) as mongo:
+                cluster_shards = mongo.get_shard_members()
 
-        if not self.state.config_server_relation:
-            return BlockedStatus("missing relation to shard(s)")
+            relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+            if shard_draining := (cluster_shards - relation_shards):
+                draining = ",".join(shard_draining)
+                status = ConfigServerStatuses.draining_shard(draining)
+                charm_statuses["unit"].append(status)
+                charm_statuses["app"].append(status)
 
-        if unreachable_shards := self.get_unreachable_shards():
-            unreachable = ", ".join(unreachable_shards)
-            return BlockedStatus(f"shards {unreachable} are unreachable.")
+            if unreachable_shards := self.get_unreachable_shards():
+                charm_statuses["unit"].append(
+                    ConfigServerStatuses.unreachable_shards(unreachable_shards)
+                )
+        except (ServerSelectionTimeoutError, OperationFailure):
+            return []
 
-        return ActiveStatus()
+        return (
+            charm_statuses[scope]
+            if charm_statuses[scope]
+            else [ConfigServerStatuses.ACTIVE_IDLE.value]
+        )
 
     def add_shards(self):
         """Add shards on all relations."""
@@ -287,7 +327,14 @@ class ConfigServerManager(Object, StatusProvider):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
 
-        self.charm.status_manager.to_maintenance(f"Adding shard {shard_name} to config-server")
+        self.state.statuses.delete(
+            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
+        )
+
+        self.charm.status_handler.set_running_status(
+            ConfigServerStatuses.adding_shard(shard_name), scope="unit"
+        )
+
         with MongoConnection(self.state.mongos_config) as mongo:
             try:
                 mongo.add_shard(shard_name, hosts)
@@ -301,7 +348,6 @@ class ConfigServerManager(Object, StatusProvider):
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
-        self.charm.status_manager.to_active()
 
     def remove_shards(self) -> None:
         """During update-status, remove shards until they are removed completely.
@@ -341,7 +387,12 @@ class ConfigServerManager(Object, StatusProvider):
         """Actually removes a shard based on the shard name."""
         with MongoConnection(self.state.mongos_config) as mongo:
             try:
-                self.charm.status_manager.to_maintenance(f"Draining shard {shard_name}")
+                self.charm.status_handler.set_running_status(
+                    ConfigServerStatuses.draining_shard(shard_name),
+                    scope="unit",
+                    statuses_state=self.state.statuses,
+                    component_name=self.name,
+                )
                 logger.info("Attempting to removing shard: %s", shard_name)
                 mongo.pre_remove_shard_checks(shard_name)
                 mongo.remove_shard(shard_name)
@@ -410,7 +461,7 @@ class ConfigServerManager(Object, StatusProvider):
         return unreachable_hosts
 
 
-class ShardManager(Object, StatusProvider):
+class ShardManager(Object, ManagerStatusProtocol):
     """Manage relations between the config server and the shard, on the shard's side."""
 
     def __init__(
@@ -421,7 +472,8 @@ class ShardManager(Object, StatusProvider):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.SHARDING,
     ):
-        super().__init__(dependent, relation_name)
+        self.name = relation_name.value
+        super().__init__(dependent, self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -442,11 +494,11 @@ class ShardManager(Object, StatusProvider):
             )
             if not is_leaving:
                 raise DeferrableFailedHookChecksError("Upgrade in progress")
-        if (
-            revision_mismatch_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.charm.status_manager.set_and_share_status(revision_mismatch_status)
+
+        # Note: we permit this logic based on status since we aren't checking
+        # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
+        # computes the revision check.
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")
@@ -472,10 +524,16 @@ class ShardManager(Object, StatusProvider):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
+                self.state.statuses.add(
+                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.name
+                )
                 raise DeferrableFailedHookChecksError(
                     "Config-Server uses TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
+                self.state.statuses.add(
+                    ShardStatuses.REQUIRES_NO_TLS.value, scope="unit", component=self.name
+                )
                 raise DeferrableFailedHookChecksError(
                     "Shard uses TLS but config-server does not. Please synchronise encryption method."
                 )
@@ -487,11 +545,20 @@ class ShardManager(Object, StatusProvider):
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
             )
 
+        if is_leaving:
+            self.dependent.assert_proceed_on_broken_event(relation)
+
     def prepare_to_add_shard(self) -> None:
         """Sets status and flags in relation data relevant to sharding."""
         # if reusing an old shard, re-set flags.
         self.state.unit_peer_data.drained = False
-        self.charm.status_manager.to_maintenance("Adding shard to config-server")
+
+        self.state.statuses.delete(
+            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
+        )
+        self.state.statuses.add(
+            ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
+        )
 
     def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
         """Retrieves secrets from config-server and updates them within the shard."""
@@ -518,6 +585,9 @@ class ShardManager(Object, StatusProvider):
 
         if not self.dependent.mongo_manager.mongod_ready():
             raise NotReadyError
+
+        # By setting the status we ensure that the former statuses of this component are removed.
+        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
         if not self.charm.unit.is_leader():
             return
@@ -570,13 +640,13 @@ class ShardManager(Object, StatusProvider):
         """Waits for the shard to be fully drained from the cluster."""
         self.assert_pass_hook_checks(relation, is_leaving=True)
 
-        self.charm.status_manager.to_maintenance("Draining shard from cluster.")
-
         mongos_hosts = self.state.app_peer_data.mongos_hosts
 
         self.wait_for_draining(mongos_hosts)
 
-        self.charm.status_manager.to_active("Shard drained from cluster, ready for removal")
+        self.state.statuses.set(
+            ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
+        )
 
     def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
@@ -712,7 +782,10 @@ class ShardManager(Object, StatusProvider):
         """Waits for shards to be drained from sharded cluster."""
         drained = False
 
-        self.charm.status_manager.to_maintenance("Draining shard from cluster.")
+        # Blocking status
+        self.charm.status_handler.set_running_status(
+            ShardStatuses.DRAINING_SHARD.value, scope="unit"
+        )
         while not drained:
             try:
                 # no need to continuously check and abuse resources while shard is draining
@@ -721,16 +794,23 @@ class ShardManager(Object, StatusProvider):
                 draining_status = (
                     "Shard is still draining" if not drained else "Shard is fully drained."
                 )
-                self.charm.status_manager.to_maintenance("Draining shard from cluster.")
+                self.charm.status_handler.set_running_status(
+                    ShardStatuses.DRAINING_SHARD.value, scope="unit"
+                )
                 logger.debug(draining_status)
             except PyMongoError as e:
                 logger.error("Error occurred while draining shard: %s", e)
-                self.charm.status_manager.to_blocked("Failed to drain shard from cluster")
+                self.charm.status_handler.set_running_status(
+                    ShardStatuses.FAILED_TO_DRAIN.value, scope="unit"
+                )
             except ShardNotPlannedForRemovalError:
                 logger.info(
-                    "Shard %s has not been identifies for removal. Must wait for mongos cluster-admin to remove shard."
+                    "Shard %s has not been identified for removal. Must wait for mongos cluster-admin to remove shard.",
+                    self.charm.app.name,
                 )
-                self.charm.status_manager.to_waiting("Waiting for config-server to remove shard")
+                self.charm.status_handler.set_running_status(
+                    ShardStatuses.WAITING_TO_REMOVE.value, scope="unit"
+                )
             except ShardNotInClusterError:
                 logger.info(
                     "Shard to remove is not in sharded cluster. It has been successfully removed."
@@ -754,7 +834,9 @@ class ShardManager(Object, StatusProvider):
 
         config = self.state.mongos_config_for_user(OperatorUser, set(mongos_hosts))
 
-        drained = shard_name not in self.dependent.mongo_manager.get_draining_shards(config=config)
+        drained = shard_name not in self.dependent.mongo_manager.get_draining_shards(
+            config=config, shard_name=shard_name
+        )
 
         self.state.unit_peer_data.drained = drained
         return drained
@@ -805,6 +887,14 @@ class ShardManager(Object, StatusProvider):
         if self.state.is_role(MongoDBRoles.REPLICATION) and not self.state.shard_relation:
             return True
 
+        if self.state.is_role(MongoDBRoles.REPLICATION) and self.state.shard_relation:
+            logger.error("Cannot use a replica as a shard.")
+            return True
+
+        if self.state.client_relations:
+            logger.error("")
+            return True
+
         return False
 
     def get_tls_status(self) -> StatusBase | None:
@@ -812,9 +902,9 @@ class ShardManager(Object, StatusProvider):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return BlockedStatus("Shard requires TLS to be enabled.")
+                return ShardStatuses.REQUIRES_TLS.value
             case True, False:
-                return BlockedStatus("Shard has TLS enabled, but config-server does not.")
+                return ShardStatuses.REQUIRES_NO_TLS.value
             case _:
                 pass
 
@@ -822,38 +912,53 @@ class ShardManager(Object, StatusProvider):
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return BlockedStatus("Shard CA and Config-Server CA don't match.")
+            return ShardStatuses.CA_MISMATCH.value
         return None
 
-    def get_status(self) -> StatusBase | None:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the shard."""
+        charm_statuses: list[StatusObject] = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        if scope == "app":
+            return []
+
         if self.should_skip_shard_status():
-            return None
+            return charm_statuses
 
-        if self.state.is_role(MongoDBRoles.REPLICATION) and self.state.shard_relation:
-            return BlockedStatus("Sharding interface cannot be used by replicas")
+        # return in these cases as other statuses require a config-server to compute
+        if not self.state.shard_relation:
+            if self.state.unit_peer_data.drained:
+                return [ShardStatuses.SHARD_DRAINED.value]
 
-        if self.state.client_relations:
-            return BlockedStatus(
-                f"Sharding roles do not support {RelationNames.DATABASE.value} interface."
-            )
+            if not self.state.unit_peer_data.drained:
+                return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
 
-        if not self.state.shard_relation and not self.state.unit_peer_data.drained:
-            return BlockedStatus("Missing relation to config-server.")
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # No need to go further if the revision is invalid
+            return charm_statuses
 
-        if not self.state.shard_relation and self.state.unit_peer_data.drained:
-            return ActiveStatus("Shard drained from cluster, ready for removal")
-
-        if not self.cluster_password_synced():
-            return WaitingStatus("Waiting to sync passwords across the cluster")
-
-        if status := self.get_tls_status():
-            return status
+        if tls_status := self.get_tls_status():
+            charm_statuses.append(tls_status)
+            # if TLS is misconfigured we will get redherrings on the remaining messages
+            return charm_statuses
 
         if not self.state.is_shard_added_to_cluster():
-            return MaintenanceStatus("Adding shard to config-server")
+            charm_statuses.append(ShardStatuses.ADDING_TO_CLUSTER.value)
+            # the rest of the statuses need mongos information which occurs after being added
+            # to the clusters
+            return charm_statuses
 
-        if not self._is_shard_aware():
-            return BlockedStatus("Shard is not yet shard aware")
+        if not self.cluster_password_synced():
+            charm_statuses.append(ShardStatuses.SYNCING_PASSWORDS.value)
 
-        return ActiveStatus()
+        try:
+            if not self._is_shard_aware():
+                charm_statuses.append(ShardStatuses.SHARD_NOT_AWARE.value)
+        except (ServerSelectionTimeoutError, OperationFailure):
+            # A status is already raised by mongo manager.
+            return []
+
+        return charm_statuses or [ShardStatuses.ACTIVE_IDLE.value]

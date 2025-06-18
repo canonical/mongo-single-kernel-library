@@ -12,8 +12,8 @@ from ipaddress import IPv4Address, IPv6Address
 from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
+from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
 from ops import Object, Relation, Unit
-from ops.model import ActiveStatus, BlockedStatus, StatusBase
 from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import (
@@ -61,8 +61,14 @@ from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
 )
-from single_kernel_mongo.state.upgrade_state import AppUpgradePeerData, UnitUpgradePeerData
-from single_kernel_mongo.utils.helpers import generate_relation_departed_key, unit_number
+from single_kernel_mongo.state.upgrade_state import (
+    AppUpgradePeerData,
+    UnitUpgradePeerData,
+)
+from single_kernel_mongo.utils.helpers import (
+    generate_relation_departed_key,
+    unit_number,
+)
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
@@ -84,7 +90,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger()
 
 
-class CharmState(Object):
+class CharmState(Object, StatusesStateProtocol):
     """The Charm State object.
 
     This object represents the charm state, including the different relations
@@ -99,7 +105,10 @@ class CharmState(Object):
     """
 
     def __init__(
-        self, charm: AbstractMongoCharm[T, U], substrate: Substrates, charm_role: CharmSpec
+        self,
+        charm: AbstractMongoCharm[T, U],
+        substrate: Substrates,
+        charm_role: CharmSpec,
     ):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
@@ -108,6 +117,9 @@ class CharmState(Object):
         self.secrets = SecretCache(charm)
         self.peer_relation_name = charm.peer_rel_name.value
         self.ldap_peer_relation_name = PeerRelationNames.LDAP_PEERS.value
+        self.statuses_relation_name = PeerRelationNames.STATUS_PEERS.value
+
+        self.statuses = StatusesState(self, self.statuses_relation_name)
 
         self.peer_app_interface = DataPeerData(
             self.model,
@@ -523,7 +535,9 @@ class CharmState(Object):
         """The cluster peer relation."""
         return {
             unit: DataPeerOtherUnitData(
-                model=self.model, unit=unit, relation_name=RelationNames.UPGRADE_VERSION.value
+                model=self.model,
+                unit=unit,
+                relation_name=RelationNames.UPGRADE_VERSION.value,
             )
             for unit in self.peers_units
         }
@@ -683,30 +697,6 @@ class CharmState(Object):
         scaling_down = departing_unit_name == self.unit_peer_data.name
         self.unit_peer_data.update({rel_departed_key: json.dumps(scaling_down)})
         return scaling_down
-
-    def share_status_with_config_server(self, status: StatusBase) -> None:
-        """Shares this shard's status with the config server.
-
-        This is primarily useful for the cluster upgrades, since the
-        config-server will need to ensure all units are healthy.
-        """
-        if not self.is_role(MongoDBRoles.SHARD):
-            return
-        if not self.shard_relation:
-            return
-
-        # All following cases write in the databag shared with the config server.
-        if isinstance(status, ActiveStatus):
-            self.unit_shard_state.status_ready_for_upgrade = True
-            return
-        if not isinstance(status, BlockedStatus):
-            self.unit_shard_state.status_ready_for_upgrade = False
-            return
-        if status.message and "is not up-to date with config-server" in status.message:
-            self.unit_shard_state.status_ready_for_upgrade = True
-            return
-
-        self.unit_shard_state.status_ready_for_upgrade = False
 
     @property
     def upgrade_resumed(self) -> bool:

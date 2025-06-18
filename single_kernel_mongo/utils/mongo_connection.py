@@ -26,6 +26,7 @@ from single_kernel_mongo.exceptions import (
     NotDrainedError,
     NotEnoughSpaceError,
     ShardNotInClusterError,
+    ShardNotPlannedForRemovalError,
 )
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
@@ -664,11 +665,14 @@ class MongoConnection:
 
         return (candidate_shard, candidate_free_space)
 
-    def get_draining_shards(self) -> list[str]:
+    def get_draining_shards(self, shard_name: str) -> list[str]:
         """Returns a list of the shards currently draining."""
         sc_status = self.client.admin.command("listShards")
         draining_shards = []
         for shard in sc_status["shards"]:
+            if shard["_id"] == shard_name and "draining" not in shard:
+                raise ShardNotPlannedForRemovalError
+
             if shard.get("draining", False):
                 draining_shards.append(shard["_id"])
 
