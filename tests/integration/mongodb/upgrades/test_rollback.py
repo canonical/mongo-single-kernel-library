@@ -33,7 +33,11 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
         mongodb_charm_name = "mongodb-k8s"
 
     await ops_test.model.deploy(
-        mongodb_charm_name, channel="6/edge", num_units=3, application_name=base_app_name
+        mongodb_charm_name,
+        channel="6/edge",
+        num_units=3,
+        application_name=base_app_name,
+        trust=(substrate == "microk8s"),
     )
 
     await ops_test.model.wait_for_idle(
