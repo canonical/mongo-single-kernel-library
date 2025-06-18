@@ -652,10 +652,10 @@ async def db_step_down(
 
     if substrate == "lxd":
         ls_command_template = "exec --unit {unit_name} sudo ls {log_path}"
-        cat_command_template = "ssh {unit_name} -- sudo cat {log_path}"
+        cat_command_template = "ssh {unit_name} sudo cat {log_path}"
     else:
-        ls_command_template = "ssh  --container mongod {unit_name} -- ls {log_path}"
-        cat_command_template = "ssh  --container mongod {unit_name} -- cat {log_path}"
+        ls_command_template = "ssh  --container mongod {unit_name} ls {log_path}"
+        cat_command_template = "ssh  --container mongod {unit_name} cat {log_path}"
 
     for unit in ops_test.model.applications[app_name].units:
         if unit.name == primary_name:

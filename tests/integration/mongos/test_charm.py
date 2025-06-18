@@ -144,7 +144,7 @@ async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate)
 
 @pytest.mark.abort_on_fail
 async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) -> None:
-    cmd = f'db.createUser({{user: "{TEST_USER_NAME}", pwd: "{TEST_USER_PWD}", roles: [{{role: "readWrite", db: "{TEST_DB_NAME}"}}]}});'
+    cmd = f"db.createUser({{user: '{TEST_USER_NAME}', pwd: '{TEST_USER_PWD}', roles: [{{'role': 'readWrite', 'db': '{TEST_DB_NAME}'}}]}})"
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
     uri = await generate_mongos_uri(
         ops_test, substrate, auth=True, app_name=MONGOS_CLIENT_APPLICATION

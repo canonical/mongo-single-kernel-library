@@ -65,7 +65,7 @@ async def test_build_and_deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
         series="jammy",
-        config={"extra-user-roles": "admin"},
+        config={"extra-user-roles": "admin", "database-name": "test-database"},
     )
 
 

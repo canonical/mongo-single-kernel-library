@@ -367,7 +367,8 @@ async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=
     """
     app_name = app_name or await get_app_name(ops_test)
     number_of_primaries = 0
-    for unit_id in UNIT_IDS:
+    for unit in ops_test.model.applications[app_name].units:
+        unit_id = get_unit_id(unit.name)
         # get unit
         ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
 

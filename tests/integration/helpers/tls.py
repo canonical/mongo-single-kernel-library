@@ -128,13 +128,13 @@ async def check_tls(
 
 
 async def time_file_created(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str
+    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> datetime:
     """Returns the unix timestamp of when a file was created on a specified unit."""
     if substrate == "lxd":
         time_cmd = f"ssh {unit_name} sudo ls -l --time-style=full-iso {path} "
     else:
-        time_cmd = f"ssh --container mongod {unit_name} ls -l --time-style=full-iso {path} "
+        time_cmd = f"ssh --container {container} {unit_name} ls -l --time-style=full-iso {path} "
     return_code, ls_output, _ = await ops_test.juju(*time_cmd.split())
 
     if return_code != 0:
@@ -156,7 +156,11 @@ def process_ls_time(ls_output):
 
 
 async def time_process_started(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, process_name: str
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    process_name: str,
+    container: str = "mongos",
 ) -> int:
     """Retrieves the time that a given process started according to systemd."""
     if substrate == "lxd":
@@ -170,7 +174,9 @@ async def time_process_started(
                 return_code,
             )
         return process_systemctl_time(systemctl_output)
-    logs = await run_command_on_unit(ops_test, unit_name, "/charm/bin/pebble changes")
+    logs = await run_command_on_unit(
+        ops_test, unit_name, "/charm/bin/pebble changes", container=container
+    )
 
     # find most recent start time. By parsing most recent logs (ie in reverse order)
     for log in reversed(logs.split("\n")):
@@ -180,7 +186,9 @@ async def time_process_started(
     raise Exception("Service was never started")
 
 
-async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
+async def run_command_on_unit(
+    ops_test: OpsTest, unit_name: str, command: str, container: str = "mongod"
+) -> str:
     """Run a command on a specific unit.
 
     Args:
@@ -191,7 +199,7 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
     Returns:
         the command output if it succeeds, otherwise raises an exception.
     """
-    complete_command = f"ssh --container mongod {unit_name} {command}"
+    complete_command = f"ssh --container {container} {unit_name} {command}"
     return_code, stdout, _ = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(

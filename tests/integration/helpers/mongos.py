@@ -202,7 +202,12 @@ async def generate_mongos_uri(
     if not auth:
         return f"mongodb://{host}"
 
-    secret_uri = await get_application_relation_data(ops_test, app_name, "mongos", "secret-user")
+    if substrate == "lxd":
+        rel_name = "mongos"
+    else:
+        rel_name = "mongos_proxy"
+
+    secret_uri = await get_application_relation_data(ops_test, app_name, rel_name, "secret-user")
 
     secret_data = await get_secret_data(ops_test, secret_uri)
     return secret_data.get("uris")
@@ -290,13 +295,13 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
             ops_test, substrate, unit.name, int_cert_path, container="mongos"
         )
         original_tls_info[unit.name]["external_cert"] = await time_file_created(
-            ops_test, substrate, unit.name, ext_cert_path
+            ops_test, substrate, unit.name, ext_cert_path, container="mongos"
         )
         original_tls_info[unit.name]["internal_cert"] = await time_file_created(
-            ops_test, substrate, unit.name, int_cert_path
+            ops_test, substrate, unit.name, int_cert_path, container="mongos"
         )
         original_tls_info[unit.name]["mongos_service"] = await time_process_started(
-            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE
+            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE, container="mongos"
         )
         await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
 
@@ -322,13 +327,13 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
             ops_test, substrate, unit.name, int_cert_path, container="mongos"
         )
         new_external_cert_time = await time_file_created(
-            ops_test, substrate, unit.name, ext_cert_path
+            ops_test, substrate, unit.name, ext_cert_path, container="mongos"
         )
         new_internal_cert_time = await time_file_created(
-            ops_test, substrate, unit.name, int_cert_path
+            ops_test, substrate, unit.name, int_cert_path, container="mongos"
         )
         new_mongos_service_time = await time_process_started(
-            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE
+            ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE, container="mongos"
         )
 
         await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)

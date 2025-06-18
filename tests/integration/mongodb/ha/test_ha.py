@@ -555,7 +555,7 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     # locate primary unit
     app_name = await get_app_name(ops_test)
     ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
 
@@ -604,8 +604,9 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     assert await mongod_ready(ops_test, primary_address, app_name)
 
     # verify all units are running under the same replset
+    unit_hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
     member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
-    assert set(member_ips) == set(ip_addresses), "all members not running under the same replset"
+    assert set(member_ips) == set(unit_hostnames), "all members not running under the same replset"
 
     # verify there is only one primary after un-freezing old primary
     password = await get_password(ops_test, app_name=app_name)

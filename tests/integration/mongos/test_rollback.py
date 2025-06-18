@@ -91,7 +91,7 @@ async def test_failed_upgrade_and_rollback(
     for unit in mongos_application.units:
         number = unit.name.split("/")[-1]
         cmd = f"db.test_collection.insertOne({{number: {number}}} );"
-        return_code, _, std_err = await check_mongos(
+        check = await check_mongos(
             ops_test, substrate, unit, auth=True, app_name=MONGOS_CLIENT_APPLICATION, cmd=cmd
         )
-        assert return_code == 0, f"mongos user failed to write data, error: {std_err}"
+        assert check, "mongos user failed to write data"

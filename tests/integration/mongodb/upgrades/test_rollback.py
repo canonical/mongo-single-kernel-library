@@ -27,7 +27,10 @@ UPGRADE_TIMEOUT = 15 * 60
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    if substrate == "lxd":
+        mongodb_charm_name = "mongodb"
+    else:
+        mongodb_charm_name = "mongodb-k8s"
 
     await ops_test.model.deploy(
         mongodb_charm_name, channel="6/edge", num_units=3, application_name=base_app_name
