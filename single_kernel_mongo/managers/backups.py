@@ -675,8 +675,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 )
                 raise ResyncError
         except WorkloadExecError as e:
-            if status := self.manager.process_pbm_error_as_status(e.stdout):
-                self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
+            if status := self.process_pbm_error_as_status(e.stdout):
+                self.state.statuses.add(status, scope="unit", component=self.name)
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.
