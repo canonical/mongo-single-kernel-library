@@ -476,7 +476,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         replicas in the set. This method tries to handle both cases at once.
         """
         replica_info = (
-            f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+            f"mongodb/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
         )
 
         clusters = pbm_status.get("cluster")
