@@ -106,7 +106,7 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
         ("status code: 301", "s3 configurations are incompatible."),
         ("Unknown message", "Unknown PBM error, check logs."),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27017", "errors": "status code: 403"}], "rs": "mongodb"}]}',
             "s3 credentials are incorrect.",
         ),
     ),
