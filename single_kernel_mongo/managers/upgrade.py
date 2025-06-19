@@ -43,7 +43,7 @@ ROLLBACK_INSTRUCTIONS = "To rollback, `juju refresh` to the previous revision"
 class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
     """Upgrade manager for Mongo upgrades."""
 
-    def on_upgrade_charm(self):
+    def upgrade_charm(self):
         """Upgrade event handler.
 
         On K8S, during an upgrade event, it will set the version in all relations,
@@ -54,11 +54,11 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         after setting the version across all relations.
         """
         if self.dependent.substrate == Substrates.VM:
-            self._on_vm_upgrade()
+            self._vm_upgrade()
         else:
-            self._on_kubernetes_upgrade()
+            self._kubernetes_upgrade()
 
-    def _on_kubernetes_upgrade(self) -> None:
+    def _kubernetes_upgrade(self) -> None:
         assert self._upgrade
         if self.charm.unit.is_leader() and self.dependent.name == CharmKind.MONGOD:
             self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
@@ -92,7 +92,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             # Post upgrade event verifies the success of the upgrade.
             self.dependent.upgrade_events.post_app_upgrade_event.emit()
 
-    def _on_vm_upgrade(self):
+    def _vm_upgrade(self):
         if not self.state.upgrade_in_progress and self.dependent.name == CharmKind.MONGOD:
             self.state.unit_upgrade_peer_data.current_revision = (
                 self.dependent.cross_app_version_checker.version  # type: ignore
@@ -112,7 +112,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             # All units call it on mongos
             self._reconcile_upgrade()
 
-    def on_pre_upgrade_check_action(self) -> None:
+    def run_pre_refresh_checks(self) -> None:
         """Pre upgrade checks."""
         if not self.charm.unit.is_leader():
             message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader {UpgradeActions.PRECHECK_ACTION_NAME.value}`)"
@@ -131,7 +131,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             )
             raise ActionFailedError(message)
 
-    def on_resume_upgrade_action(self, force: bool = False) -> str | None:
+    def resume_upgrade(self, force: bool = False) -> str | None:
         """Resume upgrade action handler."""
         if not self.charm.unit.is_leader():
             message = f"Must run action on leader unit. (e.g. `juju run {self.charm.app.name}/leader {UpgradeActions.RESUME_ACTION_NAME.value}`)"
@@ -141,7 +141,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             raise ActionFailedError(message)
         return self._upgrade.reconcile_partition(from_event=True, force=force)
 
-    def on_force_upgrade_action(self: MongoUpgradeManager[T], event: ActionEvent) -> str:
+    def force_upgrade(self: MongoUpgradeManager[T], event: ActionEvent) -> str:
         """Force upgrade action handler."""
         if not self._upgrade or not self.state.upgrade_in_progress:
             message = "No refresh in progress"

@@ -354,7 +354,7 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
             case _:
                 raise ValueError(f"Invalid scope {scope}")
 
-    def on_upgrade_peer_relation_created(self) -> None:
+    def store_initial_revisions(self) -> None:
         """Handle peer relation created event."""
         assert self._upgrade
         if self.substrate == Substrates.VM:

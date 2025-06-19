@@ -296,7 +296,7 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     content["monitor-password"] = password
     secret.set_content(content)
 
-    harness.charm.operator.on_secret_changed(secret_label, secret.get_info().id)
+    harness.charm.operator.update_secrets_and_restart(secret_label, secret.get_info().id)
 
     mocked.assert_called()
     assert (
@@ -308,7 +308,7 @@ def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
     mock_get = mocker.patch("single_kernel_mongo.core.secrets.SecretCache.get")
 
-    harness.charm.operator.on_secret_changed("unknown", "kdfjqlmdfjldq")
+    harness.charm.operator.update_secrets_and_restart("unknown", "kdfjqlmdfjldq")
     mock_get.assert_not_called()
 
 
@@ -401,9 +401,9 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
 def test_relation_joined_non_leader_does_nothing(harness: Harness[MongoTestCharm], mocker):
     rel = harness.charm.operator.state.peer_relation
     mock_on_relation_changed = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.on_relation_changed"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.peer_changed"
     )
-    spied = mocker.spy(harness.charm.operator, "on_relation_joined")
+    spied = mocker.spy(harness.charm.operator, "new_peer")
 
     harness.set_leader(False)
     harness.add_relation_unit(rel.id, "mongodb/1")
@@ -415,13 +415,13 @@ def test_relation_joined_non_leader_does_nothing(harness: Harness[MongoTestCharm
 def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCharm], mocker):
     rel = harness.charm.operator.state.peer_relation
     mock_on_relation_changed = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.on_relation_changed"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.peer_changed"
     )
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
         return_value=True,
     )
-    spied = mocker.spy(harness.charm.operator, "on_relation_joined")
+    spied = mocker.spy(harness.charm.operator, "new_peer")
     harness.set_leader(True)
     harness.add_relation_unit(rel.id, "mongodb/1")
 
@@ -466,7 +466,7 @@ def test_on_relation_departed_not_leader(
 ):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
-    spied = mocker.spy(harness.charm.operator, "on_relation_departed")
+    spied = mocker.spy(harness.charm.operator, "peer_leaving")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock,
@@ -491,10 +491,12 @@ def test_on_relation_departed_not_leader(
     update_host_mock.assert_not_called()
 
 
-def test_on_relation_departed_eader(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
+def test_on_relation_departed_leader(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
-    spied = mocker.spy(harness.charm.operator, "on_relation_departed")
+    spied = mocker.spy(harness.charm.operator, "peer_leaving")
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.is_ready",
         new_callable=mocker.PropertyMock,
