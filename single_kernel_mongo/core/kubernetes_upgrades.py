@@ -13,11 +13,12 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from lightkube.core.exceptions import ApiError
-from ops.model import ActiveStatus, StatusBase
 from overrides import override
 
-from single_kernel_mongo.config.literals import INCOMPATIBLE_UPGRADE, CharmKind, UnitState
+from single_kernel_mongo.config.literals import CharmKind, UnitState
+from single_kernel_mongo.config.statuses import UpgradeStatuses
 from single_kernel_mongo.core.abstract_upgrades import (
     AbstractUpgrade,
 )
@@ -49,18 +50,21 @@ class KubernetesUpgrade(AbstractUpgrade):
             raise
 
     @override
-    def _get_unit_healthy_status(self) -> StatusBase:
+    def _get_unit_healthy_status(self) -> StatusObject:
         version = self.state.unit_workload_container_version
         if version == self.state.app_workload_container_version:
-            return ActiveStatus(
-                f'MongoDB {self._current_versions["workload"]} running;  Charm revision {self._current_versions["charm"]}'
+            return UpgradeStatuses.k8s_active_upgrade(
+                self._current_versions["workload"], self._current_versions["charm"]
             )
-        return ActiveStatus(
-            f'MongoDB {self._current_versions["workload"]} running (restart pending); Charm revision {self._current_versions["charm"]}'
+
+        return UpgradeStatuses.k8s_active_upgrade(
+            self._current_versions["workload"],
+            self._current_versions["charm"],
+            outdated=True,
         )
 
     @property
-    def app_status(self) -> StatusBase | None:
+    def app_status(self) -> StatusObject | None:
         """App upgrade status."""
         if not self.is_compatible:
             logger.info(
@@ -68,7 +72,7 @@ class KubernetesUpgrade(AbstractUpgrade):
                 "If you accept potential *data loss* and *downtime*, you can continue by running `force-refresh-start`"
                 "action on each remaining unit"
             )
-            return INCOMPATIBLE_UPGRADE
+            return UpgradeStatuses.INCOMPATIBLE_UPGRADE.value
         return super().app_status
 
     @property

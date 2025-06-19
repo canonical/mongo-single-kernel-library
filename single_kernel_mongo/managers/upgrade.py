@@ -9,18 +9,19 @@ import logging
 from typing import Generic, TypeVar
 
 from ops import ActionEvent
-from ops.model import ActiveStatus
 from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION_6,
-    UNHEALTHY_UPGRADE,
-    WAITING_POST_UPGRADE_STATUS,
     CharmKind,
     Substrates,
     UnitState,
 )
-from single_kernel_mongo.core.abstract_upgrades import GenericMongoDBUpgradeManager, UpgradeActions
+from single_kernel_mongo.config.statuses import UpgradeStatuses
+from single_kernel_mongo.core.abstract_upgrades import (
+    GenericMongoDBUpgradeManager,
+    UpgradeActions,
+)
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -75,11 +76,15 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                     self.dependent.cross_app_version_checker.version  # type: ignore
                 )
         except ContainerNotReadyError:
-            self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
+            self.state.statuses.add(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
+            )
             self._reconcile_upgrade(during_upgrade=True)
             raise DeferrableError
 
-        self.charm.status_manager.set_and_share_status(WAITING_POST_UPGRADE_STATUS)
+        self.state.statuses.add(
+            UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value, scope="unit", component=self.name
+        )
 
         self._reconcile_upgrade(during_upgrade=True)
 
@@ -174,6 +179,9 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             1. have to wait for the unit to resolve itself.
             2. have to run the force-refresh-start action (to upgrade the next unit).
         """
+        self.state.statuses.delete(
+            UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value, scope="unit", component=self.name
+        )
         logger.debug("Running post refresh checks to verify cluster is not broken after refresh")
         self.run_post_upgrade_checks(finished_whole_cluster=False)
 
@@ -181,6 +189,11 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             return
 
         logger.debug("Cluster is healthy after refreshing unit %s", self.charm.unit.name)
+
+        if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
+            self.state.statuses.set(
+                status=UpgradeStatuses.ACTIVE_IDLE.value, scope="app", component=self.name
+            )
 
         # Leader of config-server must wait for all shards to be upgraded before finalising the
         # upgrade.
@@ -238,10 +251,18 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
             )
             raise UnhealthyUpgradeError
 
-        if self.charm.unit.status == UNHEALTHY_UPGRADE:
-            self.charm.status_manager.set_and_share_status(ActiveStatus())
+        # TODO this will be addressed in the Advanced Status Handling, when we have the
+        # functionality to clear a status.
+        if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
+            self.state.statuses.delete(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
+            )
 
         self._upgrade.unit_state = UnitState.HEALTHY
+
+        # Clear the statuses and set the new upgrade status.
+        self.state.statuses.clear(scope="unit", component=self.name)
+        self._set_upgrade_status()
 
 
 class MongosUpgradeManager(MongoUpgradeManager[T]):
@@ -278,12 +299,19 @@ class MongosUpgradeManager(MongoUpgradeManager[T]):
             )
 
         if not self.is_mongos_able_to_read_write():  # type: ignore
-            self.charm.status_manager.set_and_share_status(UNHEALTHY_UPGRADE)
+            self.state.statuses.set(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
+            )
             logger.info(ROLLBACK_INSTRUCTIONS)
             raise DeferrableError("mongos is not able to read/write after refresh.")
 
-        if self.charm.unit.status == UNHEALTHY_UPGRADE:
-            self.charm.status_manager.to_active()
+        if self.charm.unit.status == UpgradeStatuses.UNHEALTHY_UPGRADE.value:
+            self.state.statuses.delete(
+                UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
+            )
 
         logger.debug("refresh of unit succeeded.")
         self._upgrade.unit_state = UnitState.HEALTHY
+        self.state.statuses.set(
+            UpgradeStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
+        )

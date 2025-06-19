@@ -11,26 +11,28 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 import jinja2
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ldap3 import Connection as LDAPConnection
 from ldap3 import Server as LDAPServer
 from ldap3 import Tls as LDAPTls
 from ldap3.core.exceptions import LDAPException
-from ops import MaintenanceStatus
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase, WaitingStatus
+from ops.model import Relation
 
 from single_kernel_mongo.config.literals import (
     Substrates,
 )
-from single_kernel_mongo.config.models import LDAP_CONFIG
+from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.core.status_provider import StatusProvider
+from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     InvalidLdapHashError,
+    InvalidLdapWithShardError,
     LDAPSNotEnabledError,
-    NonDeferrableFailedHookChecksError,
     WaitingForLdapDataError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -44,13 +46,8 @@ if TYPE_CHECKING:
 
 logger = getLogger(__name__)
 
-CANNOT_INTEGRATE_WITH_SHARD_STATUS = BlockedStatus("Cannot integrate LDAP with shard.")
-INVALID_HASH_STATUS = BlockedStatus(
-    "mongos and config-server not integrated with the same ldap server."
-)
 
-
-class LDAPManager(Object, StatusProvider):
+class LDAPManager(Object, ManagerStatusProtocol):
     """Manages the relation between glauth-k8s and replica set, config-sever or mongos router."""
 
     def __init__(
@@ -61,7 +58,8 @@ class LDAPManager(Object, StatusProvider):
         relation_name: ExternalRequirerRelations = ExternalRequirerRelations.LDAP,
         cert_relation_name: ExternalRequirerRelations = ExternalRequirerRelations.LDAP_CERT,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        self.name = relation_name.value
+        super().__init__(parent=dependent, key=self.name)
         self.dependent = dependent
         self.charm = dependent.charm
         self.workload = self.dependent.workload
@@ -77,8 +75,7 @@ class LDAPManager(Object, StatusProvider):
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
-            self.charm.status_manager.set_and_share_status(CANNOT_INTEGRATE_WITH_SHARD_STATUS)
-            raise NonDeferrableFailedHookChecksError("Cannot integrate LDAP with shard.")
+            raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
         if self.state.upgrade_in_progress:
             raise DeferrableFailedHookChecksError(
                 "Adding LDAP is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
@@ -92,8 +89,6 @@ class LDAPManager(Object, StatusProvider):
     def store_ldap_credentials_and_uri(self, relation: Relation) -> None:
         """Runs when LDAP is ready."""
         self.assert_pass_hook_checks()
-
-        self.charm.status_manager.set_and_share_status(MaintenanceStatus("Configuring LDAP"))
 
         ldap_data = self.ldap_requirer.consume_ldap_relation_data(relation=relation)
         if not ldap_data:
@@ -115,17 +110,22 @@ class LDAPManager(Object, StatusProvider):
         if not self.state.db_initialised:
             return
 
-        match self.get_status():
-            case None:
+        match self.ldap_state():
+            case LdapState.EMPTY:
                 return
-            case ActiveStatus():
+            case LdapState.ACTIVE:
                 self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
                 self.dependent.restart_charm_services()
-                self.charm.status_manager.set_and_share_status(ActiveStatus())
-            case status:
-                self.charm.status_manager.set_and_share_status(status)
-                if status == INVALID_HASH_STATUS:
+                self.state.statuses.set(
+                    LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
+                )
+            case state:
+                self.state.statuses.clear(scope="unit", component=self.name)
+                for status in self.map_state_to_statuses(state):
+                    self.state.statuses.add(status, scope="unit", component=self.name)
+
+                if state == LdapState.LDAP_SERVERS_MISMATCH:
                     raise InvalidLdapHashError(
                         "mongos and config-server not integrated with the same ldap server."
                     )
@@ -138,7 +138,11 @@ class LDAPManager(Object, StatusProvider):
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
-        self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
+
+        self.state.statuses.clear(scope="unit", component=self.name)
+        statuses = self.get_statuses(scope="unit", recompute=True)
+        for status in statuses:
+            self.state.statuses.add(status, scope="unit", component=self.name)
 
     def store_ldap_certificates(self, certificate: str, ca: str, chain: list[str]) -> None:
         """Runs when we receive the LDAP certificates."""
@@ -180,53 +184,99 @@ class LDAPManager(Object, StatusProvider):
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
 
-        self.charm.status_manager.set_and_share_status(self.get_status() or ActiveStatus())
+        statuses = self.get_statuses(scope="unit", recompute=True)
+        self.state.statuses.clear(scope="unit", component=self.name)
+        for status in statuses:
+            self.state.statuses.add(status, scope="unit", component=self.name)
 
-    def get_status(self) -> StatusBase | None:
-        """Generates the status of a unit based on its status reported by mongod."""
+    def ldap_state(self) -> LdapState:
+        """Returns an enum object indicating the state of the LDAP integration."""
+        if not self.state.db_initialised:
+            return LdapState.EMPTY
         if self.state.ldap_relation is None and self.state.ldap_cert_relation is None:
-            return None
-
+            return LdapState.EMPTY
         if self.state.is_role(MongoDBRoles.SHARD):
-            return BlockedStatus("Cannot integrate LDAP with shard.")
-
+            return LdapState.WRONG_ROLE
         if self.state.ldap_cert_relation is None:
-            logger.info(
-                "Integrate the certificate interface between glauth and charm using "
-                f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert"  # type: ignore[union-attr]
-                f"{self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
-            )
-            return BlockedStatus("TLS is mandatory for LDAP transport.")
+            return LdapState.MISSING_CERT_REL
         if self.state.ldap_relation is None:
-            logger.info(
-                "Integrate glauth with ldap using"
-                f"`juju integrate {self.state.ldap_cert_relation.app.name}:ldap {self.charm.app.name}:{ExternalRequirerRelations.LDAP}`"
-            )
-            return BlockedStatus("GLauth TLS is integrated but LDAP is not.")
+            return LdapState.MISSING_LDAP_REL
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and self.state.cluster.ldap_hash != self.get_hash()
+        ):
+            return LdapState.LDAP_SERVERS_MISMATCH
 
-        if self.state.is_role(MongoDBRoles.MONGOS):
-            if self.state.cluster.ldap_hash != self.get_hash():
+        ldap_relation_status = self.state.ldap.ldap_ready()
+        ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()
+        match (ldap_relation_status, ldap_certificate_integration_status):
+            case False, False:
+                return LdapState.WAITING_FOR_DATA
+            case True, False:
+                return LdapState.WAITING_FOR_CERTS
+            case False, True:
+                return LdapState.WAITING_FOR_LDAP_DATA
+            case _:
+                return self.get_ldap_connection_status()
+
+    def map_state_to_statuses(self, state: LdapState) -> list[StatusObject]:  # noqa: C901
+        """Maps a Ldap state to a list of status objects."""
+        match state:
+            case LdapState.EMPTY:
+                return []
+            case LdapState.WRONG_ROLE:
+                return [LdapStatuses.INVALID_LDAP_REL_ON_SHARD.value]
+            case LdapState.MISSING_CERT_REL:
+                logger.info(
+                    "Integrate the certificate interface between glauth and charm using "
+                    f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert"  # type: ignore[union-attr]
+                    f"{self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
+                )
+                return [LdapStatuses.TLS_REQUIRED.value]
+            case LdapState.MISSING_LDAP_REL:
+                logger.info(
+                    "Integrate glauth with ldap using"
+                    f"`juju integrate {self.state.ldap_cert_relation.app.name}:ldap {self.charm.app.name}:{ExternalRequirerRelations.LDAP}`"  # type: ignore[union-attr]
+                )
+                return [LdapStatuses.LDAP_REQUIRED.value]
+            case LdapState.LDAP_SERVERS_MISMATCH:
                 logger.error(
                     "Config Server and mongos integrations with LDAP have a different checksum."
                     "This usually means they are not integrated with the same LDAP application."
                 )
-                return INVALID_HASH_STATUS
-
-        ldap_relation_status = self.state.ldap.ldap_ready()
-        ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()
-
-        match (ldap_relation_status, ldap_certificate_integration_status):
-            case False, False:
-                return WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
-            case True, False:
-                return WaitingStatus("Waiting for Glauth certificates.")
-            case False, True:
+                return [LdapStatuses.LDAP_SERVERS_MISMATCH.value]
+            case LdapState.WAITING_FOR_DATA:
+                return [LdapStatuses.WAITING_FOR_DATA.value]
+            case LdapState.WAITING_FOR_CERTS:
+                return [LdapStatuses.WAITING_FOR_CERTS.value]
+            case LdapState.WAITING_FOR_LDAP_DATA:
                 logger.info("Waiting for LDAP data.")
-                return WaitingStatus("Missing LDAP data from Glauth.")
-            case _:
-                return self.get_ldap_connection_status()
+                return [LdapStatuses.WAITING_FOR_LDAP_DATA.value]
+            case LdapState.MISSING_BASE_DN:
+                return [LdapStatuses.MISSING_BASE_DN.value]
+            case LdapState.MISSING_CERT_CHAIN:
+                return [LdapStatuses.MISSING_CERT_CHAIN.value]
+            case LdapState.MISSING_LDAPS_URLS:
+                return [LdapStatuses.MISSING_LDAPS_URLS.value]
+            case LdapState.UNABLE_TO_BIND:
+                return [LdapStatuses.UNABLE_TO_BIND.value]
+            case LdapState.ACTIVE:
+                return [LdapStatuses.ACTIVE_IDLE.value]
 
-    def get_ldap_connection_status(self) -> StatusBase:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Generates the status of a unit based on its status reported by mongod."""
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        if not self.state.db_initialised:
+            return []
+
+        if scope == "app":
+            return []
+
+        return self.map_state_to_statuses(self.ldap_state())
+
+    def get_ldap_connection_status(self) -> LdapState:
         """Checks if the LDAP connection is working or not.
 
         Helpful to prevent restarts that would fail.
@@ -242,19 +292,19 @@ class LDAPManager(Object, StatusProvider):
             logger.info(
                 "The ldap data seems incomplete, it is missing the base DN, check that the integration was completed without error."
             )
-            return BlockedStatus("Missing base DN for LDAP.")
+            return LdapState.MISSING_BASE_DN
 
         if not cert_chain:
             logger.info(
                 "The ldap data seems incomplete, it is missing the certificates chain, check that the integration was completed without error."
             )
-            return BlockedStatus("Missing chain for LDAP.")
+            return LdapState.MISSING_CERT_CHAIN
 
         if not self.state.ldap.ldaps_urls:
             logger.info(
                 "The ldap data seems incomplete, it is missing the LDAP URIs of the server, check that the integration was completed without error."
             )
-            return BlockedStatus("Missing LDAPS URLs for LDAP.")
+            return LdapState.MISSING_LDAPS_URLS
 
         try:
             for ldap_uri in self.state.ldap.ldaps_urls:
@@ -270,9 +320,9 @@ class LDAPManager(Object, StatusProvider):
                 conn.unbind()
         except LDAPException as err:
             logger.error(f"Could not bind: {err}", exc_info=True)
-            return BlockedStatus("Could not bind with ldap")
+            return LdapState.UNABLE_TO_BIND
 
-        return ActiveStatus()
+        return LdapState.ACTIVE
 
     def share_hash_with_mongos(self) -> None:
         """If we are a config-server, we share a hash to confirm the integration."""

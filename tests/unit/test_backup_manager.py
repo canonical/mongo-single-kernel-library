@@ -2,13 +2,16 @@
 # See LICENSE file for licensing details.
 
 import pytest
+from data_platform_helpers.advanced_statuses.utils import as_status
 from ops import ActiveStatus, MaintenanceStatus
-from ops.model import BlockedStatus, Relation, WaitingStatus
+from ops.model import BlockedStatus, Relation
 from ops.testing import Harness
 
+from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
+from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.events.backups import INVALID_S3_INTEGRATION_STATUS
 from single_kernel_mongo.exceptions import (
     BackupError,
     InvalidArgumentForActionError,
@@ -17,7 +20,13 @@ from single_kernel_mongo.exceptions import (
     ResyncError,
     WorkloadExecError,
 )
+from single_kernel_mongo.managers.backups import BackupManager
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+
+
+@pytest.fixture
+def backup_manager(harness: Harness[MongoTestCharm]) -> BackupManager:
+    return harness.charm.operator.backup_manager
 
 
 def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
@@ -33,12 +42,12 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert harness.charm.unit.status != BlockedStatus(INVALID_S3_INTEGRATION_STATUS)
+    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value
 
 
-def test_invalid_s3_integration(harness: Harness[MongoTestCharm]):
+def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -49,12 +58,16 @@ def test_invalid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert harness.charm.unit.status == BlockedStatus(INVALID_S3_INTEGRATION_STATUS)
+    statuses = backup_manager.state.statuses.get(
+        scope=Scope.UNIT, component=backup_manager.name
+    ).root
+
+    assert MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value in statuses
 
 
 def test_environment_is_valid(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -63,16 +76,26 @@ def test_environment_is_valid(harness: Harness[MongoTestCharm]):
     assert harness.charm.operator.backup_manager.environment["PBM_MONGODB_URI"] != ""
 
 
-def test_get_status_fail(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert status is None
+
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config",
+        return_value=True,
+    )
+
+    harness.add_relation(ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator")
 
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=False)
-    status = backup_manager.get_status()
-    assert status == WaitingStatus("waiting for pbm to start")
 
-    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
-    status = backup_manager.get_status()
-    assert status is None
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert status == BackupStatuses.WAITING_FOR_PBM_START.value
 
 
 @pytest.mark.parametrize(
@@ -81,20 +104,23 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], mocker):
         ("status code: 403", "s3 credentials are incorrect."),
         ("status code: 404", "s3 configurations are incompatible."),
         ("status code: 301", "s3 configurations are incompatible."),
-        ("Unknown message", "PBM error"),
+        ("Unknown message", "Unknown PBM error, check logs."),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27018", "errors": "status code: 403"}], "rs": "mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27017", "errors": "status code: 403"}], "rs": "mongodb"}]}',
             "s3 credentials are incorrect.",
         ),
     ),
 )
-def test_get_status_pbm_error(harness: Harness[MongoTestCharm], mocker, pbm_status, expected):
-    backup_manager = harness.charm.operator.backup_manager
+def test_get_status_pbm_error(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_status, expected
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config", return_value=True
+        "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config",
+        return_value=True,
     )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -107,14 +133,17 @@ def test_get_status_pbm_error(harness: Harness[MongoTestCharm], mocker, pbm_stat
     )
 
     mock.return_value = pbm_status
-    status = backup_manager.get_status()
-    assert status == BlockedStatus(expected)
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert as_status(status) == BlockedStatus(expected)
 
 
-def test_get_status_success(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_get_status_success(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -127,26 +156,33 @@ def test_get_status_success(harness: Harness[MongoTestCharm], mocker):
         new_callable=mocker.PropertyMock,
     )
     mock.return_value = '{"running":{"type":"resync","opID":"64f5cc22a73b330c3880e3b2"}}'
-    status = backup_manager.get_status()
-    assert status == WaitingStatus("waiting to sync s3 configurations.")
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert status == BackupStatuses.PBM_WAITING_TO_SYNC.value
 
     mock.return_value = '{"running":{"type":"backup","name":"2024-11-25"}}'
-    status = backup_manager.get_status()
-    assert status == MaintenanceStatus("backup started/running, backup id: '2024-11-25'")
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert as_status(status) == MaintenanceStatus("Backup started/running, backup id: '2024-11-25'")
 
     mock.return_value = '{"running":{"type":"restore","name":"2024-11-25"}}'
-    status = backup_manager.get_status()
-    assert status == MaintenanceStatus("restore started/running, backup id: '2024-11-25'")
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert as_status(status) == MaintenanceStatus(
+        "Restore started/running, backup id: '2024-11-25'"
+    )
 
     mock.return_value = "{}"
-    status = backup_manager.get_status()
-    assert status == ActiveStatus("")
+    statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+    assert as_status(status) == ActiveStatus("")
 
 
-def test_create_backup_success(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_create_backup_success(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -163,10 +199,11 @@ def test_create_backup_success(harness: Harness[MongoTestCharm], mocker):
     assert backup_id == "2024-11-25T15:05:40Z"
 
 
-def test_create_backup_fail_resync(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_create_backup_fail_resync(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -182,10 +219,11 @@ def test_create_backup_fail_resync(harness: Harness[MongoTestCharm], mocker):
         backup_manager.create_backup_action()
 
 
-def test_create_backup_fail_other(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_create_backup_fail_other(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -203,10 +241,11 @@ def test_create_backup_fail_other(harness: Harness[MongoTestCharm], mocker):
     assert e.match(r"deadbeef")
 
 
-def test_list_backup_action_success(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_list_backup_action_success(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -232,10 +271,11 @@ def test_list_backup_action_success(harness: Harness[MongoTestCharm], mocker):
     assert backup_formatted == backup_manager._format_backup_list(expected_list)
 
 
-def test_list_backup_action_success_no_backups(harness: Harness[MongoTestCharm], mocker):
-    backup_manager = harness.charm.operator.backup_manager
+def test_list_backup_action_success_no_backups(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -255,10 +295,11 @@ def test_list_backup_action_success_no_backups(harness: Harness[MongoTestCharm],
     assert backup_formatted == backup_manager._format_backup_list(expected_list)
 
 
-def test_list_backup_action_error(harness: Harness[MongoTestCharm], mocker) -> None:
-    backup_manager = harness.charm.operator.backup_manager
+def test_list_backup_action_error(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+) -> None:
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -272,10 +313,11 @@ def test_list_backup_action_error(harness: Harness[MongoTestCharm], mocker) -> N
         backup_manager.list_backup_action()
 
 
-def test_restore_backup_success(harness: Harness[MongoTestCharm], mocker) -> None:
-    backup_manager = harness.charm.operator.backup_manager
+def test_restore_backup_success(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+) -> None:
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -292,10 +334,11 @@ def test_restore_backup_success(harness: Harness[MongoTestCharm], mocker) -> Non
     )
 
 
-def test_get_backup_error_status(harness: Harness[MongoTestCharm], mocker) -> None:
-    backup_manager = harness.charm.operator.backup_manager
+def test_get_backup_error_status(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+) -> None:
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -315,29 +358,28 @@ def test_get_backup_error_status(harness: Harness[MongoTestCharm], mocker) -> No
 
 
 @pytest.mark.parametrize(
-    ("pbm_status", "pattern"),
+    ("pbm_state", "pattern"),
     (
-        (MaintenanceStatus(""), "Please wait for current.*"),
-        (WaitingStatus(""), "Sync-ing configurations needs more time.*"),
-        (BlockedStatus("error"), "error"),
+        (BackupState.BACKUP_RUNNING, "Please wait for current.*"),
+        (BackupState.WAITING_TO_SYNC, "Sync-ing configurations needs more time.*"),
+        (BackupState.UNKNOWN_ERROR, "error"),
     ),
 )
 def test_can_restore_fail_status(
-    harness: Harness[MongoTestCharm], mocker, pbm_status, pattern
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_state, pattern
 ) -> None:
-    backup_manager = harness.charm.operator.backup_manager
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
     )
 
-    mock.return_value = pbm_status
+    mock.return_value = pbm_state
     with pytest.raises(InvalidPBMStatusError) as e:
         backup_manager.assert_can_restore("backup", "remapping_pattern")
     assert e.match(pattern)
@@ -348,18 +390,23 @@ def test_can_restore_fail_status(
     (("", "", "Missing backup-id.*"), ("2024", "", ".*'remap-pattern'.*")),
 )
 def test_can_restore_fail_params(
-    harness: Harness[MongoTestCharm], mocker, backup_id, remap_pattern, pattern
+    harness: Harness[MongoTestCharm],
+    backup_manager: BackupManager,
+    mocker,
+    backup_id,
+    remap_pattern,
+    pattern,
 ) -> None:
-    backup_manager = harness.charm.operator.backup_manager
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status", return_value=ActiveStatus()
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        return_value=[BackupState.ACTIVE],
     )
     mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager._needs_provided_remap_arguments",
@@ -374,22 +421,23 @@ def test_can_restore_fail_params(
 @pytest.mark.parametrize(
     ("pbm_status", "pattern"),
     (
-        (MaintenanceStatus(""), "Can only create one backup.*"),
-        (WaitingStatus(""), "Sync-ing configurations needs more time.*"),
-        (BlockedStatus("error"), "error"),
+        (BackupState.BACKUP_RUNNING, "Can only create one backup.*"),
+        (BackupState.WAITING_TO_SYNC, "Sync-ing configurations needs more time.*"),
+        (BackupState.UNKNOWN_ERROR, "error"),
     ),
 )
-def test_can_backup_fail(harness: Harness[MongoTestCharm], mocker, pbm_status, pattern) -> None:
-    backup_manager = harness.charm.operator.backup_manager
+def test_can_backup_fail(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_status, pattern
+) -> None:
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
     )
 
     mock.return_value = pbm_status
@@ -401,23 +449,22 @@ def test_can_backup_fail(harness: Harness[MongoTestCharm], mocker, pbm_status, p
 @pytest.mark.parametrize(
     ("pbm_status", "pattern"),
     (
-        (WaitingStatus(""), "Sync-ing configurations needs more time.*"),
-        (BlockedStatus("error"), "error"),
+        (BackupState.WAITING_TO_SYNC, "Sync-ing configurations needs more time.*"),
+        (BackupState.UNKNOWN_ERROR, "error"),
     ),
 )
 def test_can_list_backup_fail(
-    harness: Harness[MongoTestCharm], mocker, pbm_status, pattern
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_status, pattern
 ) -> None:
-    backup_manager = harness.charm.operator.backup_manager
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
     mock = mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_status",
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
     )
 
     mock.return_value = pbm_status

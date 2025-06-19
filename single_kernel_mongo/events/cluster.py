@@ -12,11 +12,13 @@ from typing import TYPE_CHECKING
 from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -48,7 +50,8 @@ class ClusterConfigServerEventHandler(Object):
         )
 
         self.framework.observe(
-            self.database_provider_events.on.database_requested, self._on_database_requested
+            self.database_provider_events.on.database_requested,
+            self._on_database_requested,
         )
         self.framework.observe(
             self.charm.on[self.relation_name].relation_changed, self._on_relation_event
@@ -58,7 +61,8 @@ class ClusterConfigServerEventHandler(Object):
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_broken_event
+            self.charm.on[self.relation_name].relation_broken,
+            self._on_relation_broken_event,
         )
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
@@ -94,7 +98,7 @@ class ClusterConfigServerEventHandler(Object):
 
 
 class ClusterMongosEventHandler(Object):
-    """Event Handler for managing config server side events."""
+    """Event Handler for managing mongos side events."""
 
     def __init__(self, dependent: MongosOperator):
         self.dependent = dependent
@@ -115,7 +119,8 @@ class ClusterMongosEventHandler(Object):
             self.database_requirer_events.on.database_created, self._on_database_created
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_changed
+            self.charm.on[self.relation_name].relation_changed,
+            self._on_relation_changed,
         )
         self.framework.observe(
             self.charm.on[self.relation_name].relation_departed,
@@ -158,7 +163,15 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.charm.status_manager.to_waiting("Waiting for secrets from config-server")
+            self.dependent.state.statuses.add(
+                MongosStatuses.WAITING_FOR_SECRETS.value,
+                scope="unit",
+                component=self.charm.name,
+            )
+        except WorkloadServiceError:
+            # Some status was already set and a log was already displayed in
+            # `restart_charm_services`
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

@@ -18,6 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -203,7 +204,6 @@ class TLSManager:
 
         self.state.update_ca_secrets(new_ca=None)
 
-        self.charm.status_manager.to_maintenance("Disabling TLS")
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services(force=True)
 
@@ -217,12 +217,16 @@ class TLSManager:
                 "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."
             )
             return
-        self.charm.status_manager.to_maintenance("enabling TLS")
+
+        self.charm.status_handler.set_running_status(
+            TLSStatuses.ENABLING_TLS.value,
+            scope="unit",
+        )
         try:
             self.dependent.restart_charm_services(force=True)
         except WorkloadServiceError as e:
+            # TODO should we defer or just error
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            self.charm.status_manager.to_blocked("couldn't start MongoDB")
             return
 
     def delete_certificates_from_workload(self):
@@ -358,5 +362,6 @@ class TLSManager:
 
             old_csr, new_csr = self.generate_new_csr(internal)
             self.dependent.tls_events.certs_client.request_certificate_renewal(
-                old_certificate_signing_request=old_csr, new_certificate_signing_request=new_csr
+                old_certificate_signing_request=old_csr,
+                new_certificate_signing_request=new_csr,
             )
