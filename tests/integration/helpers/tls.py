@@ -160,7 +160,7 @@ async def time_process_started(
     substrate: Substrate,
     unit_name: str,
     process_name: str,
-    container: str = "mongos",
+    container: str = "mongod",
 ) -> int:
     """Retrieves the time that a given process started according to systemd."""
     if substrate == "lxd":
@@ -200,8 +200,9 @@ async def run_command_on_unit(
         the command output if it succeeds, otherwise raises an exception.
     """
     complete_command = f"ssh --container {container} {unit_name} {command}"
-    return_code, stdout, _ = await ops_test.juju(*complete_command.split())
+    return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
+        logger.warning(f"{complete_command} failed with {stdout=}, {stderr=}")
         raise Exception(
             "Expected command %s to succeed instead it failed: %s", command, return_code
         )
