@@ -146,7 +146,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         await ops_test.model.applications[MONGOS_APP_NAME].scale(scale_change=1)
 
     await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME], idle_period=20, wait_for_exact_units=2
+        apps=[MONGOS_APP_NAME], idle_period=20, wait_for_exact_units=2, status="active"
     )
 
     for mongos_unit in ops_test.model.applications[MONGOS_APP_NAME].units:

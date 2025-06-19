@@ -894,7 +894,7 @@ async def verify_replica_set_configuration(
 ) -> None:
     """Verifies presence of primary, replica set members, and number of primaries."""
     ip_addresses = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        await get_mongodb_hostname_for_unit(ops_test, substrate, unit.name)
         for unit in ops_test.model.applications[app_name].units
     ]
 

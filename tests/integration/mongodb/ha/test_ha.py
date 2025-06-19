@@ -39,9 +39,7 @@ from ...helpers.ha import (
     cut_network_from_unit,
     db_step_down,
     fetch_replica_set_members,
-    get_controller_machine,
     insert_release_to_cluster,
-    is_machine_reachable_from,
     kill_unit_process,
     kubectl_delete,
     replica_set_primary,
@@ -56,6 +54,7 @@ from ...helpers.ha import (
     verify_replica_set_configuration,
     verify_writes,
     wait_network_restore,
+    wait_until_unit_in_status,
 )
 from ...helpers.types import Substrate
 
@@ -864,17 +863,9 @@ async def test_network_cut(
 
     # verify machine is not reachable from peer units
     for unit in set(all_units) - {primary}:
-        hostname = await unit_hostname(ops_test, unit.name)
-        assert not is_machine_reachable_from(
-            hostname, primary_hostname
-        ), "unit is reachable from peer"
-
-    # verify machine is not reachable from controller
-    controller = await get_controller_machine(ops_test)
-    assert not is_machine_reachable_from(
-        controller, primary_hostname
-    ), "unit is reachable from controller"
-
+        await wait_until_unit_in_status(
+            ops_test, substrate, primary, unit, "(not reachable/healthy)", app_name
+        )
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 

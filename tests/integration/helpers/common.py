@@ -475,7 +475,8 @@ async def get_application_relation_data(
             or if there is no data for the particular relation endpoint
             and/or alias.
     """
-    unit_name = f"{application_name}/0"
+    unit = await find_unit(ops_test, leader=True, app_name=application_name)
+    unit_name = unit.name
     raw_data = (await ops_test.juju("show-unit", unit_name))[1]
 
     if not raw_data:

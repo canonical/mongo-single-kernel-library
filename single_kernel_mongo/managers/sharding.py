@@ -344,7 +344,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                         f"{shard_name} shard does not have the same auth as the config server."
                     )
                     raise ShardAuthError(shard_name)
-                logger.warning(f"Unhandled Operation Error: {e}")
+                logger.warning(f"Unhandled Operation Error {e.code}: {e}")
+                raise
             except PyMongoError as e:
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e

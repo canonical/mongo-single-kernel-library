@@ -6,7 +6,7 @@ import logging
 
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import find_unit
+from ..helpers.common import find_unit, get_unit_id
 from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,10 @@ async def assert_successful_run_upgrade_sequence(
     ops_test: OpsTest, substrate: Substrate, app_name: str, new_charm: str, mongod_resource: dict
 ) -> None:
     """Runs the upgrade sequence on a given app."""
+    number_of_units = len(ops_test.model.applications[app_name].units)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = get_unit_id(leader_unit.name)
+
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
     assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
@@ -64,7 +67,13 @@ async def assert_successful_run_upgrade_sequence(
     logger.info(f"Calling resume-refresh for {app_name}")
     action = await leader_unit.run_action("resume-refresh")
     await action.wait()
-    assert action.status == "completed", "resume-refresh failed, expected to succeed."
+
+    # Resume-refresh can fail while still triggering the upgrade if the leader
+    # unit is the second unit to upgrade because it will be shut down
+    # immediately on k8S.
+    # This is a known limitation, so in that case we allow the action to fail.
+    if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
+        assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
 

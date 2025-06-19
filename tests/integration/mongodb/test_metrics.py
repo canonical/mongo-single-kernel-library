@@ -2,7 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import time
-from pathlib import Path
 
 import httpx
 import pytest
@@ -30,7 +29,11 @@ MEDIAN_REELECTION_TIME = 12
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest,
+    mongodb_charm: str,
+    substrate: Substrate,
+    mongod_resource: dict,
+    base_app_name: str,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     app_name = await get_app_name(ops_test)

@@ -108,7 +108,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         substrate,
         SHARD_ONE_APP_NAME,
         status="Shard requires TLS to be enabled",
-        timeout=450,
+        timeout=TIMEOUT,
     )
 
     # Re-integrate to bring cluster back to steady state
