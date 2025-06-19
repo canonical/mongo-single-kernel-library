@@ -102,10 +102,14 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         raise_on_blocked=False,
     )
 
-    for mongos_unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        assert (
-            mongos_unit.workload_status_message == "mongos requires TLS to be enabled."
-        ), "mongos fails to report TLS inconsistencies."
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        MONGOS_APP_NAME,
+        status="mongos requires TLS to be enabled.",
+        timeout=TIMEOUT,
+        subordinate=(substrate == "lxd"),
+    )
 
 
 @pytest.mark.abort_on_fail

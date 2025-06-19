@@ -11,7 +11,7 @@ from tests.integration.helpers.common import (
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from tests.integration.helpers.mongos import check_mongos, generate_mongos_uri
+from tests.integration.helpers.mongos import check_mongos, generate_mongos_uri, get_k8s_public_ip
 from tests.integration.helpers.sharding import (
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
@@ -64,6 +64,11 @@ async def test_build_and_deploy(
         idle_period=10,
         raise_on_blocked=False,
     )
+
+    if substrate == "microk8s":
+        await ops_test.model.applications[MONGOS_APP_NAME].set_config(
+            {"expose-external": "nodeport"}
+        )
 
 
 @pytest.mark.abort_on_fail
@@ -141,17 +146,18 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         await ops_test.model.applications[MONGOS_APP_NAME].scale(scale_change=1)
 
     await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
-        idle_period=20,
+        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME], idle_period=20, wait_for_exact_units=2
     )
 
     for mongos_unit in ops_test.model.applications[MONGOS_APP_NAME].units:
         secret_uri = await generate_mongos_uri(
             ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
         )
-        assert (
-            mongos_unit.public_address in secret_uri
-        ), f"host for {mongos_unit} is not present in URI"
+        if substrate == "lxd":
+            mongos_ip = mongos_unit.public_address
+        else:
+            mongos_ip = get_k8s_public_ip()
+        assert mongos_ip in secret_uri, f"host for {mongos_unit} is not present in URI"
 
         mongos_running = await check_mongos(
             ops_test,
@@ -163,15 +169,19 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         )
         assert mongos_running, f"Mongos is not currently running on unit {mongos_unit}."
 
-    # destroy the first unit so the hosts are different from when the application was deployed
-    first_mongos_host_public_address = first_mongos_host.public_address
-    await ops_test.model.destroy_unit(first_mongos_host.name)
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
-        idle_period=20,
-    )
+    if substrate == "lxd":
+        # destroy the first unit so the hosts are different from when the application was deployed
+        first_mongos_host_public_address = first_mongos_host.public_address
+        await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].destroy_unit(first_mongos_host)
 
-    secret_uri = await generate_mongos_uri(
-        ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
-    )
-    assert first_mongos_host_public_address not in secret_uri, "old host is still present in URI"
+        await ops_test.model.wait_for_idle(
+            apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
+            idle_period=20,
+        )
+
+        secret_uri = await generate_mongos_uri(
+            ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
+        )
+        assert (
+            first_mongos_host_public_address not in secret_uri
+        ), "old host is still present in URI"

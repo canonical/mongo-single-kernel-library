@@ -1,20 +1,27 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+import subprocess
 from logging import getLogger
 
 from juju.unit import Unit as JujuUnit
+from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
 from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
+    DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
     MONGOS_PORT,
     TIMEOUT,
     deploy_charm,
+    find_unit,
     get_address_of_unit,
     get_application_relation_data,
     get_secret_data,
+    get_unit_hostnames,
     get_unit_id,
     mongosh,
     wait_for_mongodb_units_blocked,
@@ -52,6 +59,8 @@ PING_CMD = "db.runCommand({ping: 1})"
 TEST_USER_NAME = "TestUserName1"
 TEST_USER_PWD = "Test123"
 TEST_DB_NAME = "my-test-db"
+
+PORT_MAPPING_INDEX = 4
 
 
 async def deploy_cluster_components(
@@ -192,7 +201,7 @@ async def generate_mongos_uri(
     external: bool = False,
 ) -> str:
     """Generates a URI for accessing mongos."""
-    mongos_unit = ops_test.model.applications[app_name].units[0]
+    mongos_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     mongos_unit_id = get_unit_id(mongos_unit.name)
 
     if not external and substrate == "lxd":
@@ -208,7 +217,7 @@ async def generate_mongos_uri(
     if substrate == "lxd":
         rel_name = "mongos"
     else:
-        rel_name = "mongos_proxy"
+        rel_name = "mongodb"
 
     secret_uri = await get_application_relation_data(ops_test, app_name, rel_name, "secret-user")
 
@@ -381,4 +390,121 @@ async def toggle_tls_mongos(
         await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
             f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
             f"{certs_app_name}:{TLS_RELATION_NAME}",
+        )
+
+
+def get_k8s_public_ip() -> str:
+    result = subprocess.run("kubectl get nodes -o json", shell=True, capture_output=True, text=True)
+
+    if result.returncode:
+        logger.info("failed to retrieve public facing k8s IP error: %s", result.stderr)
+        assert False, "failed to retrieve public facing k8s IP"
+
+    node_info = json.loads(result.stdout)
+
+    try:
+        return node_info["items"][0]["status"]["addresses"][0]["address"]
+    except KeyError:
+        assert False, "failed to retrieve public facing k8s IP"
+
+
+def get_node_port_info(ops_test: OpsTest, node_port_name: str) -> subprocess.CompletedProcess:
+    node_port_cmd = (
+        f"kubectl get svc  -n  {ops_test.model.name} |  grep NodePort | grep {node_port_name}"
+    )
+    return subprocess.run(node_port_cmd, shell=True, capture_output=True, text=True)
+
+
+def has_node_port(ops_test: OpsTest, node_port_name: str) -> None:
+    result = get_node_port_info(ops_test, node_port_name)
+    return len(result.stdout.splitlines()) > 0
+
+
+def get_port_from_node_port(ops_test: OpsTest, node_port_name: str) -> str:
+    result = get_node_port_info(ops_test, node_port_name)
+
+    assert len(result.stdout.splitlines()) > 0, "No port information available for expected service"
+
+    # port information is available at PORT_MAPPING_INDEX
+    port_mapping = result.stdout.split()[PORT_MAPPING_INDEX]
+
+    # port information is of the form 27018:30259/TCP
+    return port_mapping.split(":")[1].split("/")[0]
+
+
+def assert_node_port_availablity(
+    ops_test: OpsTest, node_port_name: str, available: bool = True
+) -> None:
+    incorrect_availablity = "not available" if available else "is available"
+    assert (
+        has_node_port(ops_test, node_port_name) == available
+    ), f"Port information {incorrect_availablity} for service"
+
+
+async def assert_all_unit_node_ports_available(ops_test: OpsTest):
+    """Assert all ports available in mongos deployment."""
+    for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
+        assert_node_port_availablity(
+            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+        )
+
+        exposed_node_port = get_port_from_node_port(
+            ops_test, node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external"
+        )
+
+        assert await is_external_mongos_client_reachable(
+            ops_test, exposed_node_port
+        ), "client is not reachable"
+
+
+async def get_mongos_user_password(
+    ops_test: OpsTest, app_name=MONGOS_APP_NAME, relation_name="cluster"
+) -> tuple[str, str]:
+    secret_uri = await get_application_relation_data(
+        ops_test, app_name, relation_name=relation_name, key="secret-user"
+    )
+
+    secret_data = await get_secret_data(ops_test, secret_uri)
+    return secret_data.get("username"), secret_data.get("password")
+
+
+async def is_external_mongos_client_reachable(ops_test: OpsTest, exposed_node_port: str) -> bool:
+    """Returns True if the mongos client is reachable on the provided node port via the k8s ip."""
+    public_k8s_ip = get_k8s_public_ip()
+    username, password = await get_mongos_user_password(ops_test, MONGOS_APP_NAME)
+    try:
+        external_mongos_client = MongoClient(
+            f"mongodb://{username}:{password}@{public_k8s_ip}:{exposed_node_port}"
+        )
+        external_mongos_client.admin.command("usersInfo")
+    except ServerSelectionTimeoutError:
+        return False
+    finally:
+        external_mongos_client.close()
+
+    return True
+
+
+async def assert_app_uri_matches_external_setting(
+    ops_test: OpsTest, app_name: str, rel_name: str, external: bool
+):
+    uri = await generate_mongos_uri(
+        ops_test, "microk8s", auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
+    )
+
+    pulic_ip_present_in_uri = get_k8s_public_ip() in uri
+    assert pulic_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
+
+    for host in get_unit_hostnames(ops_test, "microk8s", MONGOS_APP_NAME):
+        local_host_in_ip = host in uri
+        assert local_host_in_ip != external, f"client URI for {app_name} has incorrect hosts."
+
+
+async def assert_all_unit_node_ports_are_unavailable(ops_test: OpsTest):
+    """Assert all ports available in mongos deployment."""
+    for unit_id in range(len(ops_test.model.applications[MONGOS_APP_NAME].units)):
+        assert_node_port_availablity(
+            ops_test,
+            node_port_name=f"{MONGOS_APP_NAME}-{unit_id}-external",
+            available=False,
         )

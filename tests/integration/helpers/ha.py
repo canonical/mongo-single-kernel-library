@@ -651,7 +651,7 @@ async def db_step_down(
     log_path = mongodb_log_path(substrate)
 
     if substrate == "lxd":
-        ls_command_template = "exec --unit {unit_name} sudo ls {log_path}"
+        ls_command_template = "ssh {unit_name} sudo ls {log_path}"
         cat_command_template = "ssh {unit_name} sudo cat {log_path}"
     else:
         ls_command_template = "ssh  --container mongod {unit_name} ls {log_path}"
@@ -664,6 +664,7 @@ async def db_step_down(
         search_file = ls_command_template.format(unit_name=unit.name, log_path=log_path)
         return_code, _, _ = await ops_test.juju(*search_file.split())
         if return_code == 2:
+            logger.info(f"Missing file {log_path}")
             continue
 
         # these log files can get quite large. According to the Juju team the 'run' command
