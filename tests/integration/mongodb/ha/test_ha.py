@@ -39,7 +39,9 @@ from ...helpers.ha import (
     cut_network_from_unit,
     db_step_down,
     fetch_replica_set_members,
+    get_controller_machine,
     insert_release_to_cluster,
+    is_machine_reachable_from,
     kill_unit_process,
     kubectl_delete,
     replica_set_primary,
@@ -799,6 +801,7 @@ async def test_full_cluster_restart(
     ), "Not all units down at the same time."
 
     # sleep for twice the median election time and the restart delay
+    logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
 
     # verify all units are up and running
@@ -849,7 +852,10 @@ async def test_network_cut(
 
     model_name = ops_test.model.info.name
 
-    primary_hostname = await unit_hostname(ops_test, primary.name)
+    if substrate == "lxd":
+        primary_hostname = await unit_hostname(ops_test, primary.name)
+    else:
+        primary_hostname = primary.name
     primary_unit_ip = await get_address_of_unit(
         ops_test, substrate, get_unit_id(primary.name), app_name
     )
@@ -866,7 +872,15 @@ async def test_network_cut(
         await wait_until_unit_in_status(
             ops_test, substrate, primary, unit, "(not reachable/healthy)", app_name
         )
+
+    if substrate == "lxd":
+        controller: str = await get_controller_machine(ops_test)
+        assert not is_machine_reachable_from(
+            controller, primary_hostname
+        ), "unit is reachable from controller"
+
     # sleep for twice the median election time
+    logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2} seconds")
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 
     # verify new writes are continuing by counting the number of writes before and after a 5 second

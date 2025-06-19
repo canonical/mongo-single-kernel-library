@@ -332,7 +332,12 @@ def unit_uri(
     return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
-async def get_password(ops_test: OpsTest, username="operator", app_name=None) -> str:
+async def get_password(
+    ops_test: OpsTest,
+    username="operator",
+    app_name: str | None = None,
+    unit: JujuUnit | None = None,
+) -> str:
     """Use the charm action to retrieve the password from provided unit.
 
     Returns:
@@ -341,8 +346,12 @@ async def get_password(ops_test: OpsTest, username="operator", app_name=None) ->
     app_name = app_name or await get_app_name(ops_test)
 
     # can retrieve from any unit running unit so we pick the first
-    unit_name = ops_test.model.applications[app_name].units[0].name
-    unit_id = unit_name.split("/")[1]
+    if unit:
+        unit_name = unit.name
+        unit_id = get_unit_id(unit.name)
+    else:
+        unit_name = ops_test.model.applications[app_name].units[0].name
+        unit_id = unit_name.split("/")[1]
 
     action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
         "get-password", **{"username": username}
@@ -396,7 +405,7 @@ async def get_direct_mongo_client(
     match username, password:
         case None, None:
             username = "operator"
-            password = await get_password(ops_test, app_name=app_name)
+            password = await get_password(ops_test, app_name=app_name, unit=unit)
         case _, None:
             raise Exception("Please provide username and password")
         case None, _:

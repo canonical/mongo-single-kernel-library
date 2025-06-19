@@ -85,7 +85,7 @@ def cut_network_from_unit(ops_test: OpsTest, substrate: Substrate, machine_name:
                 "tests/integration/helpers/manifests/chaos_network_loss.yml"
             ) as chaos_network_loss_file:
                 logger.info(
-                    "Calling network loss on ns={ops_test.model.info.name} and pod={machine_name.replace('/', '-')}"
+                    f"Calling network loss on ns={ops_test.model.info.name} and pod={machine_name.replace('/', '-')}"
                 )
                 template = string.Template(chaos_network_loss_file.read())
                 chaos_network_loss = template.substitute(
