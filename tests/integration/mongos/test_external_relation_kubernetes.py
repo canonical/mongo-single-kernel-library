@@ -30,6 +30,7 @@ from ..helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("lxd")
 async def test_build_and_deploy(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -40,9 +41,6 @@ async def test_build_and_deploy(
     mongos_client_application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    if substrate == "lxd":
-        pytest.skip(reason="Only runs on K8S.")
-
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
@@ -114,10 +112,9 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("lxd")
 async def test_mongos_external_connections(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos is accessible externally."""
-    if substrate == "lxd":
-        pytest.skip(reason="Only runs on K8S.")
     configuration_parameters = {"expose-external": "nodeport"}
 
     # apply new configuration options
@@ -129,10 +126,9 @@ async def test_mongos_external_connections(ops_test: OpsTest, substrate: Substra
 
 
 @pytest.mark.abort_on_fail
-async def test_mongos_external_connections_scale(ops_test: OpsTest, substrate: Substrate) -> None:
+@pytest.mark.skip_if_substrate("lxd")
+async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
     """Tests that new mongos units are accessible externally."""
-    if substrate == "lxd":
-        pytest.skip(reason="Only runs on K8S.")
     await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], status="active", idle_period=15)
 
@@ -168,10 +164,9 @@ async def test_mongos_bad_configuration(ops_test: OpsTest, substrate: Substrate)
 
 
 @pytest.mark.abort_on_fail
-async def test_all_clients_use_nodeport(ops_test: OpsTest, substrate: Substrate) -> None:
+@pytest.mark.skip_if_substrate("lxd")
+async def test_all_clients_use_nodeport(ops_test: OpsTest) -> None:
     """Test that all clients use nodeport."""
-    if substrate == "lxd":
-        pytest.skip(reason="Only runs on K8S.")
     await assert_app_uri_matches_external_setting(
         ops_test, app_name=DATA_INTEGRATOR_APP_NAME, rel_name="mongodb", external=True
     )
@@ -181,6 +176,7 @@ async def test_all_clients_use_nodeport(ops_test: OpsTest, substrate: Substrate)
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("lxd")
 async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     """Tests that mongos can disable external connections."""
     # get exposed node port before toggling off exposure

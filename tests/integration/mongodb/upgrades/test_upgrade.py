@@ -9,11 +9,16 @@ from pytest_operator.plugin import OpsTest
 
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
+    deploy_charm,
     find_unit,
     get_app_name,
     unit_hostname,
 )
-from ...helpers.ha import cut_network_from_unit, verify_writes, wait_until_unit_in_status
+from ...helpers.ha import (
+    cut_network_from_unit,
+    verify_writes,
+    wait_until_unit_in_status,
+)
 from ...helpers.types import Substrate
 from ...helpers.upgrade import refresh_charm
 
@@ -25,8 +30,13 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
     """Build and deploy one unit of MongoDB."""
     mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
 
-    await ops_test.model.deploy(
-        mongodb_charm_name, channel="6/edge", num_units=3, application_name=base_app_name
+    await deploy_charm(
+        ops_test,
+        mongodb_charm_name,
+        substrate,
+        mongod_resource={},  # unused
+        channel="6/edge",
+        app_name=base_app_name,
     )
 
     await ops_test.model.wait_for_idle(

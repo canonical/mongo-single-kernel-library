@@ -495,7 +495,8 @@ async def assert_app_uri_matches_external_setting(
     pulic_ip_present_in_uri = get_k8s_public_ip() in uri
     assert pulic_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
 
-    for host in get_unit_hostnames(ops_test, "microk8s", MONGOS_APP_NAME):
+    hostnames = await get_unit_hostnames(ops_test, "microk8s", MONGOS_APP_NAME)
+    for host in hostnames:
         local_host_in_ip = host in uri
         assert local_host_in_ip != external, f"client URI for {app_name} has incorrect hosts."
 

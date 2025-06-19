@@ -648,7 +648,7 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
 async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
     if substrate == "microk8s":
         return [
-            f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
+            f"{unit.name.replace('/', '-')}.{app_name}-endpoints"
             for unit in ops_test.model.applications[app_name].units
         ]
 
@@ -663,7 +663,7 @@ async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate,
     unit_id, app_name = get_unit_app(unit_name)
     if substrate == "lxd":
         return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    return f"{unit_name.replace('/', '-')}.mongodb-k8s-endpoints"
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints"
 
 
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:

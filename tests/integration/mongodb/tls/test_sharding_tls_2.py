@@ -26,7 +26,7 @@ from ...helpers.types import Substrate
 
 @pytest.mark.abort_on_fail
 async def test_tls_then_build_cluster(
-    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource
+    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
 ) -> None:
     """Tests that the cluster can be integrated with TLS."""
     num_units_cluster_config = {

@@ -7,7 +7,9 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
     MONGOS_APP_NAME,
+    MONGOS_PORT,
     execute_on_mongod,
+    get_mongodb_hostname_for_unit,
     remove_units,
     wait_for_mongodb_units_blocked,
 )
@@ -150,18 +152,24 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
         ops_test, substrate, auth=True, app_name=MONGOS_CLIENT_APPLICATION
     )
     res = await execute_on_mongod(
-        ops_test, MONGOS_CLIENT_APPLICATION, substrate, uri, cmd, container_name="mongos"
+        ops_test, MONGOS_APP_NAME, substrate, uri, cmd, container_name="mongos"
     )
     assert (
         res.succeeded
     ), f"mongos user does not have correct permissions to create new user, error: {res.stderr}"
 
-    test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{MONGOS_SOCKET}/{TEST_DB_NAME}"
+    if substrate == "lxd":
+        test_user_uri = f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{MONGOS_SOCKET}/{TEST_DB_NAME}"
+    else:
+        hostname = await get_mongodb_hostname_for_unit(ops_test, substrate, mongos_unit.name)
+        test_user_uri = (
+            f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{hostname}:{MONGOS_PORT}/{TEST_DB_NAME}"
+        )
     mongos_running = await check_mongos(
         ops_test,
         substrate,
         mongos_unit,
-        app_name=MONGOS_CLIENT_APPLICATION,
+        app_name=MONGOS_APP_NAME,
         auth=True,
         uri=test_user_uri,
     )
@@ -188,20 +196,23 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         )
         assert mongos_running, "Mongos is not currently running."
 
+    # destroy the unit we were initially connected to
     if substrate == "lxd":
-        # destroy the unit we were initially connected to
         await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].destroy_units(
             f"{MONGOS_CLIENT_APPLICATION}/0"
         )
-        await ops_test.model.wait_for_idle(
-            apps=[MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME],
-            status="active",
-            timeout=1000,
-        )
+    else:
+        await ops_test.model.applications[MONGOS_APP_NAME].scale(scale_change=-1)
 
-        # prepare sharded cluster
-        mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-        mongos_running = await check_mongos(
-            ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
-        )
-        assert mongos_running, "Mongos is not currently running."
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME],
+        status="active",
+        timeout=1000,
+    )
+
+    # prepare sharded cluster
+    mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
+    mongos_running = await check_mongos(
+        ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
+    )
+    assert mongos_running, "Mongos is not currently running."

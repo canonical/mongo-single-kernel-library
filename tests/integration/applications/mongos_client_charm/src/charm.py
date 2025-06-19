@@ -10,12 +10,10 @@ of the libraries in this repository.
 
 import logging
 
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
-
-
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +38,7 @@ class ApplicationCharm(CharmBase):
         )
         self.database_bis = DatabaseRequires(
             self,
-            relation_name="mongos_proxy",
+            relation_name="mongodb",
             database_name="my-test-db",
             extra_user_roles=EXTRA_USER_ROLES,
         )

@@ -172,7 +172,9 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
     if substrate == "lxd":
         # destroy the first unit so the hosts are different from when the application was deployed
         first_mongos_host_public_address = first_mongos_host.public_address
-        await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].destroy_unit(first_mongos_host)
+        await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].destroy_unit(
+            first_mongos_host.name
+        )
 
         await ops_test.model.wait_for_idle(
             apps=[MONGOS_APP_NAME, DATA_INTEGRATOR_APP_NAME],
