@@ -670,7 +670,7 @@ async def db_step_down(
         # these log files can get quite large. According to the Juju team the 'run' command
         # cannot be used for more than 16MB of data so it is best to use juju ssh or juju scp.
         cat_file = cat_command_template.format(unit_name=unit.name, log_path=log_path)
-        _, stdout, _ = await ops_test.juju(cat_file.split())
+        _, stdout, _ = await ops_test.juju(*cat_file.split())
 
         for line in stdout.splitlines():
             if not len(line):

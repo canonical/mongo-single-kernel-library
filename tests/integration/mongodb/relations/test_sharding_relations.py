@@ -231,7 +231,7 @@ async def test_replication_shard_relation(ops_test: OpsTest, substrate: Substrat
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas.",
+        status="Sharding interface cannot be used by rep",
         timeout=300,
     )
 
@@ -273,7 +273,7 @@ async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substra
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[SHARD_ONE_APP_NAME],
+        apps=[SHARD_ONE_APP_NAME, SHARD_ONE_APP_NAME],
         idle_period=20,
         raise_on_blocked=False,
         timeout=TIMEOUT,

@@ -118,6 +118,7 @@ async def test_connect_to_cluster_creates_user(ops_test: OpsTest, substrate: Sub
         idle_period=20,
         timeout=TIMEOUT,
         raise_on_error=False,
+        status="active",
     )
 
     num_users_after_integration = count_users(mongos_client)

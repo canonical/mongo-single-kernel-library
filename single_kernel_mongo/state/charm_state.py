@@ -732,6 +732,14 @@ class CharmState(Object, StatusesStateProtocol):
 
     # BEGIN: Configuration accessors
 
+    def has_credentials(self):
+        """Checks if we have received credentials or not."""
+        try:
+            self.mongo_config
+            return True
+        except Exception:
+            return False
+
     def mongodb_config_for_user(
         self,
         user: MongoDBUser,

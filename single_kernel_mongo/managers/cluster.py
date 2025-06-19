@@ -391,20 +391,26 @@ class ClusterRequirer(Object):
         if not self.charm.unit.is_leader():
             return
 
+        if not self.state.has_credentials():
+            logger.info("No credentials received, not removing users")
+            return
+
         # We are a Kubernetes Mongos Charm so we are in charge of our client
         # applications and their users and we proceed to remove the users we manage and their DBs.
         for relation in self.state.client_relations:
             self.dependent.mongo_manager.remove_user(relation)
             data_interface = DatabaseProviderData(self.model, relation.name)
             fields = data_interface.fetch_my_relation_data([relation.id])[relation.id]
-            data_interface.delete_relation_data(relation.id, list(fields.keys()))
-            secret_id = json.loads(
-                data_interface.fetch_relation_field(relation.id, "data") or "{}"
-            )["secret-user"]
 
-            user_secrets = self.charm.model.get_secret(id=secret_id)
-            user_secrets.remove_all_revisions()
-            user_secrets.get_content(refresh=True)
+            data_str = relation.data[next(iter(relation.units))].get("data", "{}")
+            secret_id = json.loads(data_str).get("secret-user")
+
+            data_interface.delete_relation_data(relation.id, list(fields.keys()))
+
+            if secret_id:
+                user_secrets = self.charm.model.get_secret(id=secret_id)
+                user_secrets.remove_all_revisions()
+                user_secrets.get_content(refresh=True)
             relation.data[self.charm.app].clear()
 
         # Also remove the local user.

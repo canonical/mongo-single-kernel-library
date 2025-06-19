@@ -4,7 +4,7 @@
 import asyncio
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+from logging import getLogger
 
 import pytest
 from juju import tag
@@ -62,10 +62,16 @@ from ...helpers.types import Substrate
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
 RESTART_DELAY = 60 * 3
 
+logger = getLogger(__name__)
+
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest,
+    mongodb_charm: str,
+    substrate: Substrate,
+    mongod_resource: dict,
+    base_app_name: str,
 ):
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
@@ -730,6 +736,7 @@ async def test_full_cluster_crash(
         ops_test, substrate, app_name=app_name
     ), "Not all units down at the same time."
 
+    logger.info(f"Sleeping for {MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY} seconds")
     # sleep for twice the median election time and the restart delay
     time.sleep(MEDIAN_REELECTION_TIME * 2 + RESTART_DELAY)
 
