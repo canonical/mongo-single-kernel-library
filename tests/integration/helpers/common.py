@@ -739,11 +739,14 @@ async def assert_subordinate_blocked_with_status(
     )
 
     for status_line in juju_status:
+        if not status_line:
+            continue
         if app_name not in status_line:
             continue
         # no need to check that status of the application since the application can have a
         # different status than the units.
-        is_app = "/" not in status_line
+        component_name = status_line.split(" ")[0]
+        is_app = "/" not in component_name
         if is_app:
             continue
 
@@ -762,7 +765,7 @@ async def assert_subordinate_blocked_with_status(
 
 async def check_all_units_blocked_with_status(
     ops_test: OpsTest,
-    substrate: str,
+    substrate: Substrate,
     db_app_name: str,
     status: str | None,
     subordinate: bool = False,

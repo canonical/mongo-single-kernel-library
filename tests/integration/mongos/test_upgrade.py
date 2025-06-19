@@ -31,6 +31,7 @@ async def test_build_and_deploy(
         mongos_resource,
         mongos_client_application_path,
         channel="6/edge",
+        mongos_units=2,
     )
     await build_cluster(ops_test, substrate, integrate_with_mongos=True)
 

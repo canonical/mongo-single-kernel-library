@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 from ..helpers.common import (
     MONGOS_APP_NAME,
     execute_on_mongod,
+    remove_units,
     wait_for_mongodb_units_blocked,
 )
 from ..helpers.mongos import (
@@ -125,9 +126,8 @@ async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate)
     )
 
     # destroy the unit we were initially connected to
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].destroy_units(
-        f"{CONFIG_SERVER_APP_NAME}/0"
-    )
+    config_server_unit = ops_test.model.applications[CONFIG_SERVER_APP_NAME].units[0]
+    await remove_units(ops_test, substrate, CONFIG_SERVER_APP_NAME, [config_server_unit])
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME],
         status="active",
