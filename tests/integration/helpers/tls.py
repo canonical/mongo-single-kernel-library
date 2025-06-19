@@ -249,7 +249,11 @@ async def scp_file_preserve_ctime(
 
 
 async def check_certs_correctly_distributed(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    unit: JujuUnit,
+    container: str = "mongod",
 ) -> None:
     """Comparing expected vs distributed certificates.
 
@@ -277,7 +281,9 @@ async def check_certs_correctly_distributed(
         ][0]
 
         # Read the content of the cert file stored in the unit
-        cert_file_content = await get_file_content(ops_test, substrate, unit.name, cert_path)
+        cert_file_content = await get_file_content(
+            ops_test, substrate, unit.name, cert_path, container=container
+        )
 
         # Get the external cert value from the relation
         relation_cert = "\n".join(tls_item["chain"]).strip()

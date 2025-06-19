@@ -284,11 +284,11 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
 
 
 @pytest.fixture
-async def faulty_mongos_upgrade_charm(mongod_base_path: Path, mongos_charm: str, tmp_path: Path):
+async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str, tmp_path: Path):
     literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongos_fault_charm.charm"
     shutil.copy(mongos_charm, fault_charm)
-    initial_version_path = mongod_base_path / Path("workload_version")
+    initial_version_path = mongos_base_path / Path("workload_version")
     workload_version = initial_version_path.read_text().strip()
 
     [major, minor, patch] = workload_version.split(".")
@@ -298,6 +298,7 @@ async def faulty_mongos_upgrade_charm(mongod_base_path: Path, mongos_charm: str,
             file_data = literals_file.read().decode().split("\n")
 
     regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+
     for index, line in enumerate(file_data):
         if entry := regex.findall(line):
             current_rev = entry[0]

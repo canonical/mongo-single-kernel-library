@@ -108,7 +108,7 @@ async def deploy_cluster_components(
     await ops_test.model.deploy(
         mongos_client_application_path,
         application_name=MONGOS_CLIENT_APPLICATION,
-        num_units=1,
+        num_units=mongos_units,
         series="jammy",
     )
 
@@ -306,7 +306,9 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
         original_tls_info[unit.name]["mongos_service"] = await time_process_started(
             ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE, container="mongos"
         )
-        await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
+        await check_certs_correctly_distributed(
+            ops_test, substrate, app_name=app_name, unit=unit, container="mongos"
+        )
 
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app_name].units:
@@ -339,7 +341,9 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
             ops_test, substrate, unit.name, SNAP_MONGOS_SERVICE, container="mongos"
         )
 
-        await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
+        await check_certs_correctly_distributed(
+            ops_test, substrate, app_name=app_name, unit=unit, container="mongos"
+        )
         assert (
             new_external_cert != original_tls_info[unit.name]["external_cert_contents"]
         ), "external cert not rotated"
