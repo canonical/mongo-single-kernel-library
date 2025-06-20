@@ -173,9 +173,11 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_relation_joined()
         except UpgradeInProgressError:
+            logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 
@@ -184,9 +186,11 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_relation_changed()
         except UpgradeInProgressError:
+            logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 
@@ -195,6 +199,7 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.on_relation_departed(departing_unit=event.departing_unit)
         except (NotReadyError, PyMongoError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 

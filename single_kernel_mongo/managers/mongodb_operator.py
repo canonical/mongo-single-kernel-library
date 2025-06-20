@@ -509,7 +509,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
         # work.
-        if self.state.db_initialised:
+        if self.state.db_initialised and self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
             self.backup_manager.configure_and_restart()
 
@@ -556,8 +556,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Always update the PBM and mongodb exporter configuration so that if
         # the secret changed, the configuration is updated and will still work
         # afterwards.
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.workload.active():
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         # Always process the statuses.
 
@@ -700,10 +701,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         secret_id = self.mongo_manager.set_user_password(user, new_password)
-        if user == BackupUser:
+        if user == BackupUser and self.workload.active():
             # Update and restart PBM Agent.
             self.backup_manager.configure_and_restart()
-        if user == MonitorUser:
+        if user == MonitorUser and self.workload.active():
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
         if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
@@ -753,8 +754,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         receive a relation event.
         """
         # All nodes should restart PBM and MongoDBExporter if it's not running
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.workload.active():
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         if not self.charm.unit.is_leader():
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
