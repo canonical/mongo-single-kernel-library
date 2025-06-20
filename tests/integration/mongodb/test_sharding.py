@@ -19,6 +19,7 @@ from ..helpers.common import (
     get_leader_id,
     get_password,
     get_unit_id,
+    remove_units,
     set_password,
     wait_for_mongodb_units_blocked,
 )
@@ -36,6 +37,11 @@ from ..helpers.sharding import (
     write_data_to_mongodb,
 )
 from ..helpers.types import Substrate
+
+# for now we have a large timeout due to the slow drainage of the `config.system.sessions`
+# collection. More info here:
+# https://stackoverflow.com/questions/77364840/mongodb-slow-chunk-migration-for-collection-config-system-sessions-with-remov
+REMOVAL_TIMEOUT = 30 * 60
 
 
 @pytest.mark.abort_on_fail
@@ -294,7 +300,7 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
         ],
         idle_period=15,
         status="active",
-        timeout=TIMEOUT,
+        timeout=REMOVAL_TIMEOUT,
         raise_on_error=False,
     )
 
@@ -346,7 +352,7 @@ async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substr
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
         idle_period=15,
         status="active",
-        timeout=TIMEOUT,
+        timeout=REMOVAL_TIMEOUT,
         raise_on_error=False,
     )
 
@@ -394,12 +400,13 @@ async def test_unconventual_shard_removal(ops_test: OpsTest, substrate: Substrat
         raise_on_error=False,
     )
 
-    await ops_test.model.applications[SHARD_TWO_APP_NAME].destroy_units(f"{SHARD_TWO_APP_NAME}/0")
+    unit = ops_test.model.applications[SHARD_TWO_APP_NAME].units[0]
+    await remove_units(ops_test, substrate, SHARD_TWO_APP_NAME, [unit])
     await ops_test.model.wait_for_idle(
         apps=[SHARD_TWO_APP_NAME],
         idle_period=15,
         status="active",
-        timeout=TIMEOUT,
+        timeout=REMOVAL_TIMEOUT,
         raise_on_error=False,
     )
 
@@ -409,7 +416,7 @@ async def test_unconventual_shard_removal(ops_test: OpsTest, substrate: Substrat
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
         idle_period=15,
         status="active",
-        timeout=TIMEOUT,
+        timeout=REMOVAL_TIMEOUT,
         raise_on_error=False,
     )
 

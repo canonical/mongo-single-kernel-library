@@ -657,7 +657,7 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     assert other_unit, "No secondary unit found"
 
     # send SIGTERM, we expect `systemd` to restart the process
-    sig_term_time = time.time()
+    sig_term_time = datetime.now(timezone.utc).timestamp()
     await kill_unit_process(
         ops_test, substrate, primary.name, kill_code="SIGTERM", app_name=app_name
     )
@@ -665,7 +665,7 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
     writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
-    time.sleep(5)
+    time.sleep(10)
     more_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
     assert more_writes > writes, "writes not continuing to DB"
 

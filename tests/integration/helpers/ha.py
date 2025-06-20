@@ -4,7 +4,6 @@
 
 """High availability helpers."""
 
-import calendar
 import json
 import os
 import string
@@ -436,11 +435,11 @@ async def reused_storage(
     return False
 
 
-def convert_time(time_as_str: str) -> int:
+def convert_time(time_as_str: str) -> float:
     """Converts a string time representation to an integer time representation, in UTC."""
     # parse time representation, provided in this format: 'YYYY-MM-DDTHH:MM:SS.MMM+00:00'
     d = datetime.strptime(time_as_str, "%Y-%m-%dT%H:%M:%S.%f%z")
-    return calendar.timegm(d.timetuple())
+    return d.timestamp()
 
 
 async def scale_application(
@@ -684,6 +683,11 @@ async def db_step_down(
                 and step_down_time >= sigterm_time
             ):
                 return True
+            if (
+                "Starting an election due to step up request" in line
+                and step_down_time < sigterm_time
+            ):
+                logger.warning(f"Step down: {step_down_time} < {sigterm_time}")
 
     return False
 

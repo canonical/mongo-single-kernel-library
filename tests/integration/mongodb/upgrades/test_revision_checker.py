@@ -7,7 +7,12 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.sharding import CONFIG_SERVER_REL_NAME, SHARD_REL_NAME
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, deploy_charm, wait_for_mongodb_units_blocked
+from ...helpers.common import (
+    DEPLOYMENT_TIMEOUT,
+    TIMEOUT,
+    deploy_charm,
+    wait_for_mongodb_units_blocked,
+)
 from ...helpers.types import Substrate
 
 LOCAL_SHARD_APP_NAME = "local-shard"
@@ -83,6 +88,8 @@ async def test_local_config_server_reports_remote_shard(ops_test: OpsTest) -> No
         status="waiting",
         raise_on_blocked=False,
         idle_period=20,
+        timeout=TIMEOUT,
+        wait_for_at_least_units=1,  # Otherwise wait_for_idle fail because of app status
     )
 
     config_server_unit = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME].units[0]
@@ -107,6 +114,6 @@ async def test_local_shard_reports_remote_config_server(
         ops_test,
         substrate,
         LOCAL_SHARD_APP_NAME,
-        timeout=600,
+        timeout=TIMEOUT,
         status="is not up-to date with config-server",
     )

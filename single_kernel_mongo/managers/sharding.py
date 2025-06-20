@@ -178,7 +178,11 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+        if (
+            rev_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
@@ -499,7 +503,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+        if (
+            rev_status
+            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
+        ):
+            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
         if not self.state.is_role(MongoDBRoles.SHARD):
             raise NonDeferrableFailedHookChecksError("is only executed by shards")

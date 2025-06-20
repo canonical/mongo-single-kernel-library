@@ -873,11 +873,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            self.charm.status_handler.set_running_status(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
-                scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+            self.charm.state.statuses.add(
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value, scope="unit", component=self.name
             )
             raise
 
