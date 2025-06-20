@@ -18,7 +18,7 @@ from data_platform_helpers.version_check import (
 )
 from ops.framework import Object
 from ops.model import Container, Unit
-from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
@@ -681,7 +681,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.upgrade_in_progress:
             try:
                 self.perform_self_healing()
-            except ServerSelectionTimeoutError as e:
+            except (ServerSelectionTimeoutError, OperationFailure) as e:
                 logger.warning(f"Failed to perform self healing: {e}")
             except ShardAuthError:
                 logger.warning("Failed to add shard")
