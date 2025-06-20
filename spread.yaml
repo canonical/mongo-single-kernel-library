@@ -127,6 +127,10 @@ prepare: |
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
     concierge prepare --trace -c concierge-lxd.yaml
+    if [[ $SPREAD_SUITE == *"ldap"* ]]
+    then
+      concierge prepare --trace -c concierge-microk8s.yaml
+    fi
   else
     concierge prepare --trace -c concierge-microk8s.yaml
   fi
@@ -139,6 +143,10 @@ prepare-each: |
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
     concierge prepare --trace -c concierge-lxd.yaml
+    if [[ $SPREAD_SUITE == *"ldap"* ]]
+    then
+      concierge prepare --trace -c concierge-microk8s.yaml
+    fi
   else
     concierge prepare --trace -c concierge-microk8s.yaml
   fi
