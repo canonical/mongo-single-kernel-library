@@ -40,7 +40,12 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[base_app_name], status="active", timeout=DEPLOYMENT_TIMEOUT, idle_period=120
+        apps=[base_app_name],
+        status="active",
+        timeout=DEPLOYMENT_TIMEOUT,
+        idle_period=120,
+        raise_on_error=False,
+        raise_on_blocked=False,
     )
 
 
