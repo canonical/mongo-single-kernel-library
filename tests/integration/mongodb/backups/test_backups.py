@@ -151,6 +151,7 @@ async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs) -> None
     # verify backup is started
     action = await leader_unit.run_action(action_name="create-backup")
     backup_result = await action.wait()
+    logger.info(f"Create backup result {backup_result.results=}")
     assert "backup started" in backup_result.results["backup-status"], "backup didn't start"
 
     # verify backup is present in the list of backups
@@ -278,6 +279,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     backup_id = most_recent_backup.split()[0]
     action = await leader_unit.run_action(action_name="restore", **{"backup-id": backup_id})
     restore = await action.wait()
+    logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
     await asyncio.gather(
@@ -379,6 +381,7 @@ async def test_restore_new_cluster(
     backup_id = most_recent_backup.split()[0]
     action = await db_unit.run_action(action_name="restore", **{"backup-id": backup_id})
     restore = await action.wait()
+    logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
     # verify all writes are present
@@ -424,4 +427,5 @@ async def test_update_backup_password(ops_test: OpsTest) -> None:
     # verify we still have connection to pbm via creating a backup
     action = await db_unit.run_action(action_name="create-backup")
     backup_result = await action.wait()
+    logger.info(f"Create backup result {backup_result.results=}")
     assert "backup started" in backup_result.results["backup-status"], "backup didn't start"
