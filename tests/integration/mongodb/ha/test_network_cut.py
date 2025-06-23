@@ -109,8 +109,11 @@ async def test_network_cut(
 
     logger.info(f"Cut network for {primary_hostname}")
 
+    units_to_check = {unit for unit in all_units if unit.name != primary.name}
+    logger.info(f"Checking: {units_to_check}")
     # verify machine is not reachable from peer units
-    for unit in set(all_units) - {primary}:
+    for unit in units_to_check:
+        logger.info(f"Waiting for unit {unit}")
         await wait_until_unit_in_status(
             ops_test, substrate, primary, unit, "(not reachable/healthy)", app_name
         )
@@ -135,12 +138,18 @@ async def test_network_cut(
 
     # verify that a new primary gets elected
     new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
+        ops_test,
+        substrate,
+        app_name=app_name,
+        replica_set_hosts=ip_addresses,
+        online_unit=other_unit,
     )
     assert new_primary.name != primary.name
 
     # verify that no writes to the db were missed
-    total_expected_writes = await verify_writes(ops_test, substrate, app_name)
+    total_expected_writes = await verify_writes(
+        ops_test, substrate, app_name, online_unit=new_primary
+    )
 
     # restore network connectivity to old primary
     restore_network_for_unit(ops_test, substrate, primary_hostname)

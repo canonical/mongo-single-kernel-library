@@ -234,9 +234,12 @@ async def fetch_primary(
     ops_test: OpsTest,
     substrate: Substrate,
     app_name: str,
+    online_unit: JujuUnit | None = None,
 ) -> str | None:
     """Returns IP address of current replica set primary."""
-    password = await get_password(ops_test, username="operator", app_name=app_name)
+    password = await get_password(
+        ops_test, username="operator", app_name=app_name, unit=online_unit
+    )
 
     uri = await generate_mongodb_client(
         ops_test, substrate, app_name, mongos=False, hosts=replica_set_hosts, password=password
@@ -274,13 +277,14 @@ async def replica_set_primary(
     substrate: Substrate,
     app_name: str,
     replica_set_hosts: list[str],
+    online_unit: JujuUnit | None = None,
 ) -> JujuUnit | None:
     """Returns the primary of the replica set.
 
     Retrying 5 times to give the replica set time to elect a new primary, also checks against the
     valid_ips to verify that the primary is not outdated.
     """
-    primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name)
+    primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name, online_unit)
 
     if substrate == "microk8s":
         unit_name = host_to_unit(primary_ip)
@@ -519,7 +523,11 @@ async def fetch_replica_set_members(
 
 
 async def verify_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, secondary: JujuUnit | None = None
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    secondary: JujuUnit | None = None,
+    online_unit: JujuUnit | None = None,
 ) -> int:
     # verify that no writes to the db were missed
     total_expected_writes = await stop_continous_writes(
@@ -531,7 +539,9 @@ async def verify_writes(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    primary_unit = await replica_set_primary(ops_test, substrate, app_name, hosts)
+    primary_unit = await replica_set_primary(
+        ops_test, substrate, app_name, hosts, online_unit=online_unit
+    )
 
     assert primary_unit, "No primary unit"
 

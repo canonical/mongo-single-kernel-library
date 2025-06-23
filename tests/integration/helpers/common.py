@@ -199,6 +199,7 @@ async def generate_mongodb_client(
     hosts: list[str] | None = None,
     username: str = "operator",
     password: str | None = None,
+    unit: JujuUnit | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
     hosts = hosts or [
@@ -206,7 +207,7 @@ async def generate_mongodb_client(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    password = password or await get_password(ops_test, app_name=app_name)
+    password = password or await get_password(ops_test, app_name=app_name, unit=unit)
     username = username
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = [f"{host}:{port}" for host in hosts]
@@ -945,7 +946,9 @@ async def count_writes(
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False, hosts=[host])
+    uri = await generate_mongodb_client(
+        ops_test, substrate, app_name, mongos=False, hosts=[host], unit=unit
+    )
 
     client = MongoClient(uri, directConnection=True)
     db = client[DEFAULT_DATABASE_NAME]
