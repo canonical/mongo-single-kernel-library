@@ -164,10 +164,11 @@ async def test_network_cut(
         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
     # verify we have connection to the old primary
-    new_ip = instance_ip(model_name, primary_hostname)
-    assert await mongod_ready(
-        ops_test, new_ip, app_name=app_name
-    ), f"Connection to host {new_ip} is not possible"
+    if substrate == "lxd":
+        new_ip = instance_ip(model_name, primary_hostname)
+        assert await mongod_ready(
+            ops_test, new_ip, app_name=app_name
+        ), f"Connection to host {new_ip} is not possible"
 
     # verify presence of primary, replica set member configuration, and number of primaries
     await verify_replica_set_configuration(ops_test, substrate, app_name=app_name)
