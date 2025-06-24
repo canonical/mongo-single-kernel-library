@@ -12,6 +12,7 @@ from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
     TIMEOUT,
+    check_status_detail,
     deploy_application,
     deploy_charm,
     wait_for_mongodb_units_blocked,
@@ -266,6 +267,13 @@ async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substra
         timeout=300,
     )
 
+    await check_status_detail(
+        ops_test,
+        SHARD_ONE_APP_NAME,
+        status="blocked",
+        message="Relation to mongos not supported, config role must be config-server.",
+    )
+
     # clean up relations
     await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
         f"{REPLICATION_APP_NAME}:cluster",
@@ -319,6 +327,12 @@ async def test_shard_s3_relation(ops_test: OpsTest, substrate: Substrate) -> Non
         SHARD_ONE_APP_NAME,
         status="Relation to s3-integrator is not support",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        SHARD_ONE_APP_NAME,
+        status="blocked",
+        message="Relation to s3-integrator is not supported, config role must be config-server.",
     )
 
     # clean up relations
