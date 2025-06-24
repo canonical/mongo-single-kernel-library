@@ -156,7 +156,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """
         return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
 
-    def on_relation_broken(self, relation: Relation) -> None:
+    def cleanup_certs_and_restart(self, relation: Relation) -> None:
         """On relation broken event, we need to remove the certificate from the trust store."""
         if self.state.is_scaling_down(relation.id):
             logger.info("Relation broken event occurring due to scale down.")

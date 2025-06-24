@@ -99,61 +99,61 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def on_install(self) -> None:
+    def install_workloads(self) -> None:
         """Handles the install event."""
         ...
 
     @abstractmethod
-    def on_start(self) -> None:
+    def prepare_for_startup(self) -> None:
         """Handles the start event."""
         ...
 
     @abstractmethod
-    def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
+    def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Handles the secret changed events."""
 
     @abstractmethod
-    def on_config_changed(self) -> None:
+    def update_config_and_restart(self) -> None:
         """Handles the config changed events."""
         ...
 
     @abstractmethod
-    def on_storage_attached(self) -> None:
+    def prepare_storage(self) -> None:
         """Handles the storage attached events."""
         ...
 
     @abstractmethod
-    def on_storage_detaching(self) -> None:
+    def prepare_storage_for_shutdown(self) -> None:
         """Handles the storage attached events."""
         ...
 
     @abstractmethod
-    def on_leader_elected(self) -> None:
+    def new_leader(self) -> None:
         """Handles the leader elected events."""
         ...
 
     @abstractmethod
-    def on_update_status(self) -> None:
+    def update_status(self) -> None:
         """Handle the status update events."""
         ...
 
     @abstractmethod
-    def on_relation_joined(self) -> None:
+    def new_peer(self) -> None:
         """Handles the relation changed events."""
         ...
 
     @abstractmethod
-    def on_relation_changed(self) -> None:
+    def peer_changed(self) -> None:
         """Handles the relation changed events."""
         ...
 
     @abstractmethod
-    def on_relation_departed(self, departing_unit: Unit | None) -> None:
+    def peer_leaving(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""
         ...
 
     @abstractmethod
-    def on_stop(self) -> None:
+    def prepare_for_shutdown(self) -> None:
         """Handles the stop event."""
         ...
 

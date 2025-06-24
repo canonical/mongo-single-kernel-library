@@ -146,7 +146,7 @@ class MongosOperator(OperatorProtocol, Object):
         return self.charm.parsed_config
 
     @override
-    def on_install(self) -> None:
+    def install_workloads(self) -> None:
         """Handles the install event.
 
         We ensure the workload (container or snap) is present before setting
@@ -165,7 +165,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.mongos_config_manager.set_environment()
 
     @override
-    def on_start(self) -> None:
+    def prepare_for_startup(self) -> None:
         """For this case, we don't start any service.
 
         Mongos charms need to be integrated to its config server before
@@ -192,12 +192,12 @@ class MongosOperator(OperatorProtocol, Object):
             )
 
     @override
-    def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
+    def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
-    def on_config_changed(self) -> None:
+    def update_config_and_restart(self) -> None:
         """Handle configurations for expose-external.
 
         It is necessary to check that the option is valid, and if it has
@@ -231,17 +231,17 @@ class MongosOperator(OperatorProtocol, Object):
             self.share_connection_info()
 
     @override
-    def on_storage_attached(self) -> None:
+    def prepare_storage(self) -> None:
         """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
-    def on_storage_detaching(self) -> None:
+    def prepare_storage_for_shutdown(self) -> None:
         """Nothing happens in this handler for mongos operators."""
         pass
 
     @override
-    def on_leader_elected(self) -> None:
+    def new_leader(self) -> None:
         """Just forward the call, this is for simplicity and typing.
 
         Leader elected events indicate that a unit may have been removed or
@@ -251,7 +251,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.share_connection_info()
 
     @override
-    def on_update_status(self) -> None:
+    def update_status(self) -> None:
         """Many things happening here.
 
         First, as always we ensure the expose external value is valid.
@@ -274,22 +274,22 @@ class MongosOperator(OperatorProtocol, Object):
                 self.upgrade_manager._reconcile_upgrade()
 
     @override
-    def on_relation_joined(self) -> None:
+    def new_peer(self) -> None:
         """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
-    def on_relation_changed(self) -> None:
+    def peer_changed(self) -> None:
         """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
-    def on_relation_departed(self, departing_unit: Unit | None) -> None:
+    def peer_leaving(self, departing_unit: Unit | None) -> None:
         """Any relation event will just share the connection with the client."""
         self.share_connection_info()
 
     @override
-    def on_stop(self) -> None:
+    def prepare_for_shutdown(self) -> None:
         if self.substrate == Substrates.VM:
             return
 
