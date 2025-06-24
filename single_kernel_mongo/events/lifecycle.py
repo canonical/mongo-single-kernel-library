@@ -110,7 +110,7 @@ class LifecycleEventsHandler(Object):
     def on_start(self, event: StartEvent):
         """Start event."""
         try:
-            self.dependent.on_start()
+            self.dependent.prepare_for_startup()
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(
@@ -123,12 +123,12 @@ class LifecycleEventsHandler(Object):
 
     def on_stop(self, event: StopEvent):
         """Stop event."""
-        self.dependent.on_stop()
+        self.dependent.prepare_for_shutdown()
 
     def on_install(self, event: InstallEvent):
         """Install event."""
         try:
-            self.dependent.on_install()
+            self.dependent.install_workloads()
         except (ContainerNotReadyError, WorkloadServiceError):
             logger.info("Not ready to start.")
             event.defer()
@@ -136,12 +136,12 @@ class LifecycleEventsHandler(Object):
 
     def on_leader_elected(self, event: LeaderElectedEvent):
         """Leader elected event."""
-        self.dependent.on_leader_elected()
+        self.dependent.new_leader()
 
     def on_config_changed(self, event: ConfigChangedEvent):
         """Config Changed Event."""
         try:
-            self.dependent.on_config_changed()
+            self.dependent.update_config_and_restart()
         except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
         except InvalidLdapUserToDnMappingError:
@@ -159,11 +159,11 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        self.dependent.on_update_status()
+        self.dependent.update_status()
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
-        self.dependent.on_secret_changed(
+        self.dependent.update_secrets_and_restart(
             secret_label=event.secret.label or "",
             secret_id=event.secret.id or "",
         )
@@ -171,7 +171,7 @@ class LifecycleEventsHandler(Object):
     def on_relation_joined(self, event: RelationJoinedEvent):
         """Relation joined event."""
         try:
-            self.dependent.on_relation_joined()
+            self.dependent.new_peer()
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
@@ -184,7 +184,7 @@ class LifecycleEventsHandler(Object):
     def on_relation_changed(self, event: RelationChangedEvent):
         """Relation changed event."""
         try:
-            self.dependent.on_relation_changed()
+            self.dependent.peer_changed()
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
@@ -197,7 +197,7 @@ class LifecycleEventsHandler(Object):
     def on_relation_departed(self, event: RelationDepartedEvent):
         """Relation departed event."""
         try:
-            self.dependent.on_relation_departed(departing_unit=event.departing_unit)
+            self.dependent.peer_leaving(departing_unit=event.departing_unit)
         except (NotReadyError, PyMongoError):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
@@ -205,11 +205,11 @@ class LifecycleEventsHandler(Object):
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""
-        self.dependent.on_storage_attached()
+        self.dependent.prepare_storage()
 
     def on_storage_detaching(self, event: StorageDetachingEvent):
         """Storage Detaching Event."""
-        self.dependent.on_storage_detaching()
+        self.dependent.prepare_storage_for_shutdown()
 
     def on_remove(self, _):
         """For MongoD VM, remove sysctl config."""

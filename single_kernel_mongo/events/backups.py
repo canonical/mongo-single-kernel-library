@@ -174,7 +174,7 @@ class BackupEventsHandler(Object):
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
-        self.manager.on_relation_broken(event.relation)
+        self.manager.cleanup_certs_and_restart(event.relation)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"

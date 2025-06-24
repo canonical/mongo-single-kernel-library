@@ -80,7 +80,7 @@ class UpgradeEventHandler(Object):
 
     def _on_pre_upgrade_check_action(self, event: ActionEvent):
         try:
-            self.manager.on_pre_upgrade_check_action()
+            self.manager.run_pre_refresh_checks()
             event.set_results({"result": "Charm is ready for refresh."})
         except ActionFailedError as e:
             logger.debug(f"Pre-refresh check failed: {e}")
@@ -90,7 +90,7 @@ class UpgradeEventHandler(Object):
         # We have to catch a possible ModelError here.
         # TODO: remove try/catch when https://bugs.launchpad.net/juju/+bug/2093129 is fixed.
         try:
-            self.manager.on_upgrade_peer_relation_created()
+            self.manager.store_initial_revisions()
         except ModelError as err:
             logger.info(f"Deferring because of model error: {err}")
             event.defer()
@@ -100,7 +100,7 @@ class UpgradeEventHandler(Object):
 
     def _on_upgrade_charm(self, event: UpgradeCharmEvent) -> None:
         try:
-            self.manager.on_upgrade_charm()
+            self.manager.upgrade_charm()
         except DeferrableError as err:
             logger.info(f"Deferring upgrade because of {err}")
             event.defer()
@@ -108,7 +108,7 @@ class UpgradeEventHandler(Object):
     def _on_resume_upgrade_action(self, event: ActionEvent) -> None:
         try:
             force: bool = event.params.get("force", False)
-            message = self.manager.on_resume_upgrade_action(force=force)
+            message = self.manager.resume_upgrade(force=force)
             event.set_results({"result": message})
         except ActionFailedError as e:
             logger.debug(f"Resume refresh failed: {e}")
@@ -116,7 +116,7 @@ class UpgradeEventHandler(Object):
 
     def _on_force_upgrade_action(self, event: ActionEvent) -> None:
         try:
-            message = self.manager.on_force_upgrade_action(event)
+            message = self.manager.force_upgrade(event)
             event.set_results({"result": message})
         except ActionFailedError as e:
             logger.debug(f"Resume refresh failed: {e}")

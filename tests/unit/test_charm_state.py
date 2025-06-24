@@ -37,7 +37,7 @@ def test_users_secrets(harness: Harness[MongoTestCharm]):
     harness.add_relation_unit(rel.id, "mongodb/1")  # type: ignore
 
     harness.set_leader(True)
-    harness.charm.operator.on_leader_elected()
+    harness.charm.operator.new_leader()
 
     state = harness.charm.operator.state
     assert state.operator_config.password == state.secrets.get_for_key(

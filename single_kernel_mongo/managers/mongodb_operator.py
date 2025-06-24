@@ -284,7 +284,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     # BEGIN: Handlers.
 
     @override
-    def on_install(self) -> None:
+    def install_workloads(self) -> None:
         """Handler on install."""
         if not self.workload.workload_present:
             raise ContainerNotReadyError
@@ -298,7 +298,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.write(self.workload.paths.config_file, "")
 
     @override
-    def on_start(self) -> None:
+    def prepare_for_startup(self) -> None:
         """Handler on start."""
         if not self.workload.workload_present:
             logger.debug("mongod installation is not ready yet.")
@@ -363,7 +363,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.upgrade_manager._reconcile_upgrade()
 
     @override
-    def on_stop(self) -> None:  # pragma: nocover
+    def prepare_for_shutdown(self) -> None:  # pragma: nocover
         """Handler for the stop event.
 
         K8S Only, VM has nothing to do on this step.
@@ -407,7 +407,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
     @override
-    def on_config_changed(self) -> None:
+    def update_config_and_restart(self) -> None:
         """Listen to changes in application configuration.
 
         To prevent a user from migrating a cluster, and causing the component to become
@@ -464,7 +464,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.ldap_events.restart_if_ready_event.emit()
 
     @override
-    def on_leader_elected(self) -> None:
+    def new_leader(self) -> None:
         """Handles the leader elected event.
 
         Generates the keyfile and users credentials.
@@ -478,7 +478,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.set_user_password(user, self.workload.generate_password())
 
     @override
-    def on_relation_joined(self) -> None:
+    def new_peer(self) -> None:
         """Handle relation joined events.
 
         In this event, we first check for status checks (are we leader, is the
@@ -493,10 +493,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             raise UpgradeInProgressError
 
-        self.on_relation_changed()
+        self.peer_changed()
         self.update_related_hosts()
 
-    def on_relation_changed(self) -> None:
+    def peer_changed(self) -> None:
         """Handle relation changed events.
 
         Adds the unit as a replica to the MongoDB replica set.
@@ -535,7 +535,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise
 
     @override
-    def on_secret_changed(self, secret_label: str, secret_id: str) -> None:
+    def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
 
         When user run set-password action, juju leader changes the password inside the database
@@ -563,7 +563,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Always process the statuses.
 
     @override
-    def on_relation_departed(self, departing_unit: Unit | None) -> None:
+    def peer_leaving(self, departing_unit: Unit | None) -> None:
         """Handles the relation departed events."""
         if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
             return
@@ -577,7 +577,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_hosts()
 
     @override
-    def on_storage_attached(self) -> None:  # pragma: nocover
+    def prepare_storage(self) -> None:  # pragma: nocover
         """Handler for `storage_attached` event.
 
         This should handle fixing the permissions for the data dir.
@@ -596,7 +596,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
     @override
-    def on_storage_detaching(self) -> None:
+    def prepare_storage_for_shutdown(self) -> None:
         """Before storage detaches, allow removing unit to remove itself from the set.
 
         If the removing unit is primary also allow it to step down and elect another unit as
@@ -655,7 +655,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
     @override
-    def on_update_status(self) -> None:
+    def update_status(self) -> None:
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
@@ -689,7 +689,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             except NotDrainedError:
                 logger.warning("Still draining shard.")
 
-    def on_set_password_action(self, username: str, password: str | None = None) -> tuple[str, str]:
+    def set_password(self, username: str, password: str | None = None) -> tuple[str, str]:
         """Handler for the set password action."""
         self.assert_pass_password_checks()
 
@@ -714,10 +714,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         return new_password, secret_id
-
-    def on_get_password_action(self, username: str) -> str:
-        """Handler for the get password action."""
-        return self.get_password(username)
 
     # END: Handlers.
 
@@ -766,7 +762,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_hosts()
         # Add in any new IPs to the replica set. Relation handlers require a reference to
         # a unit.
-        self.on_relation_changed()
+        self.peer_changed()
 
         # make sure all nodes in the replica set have the same priority for re-election. This is
         # necessary in the case that pre-upgrade hook fails to reset the priority of election for
