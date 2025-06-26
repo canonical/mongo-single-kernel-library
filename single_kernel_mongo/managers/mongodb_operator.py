@@ -657,7 +657,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Status update Handler."""
         # TODO update the usage of this once the spec is approved and we have a consistent way of
         # handling statuses
-        if self.get_statuses(scope="unit", recompute=True):
+        if self.basic_statuses():
             logger.info("Early return invalid statuses.")
             return
 
@@ -991,6 +991,31 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Returns True if the last replica (juju unit) is getting removed."""
         return self.state.planned_units == 0 and len(self.state.peers_units) == 0
 
+    def basic_statuses(self) -> list[StatusObject]:
+        """Basic checks."""
+        statuses = []
+        if not self.cluster_manager.is_valid_mongos_integration():
+            statuses.append(MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value)
+
+        if not self.backup_manager.is_valid_s3_integration():
+            statuses.append(MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value)
+
+        if self.state.is_role(MongoDBRoles.REPLICATION) and (
+            self.state.config_server_relation or self.state.shard_relation
+        ):
+            statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
+
+        if self.state.client_relations and self.state.is_sharding_component:
+            statuses.append(MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value)
+
+        if not self.state.is_sharding_component and self.state.has_sharding_integration:
+            statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
+        elif rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # don't bother checking revision mismatch on sharding interface if replica
+            statuses.append(rev_status)
+
+        return statuses
+
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
@@ -1013,31 +1038,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
+        charm_statuses += self.basic_statuses()
+
         if not self.state.db_initialised:
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_MONGODB_START.value)
 
         if not self.mongodb_exporter_config_manager.workload.active():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_EXPORTER_START.value)
 
-        if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            charm_statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
-        elif rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
-            # don't bother checking revision mismatch on sharding interface if replica
-            charm_statuses.append(rev_status)
             return charm_statuses
-
-        if not self.cluster_manager.is_valid_mongos_integration():
-            charm_statuses.append(MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value)
-
-        if not self.backup_manager.is_valid_s3_integration():
-            charm_statuses.append(MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value)
-
-        if self.state.is_role(MongoDBRoles.REPLICATION) and (
-            self.state.config_server_relation or self.state.shard_relation
-        ):
-            charm_statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
-
-        if self.state.client_relations and self.state.is_sharding_component:
-            charm_statuses.append(MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value)
 
         return charm_statuses

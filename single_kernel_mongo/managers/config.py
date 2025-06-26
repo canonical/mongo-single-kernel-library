@@ -224,8 +224,10 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
         if not self.workload.active() or self.get_environment() != self.state.monitor_config.uri:
             try:
+                # Always enable the service
+                self.workload.stop()
                 self.set_environment()
-                self.workload.restart()
+                self.workload.start()
             except WorkloadServiceError as e:
                 logger.error(f"Failed to restart {self.workload.service}: {e}")
                 raise
