@@ -70,7 +70,7 @@ class Snap:
     revision: str = "129"
 
 
-SNAP = Snap(channel="6/edge", revision="129")
+SNAP = Snap(channel="6/edge/test-mongodb-6-0-24", revision="130")
 
 T = TypeVar("T", bound=str | int)
 
