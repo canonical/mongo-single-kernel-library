@@ -64,7 +64,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
         try:
             # Start services.
-            self.dependent.on_install()
+            self.dependent.install_workloads()
             self.dependent._configure_workloads()
             if self.dependent.name == CharmKind.MONGOS:
                 if keyfile := self.state.cluster.keyfile:
