@@ -187,7 +187,9 @@ async def test_scale_up_down(ops_test: OpsTest, substrate: Substrate, continuous
     app_name = await get_app_name(ops_test)
     scales = [3, -3, 4, -4, 5, -5]
     for count in scales:
-        await scale_application(ops_test, substrate, app_name, count=count, wait=True)
+        await scale_application(
+            ops_test, substrate, app_name, count=count, wait=True, timeout=DEPLOYMENT_TIMEOUT
+        )
         ip_addresses = [
             await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
             for unit in ops_test.model.applications[app_name].units

@@ -453,6 +453,7 @@ async def scale_application(
     count: int,
     wait: bool = True,
     raise_on_blocked: bool = True,
+    timeout: int = TIMEOUT,
 ) -> None:
     """Scale a given application to the desired unit count.
 
@@ -497,7 +498,7 @@ async def scale_application(
             await ops_test.model.wait_for_idle(
                 apps=[application_name],
                 status="active",
-                timeout=TIMEOUT,
+                timeout=timeout,
                 wait_for_exact_units=desired_count,
                 raise_on_error=False,
                 raise_on_blocked=raise_on_blocked,
