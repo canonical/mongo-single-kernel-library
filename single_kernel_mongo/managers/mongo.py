@@ -96,6 +96,8 @@ class MongoManager(Object, ManagerStatusProtocol):
         Pass direct=True, when checking if a *single replica* is ready.
         Pass direct=False, when checking if the entire replica set is ready
         """
+        if not uri and self.state.is_role(MongoDBRoles.MONGOS):
+            uri = "localhost:27018"
         actual_uri = uri or "localhost"
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready

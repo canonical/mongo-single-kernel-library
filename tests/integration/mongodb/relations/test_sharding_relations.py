@@ -24,8 +24,8 @@ from ...helpers.relations import (
 )
 from ...helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
-    CONFIG_SERVER_BIS_APP_NAME,
     CONFIG_SERVER_REL_NAME,
+    CONFIG_SERVER_TWO_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
 )
@@ -34,7 +34,7 @@ from ...helpers.types import Substrate
 
 SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
 
-RELATION_LIMIT_MESSAGE = 'cannot add relation "shard-one:sharding config-server-bis:config-server": establishing a new relation for shard-one:sharding would exceed its maximum relation limit of 1'
+RELATION_LIMIT_MESSAGE = 'cannot add relation "shard-one:sharding config-server-two:config-server": establishing a new relation for shard-one:sharding would exceed its maximum relation limit of 1'
 
 
 @pytest.mark.abort_on_fail
@@ -61,7 +61,7 @@ async def test_build_and_deploy(
         ops_test,
         mongodb_charm,
         substrate,
-        app_name=CONFIG_SERVER_BIS_APP_NAME,
+        app_name=CONFIG_SERVER_TWO_APP_NAME,
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "config-server"},
@@ -108,7 +108,7 @@ async def test_build_and_deploy(
     await ops_test.model.wait_for_idle(
         apps=[
             CONFIG_SERVER_APP_NAME,
-            CONFIG_SERVER_BIS_APP_NAME,
+            CONFIG_SERVER_TWO_APP_NAME,
             SHARD_ONE_APP_NAME,
             TLS_CERTIFICATES_APP_NAME,
         ],
@@ -142,7 +142,7 @@ async def test_only_one_config_server_relation(ops_test: OpsTest) -> None:
     with pytest.raises(JujuAPIError) as juju_error:
         await ops_test.model.integrate(
             f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
-            f"{CONFIG_SERVER_BIS_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+            f"{CONFIG_SERVER_TWO_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
         )
 
     assert (

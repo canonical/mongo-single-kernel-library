@@ -271,9 +271,17 @@ async def add_continuous_writes_to_shards(
 
 @pytest.fixture
 async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: str, tmp_path: Path):
+    """This fixture builds a mongodb charm that will fail the upgrade.
+
+    It works by updating the workload version and the version of the snap to install.
+    That way, it will fail the `refresh_incompatible` check.
+    """
     literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongodb_fault_charm.charm"
+    # Copy the correct charm to a new destination
     shutil.copy(mongodb_charm, fault_charm)
+
+    # What is the current workload version in the charm
     initial_version_path = mongod_base_path / Path("workload_version")
     workload_version = initial_version_path.read_text().strip()
 
@@ -283,7 +291,10 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
         with charm_zip.open(literals_path) as literals_file:
             file_data = literals_file.read().decode().split("\n")
 
+    # What is the revision N of the snap that we're supposed to install if we're a VM charm
     regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+
+    # Update the read content of the file with a computed value for the snap revision (N - 1)
     for index, line in enumerate(file_data):
         if entry := regex.findall(line):
             current_rev = entry[0]
@@ -292,6 +303,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
             file_data[index] = new_line
             break
 
+    # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
         charm_zip.writestr(literals_path, "\n".join(file_data))
         charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
@@ -301,9 +313,17 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
 
 @pytest.fixture
 async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str, tmp_path: Path):
+    """This fixture builds a mongos charm that will fail the upgrade.
+
+    It works by updating the workload version and the version of the snap to install.
+    That way, it will fail the `refresh_incompatible` check.
+    """
     literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongos_fault_charm.charm"
+    # Copy the correct charm to a new destination
     shutil.copy(mongos_charm, fault_charm)
+
+    # What is the current workload version in the charm
     initial_version_path = mongos_base_path / Path("workload_version")
     workload_version = initial_version_path.read_text().strip()
 
@@ -313,8 +333,10 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
         with charm_zip.open(literals_path) as literals_file:
             file_data = literals_file.read().decode().split("\n")
 
+    # What is the revision N of the snap that we're supposed to install if we're a VM charm
     regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
 
+    # Update the read content of the file with a computed value for the snap revision (N - 1)
     for index, line in enumerate(file_data):
         if entry := regex.findall(line):
             current_rev = entry[0]
@@ -323,6 +345,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
             file_data[index] = new_line
             break
 
+    # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
         charm_zip.writestr(literals_path, "\n".join(file_data))
         charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")

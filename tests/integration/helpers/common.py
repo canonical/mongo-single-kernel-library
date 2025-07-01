@@ -128,6 +128,7 @@ async def deploy_application(
     application_path: str,
     app_name: str,
 ):
+    """Deploys the helpers applications with one unit and waits for idle."""
     application_name = await get_app_name(ops_test, app_name)
     if application_name:
         return
@@ -236,6 +237,7 @@ async def mongodb_uri(
     password: str | None = None,
     hostnames: bool = False,
 ) -> str:
+    """Build the URI for mongodb, to run on a charm unit (not from the host running the test)."""
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
@@ -346,7 +348,8 @@ async def get_password(
     """
     app_name = app_name or await get_app_name(ops_test)
 
-    # can retrieve from any unit running unit so we pick the first
+    # Can retrieve from any unit running unit so we pick the first
+    # Optionally select a unit to get the password from (useful if unit/0 was deleted)
     if unit:
         unit_name = unit.name
         unit_id = get_unit_id(unit.name)
@@ -370,7 +373,9 @@ async def get_password(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
-async def count_primaries(ops_test: OpsTest, substrate, password: str, app_name=None) -> int:
+async def count_primaries(
+    ops_test: OpsTest, substrate: Substrate, password: str, app_name: str | None = None
+) -> int:
     """Counts the number of primaries in a replica set.
 
     Will retry counting when the number of primaries is 0 at most 5 times.
@@ -400,7 +405,17 @@ async def get_direct_mongo_client(
     unit: JujuUnit | None = None,
     username: str | None = None,
     password: str | None = None,
-):
+) -> MongoClient:
+    """Gets a direct mongodb client.
+
+    This is direct as it connects to one host only, by default the leader unit,
+    otherwise the provided unit. It does not connect to a replica set.
+    The reason behind that is that on kubernetes, we would fail to connect to a
+    replica set from the host because of the server selection that relies on
+    the registered hosts in mongodb and not the one provided in the URI. Here,
+    we create the mongo client using the unit IP (not host) so that we can
+    connect to both kubernetes and VM.
+    """
     unit = unit or await find_unit(ops_test, leader=True, app_name=app_name)
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     match username, password:
@@ -573,6 +588,7 @@ async def check_or_scale_app(
 async def remove_units(
     ops_test: OpsTest, substrate: Substrate, app_name: str, units: list[JujuUnit]
 ):
+    """Removes the correct units (number of units for kubernetes."""
     if substrate == "lxd":
         await ops_test.model.applications[app_name].destroy_unit(*(unit.name for unit in units))
     else:
@@ -921,9 +937,10 @@ async def start_continous_writes(
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
 ):
+    """Helper function to run the `start-continuous-write` action on the continuous write app."""
     application_unit = ops_test.model.applications[client_app_name].units[0]
     start_writes_action = await application_unit.run_action(
-        "start-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+        "start-continuous-writes", **{"db-name": db_name, "collection-name": coll_name}
     )
     await start_writes_action.wait()
 
@@ -934,9 +951,13 @@ async def stop_continous_writes(
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
 ) -> int:
+    """Helper function to run the `stop-continuous-write` action on the continuous write app.
+
+    It returns the number of writes.
+    """
     application_unit = ops_test.model.applications[client_app_name].units[0]
     stop_writes_action = await application_unit.run_action(
-        "stop-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+        "stop-continuous-writes", **{"db-name": db_name, "collection-name": coll_name}
     )
     await stop_writes_action.wait()
     return int(stop_writes_action.results["writes"])
@@ -948,9 +969,10 @@ async def clear_continous_writes(
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
 ):
+    """Helper function to run the `clear-continuous-write` action on the continuous write app."""
     application_unit = ops_test.model.applications[client_app_name].units[0]
     clear_writes_action = await application_unit.run_action(
-        "clear-continuous-writes", **{"db-name": db_name, "coll-name": coll_name}
+        "clear-continuous-writes", **{"db-name": db_name, "collection-name": coll_name}
     )
     await clear_writes_action.wait()
 
@@ -973,6 +995,7 @@ async def count_writes(
 
 
 def generate_collection_id() -> str:
+    """Generates a random collection id."""
     new_id = "".join(choices(ascii_lowercase + digits, k=4)).replace("_", "")
     return f"collection_{new_id}"
 
@@ -980,8 +1003,7 @@ def generate_collection_id() -> str:
 async def check_if_test_documents_stored(
     ops_test: OpsTest, app_name: str, substrate: Substrate, uri: str, collection: str
 ) -> None:
-    # decide whether to pass a mongo_uri or replication set to the "run_mongo_op" function
-
+    """Check to see if some documents for the `TEST_DOCUMENT` dict were stored."""
     # serialize the str test documents into json
     o_test_docs = json.loads(TEST_DOCUMENTS)
 
@@ -1022,6 +1044,7 @@ def get_unit_id(unit_name: str) -> int:
 
 
 def get_app_name_from_unit(unit_name: str) -> str:
+    """Gets the app name from a unit name."""
     return unit_name.split("/")[0]
 
 
@@ -1031,6 +1054,7 @@ def get_unit_app(unit_name) -> tuple[int, str]:
 
 
 def get_unit_id_from_host(units: dict[int, str], host: str) -> int:
+    """Gets the unit id from the dictionary mapping unit ids to hosts."""
     for unit_id, _host in units.items():
         if host == _host:
             return unit_id
@@ -1082,7 +1106,8 @@ async def secondary_mongo_uris_with_sync_delay(
     return secondaries
 
 
-async def get_secret_data(ops_test, secret_uri):
+async def get_secret_data(ops_test: OpsTest, secret_uri: str):
+    """Gets the data stored in a secret identified by its secret uri."""
     secret_unique_id = secret_uri.split("/")[-1]
     complete_command = f"show-secret {secret_uri} --reveal --format=json"
     _, stdout, _ = await ops_test.juju(*complete_command.split())
@@ -1090,7 +1115,11 @@ async def get_secret_data(ops_test, secret_uri):
 
 
 async def get_connection_string(
-    ops_test: OpsTest, app_name, relation_name, relation_id=None, relation_alias=None
+    ops_test: OpsTest,
+    app_name: str,
+    relation_name: str,
+    relation_id: str | None = None,
+    relation_alias: str | None = None,
 ) -> str:
     secret_uri = await get_application_relation_data(
         ops_test, app_name, relation_name, "secret-user", relation_id, relation_alias
@@ -1130,17 +1159,21 @@ async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
 
 
 def get_juju_status(model_name: str, app_name: str) -> str:
+    """Gets the juju status as a string."""
     return subprocess.check_output(f"juju status --model {model_name} {app_name}".split()).decode(
         "utf-8"
     )
 
 
-async def get_username_password(
+async def get_relation_username_password(
     ops_test: OpsTest, app_name: str, relation_name: str
 ) -> tuple[str, str]:
+    """Gets both usename and password stored in a relation."""
     secret_uri = await get_application_relation_data(
         ops_test, app_name, relation_name, "secret-user"
     )
+    assert secret_uri, "No secret URI found"
+
     relation_user_data = await get_secret_data(ops_test, secret_uri)
     username = relation_user_data.get("username")
     password = relation_user_data.get("password")

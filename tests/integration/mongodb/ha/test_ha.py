@@ -13,6 +13,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from ...helpers.common import (
+    CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
     DEPLOYMENT_TIMEOUT,
@@ -30,6 +31,7 @@ from ...helpers.common import (
     get_unit_hostnames,
     get_unit_id,
     mongod_ready,
+    stop_continous_writes,
     unit_uri,
 )
 from ...helpers.ha import (
@@ -92,6 +94,7 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("microk8s")
 async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
@@ -99,13 +102,12 @@ async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_wri
     properly uses the storage that was provided. (ie. doesn't just re-sync everything from
     primary, but instead computes a diff between current storage and primary storage.)
     """
-    if substrate == "microk8s":
-        pytest.skip("This only runs on lxd")
     app_name = await get_app_name(ops_test)
     if storage_type(ops_test, app_name) == "rootfs":
         pytest.skip(
             "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
         )
+        return
 
     # removing the only replica can be disastrous
     if len(ops_test.model.applications[app_name].units) < 2:
@@ -142,6 +144,7 @@ async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_wri
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("lxd")
 async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
@@ -149,9 +152,6 @@ async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuou
     properly uses the storage that was provided. (ie. doesn't just re-sync everything from
     primary, but instead computes a diff between current storage and primary storage.)
     """
-    if substrate == "lxd":
-        pytest.skip("This only runs on microk8s")
-
     app_name = await get_app_name(ops_test)
 
     # removing the only replica can be disastrous
@@ -199,6 +199,77 @@ async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuou
     await verify_writes(ops_test, substrate, app_name)
 
 
+@pytest.mark.skip("This is currently unsupported on MongoDB charm.")
+@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.abort_on_fail
+async def test_storage_re_use_different_cluster(
+    ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
+):
+    """Tests that we can reuse storage from a different cluster.
+
+    For that, we completely remove the application while keeping the storages,
+    and then we deploy a new application with storage reuse and check that the
+    storage has been reused.
+    """
+    app_name = await get_app_name(ops_test)
+    if storage_type(ops_test, app_name) == "rootfs":
+        pytest.skip(
+            "reuse of storage can only be used on deployments with persistent storage not on rootfs deployments"
+        )
+        return
+
+    writes_results = await stop_continous_writes(
+        ops_test, client_app_name=CONTINUOUS_WRITE_APPLICATION
+    )
+    unit_ids = [unit.name for unit in ops_test.model.applications[app_name].units]
+    storage_ids = {}
+
+    remaining_units = len(unit_ids)
+    for unit_id in unit_ids:
+        storage_ids[unit_id] = storage_id(ops_test, unit_id)
+        await ops_test.model.applications[app_name].destroy_unit(unit_id)
+        # Give some time to remove the unit. We don't use asyncio.sleep here to
+        # leave time for each unit to be removed before removing the next one.
+        # time.sleep(60)
+        remaining_units -= 1
+        await ops_test.model.wait_for_idle(
+            apps=[app_name],
+            status="active",
+            timeout=1000,
+            idle_period=20,
+            wait_for_exact_units=remaining_units,
+        )
+
+    # Wait until all apps are cleaned up
+    await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, wait_for_exact_units=0)
+
+    for unit_id in unit_ids:
+        n_units = len(ops_test.model.applications[app_name].units)
+        await ops_test.model.applications[app_name].add_unit(
+            count=1, attach_storage=[tag.storage(storage_ids[unit_id])]
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[app_name],
+            status="active",
+            timeout=1000,
+            idle_period=20,
+            wait_for_exact_units=n_units + 1,
+        )
+
+    await ops_test.model.wait_for_idle(
+        apps=[app_name],
+        status="active",
+        timeout=1000,
+        idle_period=20,
+        wait_for_exact_units=len(unit_ids),
+    )
+
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+
+    actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=leader_unit)
+    assert writes_results["number"] == actual_writes
+
+
 async def test_scale_up_capabilities(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
@@ -212,19 +283,20 @@ async def test_scale_up_capabilities(
     await scale_application(ops_test, substrate, app_name, 2)
 
     # grab unit hosts
-    hostnames = await get_unit_hostnames(ops_test, substrate, app_name)
+    hosts = await get_unit_hostnames(ops_test, substrate, app_name)
 
     # connect to replica set uri and get replica set members
     member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
 
     # verify that the replica set members have the correct units
-    assert set(member_hosts) == set(hostnames), "all members not running under the same replset"
+    assert set(member_hosts) == set(hosts), "all members not running under the same replset"
 
     # verify that the no writes were skipped
     await verify_writes(ops_test, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("microk8s")
 async def test_scale_down_capabilities_lxd(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
@@ -241,10 +313,6 @@ async def test_scale_down_capabilities_lxd(
     4. race conditions due to removing multiple units is handled.
     5. deleting a non-leader unit is properly handled.
     """
-    # Those tests are so different that we run per substrate
-    if substrate == "microk8s":
-        pytest.skip("This runs for LXD charms only.")
-
     deleted_unit_ips = []
     app_name = await get_app_name(ops_test)
     units_to_remove = []
@@ -308,13 +376,11 @@ async def test_scale_down_capabilities_lxd(
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("lxd")
 async def test_scale_down_capabilities_microk8s(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
-    if substrate == "lxd":
-        pytest.skip("This runs only on microk8s.")
-
     app_name = await get_app_name(ops_test)
 
     minority_count = int(len(ops_test.model.applications[app_name].units) // 2)

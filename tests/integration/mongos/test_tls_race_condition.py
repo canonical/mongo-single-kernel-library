@@ -7,8 +7,8 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import MONGOS_APP_NAME, TIMEOUT
 from ..helpers.mongos import (
+    assert_mongos_tls_enabled,
     build_cluster,
-    check_mongos_tls_enabled,
     deploy_cluster_components,
     integrate_cluster_with_tls,
 )
@@ -68,4 +68,4 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         timeout=TIMEOUT,
     )
 
-    await check_mongos_tls_enabled(ops_test, substrate)
+    await assert_mongos_tls_enabled(ops_test, substrate)

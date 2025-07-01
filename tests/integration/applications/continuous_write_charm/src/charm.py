@@ -103,13 +103,15 @@ class ContinuousWritesApplication(CharmBase):
     # Helpers
     # ==============
 
-    def _start_continuous_writes(self, starting_number: int, db_name: str, coll_name: str) -> None:
+    def _start_continuous_writes(
+        self, starting_number: int, db_name: str, collection_name: str
+    ) -> None:
         """Start continuous writes to the MongoDB cluster."""
         if not self._database_config:
             logger.warning("No database configured.")
             return
 
-        self._stop_continuous_writes(db_name, coll_name)
+        self._stop_continuous_writes(db_name, collection_name)
 
         uris: str = self._database_config.get("uris", "")
         # Run continuous writes in the background
@@ -120,53 +122,55 @@ class ContinuousWritesApplication(CharmBase):
                 uris,
                 str(starting_number),
                 db_name,
-                coll_name,
+                collection_name,
             ]
         )
 
         # Store the continuous writes process id in stored state to be able to stop it later
-        self.app_peer_data[self.proc_id_key(db_name, coll_name)] = str(proc.pid)
+        self.app_peer_data[self.proc_id_key(db_name, collection_name)] = str(proc.pid)
 
-    def _stop_continuous_writes(self, db_name: str, coll_name: str) -> int | None:
+    def _stop_continuous_writes(self, db_name: str, collection_name: str) -> int | None:
         """Stop continuous writes to the MongoDB cluster and return the last written value."""
         if not self._database_config:
             logger.warning("No database configured.")
             return None
 
-        if not self.app_peer_data.get(self.proc_id_key(db_name, coll_name)):
+        if not self.app_peer_data.get(self.proc_id_key(db_name, collection_name)):
             return None
 
         # Send a SIGTERM to the process and wait for the process to exit
         try:
-            os.kill(int(self.app_peer_data[self.proc_id_key(db_name, coll_name)]), signal.SIGTERM)
+            os.kill(
+                int(self.app_peer_data[self.proc_id_key(db_name, collection_name)]), signal.SIGTERM
+            )
         except ProcessLookupError:
             logger.info(
-                f"Process {self.proc_id_key(db_name, coll_name)} was killed already (or never existed)"
+                f"Process {self.proc_id_key(db_name, collection_name)} was killed already (or never existed)"
             )
 
-        del self.app_peer_data[self.proc_id_key(db_name, coll_name)]
+        del self.app_peer_data[self.proc_id_key(db_name, collection_name)]
 
         # read the last written_value
         try:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
                 with attempt:
-                    with open(self.last_written_filename(db_name, coll_name)) as fd:
+                    with open(self.last_written_filename(db_name, collection_name)) as fd:
                         last_written_value = int(fd.read())
         except RetryError as e:
             logger.exception("Unable to query the database", exc_info=e)
             return -1
 
-        os.remove(self.last_written_filename(db_name, coll_name))
+        os.remove(self.last_written_filename(db_name, collection_name))
         logger.info(f"Stopped writing at {last_written_value=}")
         return last_written_value
 
-    def proc_id_key(self, db_name: str, coll_name: str) -> str:
+    def proc_id_key(self, db_name: str, collection_name: str) -> str:
         """Returns a process id key for the continuous writes process to a given db and coll."""
-        return f"{PROC_PID_KEY}-{db_name}-{coll_name}"
+        return f"{PROC_PID_KEY}-{db_name}-{collection_name}"
 
-    def last_written_filename(self, db_name: str, coll_name: str) -> str:
+    def last_written_filename(self, db_name: str, collection_name: str) -> str:
         """Returns a process id key for the continuous writes process to a given db and coll."""
-        return f"{LAST_WRITTEN_FILE}-{db_name}-{coll_name}"
+        return f"{LAST_WRITTEN_FILE}-{db_name}-{collection_name}"
 
     # ==============
     # Handlers
@@ -183,15 +187,15 @@ class ContinuousWritesApplication(CharmBase):
             return
 
         db_name = event.params.get("db-name") or DATABASE_NAME
-        coll_name = event.params.get("coll-name") or COLLECTION_NAME
+        collection_name = event.params.get("collection-name") or COLLECTION_NAME
 
-        self._stop_continuous_writes(db_name, coll_name)
+        self._stop_continuous_writes(db_name, collection_name)
 
         client = MongoClient(self._database_config["uris"])
         db = client[db_name]
 
         # collection for continuous writes
-        test_collection = db[coll_name]
+        test_collection = db[collection_name]
         test_collection.drop()
 
         # collection for replication tests
@@ -206,8 +210,8 @@ class ContinuousWritesApplication(CharmBase):
             return
 
         db_name = event.params.get("db-name") or DATABASE_NAME
-        coll_name = event.params.get("coll-name") or COLLECTION_NAME
-        self._start_continuous_writes(1, db_name, coll_name)
+        collection_name = event.params.get("collection-name") or COLLECTION_NAME
+        self._start_continuous_writes(1, db_name, collection_name)
 
     def _on_stop_continuous_writes_action(self, event: ActionEvent) -> None:
         """Handle the stop continuous writes action event."""
@@ -215,8 +219,8 @@ class ContinuousWritesApplication(CharmBase):
             return event.set_results({"writes": -1})
 
         db_name = event.params.get("db-name") or DATABASE_NAME
-        coll_name = event.params.get("coll-name") or COLLECTION_NAME
-        writes = self._stop_continuous_writes(db_name, coll_name)
+        collection_name = event.params.get("collection-name") or COLLECTION_NAME
+        writes = self._stop_continuous_writes(db_name, collection_name)
         event.set_results({"writes": writes or -1})
         return None
 

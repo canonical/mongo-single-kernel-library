@@ -40,6 +40,7 @@ async def test_build_and_deploy(
 async def test_upgrade(
     ops_test: OpsTest, substrate: Substrate, mongos_charm: str, mongos_resource: dict
 ):
+    """Refreshes the charm and wait for it to be active again."""
     await refresh_charm(ops_test, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_APP_NAME], status="active", timeout=TIMEOUT, idle_period=120

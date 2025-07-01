@@ -363,7 +363,7 @@ def storage_type(ops_test: OpsTest, app: str) -> str | None:
     return None
 
 
-def storage_id(ops_test, unit_name):
+def storage_id(ops_test: OpsTest, unit_name: str) -> str | None:
     """Retrieves storage id associated with provided unit."""
     model_name = ops_test.model.info.name
 
@@ -710,45 +710,42 @@ async def update_restart_delay(
 
     When the DB service fails it will now wait for `delay` number of seconds.
     """
-    if substrate == "lxd":
-        tmp_service_path = tmp_path / "tmp.service"
-        # load the service file from the unit and update it with the new delay
-        await unit.scp_from(source=MONGOD_SERVICE_DEFAULT_PATH, destination=tmp_service_path)
-        with open(tmp_service_path) as mongodb_service_file:
-            mongodb_service = mongodb_service_file.readlines()
-
-        for index, line in enumerate(mongodb_service):
-            if "RestartSec" in line:
-                mongodb_service[index] = f"RestartSec={delay}s\n"
-
-        with open(tmp_service_path, "w") as service_file:
-            service_file.writelines(mongodb_service)
-
-        # upload the changed file back to the unit, we cannot scp this file
-        # directly to MONGOD_SERVICE_DEFAULT_PATH since this directory has
-        # strict permissions, instead we scp it elsewhere and then move it to
-        # MONGOD_SERVICE_DEFAULT_PATH.
-        await unit.scp_to(source=tmp_service_path, destination="mongod.service")
-        mv_cmd = (
-            f"exec --unit {unit.name} mv /home/ubuntu/mongod.service {MONGOD_SERVICE_DEFAULT_PATH}"
-        )
-        return_code, _, _ = await ops_test.juju(*mv_cmd.split())
-        if return_code != 0:
-            raise ProcessError(f"Command: {mv_cmd} failed on unit: {unit.name}.")
-
-        # reload the daemon for systemd otherwise changes are not saved
-        reload_cmd = f"exec --unit {unit.name} systemctl daemon-reload"
-        return_code, _, _ = await ops_test.juju(*reload_cmd.split())
-        if return_code != 0:
-            raise ProcessError(f"Command: {reload_cmd} failed on unit: {unit.name}.")
-
-    else:
+    if substrate == "microk8s":
         modify_pebble_restart_delay(
             ops_test,
             unit.name,
             "tests/integration/helpers/manifests/extend_pebble_restart_delay.yml",
             ensure_replan=True,
         )
+        return
+    tmp_service_path = tmp_path / "tmp.service"
+    # load the service file from the unit and update it with the new delay
+    await unit.scp_from(source=MONGOD_SERVICE_DEFAULT_PATH, destination=tmp_service_path)
+    with open(tmp_service_path) as mongodb_service_file:
+        mongodb_service = mongodb_service_file.readlines()
+
+    for index, line in enumerate(mongodb_service):
+        if "RestartSec" in line:
+            mongodb_service[index] = f"RestartSec={delay}s\n"
+
+    with open(tmp_service_path, "w") as service_file:
+        service_file.writelines(mongodb_service)
+
+    # upload the changed file back to the unit, we cannot scp this file
+    # directly to MONGOD_SERVICE_DEFAULT_PATH since this directory has
+    # strict permissions, instead we scp it elsewhere and then move it to
+    # MONGOD_SERVICE_DEFAULT_PATH.
+    await unit.scp_to(source=tmp_service_path, destination="mongod.service")
+    mv_cmd = f"exec --unit {unit.name} mv /home/ubuntu/mongod.service {MONGOD_SERVICE_DEFAULT_PATH}"
+    return_code, _, _ = await ops_test.juju(*mv_cmd.split())
+    if return_code != 0:
+        raise ProcessError(f"Command: {mv_cmd} failed on unit: {unit.name}.")
+
+    # reload the daemon for systemd otherwise changes are not saved
+    reload_cmd = f"exec --unit {unit.name} systemctl daemon-reload"
+    return_code, _, _ = await ops_test.juju(*reload_cmd.split())
+    if return_code != 0:
+        raise ProcessError(f"Command: {reload_cmd} failed on unit: {unit.name}.")
 
 
 def modify_pebble_restart_delay(
@@ -908,20 +905,20 @@ async def verify_replica_set_configuration(
     ops_test: OpsTest, substrate: Substrate, app_name: str
 ) -> None:
     """Verifies presence of primary, replica set members, and number of primaries."""
-    ip_addresses = [
+    hosts = [
         await get_mongodb_hostname_for_unit(ops_test, substrate, unit.name)
         for unit in ops_test.model.applications[app_name].units
     ]
 
     # verify presence of primary
     new_primary = await replica_set_primary(
-        ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
+        ops_test, substrate, app_name=app_name, replica_set_hosts=hosts
     )
     assert new_primary.name, "primary not elected."
 
     # verify all units are running under the same replset
     member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
-    assert set(member_ips) == set(ip_addresses), "all members not running under the same replset"
+    assert set(member_ips) == set(hosts), "all members not running under the same replset"
 
     password = await get_password(ops_test, app_name=app_name)
 

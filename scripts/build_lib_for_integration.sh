@@ -2,6 +2,8 @@
 
 ## This builds the whl and then copies it to all 4 test charms and updates the requirements file.
 
+set -e
+
 git_hash=$(git describe --always --dirty)
 
 LIB_PATH="./single_kernel_mongo"

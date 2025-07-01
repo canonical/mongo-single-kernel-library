@@ -13,7 +13,7 @@ from ...helpers.common import (
     TIMEOUT,
     deploy_charm,
     get_direct_mongo_client,
-    get_username_password,
+    get_relation_username_password,
 )
 from ...helpers.sharding import (
     CLUSTER_REL_NAME,
@@ -127,7 +127,7 @@ async def test_connect_to_cluster_creates_user(ops_test: OpsTest, substrate: Sub
         num_users_after_integration > num_users
     ), "Cluster did not create new users after integration."
 
-    (username, password) = await get_username_password(
+    (username, password) = await get_relation_username_password(
         ops_test, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
     )
     mongos_user_client = await get_direct_mongo_client(
@@ -148,7 +148,7 @@ async def test_disconnect_from_cluster_removes_user(
 ) -> None:
     """Verifies that when the cluster is formed a the user is removed."""
     # generate URI for new mongos user
-    (username, password) = await get_username_password(
+    (username, password) = await get_relation_username_password(
         ops_test, app_name=MONGOS_APP_NAME, relation_name=CLUSTER_REL_NAME
     )
     mongos_user_client = await get_direct_mongo_client(

@@ -12,11 +12,13 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
 from ..helpers.common import (
     MONGOD_PORT,
+    MONGOS_APP_NAME,
     MONGOS_PORT,
     ProcessError,
     get_address_of_unit,
     get_application_relation_data,
     get_password,
+    get_relation_username_password,
     get_secret_content,
     get_secret_id,
     mongosh,
@@ -56,23 +58,36 @@ def internal_cert_path(substrate: Substrate):
 
 
 async def mongo_tls_command(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, mongos=False
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    mongos: bool = False,
+    uri: str | None = None,
 ) -> str:
     """Generates a command which verifies TLS status."""
     port = MONGOD_PORT if not mongos else MONGOS_PORT
-    replica_set_hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-    replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
-    password = await get_password(ops_test, app_name=app_name)
-    hosts = ",".join(replica_set_hosts)
-    extra_args = f"?replicaSet={app_name}" if not mongos else ""
-    replica_set_uri = f"mongodb://operator:{password}@{hosts}/admin{extra_args}"
+    if not uri:
+        replica_set_hosts = [
+            await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+            for unit in ops_test.model.applications[app_name].units
+        ]
+        replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
+        if app_name == MONGOS_APP_NAME:
+            username, password = await get_relation_username_password(ops_test, app_name, "cluster")
+        else:
+            username = "operator"
+            password = await get_password(ops_test, app_name=app_name)
+        hosts = ",".join(replica_set_hosts)
+        extra_args = f"?replicaSet={app_name}" if not mongos else ""
+        uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
 
-    status_comand = "rs.status()" if not mongos else "sh.status()"
+    if app_name == MONGOS_APP_NAME:
+        status_command = "db.getUsers()"
+    else:
+        status_command = "rs.status()" if not mongos else "sh.status()"
+
     return (
-        f'{mongosh(substrate)} "{replica_set_uri}"  --eval "{status_comand}"'
+        f'{mongosh(substrate)} "{uri}"  --eval "{status_command}"'
         f" --tls --tlsCAFile {external_cert_path(substrate)}"
         f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
     )
@@ -86,6 +101,7 @@ async def check_tls(
     app_name: str,
     mongos: bool = False,
     container: str = "mongod",
+    uri: str | None = None,
 ) -> bool:
     """Returns whether TLS is enabled on the specific MongoDB instance.
 
@@ -111,7 +127,11 @@ async def check_tls(
                     else ["ssh", unit.name, "sudo"]
                 )
                 mongod_tls_check = await mongo_tls_command(
-                    ops_test, substrate=substrate, app_name=app_name, mongos=mongos
+                    ops_test,
+                    substrate=substrate,
+                    app_name=app_name,
+                    mongos=mongos,
+                    uri=uri,
                 )
                 check_tls_cmd = ssh_command + [mongod_tls_check]
                 return_code, stdout, stderr = await ops_test.juju(*check_tls_cmd)

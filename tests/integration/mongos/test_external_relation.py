@@ -69,6 +69,9 @@ async def test_build_and_deploy(
         await ops_test.model.applications[MONGOS_APP_NAME].set_config(
             {"expose-external": "nodeport"}
         )
+        await ops_test.model.wait_for_idle(
+            apps=[MONGOS_APP_NAME], idle_period=10, raise_on_blocked=False
+        )
 
 
 @pytest.mark.abort_on_fail

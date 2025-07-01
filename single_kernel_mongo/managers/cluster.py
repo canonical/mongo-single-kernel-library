@@ -392,7 +392,9 @@ class ClusterRequirer(Object):
             return
 
         if not self.state.has_credentials():
-            logger.info("No credentials received, not removing users")
+            # This happens in case of invalid integration, for example if it
+            # was integrated with a shard instead of a config-server
+            logger.info("No credentials found, not cleaning users.")
             return
 
         # We are a Kubernetes Mongos Charm so we are in charge of our client

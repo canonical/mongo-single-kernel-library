@@ -73,6 +73,7 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
 
 @pytest.mark.abort_on_fail
 async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Integrate the cluster and checks that mongos starts."""
     # prepare sharded cluster
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
@@ -109,6 +110,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Su
 
 @pytest.mark.abort_on_fail
 async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Tests that mongos has user by running a check with authentication."""
     # prepare sharded cluster
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
     mongos_running = await check_mongos(
@@ -119,6 +121,7 @@ async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Checks that mongos supports scale up and down of config server."""
     # completely change the hosts that mongos was connected to
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].add_units(count=1)
     await ops_test.model.wait_for_idle(
@@ -146,6 +149,7 @@ async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate)
 
 @pytest.mark.abort_on_fail
 async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Check that we can create user with extra roles, and that it is accessible."""
     cmd = f"db.createUser({{user: '{TEST_USER_NAME}', pwd: '{TEST_USER_PWD}', roles: [{{'role': 'readWrite', 'db': '{TEST_DB_NAME}'}}]}})"
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
     uri = await generate_mongos_uri(

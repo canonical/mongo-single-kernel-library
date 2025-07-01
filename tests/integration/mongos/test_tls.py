@@ -11,10 +11,12 @@ from ..helpers.common import (
     wait_for_mongodb_units_blocked,
 )
 from ..helpers.mongos import (
+    assert_mongos_tls_disabled,
+    assert_mongos_tls_enabled,
     build_cluster,
-    check_mongos_tls_disabled,
-    check_mongos_tls_enabled,
     deploy_cluster_components,
+    get_k8s_public_ip,
+    get_sans_ips,
     integrate_cluster_with_tls,
     rotate_and_verify_certs,
     toggle_tls_mongos,
@@ -47,7 +49,7 @@ async def test_build_and_deploy(
         mongos_resource,
         mongos_client_application_path,
     )
-    await build_cluster(ops_test, substrate, integrate_with_mongos=True)
+    await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
@@ -81,7 +83,45 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
 
     await integrate_cluster_with_tls(ops_test)
 
-    await check_mongos_tls_enabled(ops_test, substrate)
+    await assert_mongos_tls_enabled(ops_test, substrate)
+
+
+@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.abort_on_fail
+async def test_mongos_tls_nodeport(ops_test: OpsTest, substrate: Substrate):
+    """Tests that TLS is stable on nodeport enablement/removal."""
+    # test that charm can enable nodeport without breaking mongos or accidentally disabling TLS
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "nodeport"})
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME],
+        idle_period=60,
+        status="active",
+        timeout=TIMEOUT,
+    )
+    for internal in [True, False]:
+        await assert_mongos_tls_enabled(ops_test, substrate, internal=internal)
+
+    # check for expected IP addresses in the pem file
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        assert get_k8s_public_ip() in await get_sans_ips(ops_test, unit, internal=True)
+        assert get_k8s_public_ip() in await get_sans_ips(ops_test, unit, internal=False)
+
+    # test that charm can disable nodeport without breaking mongos or accidentally disabling TLS
+    await ops_test.model.applications[MONGOS_APP_NAME].set_config({"expose-external": "none"})
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME],
+        idle_period=60,
+        status="active",
+        timeout=TIMEOUT,
+    )
+
+    await assert_mongos_tls_enabled(ops_test, substrate, internal=True)
+
+    # check for no public k8s IP address in the pem file
+    for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        assert get_k8s_public_ip() not in await get_sans_ips(ops_test, unit, internal=True)
+        assert get_k8s_public_ip() not in await get_sans_ips(ops_test, unit, internal=False)
 
 
 @pytest.mark.abort_on_fail
@@ -93,7 +133,7 @@ async def test_mongos_rotate_certs(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can disable TLS."""
     await toggle_tls_mongos(ops_test, enable=False)
-    await check_mongos_tls_disabled(ops_test, substrate)
+    await assert_mongos_tls_disabled(ops_test, substrate)
 
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_APP_NAME],
@@ -116,7 +156,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_tls_reenabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test that mongos can enable TLS after being integrated to cluster ."""
     await toggle_tls_mongos(ops_test, enable=True)
-    await check_mongos_tls_enabled(ops_test, substrate)
+    await assert_mongos_tls_enabled(ops_test, substrate)
 
 
 @pytest.mark.abort_on_fail

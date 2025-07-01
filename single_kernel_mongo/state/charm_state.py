@@ -37,6 +37,7 @@ from single_kernel_mongo.core.structured_config import (
     MongoDBRoles,
 )
 from single_kernel_mongo.core.workload import MongoPaths
+from single_kernel_mongo.exceptions import MissingCredentialsError
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
     DatabaseRequirerData,
@@ -732,12 +733,12 @@ class CharmState(Object, StatusesStateProtocol):
 
     # BEGIN: Configuration accessors
 
-    def has_credentials(self):
+    def has_credentials(self) -> bool:
         """Checks if we have received credentials or not."""
         try:
             self.mongo_config
             return True
-        except Exception:
+        except MissingCredentialsError:
             return False
 
     def mongodb_config_for_user(
@@ -836,7 +837,7 @@ class CharmState(Object, StatusesStateProtocol):
         ):
             port = None
         if not username or not password:
-            raise Exception("Missing credentials.")
+            raise MissingCredentialsError("Missing credentials.")
 
         return MongoConfiguration(
             database=database,

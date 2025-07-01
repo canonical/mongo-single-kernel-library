@@ -137,6 +137,7 @@ async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs) -> None:
+    """Tests that we can create a backup, and that it is listed in the backups."""
     db_app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
     await set_credentials(ops_test, cloud_configs, cloud="AWS")
