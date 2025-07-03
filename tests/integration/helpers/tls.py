@@ -18,7 +18,6 @@ from ..helpers.common import (
     get_address_of_unit,
     get_application_relation_data,
     get_password,
-    get_relation_username_password,
     get_secret_content,
     get_secret_id,
     mongosh,
@@ -66,17 +65,15 @@ async def mongo_tls_command(
 ) -> str:
     """Generates a command which verifies TLS status."""
     port = MONGOD_PORT if not mongos else MONGOS_PORT
+
     if not uri:
         replica_set_hosts = [
             await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
             for unit in ops_test.model.applications[app_name].units
         ]
         replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
-        if app_name == MONGOS_APP_NAME:
-            username, password = await get_relation_username_password(ops_test, app_name, "cluster")
-        else:
-            username = "operator"
-            password = await get_password(ops_test, app_name=app_name)
+        username = "operator"
+        password = await get_password(ops_test, app_name=app_name)
         hosts = ",".join(replica_set_hosts)
         extra_args = f"?replicaSet={app_name}" if not mongos else ""
         uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"

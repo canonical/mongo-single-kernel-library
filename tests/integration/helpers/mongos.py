@@ -298,7 +298,17 @@ async def get_external_uri(ops_test: OpsTest, unit: JujuUnit) -> str:
 async def assert_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate, internal: bool = True):
     # check mongos is running with TLS enabled
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        uri = await get_external_uri(ops_test, unit) if not internal else None
+        uri = (
+            await get_external_uri(ops_test, unit)
+            if not internal
+            else await generate_mongos_uri(
+                ops_test,
+                substrate,
+                auth=True,
+                app_name=MONGOS_CLIENT_APPLICATION,
+                external=not internal,
+            )
+        )
         assert await check_tls(
             ops_test,
             substrate,
@@ -311,11 +321,30 @@ async def assert_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate, int
         ), f"TLS not enabled on {unit.name}"
 
 
-async def assert_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
+async def assert_mongos_tls_disabled(
+    ops_test: OpsTest, substrate: Substrate, internal: bool = True
+) -> None:
     # check mongos is running with TLS enabled
     for unit in ops_test.model.applications[MONGOS_APP_NAME].units:
+        uri = (
+            await get_external_uri(ops_test, unit)
+            if not internal
+            else await generate_mongos_uri(
+                ops_test,
+                substrate,
+                auth=True,
+                app_name=MONGOS_CLIENT_APPLICATION,
+                external=not internal,
+            )
+        )
         assert await check_tls(
-            ops_test, substrate, unit, app_name=MONGOS_APP_NAME, enabled=False, container="mongos"
+            ops_test,
+            substrate,
+            unit,
+            app_name=MONGOS_APP_NAME,
+            enabled=False,
+            container="mongos",
+            uri=uri,
         ), f"TLS still enabled on {unit.name}"
 
 
