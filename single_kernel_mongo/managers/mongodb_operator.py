@@ -701,10 +701,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         secret_id = self.mongo_manager.set_user_password(user, new_password)
-        if user == BackupUser and self.workload.active():
+        if user == BackupUser:
             # Update and restart PBM Agent.
             self.backup_manager.configure_and_restart()
-        if user == MonitorUser and self.workload.active():
+        if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
         if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
