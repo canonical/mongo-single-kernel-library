@@ -177,20 +177,24 @@ class LogRotateConfigManager(CommonConfigManager):
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [[]]
+        return [[self.state.logrotate_config.uri]]
 
     def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
-        self.workload.build_template()
-        if self.substrate == Substrates.VM:
-            self.workload.setup_cron(
-                [
-                    f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
-                    f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
-                ]
-            )
-        else:
-            self.workload.start()
+        if not self.state.db_initialised:
+            return
+        if self.get_environment() != self.state.logrotate_config.uri:
+            self.set_environment()
+            self.workload.build_template()
+            if self.substrate == Substrates.VM:
+                self.workload.setup_cron(
+                    [
+                        f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                        f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                    ]
+                )
+            else:
+                self.workload.restart()
 
 
 class MongoDBExporterConfigManager(CommonConfigManager):

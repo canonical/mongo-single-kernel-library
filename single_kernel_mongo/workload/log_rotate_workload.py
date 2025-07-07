@@ -4,6 +4,8 @@
 
 """Logrotate workload definition."""
 
+from pathlib import Path
+
 import jinja2
 from ops import Container
 from ops.pebble import Layer
@@ -12,7 +14,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
-from single_kernel_mongo.utils.helpers import get_logrotate_pid_command
+from single_kernel_mongo.utils.helpers import get_logrotate_uri
 
 
 class LogRotateWorkload(WorkloadBase):
@@ -21,8 +23,10 @@ class LogRotateWorkload(WorkloadBase):
     service = "logrotate"
     layer_name = "log_rotate"
     bin_cmd = "logrotate"
-    env_var = ""
-    snap_param = ""
+    env_var = "LOGROTATE_URI"
+    snap_param = "logrotate-uri"
+
+    logrotate_uri_path = Path("/etc/mongod/.logrotate_uri")
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
@@ -38,9 +42,8 @@ class LogRotateWorkload(WorkloadBase):
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
-            pid_command=get_logrotate_pid_command(
-                Substrates(self.substrate), log_dir=self.paths.logs_path
-            ),
+            get_uri=get_logrotate_uri(Substrates(self.substrate), self.logrotate_uri_path),
+            shell=self.paths.shell_path,
         )
 
         self.write(path=LogRotateConfig.rendered_template, content=rendered_template)

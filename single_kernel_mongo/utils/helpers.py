@@ -8,6 +8,7 @@ import base64
 import re
 from functools import partial
 from logging import getLogger
+from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -43,6 +44,13 @@ def get_logrotate_pid_command(substrate: Substrates, log_dir: str) -> str:
     if substrate == Substrates.K8S:
         return f'pgrep -f "mongod.*--logpath={log_dir}/mongodb.log"'
     return "systemctl show -p MainPID --value snap.charmed-mongodb.mongod.service"
+
+
+def get_logrotate_uri(substrate: Substrates, logrotate_path: Path) -> str:
+    """How to get the logrotate URI ?"""
+    if substrate == Substrates.K8S:
+        return f"$(cat {logrotate_path})"
+    return "$(snap get charmed-mongodb logrotate-uri)"
 
 
 def hostname_from_hostport(host: str) -> str:

@@ -33,6 +33,7 @@ from single_kernel_mongo.exceptions import (
     UnhealthyUpgradeError,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
+from single_kernel_mongo.utils.mongodb_users import LogRotateUser
 
 T = TypeVar("T", bound=OperatorProtocol)
 
@@ -75,6 +76,8 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 self.state.unit_upgrade_peer_data.current_revision = (
                     self.dependent.cross_app_version_checker.version  # type: ignore
                 )
+                # If the user was not existing yet, create it
+                self.dependent.mongo_manager.initialise_user(LogRotateUser)
         except ContainerNotReadyError:
             self.state.statuses.add(
                 UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
@@ -97,6 +100,9 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.state.unit_upgrade_peer_data.current_revision = (
                 self.dependent.cross_app_version_checker.version  # type: ignore
             )
+        # If the user was not existing yet, create it
+        self.dependent.mongo_manager.initialise_user(LogRotateUser)
+        self.dependent.logrotate_config_manager.configure_and_restart()
         if self.charm.unit.is_leader():
             if not self.state.upgrade_in_progress:
                 logger.info("Charm refreshed. MongoDB version unchanged")

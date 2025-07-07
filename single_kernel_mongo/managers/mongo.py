@@ -50,6 +50,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReady
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
     BackupUser,
+    LogRotateUser,
     MongoDBUser,
     MonitorUser,
     OperatorUser,
@@ -131,6 +132,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         self.initialise_operator_user()
         self.initialise_user(MonitorUser)
         self.initialise_user(BackupUser)
+        self.initialise_user(LogRotateUser)
 
     def initialise_operator_user(self):
         """Creates initial admin user for MongoDB.
