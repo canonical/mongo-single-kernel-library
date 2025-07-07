@@ -19,9 +19,9 @@ from ..helpers.mongos import (
     TEST_DB_NAME,
     TEST_USER_NAME,
     TEST_USER_PWD,
-    check_mongos,
     deploy_cluster_components,
     generate_mongos_uri,
+    is_mongos_running,
 )
 from ..helpers.sharding import (
     CLUSTER_REL_NAME,
@@ -102,7 +102,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Su
     )
 
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_APP_NAME, auth=False
     )
     assert mongos_running, "Mongos is not currently running."
@@ -113,7 +113,7 @@ async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos has user by running a check with authentication."""
     # prepare sharded cluster
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
     )
     assert mongos_running, "Mongos is not currently running."
@@ -141,7 +141,7 @@ async def test_mongos_updates_config_db(ops_test: OpsTest, substrate: Substrate)
 
     # prepare sharded cluster
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
     )
     assert mongos_running, "Mongos is not currently running."
@@ -169,7 +169,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
         test_user_uri = (
             f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{hostname}:{MONGOS_PORT}/{TEST_DB_NAME}"
         )
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test,
         substrate,
         mongos_unit,
@@ -195,7 +195,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
     )
 
     for mongos_unit in ops_test.model.applications[MONGOS_APP_NAME].units:
-        mongos_running = await check_mongos(
+        mongos_running = await is_mongos_running(
             ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
         )
         assert mongos_running, "Mongos is not currently running."
@@ -216,7 +216,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
 
     # prepare sharded cluster
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
     )
     assert mongos_running, "Mongos is not currently running."

@@ -472,14 +472,15 @@ async def test_unique_cluster_dbs(
     await insert_release_to_cluster(ops_test, substrate, app_name=app_name)
 
     # deploy new cluster
-    await deploy_charm(
-        ops_test=ops_test,
-        charm=mongodb_charm,
-        substrate=substrate,
-        mongod_resource=mongod_resource,
-        app_name=ANOTHER_DATABASE_APP_NAME,
-        num_units=1,
-    )
+    if ANOTHER_DATABASE_APP_NAME not in ops_test.model.applications:
+        await deploy_charm(
+            ops_test=ops_test,
+            charm=mongodb_charm,
+            substrate=substrate,
+            mongod_resource=mongod_resource,
+            app_name=ANOTHER_DATABASE_APP_NAME,
+            num_units=1,
+        )
 
     await ops_test.model.wait_for_idle(
         apps=[ANOTHER_DATABASE_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT

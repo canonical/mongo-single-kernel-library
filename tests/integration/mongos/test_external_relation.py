@@ -11,7 +11,11 @@ from tests.integration.helpers.common import (
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from tests.integration.helpers.mongos import check_mongos, generate_mongos_uri, get_k8s_public_ip
+from tests.integration.helpers.mongos import (
+    generate_mongos_uri,
+    get_k8s_public_ip,
+    is_mongos_running,
+)
 from tests.integration.helpers.sharding import (
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
@@ -116,7 +120,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Su
     )
 
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_APP_NAME, auth=False, external=True
     )
     assert mongos_running, "Mongos is not currently running."
@@ -126,7 +130,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Su
 async def test_mongos_has_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify mongos has user and is able to connect externally via IP-address."""
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test,
         substrate,
         mongos_unit,
@@ -162,7 +166,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
             mongos_ip = get_k8s_public_ip()
         assert mongos_ip in secret_uri, f"host for {mongos_unit} is not present in URI"
 
-        mongos_running = await check_mongos(
+        mongos_running = await is_mongos_running(
             ops_test,
             substrate,
             mongos_unit,

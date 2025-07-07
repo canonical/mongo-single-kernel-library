@@ -410,6 +410,8 @@ class MongoConnection:
                 self.client.admin.command("addShard", shard_url)
                 return
             except OperationFailure as err:
+                # This means that the shard host is not yet in the shard replica set.
+                # Other errors should be raised as they indicate something else.
                 if err.code == MongoErrorCodes.OPERATION_FAILED:
                     continue
                 raise

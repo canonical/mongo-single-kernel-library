@@ -16,8 +16,8 @@ from ..helpers.common import MONGOS_APP_NAME, TIMEOUT, get_juju_status
 from ..helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     build_cluster,
-    check_mongos,
     deploy_cluster_components,
+    exec_on_mongos,
 )
 from ..helpers.types import Substrate
 
@@ -92,7 +92,7 @@ async def test_failed_upgrade_and_rollback(
     for unit in mongos_application.units:
         number = unit.name.split("/")[-1]
         cmd = f"db.test_collection.insertOne({{number: {number}}} );"
-        check = await check_mongos(
+        check = await exec_on_mongos(
             ops_test, substrate, unit, auth=True, app_name=MONGOS_CLIENT_APPLICATION, cmd=cmd
         )
         assert check, "mongos user failed to write data"

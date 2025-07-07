@@ -23,10 +23,10 @@ from ..helpers.mongos import (
     TEST_USER_NAME,
     TEST_USER_PWD,
     build_cluster,
-    check_mongos,
     deploy_cluster_components,
     generate_mongos_uri,
     get_mongos_user_password,
+    is_mongos_running,
 )
 from ..helpers.types import Substrate
 
@@ -92,7 +92,7 @@ async def test_user_can_connect(ops_test: OpsTest, substrate: Substrate) -> None
     assert password, "Password not provided to client"
 
     mongos_unit = ops_test.model.applications[MONGOS_APP_NAME].units[0]
-    assert await check_mongos(
+    assert await is_mongos_running(
         ops_test, substrate, mongos_unit, app_name=MONGOS_CLIENT_APPLICATION, auth=True
     ), "Mongos is not running."
 
@@ -100,7 +100,7 @@ async def test_user_can_connect(ops_test: OpsTest, substrate: Substrate) -> None
         ops_test, substrate, app_name=MONGOS_APP_NAME, unit_id=0
     )
     client_user_uri = f"mongodb://{username}:{password}@{mongos_host}:{MONGOS_PORT}"
-    mongos_can_connect_with_auth = await check_mongos(
+    mongos_can_connect_with_auth = await is_mongos_running(
         ops_test, substrate, mongos_unit, auth=True, app_name=MONGOS_APP_NAME, uri=client_user_uri
     )
     assert mongos_can_connect_with_auth, "User created cannot connect with auth."
@@ -127,7 +127,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
     test_user_uri = (
         f"mongodb://{TEST_USER_NAME}:{TEST_USER_PWD}@{hostname}:{MONGOS_PORT}/{TEST_DB_NAME}"
     )
-    mongos_running = await check_mongos(
+    mongos_running = await is_mongos_running(
         ops_test,
         substrate,
         mongos_unit,
@@ -154,7 +154,7 @@ async def test_removed_relation_no_longer_has_access(ops_test: OpsTest, substrat
     )
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], status="active", idle_period=20)
 
-    mongos_can_connect_with_auth = await check_mongos(
+    mongos_can_connect_with_auth = await is_mongos_running(
         ops_test,
         substrate,
         unit=mongos_unit,

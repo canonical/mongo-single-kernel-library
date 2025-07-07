@@ -34,7 +34,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 
     await ops_test.model.deploy(
         mongodb_charm_name,
-        channel="6/edge",
+        channel="6/stable",
         num_units=3,
         application_name=base_app_name,
         trust=(substrate == "microk8s"),

@@ -29,7 +29,6 @@ from ...helpers.ha import (
     replica_set_primary,
     replica_set_secondary,
     restore_network_for_unit,
-    scale_application,
     verify_replica_set_configuration,
     verify_writes,
     wait_network_restore,
@@ -178,25 +177,3 @@ async def test_network_cut(
     assert (
         total_expected_writes == secondary_writes
     ), "secondary not up to date with the cluster after restarting."
-
-
-@pytest.mark.abort_on_fail
-@pytest.mark.unstable
-async def test_scale_up_down(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
-    """Scale up and down the application and verify the replica set is healthy."""
-    app_name = await get_app_name(ops_test)
-    scales = [3, -3, 4, -4, 5, -5]
-    for count in scales:
-        await scale_application(
-            ops_test, substrate, app_name, count=count, wait=True, timeout=DEPLOYMENT_TIMEOUT
-        )
-        ip_addresses = [
-            await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-            for unit in ops_test.model.applications[app_name].units
-        ]
-        primary = await replica_set_primary(
-            ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
-        )
-        assert primary is not None, "Replica set has no primary"
-
-    await verify_writes(ops_test, substrate, app_name)

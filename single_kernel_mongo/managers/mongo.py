@@ -28,7 +28,7 @@ from pymongo.errors import (
     ServerSelectionTimeoutError,
 )
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -97,7 +97,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         Pass direct=False, when checking if the entire replica set is ready
         """
         if not uri and self.state.is_role(MongoDBRoles.MONGOS):
-            uri = "localhost:27018"
+            uri = f"localhost:{MongoPorts.MONGOS_PORT}"
         actual_uri = uri or "localhost"
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready

@@ -251,15 +251,15 @@ async def generate_mongos_command(
     return f"{mongosh(substrate)} '{mongodb_uri}'  --eval '{cmd}'"
 
 
-async def check_mongos(
+async def exec_on_mongos(
     ops_test: OpsTest,
     substrate: Substrate,
     unit: JujuUnit,
     auth: bool,
     app_name: str,
+    cmd: str,
     uri: str | None = None,
     external: bool = False,
-    cmd: str = PING_CMD,
 ) -> bool:
     """Returns whether mongos is running on the provided unit."""
     mongos_check = await generate_mongos_command(
@@ -282,6 +282,19 @@ async def check_mongos(
         logger.warning(f"Failed to execute {mongos_check}: {stderr=}, {stdout=}")
 
     return return_code == 0
+
+
+async def is_mongos_running(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit: JujuUnit,
+    auth: bool,
+    app_name: str,
+    uri: str | None = None,
+    external: bool = False,
+) -> bool:
+    """Checks that mongos is running by executing the ping command."""
+    return await exec_on_mongos(ops_test, substrate, unit, auth, app_name, PING_CMD, uri, external)
 
 
 async def get_external_uri(ops_test: OpsTest, unit: JujuUnit) -> str:

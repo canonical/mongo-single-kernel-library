@@ -40,7 +40,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "config-server"},
-        channel="6/edge",
+        channel="6/stable",
     )
     await deploy_charm(
         ops_test,
@@ -50,7 +50,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "shard"},
-        channel="6/edge",
+        channel="6/stable",
     )
     await deploy_charm(
         ops_test,

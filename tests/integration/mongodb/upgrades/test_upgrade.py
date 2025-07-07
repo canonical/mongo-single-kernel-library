@@ -38,7 +38,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
         substrate,
         app_name=base_app_name,
         mongod_resource={},  # unused
-        channel="6/edge",
+        channel="6/stable",
     )
 
     await ops_test.model.wait_for_idle(
