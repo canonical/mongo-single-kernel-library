@@ -708,6 +708,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
+        if user == LogRotateUser:
+            self.logrotate_config_manager.configure_and_restart()
         if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.config_server_manager.update_credentials(
                 user.password_key_name,

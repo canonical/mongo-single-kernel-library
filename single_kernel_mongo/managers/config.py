@@ -29,7 +29,7 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDB
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser
+from single_kernel_mongo.utils.mongodb_users import BackupUser, LogRotateUser, MonitorUser
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
@@ -183,7 +183,14 @@ class LogRotateConfigManager(CommonConfigManager):
         """Setup logrotate and cron."""
         if not self.state.db_initialised:
             return
-        if self.get_environment() != self.state.logrotate_config.uri:
+
+        if not self.state.get_user_password(LogRotateUser):
+            return
+
+        if (
+            not self.workload.read(LogRotateConfig.rendered_template)
+            or self.get_environment() != self.state.logrotate_config.uri
+        ):
             self.set_environment()
             self.workload.build_template()
             if self.substrate == Substrates.VM:

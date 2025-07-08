@@ -12,6 +12,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.utils.helpers import get_logrotate_uri
 
 
@@ -53,6 +54,9 @@ class LogRotateWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns the Pebble configuration layer for MongoDB."""
+        if self._env == "":
+            raise WorkloadServiceError("Impossible to create layer: missing parameter")
+
         return Layer(
             {
                 "summary": "Log rotate layer",
