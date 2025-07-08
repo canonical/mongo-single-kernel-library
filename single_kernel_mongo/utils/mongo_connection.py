@@ -388,20 +388,33 @@ class MongoConnection:
         shard_list = self.client.admin.command("listShards")
         return {hostname_from_shardname(member["host"]) for member in shard_list["shards"]}
 
-    def add_shard(self, shard_name, shard_hosts, shard_port=MongoPorts.MONGODB_PORT):
+    def add_shard(
+        self, shard_name: str, shard_hosts: list[str], shard_port=MongoPorts.MONGODB_PORT
+    ):
         """Adds shard to the cluster.
 
         Raises:
             ConfigurationError, OperationFailure
         """
-        shard_hosts = ",".join(f"{host}:{shard_port}" for host in shard_hosts)
-        shard_url = f"{shard_name}/{shard_hosts}"
+        shard_hosts = [f"{host}:{shard_port}" for host in shard_hosts]
         if shard_name in self.get_shard_members():
             logger.info("Skipping adding shard %s, shard is already in cluster", shard_name)
             return
 
         logger.info("Adding shard %s", shard_name)
-        self.client.admin.command("addShard", shard_url)
+        # We can use only one host of the shard and we don't know which ones
+        # are added yet to the replica set so we loop over it.
+        for shard_host in shard_hosts:
+            try:
+                shard_url = f"{shard_name}/{shard_host}"
+                self.client.admin.command("addShard", shard_url)
+                return
+            except OperationFailure as err:
+                # This means that the shard host is not yet in the shard replica set.
+                # Other errors should be raised as they indicate something else.
+                if err.code == MongoErrorCodes.OPERATION_FAILED:
+                    continue
+                raise
 
     def pre_remove_shard_checks(self, shard_name: str) -> None:
         """Performs a series of checks for removing a shard from the cluster.

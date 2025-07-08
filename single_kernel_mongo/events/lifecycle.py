@@ -111,6 +111,10 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
+        except (ContainerNotReadyError, WorkloadServiceError):
+            logger.info("Not ready to start.")
+            event.defer()
+            return
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(
@@ -173,9 +177,11 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.new_peer()
         except UpgradeInProgressError:
+            logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 
@@ -184,9 +190,11 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.peer_changed()
         except UpgradeInProgressError:
+            logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 
@@ -195,6 +203,7 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.peer_leaving(departing_unit=event.departing_unit)
         except (NotReadyError, PyMongoError):
+            logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
 

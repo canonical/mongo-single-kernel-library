@@ -9,7 +9,7 @@ from urllib.parse import quote_plus
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from .helpers import (
+from ..helpers.common import (
     MONGOD_PORT,
     MONGOS_PORT,
     execute_on_mongod,
@@ -17,6 +17,7 @@ from .helpers import (
     get_address_of_unit,
     run_action,
 )
+from ..helpers.types import Substrate
 
 POSTGRESQL_K8S = "postgresql-k8s"
 CERTIFICATES = "self-signed-certificates"
@@ -131,12 +132,12 @@ async def teardown_offers(ops_test: OpsTest, kubernetes_model: Model) -> None:
 
 
 async def create_mongodb_user_roles(
-    ops_test: OpsTest, substrate: str, app_name: str, role_name: str, mongos: bool = False
+    ops_test: OpsTest, substrate: Substrate, app_name: str, role_name: str, mongos: bool = False
 ) -> None:
     """Creates the roles for mongodb with the provided role_name."""
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=mongos)
 
-    await execute_on_mongod(
+    result = await execute_on_mongod(
         ops_test,
         app_name,
         substrate,
@@ -147,11 +148,12 @@ async def create_mongodb_user_roles(
         "  roles: [{'db': 'superdb', 'role': 'readWrite'}, {'db': 'superdb', 'role': 'enableSharding'}]"
         "})",
     )
+    assert result.succeeded, "Failed to create role"
 
 
 async def generate_mongodb_ldap_client(
     ops_test: OpsTest,
-    substrate: str,
+    substrate: Substrate,
     app_name: str,
     database: str,
     username: str,
