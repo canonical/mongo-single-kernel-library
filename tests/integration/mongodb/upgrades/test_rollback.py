@@ -48,18 +48,22 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 @pytest.mark.abort_on_fail
 async def test_rollback(
     ops_test: OpsTest,
+    substrate: Substrate,
     mongod_base_path: Path,
     mongodb_charm: str,
+    mongod_resource: dict,
     faulty_mongodb_upgrade_charm: Path,
 ) -> None:
     app_name = await get_app_name(ops_test)
+
+    resources = mongod_resource if substrate == "microk8s" else None
 
     mongodb_application = ops_test.model.applications[app_name]
 
     initial_version_path = mongod_base_path / Path("workload_version")
     initial_version = initial_version_path.read_text().strip()
 
-    await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm)
+    await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm, resources=resources)
     logger.info("Wait for refresh to fail")
 
     for attempt in Retrying(

@@ -80,7 +80,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
             )
             self._reconcile_upgrade(during_upgrade=True)
-            raise DeferrableError
+            raise DeferrableError("Container not ready")
 
         self.state.statuses.add(
             UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value, scope="unit", component=self.name
