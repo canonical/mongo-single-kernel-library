@@ -2,10 +2,6 @@
 # See LICENSE file for licensing details.
 """The different workloads and their code for mongo charms."""
 
-from itertools import chain
-
-from typing_extensions import override
-
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.core.k8s_workload import KubernetesWorkload
 from single_kernel_mongo.core.vm_workload import VMWorkload
@@ -67,20 +63,7 @@ class KubernetesPBMWorkload(PBMWorkload, KubernetesWorkload):
 class KubernetesLogRotateDBWorkload(LogRotateWorkload, KubernetesWorkload):
     """Kubernetes logrotate Workload implementation."""
 
-    @override
-    def get_env(self) -> dict[str, str]:
-        # Read directly from the logrotate path for kubernetes
-        uri = self.read(self.logrotate_uri_path)
-        return {self.env_var: "".join(uri)}
-
-    @override
-    def update_env(self, parameters: chain[str]) -> None:
-        # Write in the logrotate file directly with the proper permissions
-        self.write(self.logrotate_uri_path, "".join(parameters))
-        # Minimal permissions: read-write for root and read for mongodb (which
-        # runs the logrotate script)
-        self.exec(["chown", "root:mongodb", f"{self.logrotate_uri_path}"])
-        self.exec(["chmod", "640", f"{self.logrotate_uri_path}"])
+    ...
 
 
 class KubernetesMongoDBExporterWorkload(MongoDBExporterWorkload, KubernetesWorkload):

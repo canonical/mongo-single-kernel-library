@@ -156,6 +156,7 @@ def test_logrotate_workload_init():
                     "backoff-factor": 1,
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
+                    "environment": {"LOGROTATE_URI": ""},
                 }
             },
         }

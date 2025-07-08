@@ -4,8 +4,6 @@
 
 """Logrotate workload definition."""
 
-from pathlib import Path
-
 import jinja2
 from ops import Container
 from ops.pebble import Layer
@@ -26,8 +24,6 @@ class LogRotateWorkload(WorkloadBase):
     env_var = "LOGROTATE_URI"
     snap_param = "logrotate-uri"
 
-    logrotate_uri_path = Path("/etc/mongod/.logrotate_uri")
-
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
         self.paths = MongoPaths(self.role)
@@ -42,7 +38,9 @@ class LogRotateWorkload(WorkloadBase):
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
-            get_uri=get_logrotate_uri(Substrates(self.substrate), self.logrotate_uri_path),
+            get_uri=get_logrotate_uri(
+                Substrates(self.substrate), service_name=self.service, env_variable=self.env_var
+            ),
             shell=self.paths.shell_path,
         )
 
@@ -70,6 +68,7 @@ class LogRotateWorkload(WorkloadBase):
                         "backoff-factor": 1,
                         "user": self.users.user,
                         "group": self.users.group,
+                        "environment": {self.env_var: self._env},
                     }
                 },
             }
