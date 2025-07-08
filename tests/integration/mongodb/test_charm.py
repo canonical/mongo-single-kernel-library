@@ -20,6 +20,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
 from ..helpers.common import (
+    DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOD_PORT,
@@ -355,7 +356,7 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
     await relate_mongodb_and_application(ops_test, app_name, application_name)
 
-    time_to_write_50m_of_data = 60 * 10
+    time_to_write_200m_of_data = 60 * 10
     logrotate_timeout = 61
 
     match substrate:
@@ -378,11 +379,20 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     log_not_rotated = "audit.log.1" not in log_files
     assert log_not_rotated, f"Found rotated log in {log_files}"
 
-    await start_continous_writes(ops_test, client_app_name=application_name)
-    time.sleep(time_to_write_50m_of_data)
-    await stop_continous_writes(ops_test, client_app_name=application_name)
+    for i in range(5):
+        await start_continous_writes(
+            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        )
+    time.sleep(time_to_write_200m_of_data)
+    for i in range(5):
+        await stop_continous_writes(
+            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        )
     time.sleep(logrotate_timeout)  # Just to make sure that logrotate will run
-    await clear_continous_writes(ops_test, client_app_name=application_name)
+    for i in range(5):
+        await clear_continous_writes(
+            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        )
 
     log_files = check_output(
         f"{base_command} ls {audit_log_path}",

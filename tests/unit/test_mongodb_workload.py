@@ -137,6 +137,7 @@ def test_pbm_workload_init(monkeypatch):
 
 def test_logrotate_workload_init():
     workload = VMLogRotateDBWorkload(ROLES["vm"]["mongod"], container=None)
+    workload._env = "test"
 
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
     assert workload.env_var == "LOGROTATE_URI"
@@ -156,7 +157,7 @@ def test_logrotate_workload_init():
                     "backoff-factor": 1,
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
-                    "environment": {"LOGROTATE_URI": ""},
+                    "environment": {"LOGROTATE_URI": "test"},
                 }
             },
         }
