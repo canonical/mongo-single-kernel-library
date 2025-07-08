@@ -51,6 +51,9 @@ def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, u
         "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
         return_value=[StatusObject(status="active", message="")],
     )
+    mocker.patch(
+        "single_kernel_mongo.workload.mongodb_workload.MongoDBWorkload.active", return_value=True
+    )
     mock_exporter_connect = mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )

@@ -64,7 +64,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
         try:
             # Start services.
-            self.dependent.on_install()
+            self.dependent.install_workloads()
             self.dependent._configure_workloads()
             if self.dependent.name == CharmKind.MONGOS:
                 if keyfile := self.state.cluster.keyfile:
@@ -80,7 +80,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
                 UpgradeStatuses.UNHEALTHY_UPGRADE.value, scope="unit", component=self.name
             )
             self._reconcile_upgrade(during_upgrade=True)
-            raise DeferrableError
+            raise DeferrableError("Container not ready")
 
         self.state.statuses.add(
             UpgradeStatuses.WAITING_POST_UPGRADE_STATUS.value, scope="unit", component=self.name

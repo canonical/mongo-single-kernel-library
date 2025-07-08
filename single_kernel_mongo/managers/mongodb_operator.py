@@ -18,7 +18,7 @@ from data_platform_helpers.version_check import (
 )
 from ops.framework import Object
 from ops.model import Container, Unit
-from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
@@ -509,8 +509,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # units receiving a relation changed event. We must update the monitor
         # and pbm URI if the password changes so that COS/pbm can continue to
         # work.
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.state.db_initialised and self.workload.active():
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
@@ -555,8 +556,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Always update the PBM and mongodb exporter configuration so that if
         # the secret changed, the configuration is updated and will still work
         # afterwards.
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.workload.active():
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         # Always process the statuses.
 
@@ -680,7 +682,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.upgrade_in_progress:
             try:
                 self.perform_self_healing()
-            except ServerSelectionTimeoutError as e:
+            except (ServerSelectionTimeoutError, OperationFailure) as e:
                 logger.warning(f"Failed to perform self healing: {e}")
             except ShardAuthError:
                 logger.warning("Failed to add shard")
@@ -748,8 +750,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         receive a relation event.
         """
         # All nodes should restart PBM and MongoDBExporter if it's not running
-        self.mongodb_exporter_config_manager.configure_and_restart()
-        self.backup_manager.configure_and_restart()
+        if self.workload.active():
+            self.mongodb_exporter_config_manager.configure_and_restart()
+            self.backup_manager.configure_and_restart()
 
         if not self.charm.unit.is_leader():
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
@@ -868,11 +871,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            self.charm.status_handler.set_running_status(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
-                scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+            self.charm.state.statuses.add(
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value, scope="unit", component=self.name
             )
             raise
 

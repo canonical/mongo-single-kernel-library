@@ -16,7 +16,7 @@ from ops.charm import (
     SecretChangedEvent,
 )
 from ops.framework import Object
-from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
+from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
@@ -84,6 +84,7 @@ class ConfigServerEventHandler(Object):
             NotReadyError,
             BalancerNotEnabledError,
             PyMongoError,
+            OperationFailure,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:

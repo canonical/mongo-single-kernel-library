@@ -94,6 +94,10 @@ backends:
     environment:
       CI: '$(HOST: echo $CI)'
       CHARM_UBUNTU_BASE: '$(HOST: echo $CHARM_UBUNTU_BASE)'
+      AWS_ACCESS_KEY: '$(HOST: echo $AWS_ACCESS_KEY)'
+      AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
+      GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
+      GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
     systems:
       - ubuntu-24.04:
           username: runner
@@ -122,14 +126,32 @@ prepare: |
   snap install --classic concierge
 
   # Install charmcraft & pipx (on lxd-vm backend)
-  concierge prepare --trace
+  if [[ $SPREAD_SUITE == *"lxd"* ]]
+  then
+    concierge prepare --trace -c concierge-lxd.yaml
+    if [[ $SPREAD_TASK == *"ldap"* ]]
+    then
+      concierge prepare --trace -c concierge-microk8s.yaml
+    fi
+  else
+    concierge prepare --trace -c concierge-microk8s.yaml
+  fi
 
   pipx install tox poetry
 prepare-each: |
   cd "$SPREAD_PATH"
 
   # `concierge prepare` needs to be run for each spread job in case Juju version changed
-  concierge prepare --trace
+  if [[ $SPREAD_SUITE == *"lxd"* ]]
+  then
+    concierge prepare --trace -c concierge-lxd.yaml
+    if [[ $SPREAD_TASK == *"ldap"* ]]
+    then
+      concierge prepare --trace -c concierge-microk8s.yaml
+    fi
+  else
+    concierge prepare --trace -c concierge-microk8s.yaml
+  fi
 
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
