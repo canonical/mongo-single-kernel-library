@@ -167,18 +167,19 @@ class MongoManager(Object, ManagerStatusProtocol):
         if self.state.app_peer_data.is_user_created(user.username):
             return
         with MongoConnection(self.state.mongo_config) as mongo:
-            logger.debug(f"Creating the {user.username} user roles…")
+            logger.info(f"Creating the {user.username} user roles…")
             mongo.create_role(
                 role_name=user.mongodb_role,
                 privileges=user.privileges,
             )
-            logger.debug(f"Creating the {user.username} user...")
+            logger.info(f"Creating the {user.username} user...")
             config = self.state.mongodb_config_for_user(user)
             mongo.create_user(
                 config.username,
                 config.password,
                 config.supported_roles,
             )
+
         self.state.app_peer_data.set_user_created(user.username)
 
     def reconcile_mongo_users_and_dbs(

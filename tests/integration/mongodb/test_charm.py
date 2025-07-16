@@ -7,7 +7,6 @@ import logging
 import pathlib
 import subprocess
 import time
-from pathlib import Path
 from subprocess import check_output
 from uuid import uuid4
 
@@ -56,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
 ):
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
@@ -379,6 +378,8 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     log_not_rotated = "audit.log.1" not in log_files
     assert log_not_rotated, f"Found rotated log in {log_files}"
 
+    # We want to speed up the test because it requires a lot of writing to
+    # ensure a log rotation so we write on 5 concurrent jobs.
     for i in range(5):
         await start_continous_writes(
             ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"

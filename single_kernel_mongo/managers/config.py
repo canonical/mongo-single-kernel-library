@@ -182,15 +182,14 @@ class LogRotateConfigManager(CommonConfigManager):
     def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
         if not self.state.db_initialised:
+            logger.info("DB is not initialised.")
             return
 
         if not self.state.get_user_password(LogRotateUser):
+            logger.info("No password found.")
             return
 
-        if (
-            not self.workload.read(LogRotateConfig.rendered_template)
-            or self.get_environment() != self.state.logrotate_config.uri
-        ):
+        try:
             self.set_environment()
             self.workload.build_template()
             if self.substrate == Substrates.VM:
@@ -201,7 +200,11 @@ class LogRotateConfigManager(CommonConfigManager):
                     ]
                 )
             else:
+                self.set_environment()
                 self.workload.restart()
+        except WorkloadServiceError as e:
+            logger.error(f"Failed to restart {self.workload.service}: {e}")
+            raise
 
 
 class MongoDBExporterConfigManager(CommonConfigManager):
