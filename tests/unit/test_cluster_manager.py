@@ -325,6 +325,8 @@ def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness.add_relation_unit(rel_id_cluster, "mongodb/0")
     mongos_harness.add_relation_unit(rel_id_proxy, "test-application/0")
 
+    mongos_harness.update_relation_data(rel_id_proxy, "test-application", {"database": "test-db"})
+
     manager.share_credentials_to_clients("operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
@@ -350,14 +352,14 @@ def test_cluster_requirer_update_mongos_and_restart(
         data = relation.data[mongos_harness.charm.app]
         assert data["username"] == "operator"
         assert data["password"] == "password"
-        assert data["database"] == "mongos-database"
+        assert data["database"] == "test-db"
         assert (
             data["endpoints"]
             == "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
         )
         assert (
             data["uris"]
-            == "mongodb://operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/mongos-database?authSource=admin"
+            == "mongodb://operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
         )
 
 
