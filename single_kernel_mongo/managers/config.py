@@ -200,7 +200,6 @@ class LogRotateConfigManager(CommonConfigManager):
                     ]
                 )
             else:
-                self.set_environment()
                 self.workload.restart()
         except WorkloadServiceError as e:
             logger.error(f"Failed to restart {self.workload.service}: {e}")

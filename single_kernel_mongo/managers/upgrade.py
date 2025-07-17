@@ -65,7 +65,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
 
             # If the user was not existing yet, create it.
-            # This user was added after upgrades where developed so we have to
+            # This user was added after the first stable release so we have to
             # create it on upgrade if necessary.
             if not self.state.get_user_password(LogRotateUser):
                 self.state.set_user_password(
@@ -112,7 +112,7 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
 
         if self.dependent.name == CharmKind.MONGOD and self.charm.unit.is_leader():
             # If the user was not existing yet, create it.
-            # This user was added after upgrades where developed so we have to
+            # This user was added after the first stable release so we have to
             # create it on upgrade if necessary.
             if not self.state.get_user_password(LogRotateUser):
                 self.state.set_user_password(
