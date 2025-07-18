@@ -137,9 +137,10 @@ def test_pbm_workload_init(monkeypatch):
 
 def test_logrotate_workload_init():
     workload = VMLogRotateDBWorkload(ROLES["vm"]["mongod"], container=None)
+    workload._env = "test"
 
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
-    assert workload.env_var == ""
+    assert workload.env_var == "LOGROTATE_URI"
     assert workload.role == ROLES["vm"]["mongod"]
 
     assert workload.layer == Layer(
@@ -156,6 +157,7 @@ def test_logrotate_workload_init():
                     "backoff-factor": 1,
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore
+                    "environment": {"LOGROTATE_URI": "test"},
                 }
             },
         }
@@ -305,7 +307,8 @@ def test_logrotate_build_template(monkeypatch, tmp_path):
     monkeypatch.setattr(workload, "write", mock_write)
     monkeypatch.setattr(workload, "exec", mock_exec)
     workload.build_template()
-    assert "mongodb/*.log" in tmp_file.read_text()
+    assert "mongodb/mongodb.log" in tmp_file.read_text()
+    assert "mongodb/audit.log" in tmp_file.read_text()
 
 
 def test_exists(tmp_path):

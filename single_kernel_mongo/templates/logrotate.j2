@@ -1,4 +1,4 @@
-{{logs_directory}}/*.log
+{{logs_directory}}/mongodb.log
 {
     rotate {{max_rotations}}
     size {{max_log_size}}
@@ -11,7 +11,24 @@
     nocopytruncate
     sharedscripts
     postrotate
-        PID=$({{ pid_command }})
-        /bin/kill -SIGUSR1 $PID
+        uri={{get_uri}}
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'server'})"
+    endscript
+}
+{{logs_directory}}/audit.log
+{
+    rotate {{max_rotations}}
+    size {{max_log_size}}
+    missingok
+    notifempty
+    create 0600 {{mongo_user}} {{mongo_user}}
+    compress
+    delaycompress
+    nomail
+    nocopytruncate
+    sharedscripts
+    postrotate
+        uri={{get_uri}}
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'audit'})"
     endscript
 }

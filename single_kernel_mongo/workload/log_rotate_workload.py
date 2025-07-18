@@ -12,7 +12,8 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
-from single_kernel_mongo.utils.helpers import get_logrotate_pid_command
+from single_kernel_mongo.exceptions import WorkloadServiceError
+from single_kernel_mongo.utils.helpers import get_logrotate_uri
 
 
 class LogRotateWorkload(WorkloadBase):
@@ -21,8 +22,8 @@ class LogRotateWorkload(WorkloadBase):
     service = "logrotate"
     layer_name = "log_rotate"
     bin_cmd = "logrotate"
-    env_var = ""
-    snap_param = ""
+    env_var = "LOGROTATE_URI"
+    snap_param = "logrotate-uri"
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
@@ -38,9 +39,10 @@ class LogRotateWorkload(WorkloadBase):
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
-            pid_command=get_logrotate_pid_command(
-                Substrates(self.substrate), log_dir=self.paths.logs_path
+            get_uri=get_logrotate_uri(
+                Substrates(self.substrate), service_name=self.service, env_variable=self.env_var
             ),
+            shell=self.paths.shell_path,
         )
 
         self.write(path=LogRotateConfig.rendered_template, content=rendered_template)
@@ -52,6 +54,9 @@ class LogRotateWorkload(WorkloadBase):
     @override
     def layer(self) -> Layer:
         """Returns the Pebble configuration layer for MongoDB."""
+        if self._env == "":
+            raise WorkloadServiceError("Impossible to create layer: missing parameter")
+
         return Layer(
             {
                 "summary": "Log rotate layer",
@@ -67,6 +72,7 @@ class LogRotateWorkload(WorkloadBase):
                         "backoff-factor": 1,
                         "user": self.users.user,
                         "group": self.users.group,
+                        "environment": {self.env_var: self._env},
                     }
                 },
             }

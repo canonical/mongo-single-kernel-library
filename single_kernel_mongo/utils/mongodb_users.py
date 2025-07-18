@@ -37,6 +37,7 @@ class RoleNames(str, Enum):
     BACKUP = "backup"
     DEFAULT = "default"
     OPERATOR = "operator"
+    LOGROTATE = "logRotate"
 
 
 OPERATOR_ROLE = UserRole(
@@ -70,6 +71,11 @@ REGULAR_ROLES = {
             DBPrivilege(db="admin", role="clusterMonitor"),
             DBPrivilege(db="admin", role="restore"),
             DBPrivilege(db="admin", role="pbmAnyAction"),
+        ]
+    ),
+    RoleNames.LOGROTATE: UserRole(
+        [
+            DBPrivilege(db="admin", role="logRotate"),
         ]
     ),
 }
@@ -155,8 +161,22 @@ BackupUser = MongoDBUser(
     hosts={LOCALHOST},  # pbm cannot make a direct connection if multiple hosts are used
 )
 
+LogRotateUser = MongoDBUser(
+    username=InternalUsers.LOGROTATE,
+    database_name=SystemDBS.ADMIN,
+    roles={RoleNames.LOGROTATE},
+    privileges={"resource": {"cluster": True}, "actions": ["logRotate"]},
+    mongodb_role="logRotate",
+    hosts={LOCALHOST},
+)
 
-CharmUsers = (OperatorUser.username, BackupUser.username, MonitorUser.username)
+
+CharmUsers = (
+    OperatorUser.username,
+    BackupUser.username,
+    MonitorUser.username,
+    LogRotateUser.username,
+)
 
 
 def get_user_from_username(username: str) -> MongoDBUser:
@@ -167,4 +187,6 @@ def get_user_from_username(username: str) -> MongoDBUser:
         return MonitorUser
     if username == BackupUser.username:
         return BackupUser
+    if username == LogRotateUser.username:
+        return LogRotateUser
     raise ValueError(f"Unknown user: {username}")

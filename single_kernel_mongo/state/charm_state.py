@@ -75,6 +75,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
+    LogRotateUser,
     MongoDBUser,
     MonitorUser,
     OperatorUser,
@@ -810,6 +811,11 @@ class CharmState(Object, StatusesStateProtocol):
     def monitor_config(self) -> MongoConfiguration:
         """Mongo Configuration for the monitoring user."""
         return self.mongodb_config_for_user(MonitorUser, hosts=self.internal_hosts)
+
+    @property
+    def logrotate_config(self) -> MongoConfiguration:
+        """Mongo Configuration for the logrotate user."""
+        return self.mongodb_config_for_user(LogRotateUser, standalone=True)
 
     @property
     def operator_config(self) -> MongoConfiguration:

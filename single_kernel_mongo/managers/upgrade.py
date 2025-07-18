@@ -33,6 +33,7 @@ from single_kernel_mongo.exceptions import (
     UnhealthyUpgradeError,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
+from single_kernel_mongo.utils.mongodb_users import LogRotateUser
 
 T = TypeVar("T", bound=OperatorProtocol)
 
@@ -62,6 +63,15 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
         assert self._upgrade
         if self.charm.unit.is_leader() and self.dependent.name == CharmKind.MONGOD:
             self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
+
+            # If the user was not existing yet, create it.
+            # This user was added after the first stable release so we have to
+            # create it on upgrade if necessary.
+            if not self.state.get_user_password(LogRotateUser):
+                self.state.set_user_password(
+                    LogRotateUser, self.dependent.workload.generate_password()
+                )
+                self.dependent.mongo_manager.initialise_user(LogRotateUser)
         try:
             # Start services.
             self.dependent.install_workloads()
@@ -97,14 +107,21 @@ class MongoUpgradeManager(Generic[T], GenericMongoDBUpgradeManager[T]):
             self.state.unit_upgrade_peer_data.current_revision = (
                 self.dependent.cross_app_version_checker.version  # type: ignore
             )
-        if self.charm.unit.is_leader():
-            if not self.state.upgrade_in_progress:
-                logger.info("Charm refreshed. MongoDB version unchanged")
-            if self.dependent.name == CharmKind.MONGOD:
-                self.state.app_upgrade_peer_data.upgrade_resumed = False
-                self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
+        if self.charm.unit.is_leader() and not self.state.upgrade_in_progress:
+            logger.info("Charm refreshed. MongoDB version unchanged")
 
         if self.dependent.name == CharmKind.MONGOD and self.charm.unit.is_leader():
+            # If the user was not existing yet, create it.
+            # This user was added after the first stable release so we have to
+            # create it on upgrade if necessary.
+            if not self.state.get_user_password(LogRotateUser):
+                self.state.set_user_password(
+                    LogRotateUser, self.dependent.workload.generate_password()
+                )
+                self.dependent.mongo_manager.initialise_user(LogRotateUser)
+                self.dependent.logrotate_config_manager.configure_and_restart()
+            self.state.app_upgrade_peer_data.upgrade_resumed = False
+            self.dependent.cross_app_version_checker.set_version_across_all_relations()  # type: ignore
             # MONGODB: Only call `_reconcile_upgrade` on leader unit to
             # avoid race conditions with `upgrade_resumed`
             self._reconcile_upgrade()
