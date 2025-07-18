@@ -172,4 +172,5 @@ class ShardEventHandler(Object):
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")

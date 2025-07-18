@@ -31,6 +31,7 @@ from pymongo.errors import (
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
     MongoPorts,
     Substrates,
     TrustStoreFiles,
@@ -610,14 +611,22 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
         # Add the certificate if it is present
-        if backup_tls_chain := self.state.shard_state.backup_ca_secret:
+        if (
+            backup_tls_chain := self.state.shard_state.backup_ca_secret
+        ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
+            logger.debug("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
-        else:
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
+        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
+            TRUST_STORE_PATH / TrustStoreFiles.PBM.value
+        ):
+            logger.debug("Removing certificate for PBM")
             # If it is not in the databag, always remove it, it won't change a
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-        # We updated the configuration, so we restart PBM.
-        self.dependent.backup_manager.configure_and_restart(force=True)
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
 
         if not self.charm.unit.is_leader():
             return
@@ -641,15 +650,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
         to secret changes events.
         """
-        if not self.charm.unit.is_leader():
-            return
         if not secret_label:
             return
         if not (relation := self.state.shard_relation):
             return
-        if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
-            return
-
         # many secret changed events occur, only listen to those related to our interface with the
         # config-server
         sharding_secretes_label = f"{self.relation_name}.{relation.id}.extra.secret"
@@ -659,22 +663,34 @@ class ShardManager(Object, ManagerStatusProtocol):
             )
             return
 
-        operator_password = self.state.shard_state.operator_password
-        backup_password = self.state.shard_state.backup_password
+        if self.charm.unit.is_leader():
+            if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
+                return
 
-        if not operator_password or not backup_password:
-            raise WaitingForSecretsError("Missing operator password or backup password")
-        self.sync_cluster_passwords(operator_password, backup_password)
+            operator_password = self.state.shard_state.operator_password
+            backup_password = self.state.shard_state.backup_password
 
-        # If the relation was already established, only the secret will be changed
-        if backup_tls_chain := self.state.shard_state.backup_ca_secret:
+            if not operator_password or not backup_password:
+                raise WaitingForSecretsError("Missing operator password or backup password")
+            self.sync_cluster_passwords(operator_password, backup_password)
+
+        # Add the certificate if it is present
+        if (
+            backup_tls_chain := self.state.shard_state.backup_ca_secret
+        ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
+            logger.debug("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
-        else:
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
+        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
+            TRUST_STORE_PATH / TrustStoreFiles.PBM.value
+        ):
+            logger.debug("Removing certificate for PBM")
             # If it is not in the databag, always remove it, it won't change a
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-        # We updated the configuration, so we restart PBM.
-        self.dependent.backup_manager.configure_and_restart(force=True)
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""

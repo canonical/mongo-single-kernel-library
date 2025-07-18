@@ -47,6 +47,7 @@ class InternalUsers(str, Enum):
     OPERATOR = "operator"
     BACKUP = "backup"
     MONITOR = "monitor"
+    LOGROTATE = "logrotate"
 
 
 class UnitState(str, Enum):

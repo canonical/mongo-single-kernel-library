@@ -439,7 +439,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
-            self.share_certificate_to_shards(cert_chain_list)
+            self.share_certificate_with_shards(cert_chain_list)
             self.configure_and_restart(force=True)
 
         # Clear the current config file.
@@ -790,9 +790,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         )
         return f"{current_cluster_name}={old_cluster_name}"
 
-    def share_certificate_to_shards(self, ca_chain_list: list[str]):
+    def share_certificate_with_shards(self, ca_chain_list: list[str]):
         """Shares the certificates to shards if role is config-server."""
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.charm.unit.is_leader():
             for relation in self.state.config_server_relation:
                 self.state.config_server_data_interface.update_relation_data(
                     relation.id,
@@ -801,7 +801,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     def remove_cert_from_shards(self):
         """Removes the certificates from the shards databag."""
-        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.charm.unit.is_leader():
             # Remove the certificate from all relations
             for relation in self.state.config_server_relation:
                 self.state.config_server_data_interface.delete_relation_data(

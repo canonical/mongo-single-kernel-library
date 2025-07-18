@@ -102,6 +102,7 @@ from single_kernel_mongo.utils.helpers import (
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
+    LogRotateUser,
     MonitorUser,
     OperatorUser,
     get_user_from_username,
@@ -331,11 +332,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
-                scope="unit",
-                component=self.name,
-            )
             raise WorkloadNotReadyError
 
         self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
@@ -473,7 +469,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state.set_keyfile(self.workload.generate_keyfile())
 
         # Sets the password for the system users
-        for user in (OperatorUser, BackupUser, MonitorUser):
+        for user in (OperatorUser, BackupUser, MonitorUser, LogRotateUser):
             if not self.state.get_user_password(user):
                 self.state.set_user_password(user, self.workload.generate_password())
 
@@ -707,6 +703,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if user == MonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
+        if user == LogRotateUser:
+            # Update and restart logrotate.
+            self.logrotate_config_manager.configure_and_restart()
         if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             self.config_server_manager.update_credentials(
                 user.password_key_name,
@@ -896,6 +895,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             raise
 
+        self.logrotate_config_manager.configure_and_restart()
+
     @override
     def is_relation_feasible(self, rel_name: str) -> bool:
         """Checks if the relation is feasible in the current context.
@@ -932,9 +933,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Configure the workloads
         self.config_manager.set_environment()
         self.mongos_config_manager.set_environment()
-
-        # Start logrotate
-        self.logrotate_config_manager.configure_and_restart()
 
         # Instantiate the keyfile
         self.instantiate_keyfile()

@@ -24,8 +24,8 @@ OBSERVABILITY_DIRECTORY = impresources.files(observability_rules)
 class LogRotateConfig:
     """The logrotate parameters and useful static configuration."""
 
-    max_log_size: str = "50M"
-    max_rotations_to_keep: int = 10
+    max_log_size: str = "200M"
+    max_rotations_to_keep: int = 25
     log_rotate_template: Traversable = TEMPLATE_DIRECTORY / "logrotate.j2"
     rendered_template: Path = Path("/etc/logrotate.d/mongodb")
     log_status_dir: Path = Path("/var/lib/logrotate")
