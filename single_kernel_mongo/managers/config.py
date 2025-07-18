@@ -29,7 +29,7 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDB
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser
+from single_kernel_mongo.utils.mongodb_users import BackupUser, LogRotateUser, MonitorUser
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
@@ -177,20 +177,33 @@ class LogRotateConfigManager(CommonConfigManager):
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [[]]
+        return [[self.state.logrotate_config.uri]]
 
     def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
-        self.workload.build_template()
-        if self.substrate == Substrates.VM:
-            self.workload.setup_cron(
-                [
-                    f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
-                    f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
-                ]
-            )
-        else:
-            self.workload.start()
+        if not self.state.db_initialised:
+            logger.info("DB is not initialised.")
+            return
+
+        if not self.state.get_user_password(LogRotateUser):
+            logger.info("No password found.")
+            return
+
+        try:
+            self.set_environment()
+            self.workload.build_template()
+            if self.substrate == Substrates.VM:
+                self.workload.setup_cron(
+                    [
+                        f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                        f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                    ]
+                )
+            else:
+                self.workload.restart()
+        except WorkloadServiceError as e:
+            logger.error(f"Failed to restart {self.workload.service}: {e}")
+            raise
 
 
 class MongoDBExporterConfigManager(CommonConfigManager):

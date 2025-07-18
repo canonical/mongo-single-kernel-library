@@ -82,6 +82,7 @@ class CharmStatuses(Enum):
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
     FAILED_SERVICES_START = StatusObject(status="blocked", message="Failed to start services.")
+    WAITING_TO_START = StatusObject(status="waiting", message="Starting services.")
     MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
 

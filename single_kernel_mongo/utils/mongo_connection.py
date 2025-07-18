@@ -147,13 +147,20 @@ class MongoConnection:
 
         Grant read and write privileges for specified database.
         """
-        self.client.admin.command(
-            "createUser",
-            value=username,
-            pwd=password,
-            roles=roles,
-            mechanisms=["SCRAM-SHA-256"],
-        )
+        try:
+            self.client.admin.command(
+                "createUser",
+                value=username,
+                pwd=password,
+                roles=roles,
+                mechanisms=["SCRAM-SHA-256"],
+            )
+        except OperationFailure as e:
+            if e.code == MongoErrorCodes.USER_ALREADY_EXISTS:
+                logger.info("Role already exists")
+                return
+            logger.error("Cannot add user. error=%r", e)
+            raise
 
     def update_user(self, config: MongoConfiguration):
         """Update grants on database."""

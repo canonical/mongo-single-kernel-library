@@ -111,6 +111,7 @@ class ContinuousWritesApplication(CharmBase):
             logger.warning("No database configured.")
             return
 
+        logger.info("Running start continuous write with {db_name=} and {collection_name=}")
         self._stop_continuous_writes(db_name, collection_name)
 
         uris: str = self._database_config.get("uris", "")
