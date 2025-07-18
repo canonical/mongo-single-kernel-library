@@ -42,7 +42,11 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, LdapStatuses
+from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
+    LdapStatuses,
+    MongoDBStatuses,
+)
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
@@ -50,6 +54,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WorkloadNotReadyError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
@@ -113,6 +118,15 @@ class LifecycleEventsHandler(Object):
             self.dependent.prepare_for_startup()
         except (ContainerNotReadyError, WorkloadServiceError):
             logger.info("Not ready to start.")
+            event.defer()
+            return
+        except WorkloadNotReadyError:
+            logger.info("Still starting service.")
+            self.dependent.state.statuses.add(
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
             event.defer()
             return
         except Exception as e:

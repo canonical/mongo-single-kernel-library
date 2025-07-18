@@ -7,7 +7,7 @@ import pytest
 from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.statuses import LdapStatuses, MongodStatuses
+from single_kernel_mongo.config.statuses import LdapStatuses, MongoDBStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
@@ -27,6 +27,22 @@ def test_install_blocks_snap_install_failure(harness, mocker):
     )
     with pytest.raises(WorkloadNotReadyError):
         harness.charm.on.install.emit()
+
+
+def test_start_not_ready(harness, mocker, mock_fs_interactions):
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.mongod_ready", return_value=False)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
+    patched_mongo_initialise = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
+    )
+
+    harness.set_leader(True)
+    harness.charm.on.start.emit()
+    patched_mongo_initialise.assert_not_called()
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == MongoDBStatuses.WAITING_FOR_MONGODB_START.value
 
 
 def test_snap_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):

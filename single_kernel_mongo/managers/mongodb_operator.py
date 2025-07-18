@@ -332,11 +332,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         #        raise WorkloadNotReadyError
 
         if not self.mongo_manager.mongod_ready():
-            self.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
-                scope="unit",
-                component=self.name,
-            )
             raise WorkloadNotReadyError
 
         self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
