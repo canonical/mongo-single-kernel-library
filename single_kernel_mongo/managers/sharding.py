@@ -30,7 +30,11 @@ from pymongo.errors import (
 )
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from single_kernel_mongo.config.literals import MongoPorts, Substrates
+from single_kernel_mongo.config.literals import (
+    MongoPorts,
+    Substrates,
+    TrustStoreFiles,
+)
 from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
@@ -111,6 +115,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
             AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
         }
+
+        if self.state.s3_relation:
+            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            if cert_chain_list := credentials.get("tls-ca-chain", None):
+                relation_data[AppShardingComponentKeys.BACKUP_CA_SECRET.value] = json.dumps(
+                    cert_chain_list
+                )
 
         if int_tls_ca := self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.INT_CA_SECRET.value] = int_tls_ca
@@ -598,6 +609,16 @@ class ShardManager(Object, ManagerStatusProtocol):
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
+        # Add the certificate if it is present
+        if backup_tls_chain := self.state.shard_state.backup_ca_secret:
+            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
+        else:
+            # If it is not in the databag, always remove it, it won't change a
+            # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+        # We updated the configuration, so we restart PBM.
+        self.dependent.backup_manager.configure_and_restart(force=True)
+
         if not self.charm.unit.is_leader():
             return
 
@@ -644,6 +665,16 @@ class ShardManager(Object, ManagerStatusProtocol):
         if not operator_password or not backup_password:
             raise WaitingForSecretsError("Missing operator password or backup password")
         self.sync_cluster_passwords(operator_password, backup_password)
+
+        # If the relation was already established, only the secret will be changed
+        if backup_tls_chain := self.state.shard_state.backup_ca_secret:
+            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
+        else:
+            # If it is not in the databag, always remove it, it won't change a
+            # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+        # We updated the configuration, so we restart PBM.
+        self.dependent.backup_manager.configure_and_restart(force=True)
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""

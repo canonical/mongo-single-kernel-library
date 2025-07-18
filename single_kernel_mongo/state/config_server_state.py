@@ -23,13 +23,20 @@ class AppShardingComponentKeys(str, Enum):
     HOST = "host"
     KEY_FILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
+    BACKUP_CA_SECRET = "backup-ca-secret"
 
     # We don't use those except to check if we've received credentials
     USERNAME = "username"
     PASSWORD = "password"
 
 
-SECRETS_FIELDS = ["operator-password", "backup-password", "key-file", "int-ca-secret"]
+SECRETS_FIELDS = [
+    "operator-password",
+    "backup-password",
+    "key-file",
+    "int-ca-secret",
+    "backup-ca-secret",
+]
 
 
 class UnitShardingComponentKeys(str, Enum):
@@ -94,6 +101,15 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         if not self.relation:
             return None
         return self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
+
+    @property
+    def backup_ca_secret(self) -> list[str] | None:
+        """Returns the backup ca secret."""
+        if not self.relation:
+            return None
+        return json.loads(
+            self.relation_data.get(AppShardingComponentKeys.BACKUP_CA_SECRET.value, "null")
+        )
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):
