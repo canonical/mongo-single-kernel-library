@@ -428,7 +428,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return True
 
-    def set_config_options(self, credentials: dict[str, str]) -> None:
+    def set_config_options(self, credentials: dict) -> None:
         """Apply the configuration provided by S3 integrator.
 
         Args:
