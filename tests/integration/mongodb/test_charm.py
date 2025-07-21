@@ -379,18 +379,18 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     assert log_not_rotated, f"Found rotated log in {log_files}"
 
     # We want to speed up the test because it requires a lot of writing to
-    # ensure a log rotation so we write on 5 concurrent jobs.
-    for i in range(5):
+    # ensure a log rotation so we write on 10 concurrent jobs.
+    for i in range(10):
         await start_continous_writes(
             ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
         )
     time.sleep(time_to_write_200m_of_data)
-    for i in range(5):
+    for i in range(10):
         await stop_continous_writes(
             ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
         )
     time.sleep(logrotate_timeout)  # Just to make sure that logrotate will run
-    for i in range(5):
+    for i in range(10):
         await clear_continous_writes(
             ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
         )
