@@ -1188,3 +1188,30 @@ def get_highest_unit(ops_test: OpsTest, app_name: str) -> JujuUnit | None:
         if unit.name == highest_unit_name:
             return unit
     return None
+
+
+async def has_file(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit: JujuUnit,
+    dir_path: str,
+    filename: str,
+    container: str = "mongod",
+) -> bool:
+    """Checks if the file exists or not."""
+    app_name = get_app_name_from_unit(unit.name)
+    match substrate:
+        case "lxd":
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
+        case "microk8s":
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {app_name}/leader"
+        case _:
+            raise Exception(f"Invalid substrate {substrate}")
+
+    files = subprocess.check_output(
+        f"{base_command} ls {dir_path}",
+        stderr=subprocess.PIPE,
+        shell=True,
+        universal_newlines=True,
+    )
+    return filename in files

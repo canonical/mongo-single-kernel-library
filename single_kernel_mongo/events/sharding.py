@@ -18,6 +18,7 @@ from ops.charm import (
 from ops.framework import Object
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 
+from single_kernel_mongo.config.literals import TrustStoreFiles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     DeferrableFailedHookChecksError,
@@ -167,7 +168,9 @@ class ShardEventHandler(Object):
         """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
             self.manager.drain_shard_from_cluster(event.relation)
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")

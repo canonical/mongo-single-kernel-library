@@ -60,6 +60,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
@@ -162,6 +163,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Relation broken event occurring due to scale down.")
             return
         self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+        self.remove_cert_from_shards()
         self.configure_and_restart(force=True)
 
     @retry(
@@ -428,7 +430,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return True
 
-    def set_config_options(self, credentials: dict[str, str]) -> None:
+    def set_config_options(self, credentials: dict) -> None:
         """Apply the configuration provided by S3 integrator.
 
         Args:
@@ -437,6 +439,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
+            self.share_certificate_with_shards(cert_chain_list)
             self.configure_and_restart(force=True)
 
         # Clear the current config file.
@@ -786,6 +789,24 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             current_cluster_name,
         )
         return f"{current_cluster_name}={old_cluster_name}"
+
+    def share_certificate_with_shards(self, ca_chain_list: list[str]):
+        """Shares the certificates to shards if role is config-server."""
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.charm.unit.is_leader():
+            for relation in self.state.config_server_relation:
+                self.state.config_server_data_interface.update_relation_data(
+                    relation.id,
+                    {AppShardingComponentKeys.BACKUP_CA_SECRET.value: json.dumps(ca_chain_list)},
+                )
+
+    def remove_cert_from_shards(self):
+        """Removes the certificates from the shards databag."""
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and self.charm.unit.is_leader():
+            # Remove the certificate from all relations
+            for relation in self.state.config_server_relation:
+                self.state.config_server_data_interface.delete_relation_data(
+                    relation.id, [AppShardingComponentKeys.BACKUP_CA_SECRET.value]
+                )
 
 
 def map_s3_config_to_pbm_config(credentials: dict[str, str]):

@@ -277,20 +277,22 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ):
             self.workload.exec(["chmod", "600", f"{path}"])
 
-    def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: str) -> None:
+    def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: list[str]) -> None:
         """Saves the certificate in the trust store.
 
         Raises:
             WorkloadExecError: In that case, we should let the charm go into error state.
         """
+        # Convert the list of str to a str
+        chain_str = "\n".join(chain)
         # Write the file with the right permissions
         full_path = TRUST_STORE_PATH / file.value
-        self.workload.write(full_path, chain)
+        self.workload.write(full_path, chain_str)
         self.workload.exec(["chown", "root:root", f"{full_path}"])
         self.workload.exec(["chmod", "644", f"{full_path}"])
 
         # Update ca certificates.
-        self.workload.exec("update-ca-certificates")
+        self.workload.exec(["update-ca-certificates"])
 
     def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
@@ -300,6 +302,6 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         # Remove the file
         self.workload.delete(TRUST_STORE_PATH / file.value)
         # Update CA certificates to remove the certificate from the trust store
-        self.workload.exec("update-ca-certificates")
+        self.workload.exec(["update-ca-certificates"])
         # Restart the service
         self.restart_charm_services(force=True)

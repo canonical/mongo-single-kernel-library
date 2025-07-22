@@ -389,6 +389,7 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
         await stop_continous_writes(
             ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
         )
+
     time.sleep(logrotate_timeout)  # Just to make sure that logrotate will run
     for i in range(10):
         await clear_continous_writes(
