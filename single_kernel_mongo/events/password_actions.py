@@ -13,7 +13,11 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent
 from ops.framework import Object
 
-from single_kernel_mongo.exceptions import NonDeferrableFailedHookChecksError, SetPasswordError
+from single_kernel_mongo.exceptions import (
+    NonDeferrableFailedHookChecksError,
+    SetPasswordError,
+    WorkloadServiceError,
+)
 from single_kernel_mongo.utils.event_helpers import fail_action_with_error_log
 from single_kernel_mongo.utils.mongodb_users import CharmUsers, OperatorUser
 
@@ -73,7 +77,7 @@ class PasswordActionEvents(Object):
             return
         try:
             passwd, secret_id = self.dependent.set_password(username, password)
-        except (NonDeferrableFailedHookChecksError, SetPasswordError) as e:
+        except (NonDeferrableFailedHookChecksError, SetPasswordError, WorkloadServiceError) as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 

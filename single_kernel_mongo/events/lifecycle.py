@@ -38,6 +38,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import Object
+from ops.pebble import ChangeError
 from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
@@ -181,10 +182,20 @@ class LifecycleEventsHandler(Object):
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
-        self.dependent.update_secrets_and_restart(
-            secret_label=event.secret.label or "",
-            secret_id=event.secret.id or "",
-        )
+        try:
+            self.dependent.update_secrets_and_restart(
+                secret_label=event.secret.label or "",
+                secret_id=event.secret.id or "",
+            )
+        except (WorkloadServiceError, ChangeError) as err:
+            logger.info("Failed to restart services", err, exc_info=True)
+            self.dependent.state.statuses.add(
+                CharmStatuses.FAILED_SERVICES_START.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+            event.defer()
+            return
 
     def on_relation_joined(self, event: RelationJoinedEvent):
         """Relation joined event."""
