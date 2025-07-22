@@ -73,9 +73,6 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         self.operator = self.operator_type(self)
         self.state = self.operator.state
 
-        # Status manager stores the operator locally
-        self.status_handler = StatusHandler(self, self, *self.operator.components)
-
         # We will use the main workload of the Charm to install the snap.
         # A workload represents a service, and the main workload represents the
         # mongod or mongos service.
@@ -88,6 +85,11 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         # Those lifecycle events are bound to the operator we defined, which
         # implements the handlers for all lifecycle and peer relation events.
         self.lifecycle = LifecycleEventsHandler(self.operator, self.peer_rel_name)
+
+        # Status manager stores the operator locally
+        # Added after the lifecycle so that the update-status of the operator
+        # runs before the one of the status handler.
+        self.status_handler = StatusHandler(self, self, *self.operator.components)
 
     @property
     def parsed_config(self) -> T:
