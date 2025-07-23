@@ -20,7 +20,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        env: [integration, ha-integration, tls-integration]
+        env: [integration, sharding-integration]
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -54,6 +54,9 @@ jobs:
           pipx install poetry
           pipx install charmcraftcache
           pipx inject poetry poetry-plugin-export
+      - name: Install yq
+        run: |
+          sudo snap install yq --classic
       - name: Integration Tests
         run: |
           sg snap_microk8s -c "tox -e ${{ matrix.env }}"
