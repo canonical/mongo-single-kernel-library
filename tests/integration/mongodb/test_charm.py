@@ -355,7 +355,7 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
     await relate_mongodb_and_application(ops_test, app_name, application_name)
 
-    time_to_write_200m_of_data = 60 * 10
+    time_to_write_200m_of_data = 60 * 15
     logrotate_timeout = 61
 
     match substrate:
