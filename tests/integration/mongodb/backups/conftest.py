@@ -144,7 +144,7 @@ def storage_config(microceph: ConnectionInformation) -> dict[str, str]:
     return {
         "endpoint": f"https://{host_ip}:445",
         "bucket": microceph.bucket,
-        "path": "etcd",
+        "path": "mongodb-backups",
         "region": "",
         "tls-ca-chain": cert_encoded,
     }

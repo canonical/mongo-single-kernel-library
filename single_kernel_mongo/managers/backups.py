@@ -444,7 +444,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
-            self.configure_and_restart(force=True)
 
         # Clear the current config file.
         self.clear_pbm_config_file()
@@ -468,6 +467,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.error(f"Failed to configure PBM options: {err}")
             raise SetPBMConfigError
 
+        # Restart after setting all configurations
+        self.configure_and_restart(force=True)
+
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
         # Bootstrap the config with blackhole configuration.
@@ -489,9 +491,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         replicas in the set. This method tries to handle both cases at once.
         """
         app_name = self.charm.app.name
-        replica_info = (
-            f"{app_name}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
-        )
+        replica_info = f"{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
 
         clusters = pbm_status.get("cluster")
 
