@@ -13,6 +13,7 @@ This user is named "backup".
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import re
@@ -84,6 +85,9 @@ S3_PBM_OPTION_MAP = {
     "endpoint": "storage.s3.endpointUrl",
     "storage-class": "storage.s3.storageClass",
 }
+
+# Already yaml encoded blackhole config to bootstrap pbm config
+EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
 logger = logging.getLogger(__name__)
 
@@ -447,28 +451,34 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         config = map_s3_config_to_pbm_config(credentials)
 
-        for pbm_key, pbm_value in config.items():
-            try:
-                self.workload.run_bin_command(
-                    "config",
-                    ["--set", f"{pbm_key}={pbm_value}"],
-                    environment=self.environment,
-                )
-            except WorkloadExecError:
-                logger.error(f"Failed to configure PBM option: {pbm_key}")
-                raise SetPBMConfigError
+        try:
+            self.workload.run_bin_command(
+                "config",
+                list(
+                    itertools.chain(
+                        *[
+                            ("--set", f"{pbm_key}={pbm_value}")
+                            for pbm_key, pbm_value in config.items()
+                        ],
+                    )
+                ),
+                environment=self.environment,
+            )
+        except WorkloadExecError as err:
+            logger.error(f"Failed to configure PBM options: {err}")
+            raise SetPBMConfigError
 
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
-        if self.substrate == Substrates.K8S:
-            self.workload.write(
-                self.workload.paths.pbm_config,
-                "# this file is to be left empty. Changes in this file will be ignored.\n",
-            )
+        # Bootstrap the config with blackhole configuration.
+        self.workload.write(
+            self.workload.paths.pbm_config,
+            "# this file is to be left empty. Changes in this file will be ignored.\n"
+            + EMPTY_CONFIG,
+        )
+        self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
         self.workload.run_bin_command(
-            "config",
-            ["--file", str(self.workload.paths.pbm_config)],
-            environment=self.environment,
+            "config", ["--file", f"{self.workload.paths.pbm_config}"], environment=self.environment
         )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
