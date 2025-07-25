@@ -12,7 +12,7 @@ from ops import ActionEvent
 from tenacity import RetryError
 
 from single_kernel_mongo.config.literals import (
-    FEATURE_VERSION_6,
+    FEATURE_VERSION,
     CharmKind,
     Substrates,
     UnitState,
@@ -243,7 +243,7 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
                 "Need more time to enable the balancer after finishing the refresh. Deferring event."
             )
 
-        self.set_mongos_feature_compatibilty_version(FEATURE_VERSION_6)
+        self.set_mongos_feature_compatibilty_version(FEATURE_VERSION)
 
     # END: Event handlers
 

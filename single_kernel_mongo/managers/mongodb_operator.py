@@ -805,7 +805,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         try:
             for port in ports:
-                self.workload.exec(["open-port", f"{port}/TCP"])
+                self.workload.exec(["open-port", f"{port.value}/TCP"])
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise

@@ -26,7 +26,7 @@ from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeou
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import (
-    FEATURE_VERSION_6,
+    FEATURE_VERSION,
     SNAP,
     CharmKind,
     Substrates,
@@ -821,14 +821,14 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return False
 
-        if not self.is_feature_compatibility_version(FEATURE_VERSION_6):
+        if not self.is_feature_compatibility_version(FEATURE_VERSION):
             logger.debug(
                 "Not all replicas have the expected feature compatibility: %s",
-                FEATURE_VERSION_6,
+                FEATURE_VERSION,
             )
             return False
 
-        self.set_mongos_feature_compatibilty_version(FEATURE_VERSION_6)
+        self.set_mongos_feature_compatibilty_version(FEATURE_VERSION)
 
         # pre-upgrade sequence runs twice. Once when the user runs the pre-upgrade action and
         # again automatically on refresh (just in case the user forgot to). Disabling the balancer
