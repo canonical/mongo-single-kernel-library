@@ -444,6 +444,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
+            # Restart after setting all configurations
+            self.configure_and_restart(force=True)
 
         # Clear the current config file.
         self.clear_pbm_config_file()
@@ -466,9 +468,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         except WorkloadExecError as err:
             logger.error(f"Failed to configure PBM options: {err}")
             raise SetPBMConfigError
-
-        # Restart after setting all configurations
-        self.configure_and_restart(force=True)
 
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
@@ -508,7 +507,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return ""
 
         for host_info in cluster.get("nodes", []):
-            if host_info.get("host") == replica_info:
+            if replica_info in host_info.get("host"):
                 return str(host_info.get("errors", ""))
 
         # Default case, no error message
@@ -653,7 +652,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return
 
     @retry(
-        stop=stop_after_attempt(60),
+        stop=stop_after_attempt(120),
         wait=wait_fixed(5),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
