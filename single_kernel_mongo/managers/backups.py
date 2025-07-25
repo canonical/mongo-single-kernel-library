@@ -204,7 +204,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             ):
                 logger.info(f"Using existing bucket {credentials['bucket']}")
                 return
-            if "AccessDenied" in e.args[0] or "InvalidAccessKeyId" in e.args[0]:
+            if (
+                "AccessDenied" in e.args[0]
+                or "InvalidAccessKeyId" in e.args[0]
+                or "SignatureDoesNotMatch" in e.args[0]
+            ):
                 logger.info("Incorrect credentials for S3")
                 raise InvalidS3CredentialsError
             logger.error(e)
