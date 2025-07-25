@@ -513,7 +513,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Missing region - this is required for AWS and GCP")
 
         if not provided_configs.get("storage.s3.endpointUrl"):
-            logger.info("Missing endpointUrl - this is required for MinIO and GCP")
+            return False
 
         return True
 
