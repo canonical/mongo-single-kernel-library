@@ -122,6 +122,9 @@ def test_get_status_pbm_error(
         "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config",
         return_value=True,
     )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.create_bucket",
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -151,6 +154,7 @@ def test_get_status_success(
     harness.add_relation_unit(relation_id, "s3-integrator/0")
 
     mocker.patch("single_kernel_mongo.managers.backups.BackupManager.validate_s3_config")
+    mocker.patch("single_kernel_mongo.managers.backups.BackupManager.create_bucket")
     mock = mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.pbm_status",
         new_callable=mocker.PropertyMock,

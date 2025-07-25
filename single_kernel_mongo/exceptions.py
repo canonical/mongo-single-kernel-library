@@ -82,6 +82,14 @@ class ListBackupError(Exception):
     """Raised when list backup operation is failed."""
 
 
+class InvalidS3CredentialsError(Exception):
+    """Raised when list backup operation is failed."""
+
+
+class FailedToCreateS3BucketError(Exception):
+    """Raised when list backup operation is failed."""
+
+
 class FailedToFindNodePortError(Exception):
     """Raised when NodePort cannot be found, but is excepted to be present."""
 

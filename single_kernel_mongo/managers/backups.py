@@ -22,9 +22,13 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, NewType
 
+import boto3
+from botocore.client import Config as BotoConfig
+from botocore.exceptions import ClientError
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
+from mypy_boto3_s3.service_resource import Bucket
 from ops import Container
 from ops.framework import Object
 from ops.model import (
@@ -41,6 +45,7 @@ from tenacity import (
 )
 
 from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
     MongoPorts,
     Substrates,
     TrustStoreFiles,
@@ -50,8 +55,10 @@ from single_kernel_mongo.config.statuses import BackupStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
+    FailedToCreateS3BucketError,
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
+    InvalidS3CredentialsError,
     ListBackupError,
     PBMBusyError,
     RestoreError,
@@ -62,6 +69,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
+from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
@@ -145,6 +153,65 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     def backup_id(self, value: str):
         self._backup_id = value
 
+    def _get_bucket_resource(self, credentials: dict[str, str]) -> Bucket:
+        """Get the Bucket resource from the s3 connection.
+
+        Returns:
+            Bucket: the s3 bucket for uploading/downloading backups
+        """
+        s3_resource = boto3.resource(
+            "s3",
+            region_name=credentials.get("region"),
+            endpoint_url=credentials["endpoint"],
+            aws_access_key_id=credentials["access-key"],
+            aws_secret_access_key=credentials["secret-key"],
+            config=BotoConfig(
+                # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+            verify=(TRUST_STORE_PATH / TrustStoreFiles.PBM.value)
+            if credentials.get("tls-ca-chain")
+            else True,
+        )
+
+        return s3_resource.Bucket(credentials["bucket"])
+
+    def create_bucket(self, credentials: dict[str, str]) -> None:
+        """Create bucket if it does not exist yet."""
+        region = credentials.get("region")
+
+        if tls_ca_chain := credentials.get("tls-ca-chain", None):
+            with open(TRUST_STORE_PATH / TrustStoreFiles.PBM.value, mode="w") as fd:
+                # boto3 client will need the certificate on the node that runs the command
+                fd.write("\n".join(tls_ca_chain))
+
+        bucket = self._get_bucket_resource(credentials)
+
+        try:
+            if region:
+                bucket.create(CreateBucketConfiguration={"LocationConstraint": region})  # type: ignore
+            else:
+                bucket.create()
+            bucket.wait_until_exists()
+        except ClientError as e:
+            if (
+                # AWS returns these if the bucket was already created
+                "BucketAlreadyOwnedByYou" in e.args[0]
+                or "BucketAlreadyExists" in e.args[0]
+                # GCP returns this if the bucket was already created
+                or "BucketNameUnavailable" in e.args[0]
+            ):
+                logger.info(f"Using existing bucket {credentials['bucket']}")
+                return
+            if "AccessDenied" in e.args[0]:
+                logger.info("Incorrect credentials for S3")
+                raise InvalidS3CredentialsError
+            logger.error(e)
+            raise FailedToCreateS3BucketError from e
+
+        logger.info(f"Bucket {credentials['bucket']} is ready")
+
     @cached_property
     def environment(self) -> dict[str, str]:
         """The environment used to run PBM commands.
@@ -166,6 +233,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if self.state.is_scaling_down(relation.id):
             logger.info("Relation broken event occurring due to scale down.")
             return
+
+        # cleanup local certificate if it exists
+        local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.PBM.value
+        if local_cert_file.exists() and local_cert_file.is_file():
+            local_cert_file.unlink()
+
         self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         self.remove_cert_from_shards()
         self.configure_and_restart(force=True)
@@ -313,6 +386,14 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return BackupState.WAITING_PBM_START
 
         try:
+            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            self.create_bucket(credentials)
+        except InvalidS3CredentialsError:
+            return BackupState.INCORRECT_CREDS
+        except FailedToCreateS3BucketError:
+            return BackupState.FAILED_TO_CREATE_BUCKET
+
+        try:
             pbm_status = self.pbm_status
         except WorkloadExecError as err:
             pbm_status = err.stdout
@@ -342,6 +423,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
             case BackupState.WAITING_TO_SYNC:
                 return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
+            case BackupState.FAILED_TO_CREATE_BUCKET:
+                return [BackupStatuses.FAILED_TO_CREATE_BUCKET.value]
             case BackupState.BACKUP_RUNNING:
                 if operation_result := self._get_backup_restore_operation_result(state):
                     logger.info(operation_result)
@@ -447,8 +530,13 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             # Restart after setting all configurations
             self.configure_and_restart(force=True)
 
-        # Clear the current config file.
-        self.clear_pbm_config_file()
+        # First check if we ever had received a config
+        with MongoConnection(self.state.backup_config) as conn:
+            has_config = conn.client.admin["pbmConfig"].find_one()
+
+        if not has_config:
+            # Clear the current config file.
+            self.clear_pbm_config_file()
 
         config = map_s3_config_to_pbm_config(credentials)
 
