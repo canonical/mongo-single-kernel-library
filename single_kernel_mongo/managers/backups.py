@@ -800,9 +800,13 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                     component_name=self.name,
                 )
                 raise ResyncError
+
+            # We're done with the sync, let's clear the statuses.
+            self.state.statuses.clear(scope="unit", component=self.name)
         except WorkloadExecError as e:
             if status := self.process_pbm_error_as_status(e.stdout):
                 self.state.statuses.add(status, scope="unit", component=self.name)
+                return
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.
