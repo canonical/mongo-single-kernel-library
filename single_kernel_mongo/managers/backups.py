@@ -502,7 +502,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                     case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                         raise PBMBusyError
                     case BackupState.WAITING_TO_SYNC:
-                        self.workload.restart()
+                        # self.workload.restart()
                         raise PBMBusyError
                     case _:
                         continue
