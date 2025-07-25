@@ -164,6 +164,9 @@ async def test_backup_restore(ops_test: OpsTest, add_writes_to_shard, substrate:
     list_result = list_result.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
 
+    # Wait for backup to be finished
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=20)
+
     # add writes to be cleared after restoring the backup.
     await add_and_verify_unwanted_writes(ops_test, substrate, leader_unit, cluster_writes)
 
