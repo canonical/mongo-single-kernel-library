@@ -565,6 +565,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             # Clear the current config file.
             self.clear_pbm_config_file()
 
+        self._wait_pbm_status()
+
         config = map_s3_config_to_pbm_config(credentials)
 
         try:
