@@ -81,18 +81,23 @@ async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -
 
 
 @pytest.mark.abort_on_fail
-async def test_blocked_incorrect_creds(ops_test: OpsTest, substrate: Substrate) -> None:
+async def test_blocked_incorrect_creds(
+    ops_test: OpsTest, substrate: Substrate, cloud_configs
+) -> None:
     """Verifies that the charm goes into blocked status when s3 creds are incorrect."""
     db_app_name = await get_app_name(ops_test)
+    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
 
     # set incorrect s3 credentials
-    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
+    configuration_parameters, _ = cloud_configs["AWS"]
+
+    # apply new configuration options
+    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
+
+    # Set invalid credentials
     parameters = {"access-key": "user", "secret-key": "doesnt-exist"}
     action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **parameters)
     await action.wait()
-
-    # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config({"bucket": "doesnt-exist"})
 
     # verify that Charmed MongoDB is blocked and reports incorrect credentials
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active")
@@ -106,10 +111,11 @@ async def test_blocked_incorrect_creds(ops_test: OpsTest, substrate: Substrate) 
 async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs) -> None:
     """Verifies charm goes into active status when s3 config and creds options are correct."""
     db_app_name = await get_app_name(ops_test)
+    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
 
-    configuration_parameters, _ = cloud_configs["AWS"]
-    # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
+    _, credentials = cloud_configs["AWS"]
+    action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **credentials)
+    await action.wait()
 
     # after applying correct config options and creds the applications should both be active
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active", timeout=TIMEOUT)
