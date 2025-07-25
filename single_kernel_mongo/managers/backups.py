@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, NewType
 
 import boto3
 from botocore.client import Config as BotoConfig
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -180,6 +180,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     def create_bucket(self, credentials: dict[str, str]) -> None:
         """Create bucket if it does not exist yet."""
         region = credentials.get("region")
+        bucket_name = credentials["bucket"]
 
         if tls_ca_chain := credentials.get("tls-ca-chain", None):
             with open(TRUST_STORE_PATH / TrustStoreFiles.PBM.value, mode="w") as fd:
@@ -187,6 +188,26 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 fd.write("\n".join(tls_ca_chain))
 
         bucket = self._get_bucket_resource(credentials)
+
+        try:
+            bucket.meta.client.head_bucket(Bucket=bucket_name)
+            logger.info(f"Using existing bucket {bucket_name}")
+            exists = True
+        except ConnectTimeoutError as e:
+            # Re-raise the error if the connection timeouts, so the user has the possibility to
+            # fix network issues and call juju resolve to re-trigger the hook that calls
+            # this method.
+            logger.error(f"error: {e!s} - please fix the error and call juju resolve on this unit")
+            raise e
+        except ClientError:
+            logger.warning("Bucket %s doesn't exist or you don't have access to it.", bucket_name)
+            exists = False
+        except SSLError as e:
+            logger.error(f"error: {e!s} - Is TLS enabled and CA chain set on S3?")
+            raise e
+
+        if exists:
+            return
 
         try:
             # cf https://github.com/aws/aws-sdk-js/issues/3647, setting the
@@ -204,7 +225,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 # GCP returns this if the bucket was already created
                 or "BucketNameUnavailable" in e.args[0]
             ):
-                logger.info(f"Using existing bucket {credentials['bucket']}")
+                logger.info(f"Using existing bucket {bucket_name}")
                 return
             if (
                 "AccessDenied" in e.args[0]
@@ -216,7 +237,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.error(e)
             raise FailedToCreateS3BucketError from e
 
-        logger.info(f"Bucket {credentials['bucket']} is ready")
+        logger.info(f"Bucket {bucket_name} is ready")
 
     @cached_property
     def environment(self) -> dict[str, str]:
