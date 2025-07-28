@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from botocore.exceptions import ConnectTimeoutError, SSLError
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
@@ -148,7 +149,8 @@ class BackupEventsHandler(Object):
                 BackupStatuses.PBM_INCORRECT_CREDS.value, scope="unit", component=self.manager.name
             )
             return
-        except FailedToCreateS3BucketError:
+        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError) as err:
+            logger.error("Failed to create bucket: %s", err)
             self.manager.state.statuses.add(
                 BackupStatuses.FAILED_TO_CREATE_BUCKET.value,
                 scope="unit",
@@ -242,6 +244,8 @@ class BackupEventsHandler(Object):
             InvalidPBMStatusError,
             FailedToCreateS3BucketError,
             InvalidS3CredentialsError,
+            SSLError,
+            ConnectTimeoutError,
             Exception,
         ) as e:
             fail_action_with_error_log(logger, event, action, str(e))

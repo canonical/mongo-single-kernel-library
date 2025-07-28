@@ -414,7 +414,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             self.create_bucket(credentials)
         except InvalidS3CredentialsError:
             return BackupState.INCORRECT_CREDS
-        except FailedToCreateS3BucketError:
+        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError):
             return BackupState.FAILED_TO_CREATE_BUCKET
 
         try:
