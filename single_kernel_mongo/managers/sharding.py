@@ -289,7 +289,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             return charm_statuses[scope]
 
-        uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+        uri = (
+            f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT.value}"
+        )
         if not self.dependent.mongo_manager.mongod_ready(uri):
             charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 

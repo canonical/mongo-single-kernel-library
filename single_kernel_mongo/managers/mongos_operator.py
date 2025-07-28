@@ -425,7 +425,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.state.app_peer_data.external_connectivity = external_connectivity
 
         if external_connectivity:
-            self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT)
+            self.charm.unit.open_port("tcp", MongoPorts.MONGOS_PORT.value)
 
     # BEGIN: Helpers
     def update_k8s_external_services(self):
@@ -439,7 +439,7 @@ class MongosOperator(OperatorProtocol, Object):
             return
         match self.config.expose_external:
             case ExposeExternal.NODEPORT:
-                service = self.k8s.build_node_port_services(f"{MongoPorts.MONGOS_PORT}")
+                service = self.k8s.build_node_port_services(f"{MongoPorts.MONGOS_PORT.value}")
                 self.k8s.apply_service(service)
             case ExposeExternal.NONE:
                 self.k8s.delete_service()
@@ -480,11 +480,13 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.substrate == Substrates.VM:
             if self.state.app_peer_data.external_connectivity:
-                host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+                host = (
+                    self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT.value}"
+                )
             else:
                 host = self.state.formatted_socket_path
         else:
-            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT}"
+            host = self.state.unit_peer_data.internal_address + f":{MongoPorts.MONGOS_PORT.value}"
 
         uri = f"mongodb://{host}"
 

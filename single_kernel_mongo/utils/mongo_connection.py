@@ -403,7 +403,7 @@ class MongoConnection:
         Raises:
             ConfigurationError, OperationFailure
         """
-        shard_hosts = [f"{host}:{shard_port}" for host in shard_hosts]
+        shard_hosts = [f"{host}:{shard_port.value}" for host in shard_hosts]
         if shard_name in self.get_shard_members():
             logger.info("Skipping adding shard %s, shard is already in cluster", shard_name)
             return

@@ -595,8 +595,8 @@ class CharmState(Object, StatusesStateProtocol):
         if self.is_role(MongoDBRoles.MONGOS):
             if self.is_external_client and self.substrate == Substrates.K8S:
                 return self.unit_peer_data.node_port
-            return MongoPorts.MONGOS_PORT
-        return MongoPorts.MONGODB_PORT
+            return MongoPorts.MONGOS_PORT.value
+        return MongoPorts.MONGODB_PORT.value
 
     @property
     def config_server_data_interface(self) -> DatabaseProviderData:
@@ -651,7 +651,7 @@ class CharmState(Object, StatusesStateProtocol):
     def generate_config_server_db(self) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
-        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.internal_hosts)
+        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT.value}" for host in self.internal_hosts)
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
@@ -767,7 +767,7 @@ class CharmState(Object, StatusesStateProtocol):
             username=user.username,
             password=self.get_user_password(user),
             hosts=hosts or user.hosts,
-            port=MongoPorts.MONGODB_PORT,
+            port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
             tls_external=self.tls.external_enabled,
             tls_internal=self.tls.internal_enabled,
@@ -796,7 +796,7 @@ class CharmState(Object, StatusesStateProtocol):
             username=user.username,
             password=self.get_user_password(user),
             hosts=hosts or user.hosts,
-            port=MongoPorts.MONGOS_PORT,
+            port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
             tls_external=self.tls.external_enabled,
             tls_internal=self.tls.internal_enabled,
@@ -835,7 +835,7 @@ class CharmState(Object, StatusesStateProtocol):
             return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
         username, password = self.get_user_credentials()
         database = self.app_peer_data.database
-        port: MongoPorts | None = MongoPorts.MONGOS_PORT
+        port: int | None = MongoPorts.MONGOS_PORT.value
         if (
             self.charm_role.name == CharmKind.MONGOS
             and self.substrate == Substrates.VM

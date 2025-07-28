@@ -6,7 +6,7 @@ This module should contain the literals used in the charms (paths, enums, etc).
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -34,7 +34,7 @@ class Scope(str, Enum):
     UNIT = "unit"
 
 
-class MongoPorts(int, Enum):
+class MongoPorts(IntEnum):
     """The default Mongo ports."""
 
     MONGODB_PORT = 27017
