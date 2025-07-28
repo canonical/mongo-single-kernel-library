@@ -123,7 +123,7 @@ class BackupStatuses(Enum):
     )
     PBM_INCOMPATIBLE_CONF = StatusObject(
         status="blocked",
-        message="s3 configurations are incompatible.",
+        message="s3 config options are incompatible.",
         action="Check S3 configuration on s3-integrator",
     )
     UNKNOWN_PBM_ERROR = StatusObject(
@@ -136,7 +136,7 @@ class BackupStatuses(Enum):
     FAILED_TO_CREATE_BUCKET = StatusObject(
         status="blocked",
         message="Failed to create buckets, check logs.",
-        action="Check S3 configuration",
+        action="Check S3 configuration on s3-integrator.",
         check="Failed to create S3 bucket",
     )
 
