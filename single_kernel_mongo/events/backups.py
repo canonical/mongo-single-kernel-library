@@ -122,7 +122,7 @@ class BackupEventsHandler(Object):
             return
 
         if not self.manager.validate_s3_config():
-            logger.info(
+            logger.warning(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
             self.manager.state.statuses.set(

@@ -177,6 +177,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         return s3_resource.Bucket(credentials["bucket"])
 
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(ConnectTimeoutError),
+        wait=wait_fixed(5),
+        reraise=True,
+    )
     def create_bucket(self, credentials: dict[str, str]) -> None:
         """Create bucket if it does not exist yet."""
         region = credentials.get("region")
@@ -218,15 +224,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 bucket.create()
             bucket.wait_until_exists()
         except ClientError as e:
-            if (
-                # AWS returns these if the bucket was already created
-                "BucketAlreadyOwnedByYou" in e.args[0]
-                or "BucketAlreadyExists" in e.args[0]
-                # GCP returns this if the bucket was already created
-                or "BucketNameUnavailable" in e.args[0]
-            ):
-                logger.info(f"Using existing bucket {bucket_name}")
-                return
             if (
                 "AccessDenied" in e.args[0]
                 or "InvalidAccessKeyId" in e.args[0]
@@ -816,6 +813,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             if status := self.process_pbm_error_as_status(e.stdout):
                 self.state.statuses.add(status, scope="unit", component=self.name)
                 return
+            raise
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.
