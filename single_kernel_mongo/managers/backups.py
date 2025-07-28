@@ -582,8 +582,16 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 environment=self.environment,
             )
         except WorkloadExecError as err:
-            logger.error(f"Failed to configure PBM options: {err}")
-            raise SetPBMConfigError
+            # In case of resync in progress, raise a ResyncError that will set a waiting status.
+            if "resync" in err.stderr.lower():
+                logger.error("Waiting for resync to finish before setting configuration", err)
+                raise ResyncError
+            # Don't log the credentials that are part of the cmd]
+            logger.error(
+                "Failed to configure PBM options.",
+                {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
+            )
+            raise SetPBMConfigError(err.stderr)
 
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""

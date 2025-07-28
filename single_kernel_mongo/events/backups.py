@@ -157,7 +157,6 @@ class BackupEventsHandler(Object):
             event.defer()
             return
         except SetPBMConfigError:
-            logger.error("Failed to configure s3 backup options")
             self.manager.state.statuses.add(
                 BackupStatuses.CANT_CONFIGURE.value, scope="unit", component=self.manager.name
             )
