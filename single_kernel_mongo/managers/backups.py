@@ -581,11 +581,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         except WorkloadExecError as err:
             # In case of resync in progress, raise a ResyncError that will set a waiting status.
             if "resync" in err.stderr.lower():
-                logger.error("Waiting for resync to finish before setting configuration", err)
+                logger.error("Waiting for resync to finish before setting configuration: %s", err)
                 raise ResyncError
             # Don't log the credentials that are part of the cmd]
             logger.error(
-                "Failed to configure PBM options.",
+                "Failed to configure PBM options: %s",
                 {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
             )
             raise SetPBMConfigError(err.stderr)
