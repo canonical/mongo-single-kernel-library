@@ -661,7 +661,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             return
         # many secret changed events occur, only listen to those related to our interface with the
         # config-server
-        sharding_secretes_label = f"{self.relation_name}.{relation.id}.extra.secret"
+        sharding_secretes_label = f"{self.relation_name.value}.{relation.id}.extra.secret"
         if secret_label != sharding_secretes_label:
             logger.info(
                 f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
