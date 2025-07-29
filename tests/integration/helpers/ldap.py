@@ -51,6 +51,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             kubernetes_model.deploy(
                 LDAP_APP_NAME,
                 channel="latest/edge",
+                revision=55,
                 trust=True,
                 config={"ldaps_enabled": True},
             ),

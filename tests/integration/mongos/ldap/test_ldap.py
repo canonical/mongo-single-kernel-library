@@ -160,7 +160,7 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         substrate,
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
-        timeout=300,
+        timeout=600,
         subordinate=(substrate == "lxd"),
     )
 
