@@ -73,6 +73,12 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
         )
 
         logger.info("Running integrations")
+        await kubernetes_model.integrate(
+            f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
+        )
+
+        await kubernetes_model.wait_for_idle(TRAEFIK_CHARM, status="active")
+
         await kubernetes_model.integrate(LDAP_APP_NAME, POSTGRESQL_K8S)
         await kubernetes_model.integrate(LDAP_APP_NAME, CERTIFICATES)
         await kubernetes_model.integrate(LDAP_APP_NAME, LDAP_UTILS_APP_NAME)
@@ -82,9 +88,6 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             raise_on_blocked=False,
         )
 
-        await kubernetes_model.integrate(
-            f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
-        )
         await kubernetes_model.wait_for_idle(
             apps=[LDAP_APP_NAME, CERTIFICATES, TRAEFIK_CHARM],
             raise_on_blocked=False,  # postgresql can be in Blocked State because of low free space

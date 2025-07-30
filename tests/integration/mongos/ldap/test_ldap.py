@@ -175,11 +175,19 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
 
 
 @pytest.mark.abort_on_fail
-async def test_glauth_fully_integrated(ops_test: OpsTest):
+async def test_glauth_fully_integrated(ops_test: OpsTest, substrate: Substrate):
     """Integrate the config server as well, everything should be green."""
     app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        CONFIG_SERVER_APP_NAME,
+        status="TLS is mandatory for LDAP transport.",
+        timeout=300,
+    )
+
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
