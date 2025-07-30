@@ -51,7 +51,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             kubernetes_model.deploy(
                 LDAP_APP_NAME,
                 channel="latest/edge",
-                revision=55,
+                revision=56,
                 trust=True,
                 config={"ldaps_enabled": True},
             ),
@@ -62,7 +62,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
                 trust=True,
                 series="jammy",
                 config={"profile": "testing"},
-                storage={"pgdata": "100G"},
+                storage={"pgdata": "10G"},
             ),
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),

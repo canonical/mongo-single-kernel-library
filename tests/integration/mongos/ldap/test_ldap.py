@@ -151,6 +151,15 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
     app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        app_name,
+        status="TLS is mandatory for LDAP transport.",
+        timeout=300,
+        subordinate=(substrate == "lxd"),
+    )
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
     )
