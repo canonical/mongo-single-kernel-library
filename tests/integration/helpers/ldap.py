@@ -55,8 +55,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             config={"profile": "testing"},
             storage={"pgdata": "5G"},
         )
-        with ops_test.fast_forward(fast_interval="1m"):
-            await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
+        await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
 
         await asyncio.gather(
             kubernetes_model.deploy(
