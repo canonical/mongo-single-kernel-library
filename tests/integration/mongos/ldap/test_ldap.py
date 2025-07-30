@@ -50,6 +50,10 @@ async def test_build_and_deploy_mongodb_cluster(
     kubernetes_model: Model,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
+    # deploy the glauth-k8s charm
+    await deploy_glauth(ops_test, kubernetes_model)
+    await consume_glauth_offers(ops_test, kubernetes_model)
+
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     await deploy_cluster_components(
@@ -74,10 +78,6 @@ async def test_build_and_deploy_mongodb_cluster(
         idle_period=20,
         timeout=DEPLOYMENT_TIMEOUT,
     )
-
-    # deploy the glauth-k8s charm
-    await deploy_glauth(ops_test, kubernetes_model)
-    await consume_glauth_offers(ops_test, kubernetes_model)
 
     await create_mongodb_user_roles(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"

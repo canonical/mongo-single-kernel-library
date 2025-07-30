@@ -23,7 +23,7 @@ async def kubernetes_model(
         pytest.fail("No Kubernetes config found to add-k8s")
     # deploy the glauth-k8s charm
     kubernetes_model = await ops_test.track_model(
-        "secondary", cloud_name=k8s_cloud, keep=ops_test.ModelKeep.NEVER
+        "secondary", cloud_name=k8s_cloud, keep=ops_test.ModelKeep.ALWAYS
     )
     logger.info(f"Created model {kubernetes_model.name}")
     yield kubernetes_model

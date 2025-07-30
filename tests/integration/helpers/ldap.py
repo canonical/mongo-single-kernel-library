@@ -49,6 +49,14 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     with ops_test.model_context("secondary"):
         await asyncio.gather(
             kubernetes_model.deploy(
+                POSTGRESQL_K8S,
+                channel="14/stable",
+                trust=True,
+                series="jammy",
+                config={"profile": "testing"},
+                storage={"pgdata": "5G"},
+            ),
+            kubernetes_model.deploy(
                 LDAP_APP_NAME,
                 channel="latest/edge",
                 revision=56,
@@ -56,14 +64,6 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
                 config={"ldaps_enabled": True},
             ),
             kubernetes_model.deploy(LDAP_UTILS_APP_NAME, channel="latest/edge", trust=True),
-            kubernetes_model.deploy(
-                POSTGRESQL_K8S,
-                channel="14/stable",
-                trust=True,
-                series="jammy",
-                config={"profile": "testing"},
-                storage={"pgdata": "10G"},
-            ),
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
         )
