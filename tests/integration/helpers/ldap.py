@@ -77,7 +77,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
         )
 
-        await kubernetes_model.wait_for_idle(TRAEFIK_CHARM, status="active")
+        await kubernetes_model.wait_for_idle([TRAEFIK_CHARM], status="active")
 
         await kubernetes_model.integrate(LDAP_APP_NAME, POSTGRESQL_K8S)
         await kubernetes_model.integrate(LDAP_APP_NAME, CERTIFICATES)
