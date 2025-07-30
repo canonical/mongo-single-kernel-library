@@ -53,7 +53,6 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             trust=True,
             series="jammy",
             config={"profile": "testing"},
-            storage={"pgdata": "5G"},
         )
         await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
 
