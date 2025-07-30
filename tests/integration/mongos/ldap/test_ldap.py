@@ -64,6 +64,11 @@ async def test_build_and_deploy_mongodb_cluster(
         extra_config_config_server={
             "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
         },
+        num_units_cluster_config={
+            CONFIG_SERVER_APP_NAME: 1,
+            SHARD_ONE_APP_NAME: 1,
+            SHARD_TWO_APP_NAME: 1,
+        },
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -95,7 +100,7 @@ async def test_build_and_deploy_mongos(
     Then integrate mongos and sharded cluster.
     """
     if app_name := await get_app_name(ops_test, charm_name="mongos"):
-        await check_or_scale_app(ops_test, substrate, app_name, 3)
+        await check_or_scale_app(ops_test, substrate, app_name, 1)
     else:
         await deploy_charm(
             ops_test=ops_test,
@@ -103,7 +108,7 @@ async def test_build_and_deploy_mongos(
             substrate=substrate,
             mongod_resource=mongod_resource,
             app_name=base_app_name,
-            num_units=3,
+            num_units=1,
             subordinate=(substrate == "lxd"),
         )
         app_name = base_app_name
@@ -113,7 +118,7 @@ async def test_build_and_deploy_mongos(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
         series="jammy",
-        num_units=2,
+        num_units=1,
         config={"database-name": "test-database"},
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
