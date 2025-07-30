@@ -47,15 +47,18 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     Then it offers the two relations provided by glauth.
     """
     with ops_test.model_context("secondary"):
+        await kubernetes_model.deploy(
+            POSTGRESQL_K8S,
+            channel="14/stable",
+            trust=True,
+            series="jammy",
+            config={"profile": "testing"},
+            storage={"pgdata": "5G"},
+        )
+        with ops_test.fast_forward(fast_interval="1m"):
+            await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
+
         await asyncio.gather(
-            kubernetes_model.deploy(
-                POSTGRESQL_K8S,
-                channel="14/stable",
-                trust=True,
-                series="jammy",
-                config={"profile": "testing"},
-                storage={"pgdata": "5G"},
-            ),
             kubernetes_model.deploy(
                 LDAP_APP_NAME,
                 channel="latest/edge",

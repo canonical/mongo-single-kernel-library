@@ -113,6 +113,14 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          detached: true
+
       - name: Run spread job
         timeout-minutes: 180
         id: spread
@@ -125,12 +133,6 @@ jobs:
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
           GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
-
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
 
       - name: Upload Allure results
         timeout-minutes: 3
