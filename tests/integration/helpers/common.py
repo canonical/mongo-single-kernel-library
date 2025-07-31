@@ -848,7 +848,7 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
         result = action.results["json-output"]
 
         # juju messes up the string formatting here.
-        unit_statuses = json.loads(result["unit"].replace("'", '"'))
+        unit_statuses = json.loads(result["unit"])
 
         assert unit_statuses[0]["Status"].lower() == status
         assert unit_statuses[0]["Message"] == message
