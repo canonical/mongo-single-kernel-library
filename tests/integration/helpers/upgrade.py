@@ -53,7 +53,8 @@ async def assert_successful_run_upgrade_sequence(
 
     await refresh_charm(ops_test, substrate, app_name, new_charm, mongod_resource)
     # TODO future work, resolve flickering status of app
-    await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=90)
+    async with ops_test.fast_forward(fast_interval="120s"):
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
 
     # resume upgrade only needs to be ran when:
     # 1. there are more than one units in the application
@@ -75,7 +76,8 @@ async def assert_successful_run_upgrade_sequence(
     if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
         assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
-    await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
 
 
 async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> None:
