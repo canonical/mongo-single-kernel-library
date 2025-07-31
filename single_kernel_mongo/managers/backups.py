@@ -198,7 +198,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         try:
             bucket.meta.client.head_bucket(Bucket=bucket_name)
             logger.info(f"Using existing bucket {bucket_name}")
-            exists = True
+            return
         except ConnectTimeoutError as e:
             # Re-raise the error if the connection timeouts, so the user has the possibility to
             # fix network issues and call juju resolve to re-trigger the hook that calls
@@ -207,13 +207,9 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             raise e
         except ClientError:
             logger.warning("Bucket %s doesn't exist or you don't have access to it.", bucket_name)
-            exists = False
         except SSLError as e:
             logger.error(f"error: {e!s} - Is TLS enabled and CA chain set on S3?")
             raise e
-
-        if exists:
-            return
 
         try:
             # cf https://github.com/aws/aws-sdk-js/issues/3647, setting the
@@ -499,7 +495,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                     case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                         raise PBMBusyError
                     case BackupState.WAITING_TO_SYNC:
-                        # self.workload.restart()
                         raise PBMBusyError
                     case _:
                         continue

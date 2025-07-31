@@ -135,7 +135,7 @@ class BackupStatuses(Enum):
     ACTIVE_IDLE = StatusObject(status="active", message="")
     FAILED_TO_CREATE_BUCKET = StatusObject(
         status="blocked",
-        message="Failed to create buckets, check logs.",
+        message="Failed to create S3 bucket, check logs.",
         action="Check S3 configuration on s3-integrator.",
         check="Failed to create S3 bucket",
     )
