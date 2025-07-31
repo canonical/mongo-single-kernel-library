@@ -146,4 +146,5 @@ class BackupState(Enum):
     BACKUP_RUNNING = auto()
     RESTORE_RUNNING = auto()
     WAITING_TO_SYNC = auto()
+    FAILED_TO_CREATE_BUCKET = auto()
     ACTIVE = auto()

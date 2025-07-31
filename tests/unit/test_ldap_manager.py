@@ -318,8 +318,6 @@ def test_ldap_full_integration_cycle(
         },
     )
 
-    # Empty cache because harness does not reinstantiate a context for each event
-    harness.charm.status_handler._get_sorted_statuses.cache_clear()
     harness.evaluate_status()
 
     assert harness.model.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
@@ -335,8 +333,6 @@ def test_ldap_full_integration_cycle(
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
 
-    # Empty cache because harness does not reinstantiate a context for each event
-    harness.charm.status_handler._get_sorted_statuses.cache_clear()
     harness.evaluate_status()
     # All is good, we are green
     assert harness.model.unit.status == ActiveStatus("")
@@ -403,8 +399,6 @@ def test_ldaps_not_enabled(harness: Harness[MongoTestCharm], mocker, mock_fs_int
         },
     )
 
-    # Empty cache because harness does not reinstantiate a context for each event
-    harness.charm.status_handler._get_sorted_statuses.cache_clear()
     harness.evaluate_status()
 
     assert harness.model.unit.status == BlockedStatus("LDAPS not enabled on LDAP application.")
@@ -442,8 +436,6 @@ def test_ldaps_mongos_invalid_hash(
         {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
     )
 
-    # Empty cache because harness does not reinstantiate a context for each event
-    mongos_harness.charm.status_handler._get_sorted_statuses.cache_clear()
     mongos_harness.evaluate_status()
 
     assert mongos_harness.model.unit.status == BlockedStatus(

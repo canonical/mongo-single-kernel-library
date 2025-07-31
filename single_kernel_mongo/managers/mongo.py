@@ -274,7 +274,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 )
 
     def update_user(self, relation: Relation) -> None:
-        """Add the user for this relation."""
+        """Update the user for this relation."""
         data_interface = DatabaseProviderData(
             self.model,
             relation.name,
@@ -282,10 +282,14 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         username = f"relation-{relation.id}"
         password = data_interface.fetch_my_relation_field(relation.id, "password")
+
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
-        if has_user:
+
+        # Don't update a user that doesn't exist
+        if not has_user:
             return
+
         with MongoConnection(self.state.mongo_config) as mongo:
             config = self.get_config(
                 username,

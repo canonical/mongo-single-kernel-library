@@ -67,7 +67,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
         self.substrate = substrate
         self.relation_name = relation_name
         self.cert_relation_name = cert_relation_name
-        self.ldap_requirer = LdapRequirer(self.charm, self.relation_name)
+        self.ldap_requirer = LdapRequirer(self.charm, self.relation_name.value)
         self.certificate_transfer = CertificateTransferRequires(self.charm, self.cert_relation_name)
 
     def assert_pass_hook_checks(self) -> None:

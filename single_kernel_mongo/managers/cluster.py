@@ -158,6 +158,9 @@ class ClusterProvider(Object):
 
         config_server_db = self.state.generate_config_server_db()
         for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
             self.data_interface.update_relation_data(
                 relation.id,
                 {
@@ -177,6 +180,9 @@ class ClusterProvider(Object):
             return
 
         for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
             self.data_interface.update_relation_data(
                 relation.id,
                 {ClusterStateKeys.LDAP_HASH.value: hashed_data},
@@ -194,6 +200,9 @@ class ClusterProvider(Object):
             return
 
         for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
             self.data_interface.delete_relation_data(
                 relation.id,
                 [ClusterStateKeys.LDAP_HASH.value],
@@ -211,6 +220,9 @@ class ClusterProvider(Object):
             return
 
         for relation in self.state.cluster_relations:
+            if not self.data_interface.fetch_relation_field(relation.id, "database"):
+                logger.info("Database Requested has not run yet, skipping.")
+                continue
             self.data_interface.update_relation_data(
                 relation.id,
                 {

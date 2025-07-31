@@ -170,7 +170,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         """Database tag for mongos."""
         if self.substrate == Substrates.K8S:
             return f"{self.component.name}_{self._model.name}"
-        return self.relation_data.get(AppPeerDataKeys.DATABASE.value, "mongos-database")
+        return self.relation_data.get(AppPeerDataKeys.DATABASE.value, "")
 
     @database.setter
     def database(self, value: str):

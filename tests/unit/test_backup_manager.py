@@ -102,8 +102,8 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
     ("pbm_status", "expected"),
     (
         ("status code: 403", "s3 credentials are incorrect."),
-        ("status code: 404", "s3 configurations are incompatible."),
-        ("status code: 301", "s3 configurations are incompatible."),
+        ("status code: 404", "s3 config options are incompatible."),
+        ("status code: 301", "s3 config options are incompatible."),
         ("Unknown message", "Unknown PBM error, check logs."),
         (
             '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27017", "errors": "status code: 403"}], "rs": "mongodb"}]}',
@@ -121,6 +121,9 @@ def test_get_status_pbm_error(
     mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config",
         return_value=True,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.create_bucket",
     )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
@@ -151,6 +154,7 @@ def test_get_status_success(
     harness.add_relation_unit(relation_id, "s3-integrator/0")
 
     mocker.patch("single_kernel_mongo.managers.backups.BackupManager.validate_s3_config")
+    mocker.patch("single_kernel_mongo.managers.backups.BackupManager.create_bucket")
     mock = mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.pbm_status",
         new_callable=mocker.PropertyMock,

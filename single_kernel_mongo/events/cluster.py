@@ -14,6 +14,7 @@ from ops.framework import Object
 
 from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
+    DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
@@ -95,6 +96,8 @@ class ClusterConfigServerEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info("Not cleaning users, relation was not established yet.")
 
 
 class ClusterMongosEventHandler(Object):

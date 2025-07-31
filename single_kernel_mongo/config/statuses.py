@@ -116,13 +116,29 @@ class BackupStatuses(Enum):
     # since certain configurations are required for pbm to be active and running.
     WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for pbm to start...")
     PBM_MISSING_CONFIGS = StatusObject(status="blocked", message="s3 configurations missing.")
-    PBM_INCORRECT_CREDS = StatusObject(status="blocked", message="s3 credentials are incorrect.")
-    PBM_INCOMPATIBLE_CONF = StatusObject(
-        status="blocked", message="s3 configurations are incompatible."
+    PBM_INCORRECT_CREDS = StatusObject(
+        status="blocked",
+        message="s3 credentials are incorrect.",
+        action="Check S3 credentials on s3-integrator",
     )
-    UNKNOWN_PBM_ERROR = StatusObject(status="blocked", message="Unknown PBM error, check logs.")
+    PBM_INCOMPATIBLE_CONF = StatusObject(
+        status="blocked",
+        message="s3 config options are incompatible.",
+        action="Check S3 configuration on s3-integrator",
+    )
+    UNKNOWN_PBM_ERROR = StatusObject(
+        status="blocked",
+        message="Unknown PBM error, check logs.",
+        action="Check logs for more information",
+    )
     CANT_CONFIGURE = StatusObject(status="blocked", message="Couldn't configure s3 backup options.")
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    FAILED_TO_CREATE_BUCKET = StatusObject(
+        status="blocked",
+        message="Failed to create S3 bucket, check logs.",
+        action="Check S3 configuration on s3-integrator.",
+        check="Failed to create S3 bucket",
+    )
 
     # Running status
     PBM_WAITING_TO_SYNC = StatusObject(

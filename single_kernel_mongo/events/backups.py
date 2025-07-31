@@ -9,14 +9,17 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from botocore.exceptions import ConnectTimeoutError, SSLError
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
+    FailedToCreateS3BucketError,
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
+    InvalidS3CredentialsError,
     ListBackupError,
     NonDeferrableFailedHookChecksError,
     PBMBusyError,
@@ -119,14 +122,43 @@ class BackupEventsHandler(Object):
             )
             return
 
+        if not self.manager.validate_s3_config():
+            logger.warning(
+                "Relation to S3 charm exists but not all necessary configurations have been set."
+            )
+            self.manager.state.statuses.set(
+                BackupStatuses.PBM_MISSING_CONFIGS.value,
+                scope="unit",
+                component=self.manager.name,
+            )
+            return
+
         # Get the credentials from S3 connection
         credentials = self.s3_client.get_s3_connection_info()
 
         try:
+            # First create the bucket if it does not exist.
+            self.manager.create_bucket(credentials=credentials)
+            # Then set the config options on PBM.
             self.manager.set_config_options(credentials=credentials)
+            # Finally, resync the configuration.
             self.manager.resync_config_options()
+        except InvalidS3CredentialsError:
+            logger.error("Incorrect S3 credentials")
+            self.manager.state.statuses.add(
+                BackupStatuses.PBM_INCORRECT_CREDS.value, scope="unit", component=self.manager.name
+            )
+            return
+        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError) as err:
+            logger.error("Failed to create bucket: %s", err)
+            self.manager.state.statuses.add(
+                BackupStatuses.FAILED_TO_CREATE_BUCKET.value,
+                scope="unit",
+                component=self.manager.name,
+            )
+            event.defer()
+            return
         except SetPBMConfigError:
-            logger.error("Failed to configure s3 backup options")
             self.manager.state.statuses.add(
                 BackupStatuses.CANT_CONFIGURE.value, scope="unit", component=self.manager.name
             )
@@ -184,8 +216,14 @@ class BackupEventsHandler(Object):
             )
             return
 
+        # Get the credentials from S3 connection
+        credentials = self.s3_client.get_s3_connection_info()
+
         try:
             self.assert_pass_sanity_checks()
+
+            self.manager.create_bucket(credentials=credentials)
+
             self.manager.assert_can_backup()
             backup_id = self.manager.create_backup_action()
             self.charm.status_handler.set_running_status(
@@ -204,6 +242,10 @@ class BackupEventsHandler(Object):
         except (
             NonDeferrableFailedHookChecksError,
             InvalidPBMStatusError,
+            FailedToCreateS3BucketError,
+            InvalidS3CredentialsError,
+            SSLError,
+            ConnectTimeoutError,
             Exception,
         ) as e:
             fail_action_with_error_log(logger, event, action, str(e))

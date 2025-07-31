@@ -50,6 +50,10 @@ async def test_build_and_deploy_mongodb_cluster(
     kubernetes_model: Model,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
+    # deploy the glauth-k8s charm
+    await deploy_glauth(ops_test, kubernetes_model)
+    await consume_glauth_offers(ops_test, kubernetes_model)
+
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     await deploy_cluster_components(
@@ -59,6 +63,11 @@ async def test_build_and_deploy_mongodb_cluster(
         mongod_resource=mongod_resource,
         extra_config_config_server={
             "ldap-query-template": "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={PROVIDED_USER}))"
+        },
+        num_units_cluster_config={
+            CONFIG_SERVER_APP_NAME: 1,
+            SHARD_ONE_APP_NAME: 1,
+            SHARD_TWO_APP_NAME: 1,
         },
     )
     await ops_test.model.wait_for_idle(
@@ -74,10 +83,6 @@ async def test_build_and_deploy_mongodb_cluster(
         idle_period=20,
         timeout=DEPLOYMENT_TIMEOUT,
     )
-
-    # deploy the glauth-k8s charm
-    await deploy_glauth(ops_test, kubernetes_model)
-    await consume_glauth_offers(ops_test, kubernetes_model)
 
     await create_mongodb_user_roles(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, "ou=superheroes,ou=users,dc=glauth,dc=com"
@@ -95,7 +100,7 @@ async def test_build_and_deploy_mongos(
     Then integrate mongos and sharded cluster.
     """
     if app_name := await get_app_name(ops_test, charm_name="mongos"):
-        await check_or_scale_app(ops_test, substrate, app_name, 3)
+        await check_or_scale_app(ops_test, substrate, app_name, 1)
     else:
         await deploy_charm(
             ops_test=ops_test,
@@ -103,7 +108,7 @@ async def test_build_and_deploy_mongos(
             substrate=substrate,
             mongod_resource=mongod_resource,
             app_name=base_app_name,
-            num_units=3,
+            num_units=1,
             subordinate=(substrate == "lxd"),
         )
         app_name = base_app_name
@@ -113,7 +118,7 @@ async def test_build_and_deploy_mongos(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
         series="jammy",
-        num_units=2,
+        num_units=1,
         config={"database-name": "test-database"},
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
@@ -151,6 +156,15 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
     app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
+
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        app_name,
+        status="TLS is mandatory for LDAP transport.",
+        timeout=300,
+        subordinate=(substrate == "lxd"),
+    )
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
     )
@@ -160,17 +174,25 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         substrate,
         app_name,
         status="mongos and config-server not integrated with the same ldap server.",
-        timeout=300,
+        timeout=600,
         subordinate=(substrate == "lxd"),
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_glauth_fully_integrated(ops_test: OpsTest):
+async def test_glauth_fully_integrated(ops_test: OpsTest, substrate: Substrate):
     """Integrate the config server as well, everything should be green."""
     app_name = await get_app_name(ops_test, charm_name="mongos")
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        CONFIG_SERVER_APP_NAME,
+        status="TLS is mandatory for LDAP transport.",
+        timeout=300,
+    )
+
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )

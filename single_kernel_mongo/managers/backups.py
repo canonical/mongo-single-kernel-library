@@ -13,6 +13,7 @@ This user is named "backup".
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import re
@@ -21,9 +22,13 @@ from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, NewType
 
+import boto3
+from botocore.client import Config as BotoConfig
+from botocore.exceptions import ClientError, ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
+from mypy_boto3_s3.service_resource import Bucket
 from ops import Container
 from ops.framework import Object
 from ops.model import (
@@ -40,6 +45,7 @@ from tenacity import (
 )
 
 from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
     MongoPorts,
     Substrates,
     TrustStoreFiles,
@@ -49,8 +55,10 @@ from single_kernel_mongo.config.statuses import BackupStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
+    FailedToCreateS3BucketError,
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
+    InvalidS3CredentialsError,
     ListBackupError,
     PBMBusyError,
     RestoreError,
@@ -61,6 +69,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
+from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
@@ -84,6 +93,9 @@ S3_PBM_OPTION_MAP = {
     "endpoint": "storage.s3.endpointUrl",
     "storage-class": "storage.s3.storageClass",
 }
+
+# Already yaml encoded blackhole config to bootstrap pbm config
+EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +153,85 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     def backup_id(self, value: str):
         self._backup_id = value
 
+    def _get_bucket_resource(self, credentials: dict[str, str]) -> Bucket:
+        """Get the Bucket resource from the s3 connection.
+
+        Returns:
+            Bucket: the s3 bucket for uploading/downloading backups
+        """
+        s3_resource = boto3.resource(
+            "s3",
+            region_name=credentials.get("region"),
+            endpoint_url=credentials["endpoint"],
+            aws_access_key_id=credentials["access-key"],
+            aws_secret_access_key=credentials["secret-key"],
+            config=BotoConfig(
+                # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+            verify=(TRUST_STORE_PATH / TrustStoreFiles.PBM.value)
+            if credentials.get("tls-ca-chain")
+            else True,
+        )
+
+        return s3_resource.Bucket(credentials["bucket"])
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(ConnectTimeoutError),
+        wait=wait_fixed(5),
+        reraise=True,
+    )
+    def create_bucket(self, credentials: dict[str, str]) -> None:
+        """Create bucket if it does not exist yet."""
+        region = credentials.get("region")
+        bucket_name = credentials["bucket"]
+
+        if tls_ca_chain := credentials.get("tls-ca-chain", None):
+            with open(TRUST_STORE_PATH / TrustStoreFiles.PBM.value, mode="w") as fd:
+                # boto3 client will need the certificate on the node that runs the command
+                fd.write("\n".join(tls_ca_chain))
+
+        bucket = self._get_bucket_resource(credentials)
+
+        try:
+            bucket.meta.client.head_bucket(Bucket=bucket_name)
+            logger.info(f"Using existing bucket {bucket_name}")
+            return
+        except ConnectTimeoutError as e:
+            # Re-raise the error if the connection timeouts, so the user has the possibility to
+            # fix network issues and call juju resolve to re-trigger the hook that calls
+            # this method.
+            logger.error(f"error: {e!s} - please fix the error and call juju resolve on this unit")
+            raise e
+        except ClientError:
+            logger.warning("Bucket %s doesn't exist or you don't have access to it.", bucket_name)
+        except SSLError as e:
+            logger.error(f"error: {e!s} - Is TLS enabled and CA chain set on S3?")
+            raise e
+
+        try:
+            # cf https://github.com/aws/aws-sdk-js/issues/3647, setting the
+            # LocationConstraint to the default value of us-east-1 will fail
+            if region and region != "us-east-1":
+                bucket.create(CreateBucketConfiguration={"LocationConstraint": region})  # type: ignore
+            else:
+                bucket.create()
+            bucket.wait_until_exists()
+        except ClientError as e:
+            if (
+                "AccessDenied" in e.args[0]
+                or "InvalidAccessKeyId" in e.args[0]
+                or "SignatureDoesNotMatch" in e.args[0]
+            ):
+                logger.info("Incorrect credentials for S3")
+                raise InvalidS3CredentialsError
+            logger.error(e)
+            raise FailedToCreateS3BucketError from e
+
+        logger.info(f"Bucket {bucket_name} is ready")
+
     @cached_property
     def environment(self) -> dict[str, str]:
         """The environment used to run PBM commands.
@@ -162,6 +253,12 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if self.state.is_scaling_down(relation.id):
             logger.info("Relation broken event occurring due to scale down.")
             return
+
+        # cleanup local certificate if it exists
+        local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.PBM.value
+        if local_cert_file.exists() and local_cert_file.is_file():
+            local_cert_file.unlink()
+
         self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         self.remove_cert_from_shards()
         self.configure_and_restart(force=True)
@@ -309,6 +406,14 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return BackupState.WAITING_PBM_START
 
         try:
+            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            self.create_bucket(credentials)
+        except InvalidS3CredentialsError:
+            return BackupState.INCORRECT_CREDS
+        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError):
+            return BackupState.FAILED_TO_CREATE_BUCKET
+
+        try:
             pbm_status = self.pbm_status
         except WorkloadExecError as err:
             pbm_status = err.stdout
@@ -338,6 +443,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
             case BackupState.WAITING_TO_SYNC:
                 return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
+            case BackupState.FAILED_TO_CREATE_BUCKET:
+                return [BackupStatuses.FAILED_TO_CREATE_BUCKET.value]
             case BackupState.BACKUP_RUNNING:
                 if operation_result := self._get_backup_restore_operation_result(state):
                     logger.info(operation_result)
@@ -388,7 +495,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                     case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                         raise PBMBusyError
                     case BackupState.WAITING_TO_SYNC:
-                        self.workload.restart()
                         raise PBMBusyError
                     case _:
                         continue
@@ -426,7 +532,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Missing region - this is required for AWS and GCP")
 
         if not provided_configs.get("storage.s3.endpointUrl"):
-            logger.info("Missing endpointUrl - this is required for MinIO and GCP")
+            logger.info("Missing s3 endpoint.")
+            return False
 
         return True
 
@@ -440,35 +547,55 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
+            # Restart after setting all configurations
             self.configure_and_restart(force=True)
 
-        # Clear the current config file.
-        self.clear_pbm_config_file()
+        # First check if we ever had received a config
+        with MongoConnection(self.state.backup_config) as conn:
+            has_config = conn.client.admin["pbmConfig"].find_one()
+
+        if not has_config:
+            # Clear the current config file.
+            self.clear_pbm_config_file()
 
         config = map_s3_config_to_pbm_config(credentials)
 
-        for pbm_key, pbm_value in config.items():
-            try:
-                self.workload.run_bin_command(
-                    "config",
-                    ["--set", f"{pbm_key}={pbm_value}"],
-                    environment=self.environment,
-                )
-            except WorkloadExecError:
-                logger.error(f"Failed to configure PBM option: {pbm_key}")
-                raise SetPBMConfigError
+        try:
+            self.workload.run_bin_command(
+                "config",
+                list(
+                    itertools.chain(
+                        *[
+                            ("--set", f"{pbm_key}={pbm_value}")
+                            for pbm_key, pbm_value in config.items()
+                        ],
+                    )
+                ),
+                environment=self.environment,
+            )
+        except WorkloadExecError as err:
+            # In case of resync in progress, raise a ResyncError that will set a waiting status.
+            if "resync" in err.stderr.lower():
+                logger.error("Waiting for resync to finish before setting configuration: %s", err)
+                raise ResyncError
+            # Don't log the credentials that are part of the cmd]
+            logger.error(
+                "Failed to configure PBM options: %s",
+                {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
+            )
+            raise SetPBMConfigError(err.stderr)
 
     def clear_pbm_config_file(self) -> None:
         """Overwrites the PBM config file with the one provided by default."""
-        if self.substrate == Substrates.K8S:
-            self.workload.write(
-                self.workload.paths.pbm_config,
-                "# this file is to be left empty. Changes in this file will be ignored.\n",
-            )
+        # Bootstrap the config with blackhole configuration.
+        self.workload.write(
+            self.workload.paths.pbm_config,
+            "# this file is to be left empty. Changes in this file will be ignored.\n"
+            + EMPTY_CONFIG,
+        )
+        self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
         self.workload.run_bin_command(
-            "config",
-            ["--file", str(self.workload.paths.pbm_config)],
-            environment=self.environment,
+            "config", ["--file", f"{self.workload.paths.pbm_config}"], environment=self.environment
         )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
@@ -479,9 +606,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         replicas in the set. This method tries to handle both cases at once.
         """
         app_name = self.charm.app.name
-        replica_info = (
-            f"{app_name}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
-        )
+        replica_info = f"{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT}"
 
         clusters = pbm_status.get("cluster")
 
@@ -498,7 +623,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return ""
 
         for host_info in cluster.get("nodes", []):
-            if host_info.get("host") == replica_info:
+            if replica_info in host_info.get("host"):
                 return str(host_info.get("errors", ""))
 
         # Default case, no error message
@@ -643,7 +768,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return
 
     @retry(
-        stop=stop_after_attempt(60),
+        stop=stop_after_attempt(120),
         wait=wait_fixed(5),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
@@ -676,9 +801,14 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                     component_name=self.name,
                 )
                 raise ResyncError
+
+            # We're done with the sync, let's clear the statuses.
+            self.state.statuses.clear(scope="unit", component=self.name)
         except WorkloadExecError as e:
             if status := self.process_pbm_error_as_status(e.stdout):
                 self.state.statuses.add(status, scope="unit", component=self.name)
+                return
+            raise
 
     def _get_backup_restore_operation_result(self, current_pbm_status: BackupState) -> str | None:
         """Returns a string with the result of the backup/restore operation.

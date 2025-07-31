@@ -238,6 +238,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
     def update_mongos_hosts(self) -> None:
         """Updates the hosts for mongos on the relation data."""
         for relation in self.state.config_server_relation:
+            if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
+                logger.info(f"Database Requested event has not run yet for relation {relation.id}")
+                continue
             self.data_interface.update_relation_data(
                 relation.id,
                 {

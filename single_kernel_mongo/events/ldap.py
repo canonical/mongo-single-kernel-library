@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ops.framework import EventBase, EventSource, Object
+from pydantic import ValidationError
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, PeerRelationNames
 from single_kernel_mongo.config.statuses import LdapStatuses
@@ -80,7 +81,7 @@ class LDAPEventHandler(Object):
                 scope="unit",
             )
             self.manager.store_ldap_credentials_and_uri(event.relation)
-        except WaitingForLdapDataError as err:
+        except (WaitingForLdapDataError, ValidationError) as err:
             self.manager.state.statuses.add(
                 LdapStatuses.WAITING_FOR_LDAP_DATA.value,
                 scope="unit",

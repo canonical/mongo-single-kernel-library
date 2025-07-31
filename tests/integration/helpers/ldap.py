@@ -47,22 +47,24 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     Then it offers the two relations provided by glauth.
     """
     with ops_test.model_context("secondary"):
+        await kubernetes_model.deploy(
+            POSTGRESQL_K8S,
+            channel="14/stable",
+            trust=True,
+            series="jammy",
+            config={"profile": "testing"},
+        )
+        await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
+
         await asyncio.gather(
             kubernetes_model.deploy(
                 LDAP_APP_NAME,
                 channel="latest/edge",
+                revision=56,
                 trust=True,
                 config={"ldaps_enabled": True},
             ),
             kubernetes_model.deploy(LDAP_UTILS_APP_NAME, channel="latest/edge", trust=True),
-            kubernetes_model.deploy(
-                POSTGRESQL_K8S,
-                channel="14/stable",
-                trust=True,
-                series="jammy",
-                config={"profile": "testing"},
-                storage={"pgdata": "100G"},
-            ),
             kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
         )
@@ -72,6 +74,12 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
         )
 
         logger.info("Running integrations")
+        await kubernetes_model.integrate(
+            f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
+        )
+
+        await kubernetes_model.wait_for_idle([TRAEFIK_CHARM], status="active")
+
         await kubernetes_model.integrate(LDAP_APP_NAME, POSTGRESQL_K8S)
         await kubernetes_model.integrate(LDAP_APP_NAME, CERTIFICATES)
         await kubernetes_model.integrate(LDAP_APP_NAME, LDAP_UTILS_APP_NAME)
@@ -81,9 +89,6 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             raise_on_blocked=False,
         )
 
-        await kubernetes_model.integrate(
-            f"{LDAP_APP_NAME}:ldaps-ingress", f"{TRAEFIK_CHARM}:ingress-per-unit"
-        )
         await kubernetes_model.wait_for_idle(
             apps=[LDAP_APP_NAME, CERTIFICATES, TRAEFIK_CHARM],
             raise_on_blocked=False,  # postgresql can be in Blocked State because of low free space
