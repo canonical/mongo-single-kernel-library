@@ -182,7 +182,7 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
 
 def test_on_config_changed_invalid_role(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
 

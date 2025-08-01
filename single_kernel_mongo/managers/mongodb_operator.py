@@ -436,7 +436,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.state.is_role(self.config.role):
             logger.error(
-                f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role.value} to {self.config.role.value}"
+                f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role.value} to {self.config.role}"
             )
             raise ShardingMigrationError(
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
