@@ -189,7 +189,7 @@ def test_on_config_changed_invalid_role(harness):
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
 
@@ -201,7 +201,7 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
 
 def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     valid_mapping = [
         {
