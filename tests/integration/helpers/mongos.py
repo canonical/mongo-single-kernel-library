@@ -125,7 +125,7 @@ async def deploy_cluster_components(
         mongos_client_application_path,
         application_name=MONGOS_CLIENT_APPLICATION,
         num_units=mongos_units,
-        series="jammy",
+        series="noble",
     )
 
     apps_to_wait_for = [config_server_name, shard_one_name, MONGOS_CLIENT_APPLICATION]

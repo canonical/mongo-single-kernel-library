@@ -44,7 +44,7 @@ async def test_build_and_deploy(
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="jammy",
+        series="noble",
         config={"database-name": "test-database"},
     )
     await ops_test.model.deploy(

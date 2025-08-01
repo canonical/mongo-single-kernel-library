@@ -38,7 +38,7 @@ MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOD_PORT = 27017
 MONGOS_PORT = 27018
 UNIT_IDS = [0, 1, 2]
-SERIES = "jammy"
+SERIES = "noble"
 TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 OPERATOR_USERNAME = "operator"
@@ -106,7 +106,7 @@ async def deploy_charm(
             resources=(mongod_resource if not channel else None),
             application_name=app_name,
             num_units=0 if subordinate else num_units,
-            series="jammy",
+            series="noble",
             trust=True,
             config=config,
             channel=channel,
@@ -136,7 +136,7 @@ async def deploy_application(
         application_path,
         application_name=app_name,
         num_units=1,
-        series="jammy",
+        series="noble",
     )
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
