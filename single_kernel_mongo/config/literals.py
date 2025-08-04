@@ -67,11 +67,11 @@ class Snap:
     """The Snap related information."""
 
     name: str = "charmed-mongodb"
-    channel: str = "8-transition/edge"
-    revision: str = "132"
+    channel: str = "8/edge"
+    revision: str = "133"
 
 
-SNAP = Snap(channel="8-transition/edge", revision="132")
+SNAP = Snap(channel="8/edge", revision="133")
 
 T = TypeVar("T", bound=str | int)
 
@@ -109,7 +109,7 @@ MAX_PASSWORD_LENGTH = 4096
 
 PBM_RESTART_DELAY = 5
 
-FEATURE_VERSION = "7.0"
+FEATURE_VERSION = "8.0"
 
 
 OS_REQUIREMENTS = {
