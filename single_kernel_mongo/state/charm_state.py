@@ -14,7 +14,12 @@ from urllib.parse import quote
 
 from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
 from ops import Object, Relation, Unit
-from pymongo.errors import OperationFailure, ServerSelectionTimeoutError
+from pymongo.errors import (
+    AutoReconnect,
+    NotPrimaryError,
+    OperationFailure,
+    ServerSelectionTimeoutError,
+)
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
@@ -725,7 +730,7 @@ class CharmState(Object, StatusesStateProtocol):
             ):
                 return False
             raise
-        except ServerSelectionTimeoutError:
+        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError):
             # Connection refused, - this occurs when internal membership is not in sync across the
             # cluster (i.e. TLS + KeyFile).
             return False
