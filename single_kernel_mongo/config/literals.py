@@ -123,3 +123,4 @@ class TrustStoreFiles(str, Enum):
     """The different files we store in the trust store."""
 
     PBM = "pbm.crt"
+    LDAP = "ldap.crt"

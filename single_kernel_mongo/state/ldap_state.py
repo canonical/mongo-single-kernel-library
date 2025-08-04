@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from ldap3.utils.uri import parse_uri
+from ldapurl import LDAPUrl
 from ops import Relation
 from ops.model import Application
 
@@ -172,8 +172,8 @@ class LdapState(AbstractRelationState[DataPeerData]):
         if not (ldaps_urls := self.ldaps_urls):
             return
         for uri in ldaps_urls:
-            parsed_uri = parse_uri(uri)
-            yield f"{parsed_uri['host']}:{parsed_uri['port']}"
+            parsed_uri = LDAPUrl(uri)
+            yield parsed_uri.hostport
 
     @property
     def certificate(self) -> str | None:
