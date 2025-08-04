@@ -23,8 +23,12 @@ jobs:
       - name: Set up python environment
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: "poetry"
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Install pre-commit
         run: |
           poetry install
@@ -81,8 +85,12 @@ jobs:
       - name: Set up python environment
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: "poetry"
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Run linters
         run: tox run -e lint
 
@@ -101,8 +109,12 @@ jobs:
       - name: Set up python environment
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: "poetry"
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Run tests
         run: tox run -e unit
 
@@ -144,17 +156,18 @@ jobs:
 
           sudo snap install charmcraft --classic
           pipx install charmcraftcache
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Set up python environment
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: 'poetry'
       - name: Update lib and build charm
         shell: bash
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh ${{ matrix.path }}
         env:
-          CI_CACHE: true
+          CI_CACHE: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute path in artifact
         id: path-in-artifact
@@ -179,7 +192,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.2.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: true
+      cache: false
 
   integration-test:
     name: Integration test charm

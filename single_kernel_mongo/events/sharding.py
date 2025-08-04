@@ -53,7 +53,9 @@ class ConfigServerEventHandler(Object):
         self.charm = self.dependent.charm
         self.manager = self.dependent.config_server_manager
         self.relation_name = self.manager.relation_name
-        super().__init__(parent=self.manager, key=dependent.config_server_manager.relation_name)
+        super().__init__(
+            parent=self.manager, key=dependent.config_server_manager.relation_name.value
+        )
 
         self.database_provider_events = DatabaseProviderEventHandlers(
             self.charm, self.manager.data_interface
@@ -62,14 +64,14 @@ class ConfigServerEventHandler(Object):
             self.database_provider_events.on.database_requested, self._on_database_requested
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_departed,
+            self.charm.on[self.relation_name.value].relation_departed,
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_event
+            self.charm.on[self.relation_name.value].relation_changed, self._on_relation_event
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_event
+            self.charm.on[self.relation_name.value].relation_broken, self._on_relation_event
         )
 
     def _on_relation_event(self, event: RelationChangedEvent):
@@ -117,10 +119,10 @@ class ShardEventHandler(Object):
         )
 
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_created, self._on_relation_created
+            self.charm.on[self.relation_name.value].relation_created, self._on_relation_created
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_database_created
+            self.charm.on[self.relation_name.value].relation_changed, self._on_database_created
         )
 
         self.framework.observe(
@@ -128,12 +130,12 @@ class ShardEventHandler(Object):
         )
 
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_departed,
+            self.charm.on[self.relation_name.value].relation_departed,
             self.dependent.check_relation_broken_or_scale_down,
         )
 
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
+            self.charm.on[self.relation_name.value].relation_broken, self._on_relation_broken
         )
 
     def _on_relation_created(self, event: RelationCreatedEvent):

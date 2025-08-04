@@ -436,10 +436,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not self.state.is_role(self.config.role):
             logger.error(
-                f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role} to {self.config.role}"
+                f"cluster migration currently not supported, cannot change from {self.state.app_peer_data.role.value} to {self.config.role}"
             )
             raise ShardingMigrationError(
-                f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role}"
+                f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
         if self.charm.unit.is_leader():
@@ -805,7 +805,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         try:
             for port in ports:
-                self.workload.exec(["open-port", f"{port}/TCP"])
+                self.workload.exec(["open-port", f"{port.value}/TCP"])
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise

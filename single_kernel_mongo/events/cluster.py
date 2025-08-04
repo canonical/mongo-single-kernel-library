@@ -44,7 +44,7 @@ class ClusterConfigServerEventHandler(Object):
         self.charm = self.dependent.charm
         self.manager = self.dependent.cluster_manager
         self.relation_name = self.manager.relation_name
-        super().__init__(parent=self.manager, key=dependent.cluster_manager.relation_name)
+        super().__init__(parent=self.manager, key=dependent.cluster_manager.relation_name.value)
 
         self.database_provider_events = DatabaseProviderEventHandlers(
             self.charm, self.manager.data_interface
@@ -55,14 +55,14 @@ class ClusterConfigServerEventHandler(Object):
             self._on_database_requested,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed, self._on_relation_event
+            self.charm.on[self.relation_name.value].relation_changed, self._on_relation_event
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_departed,
+            self.charm.on[self.relation_name.value].relation_departed,
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken,
+            self.charm.on[self.relation_name.value].relation_broken,
             self._on_relation_broken_event,
         )
 
@@ -115,22 +115,22 @@ class ClusterMongosEventHandler(Object):
         )
 
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_created,
+            self.charm.on[self.relation_name.value].relation_created,
             self._on_relation_created,
         )
         self.framework.observe(
             self.database_requirer_events.on.database_created, self._on_database_created
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_changed,
+            self.charm.on[self.relation_name.value].relation_changed,
             self._on_relation_changed,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_departed,
+            self.charm.on[self.relation_name.value].relation_departed,
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken, self._on_relation_broken
+            self.charm.on[self.relation_name.value].relation_broken, self._on_relation_broken
         )
 
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:

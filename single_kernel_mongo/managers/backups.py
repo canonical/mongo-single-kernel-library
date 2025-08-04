@@ -650,11 +650,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         except json.JSONDecodeError:
             error_message = pbm_status
 
-        if StatusCodeError.FORBIDDEN in error_message:
+        if StatusCodeError.FORBIDDEN.value in error_message:
             return BackupState.INCORRECT_CREDS
-        if StatusCodeError.NOTFOUND in error_message:
+        if StatusCodeError.NOTFOUND.value in error_message:
             return BackupState.INCOMPATIBLE_CONF
-        if StatusCodeError.MOVED_PERMANENTLY in error_message:
+        if StatusCodeError.MOVED_PERMANENTLY.value in error_message:
             return BackupState.INCOMPATIBLE_CONF
 
         if error_message:

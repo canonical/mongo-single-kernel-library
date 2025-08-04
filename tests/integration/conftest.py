@@ -76,19 +76,19 @@ def skip_for_substrate(request, substrate: Substrate):
 @pytest.fixture
 def application_path() -> str:
     """The test application path."""
-    return "./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@22.04-amd64.charm"
+    return "./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@24.04-amd64.charm"
 
 
 @pytest.fixture
 def client_relation_charm_path() -> str:
     """The test application path."""
-    return "./tests/integration/applications/client_relations_charm/application_ubuntu@22.04-amd64.charm"
+    return "./tests/integration/applications/client_relations_charm/application_ubuntu@24.04-amd64.charm"
 
 
 @pytest.fixture
 def mongos_client_application_path() -> str:
     """The mongos test application path."""
-    return "./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@22.04-amd64.charm"
+    return "./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@24.04-amd64.charm"
 
 
 @pytest.fixture
@@ -111,16 +111,16 @@ def mongos_base_path(substrate) -> Path:
 def mongodb_charm(substrate, mongod_base_path) -> str:
     """The MongoDB charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@22.04-amd64.charm"
-    return f"./{mongod_base_path}/mongodb_ubuntu@22.04-amd64.charm"
+        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-amd64.charm"
+    return f"./{mongod_base_path}/mongodb_ubuntu@24.04-amd64.charm"
 
 
 @pytest.fixture
 def mongos_charm(substrate, mongos_base_path) -> str:
     """The Mongos charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongos_base_path}/mongos-k8s_ubuntu@22.04-amd64.charm"
-    return f"./{mongos_base_path}/mongos_ubuntu@22.04-amd64.charm"
+        return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-amd64.charm"
+    return f"./{mongos_base_path}/mongos_ubuntu@24.04-amd64.charm"
 
 
 @pytest.fixture

@@ -91,7 +91,7 @@ async def test_build_and_deploy(
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="jammy",
+        series="noble",
         config={"extra-user-roles": "admin"},
     )
 

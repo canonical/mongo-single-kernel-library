@@ -81,7 +81,7 @@ class PasswordActionEvents(Object):
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
-        event.set_results({PasswordActionParameter.PASSWORD: passwd, "secret-id": secret_id})
+        event.set_results({PasswordActionParameter.PASSWORD.value: passwd, "secret-id": secret_id})
         return
 
     def _get_password_action(self, event: ActionEvent) -> None:
@@ -100,4 +100,4 @@ class PasswordActionEvents(Object):
         if not username:
             return
         password = self.dependent.get_password(username)
-        event.set_results({PasswordActionParameter.PASSWORD: password})
+        event.set_results({PasswordActionParameter.PASSWORD.value: password})
