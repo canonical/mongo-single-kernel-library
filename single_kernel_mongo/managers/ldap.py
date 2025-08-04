@@ -6,23 +6,21 @@
 from __future__ import annotations
 
 import hashlib
-import ssl
 from logging import getLogger
 from typing import TYPE_CHECKING
 
 import jinja2
+import ldap
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
-from ldap3 import Connection as LDAPConnection
-from ldap3 import Server as LDAPServer
-from ldap3 import Tls as LDAPTls
-from ldap3.core.exceptions import LDAPException
 from ops.framework import Object
 from ops.model import Relation
 
 from single_kernel_mongo.config.literals import (
+    TRUST_STORE_PATH,
     Substrates,
+    TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
@@ -68,7 +66,9 @@ class LDAPManager(Object, ManagerStatusProtocol):
         self.relation_name = relation_name
         self.cert_relation_name = cert_relation_name
         self.ldap_requirer = LdapRequirer(self.charm, self.relation_name.value)
-        self.certificate_transfer = CertificateTransferRequires(self.charm, self.cert_relation_name)
+        self.certificate_transfer = CertificateTransferRequires(
+            self.charm, self.cert_relation_name.value
+        )
 
     def assert_pass_hook_checks(self) -> None:
         """Runs some hook checks before allowing the hook to run."""
@@ -171,6 +171,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
 
         self.workload.write(self.workload.paths.ldap_certificates_file, full_chain)
 
+        with open(TRUST_STORE_PATH / TrustStoreFiles.LDAP.value, mode="w") as fd:
+            # boto3 client will need the certificate on the node that runs the command
+            fd.write("\n".join(full_chain))
+
     def remove_ldap_certificates(self) -> None:
         """Runs when the certificate is removed."""
         self.state.ldap.clean_certificates()
@@ -180,6 +184,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
         # Conditional removal of the certificates
         if self.workload.exists(self.workload.paths.ldap_certificates_file):
             self.workload.delete(self.workload.paths.ldap_certificates_file)
+
+        local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.LDAP.value
+        if local_cert_file.exists() and local_cert_file.is_file():
+            local_cert_file.unlink()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
             self.dependent.restart_charm_services()
@@ -306,22 +314,20 @@ class LDAPManager(Object, ManagerStatusProtocol):
             )
             return LdapState.MISSING_LDAPS_URLS
 
-        try:
-            for ldap_uri in self.state.ldap.ldaps_urls:
-                tls = LDAPTls(
-                    validate=ssl.CERT_REQUIRED,
-                    version=ssl.PROTOCOL_TLSv1_2,
-                    ca_certs_data="\n".join(cert_chain),
-                )
-                server = LDAPServer(host=ldap_uri, use_ssl=True, tls=tls)
-                conn = LDAPConnection(server, user=bind_dn, password=bind_password)
-                # For LDAP, binding is authenticating.
-                conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
-                conn.unbind()
-        except LDAPException as err:
-            logger.error(f"Could not bind: {err}", exc_info=True)
-            return LdapState.UNABLE_TO_BIND
+        local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.LDAP.value
 
+        for ldap_uri in self.state.ldap.ldaps_urls:
+            conn = ldap.initialize(ldap_uri)
+            conn.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
+            conn.set_option(ldap.OPT_X_TLS_CACERTFILE, f"{local_cert_file}")
+            conn.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+            # For LDAP, binding is authenticating.
+            if not conn.bind(
+                who=bind_dn, cred=bind_password
+            ):  # We consider sufficient to be able to bind to verify that the connection is working.
+                logger.error(f"Could not bind to {ldap_uri}.")
+                return LdapState.UNABLE_TO_BIND
+            conn.unbind()
         return LdapState.ACTIVE
 
     def share_hash_with_mongos(self) -> None:

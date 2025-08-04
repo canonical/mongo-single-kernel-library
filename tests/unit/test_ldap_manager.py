@@ -194,7 +194,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
-    assert ldap_parameters["servers"] == "ldap.glauth.com:636"  # parsing adds port if non existent
+    assert ldap_parameters["servers"] == "ldap.glauth.com"
     assert ldap_parameters["transportSecurity"] == "tls"
     assert ldap_parameters["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
     assert ldap_parameters["bind"]["queryPassword"] == "password"
@@ -345,7 +345,7 @@ def test_ldap_full_integration_cycle(
     # Check the parameters
     ldap_parameters = harness.charm.operator.config_manager.ldap_parameters["security"]["ldap"]  # type: ignore
 
-    assert ldap_parameters["servers"] == "ldap.glauth.com:636"  # parsing adds port if non existent
+    assert ldap_parameters["servers"] == "ldap.glauth.com"  # parsing adds port if non existent
     assert ldap_parameters["transportSecurity"] == "tls"
     assert ldap_parameters["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
     assert ldap_parameters["bind"]["queryPassword"] == "password"

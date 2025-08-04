@@ -182,14 +182,14 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
 
 def test_on_config_changed_invalid_role(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
 
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     harness.update_config({"ldap-user-to-dn-mapping": "invalid"})
 
@@ -201,7 +201,7 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
 
 def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     valid_mapping = [
         {
@@ -224,7 +224,7 @@ def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
 
 def test_on_config_changed_invalid_ldap_query_template_user(harness):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     harness.update_config(
         {
@@ -242,7 +242,7 @@ def test_on_config_changed_valid_ldap_query_template(harness, mocker):
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
     )
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     valid_mapping = [
         {
@@ -263,7 +263,7 @@ def test_on_config_changed_valid_ldap_query_template(harness, mocker):
 
 def test_on_config_changed_upgrade_in_progress(harness, mocker):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocked_defer = mocker.patch("ops.framework.EventBase.defer")
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",

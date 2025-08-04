@@ -37,7 +37,7 @@ async def test_build_and_deploy(
     mongos_resource: dict,
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="jammy")
+    await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, channel="latest/stable", series="noble")
     await deploy_charm(
         ops_test,
         mongodb_charm,

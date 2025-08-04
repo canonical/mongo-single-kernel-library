@@ -51,7 +51,7 @@ class ClusterProvider(Object):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.CLUSTER,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        super().__init__(parent=dependent, key=relation_name.value)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state
@@ -242,7 +242,7 @@ class ClusterRequirer(Object):
         substrate: Substrates,
         relation_name: RelationNames = RelationNames.CLUSTER,
     ):
-        super().__init__(parent=dependent, key=relation_name)
+        super().__init__(parent=dependent, key=relation_name.value)
         self.dependent = dependent
         self.charm = dependent.charm
         self.state = state

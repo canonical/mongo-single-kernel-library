@@ -6,7 +6,7 @@ This module should contain the literals used in the charms (paths, enums, etc).
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -34,7 +34,7 @@ class Scope(str, Enum):
     UNIT = "unit"
 
 
-class MongoPorts(int, Enum):
+class MongoPorts(IntEnum):
     """The default Mongo ports."""
 
     MONGODB_PORT = 27017
@@ -67,11 +67,11 @@ class Snap:
     """The Snap related information."""
 
     name: str = "charmed-mongodb"
-    channel: str = "6/edge"
-    revision: str = "131"
+    channel: str = "8-transition/edge"
+    revision: str = "132"
 
 
-SNAP = Snap(channel="6/edge", revision="131")
+SNAP = Snap(channel="8-transition/edge", revision="132")
 
 T = TypeVar("T", bound=str | int)
 
@@ -109,7 +109,7 @@ MAX_PASSWORD_LENGTH = 4096
 
 PBM_RESTART_DELAY = 5
 
-FEATURE_VERSION_6 = "6.0"
+FEATURE_VERSION = "7.0"
 
 
 OS_REQUIREMENTS = {
@@ -123,3 +123,4 @@ class TrustStoreFiles(str, Enum):
     """The different files we store in the trust store."""
 
     PBM = "pbm.crt"
+    LDAP = "ldap.crt"

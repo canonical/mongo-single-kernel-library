@@ -40,17 +40,19 @@ class DatabaseEventsHandler(Object):
         self.manager = dependent.mongo_manager
         self.charm = dependent.charm
         self.relation_name = relation_name
-        self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
+        self.database_provides = DatabaseProvides(
+            self.charm, relation_name=self.relation_name.value
+        )
 
         self.framework.observe(
-            self.charm.on[relation_name].relation_departed,
+            self.charm.on[relation_name.value].relation_departed,
             self.dependent.check_relation_broken_or_scale_down,
         )
         self.framework.observe(
-            self.charm.on[relation_name].relation_broken, self._on_relation_event
+            self.charm.on[relation_name.value].relation_broken, self._on_relation_event
         )
         self.framework.observe(
-            self.charm.on[relation_name].relation_changed, self._on_relation_event
+            self.charm.on[relation_name.value].relation_changed, self._on_relation_event
         )
         self.framework.observe(
             self.database_provides.on.database_requested, self._on_relation_event

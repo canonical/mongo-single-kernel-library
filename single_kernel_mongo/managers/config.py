@@ -494,7 +494,7 @@ class MongosConfigManager(MongoConfigManager):
             return {"sharding": {"configDB": uri}}
         return {
             "sharding": {
-                "configDB": f"{self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT}"
+                "configDB": f"{self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT.value}"
             }
         }
 

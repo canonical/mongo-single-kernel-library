@@ -117,7 +117,7 @@ async def test_build_and_deploy_mongos(
     await ops_test.model.deploy(
         DATA_INTEGRATOR_APP_NAME,
         channel="latest/stable",
-        series="jammy",
+        series="noble",
         num_units=1,
         config={"database-name": "test-database"},
     )

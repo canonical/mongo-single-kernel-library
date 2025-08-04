@@ -18,7 +18,7 @@ def test_tls_relation_joined(harness: Harness[MongoTestCharm]):
 
     harness.set_leader(True)
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -45,7 +45,7 @@ def test_tls_relation_joined_fails_condition_role(harness: Harness[MongoTestChar
 
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -63,7 +63,7 @@ def test_tls_relation_joined_fails_upgrade_in_progress(harness: Harness[MongoTes
         return_value=True,
     )
 
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -75,7 +75,7 @@ def test_set_private_key(harness: Harness[MongoTestCharm]):
     manager = harness.charm.operator.tls_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -96,7 +96,7 @@ def test_set_private_key(harness: Harness[MongoTestCharm]):
 
 def test_tls_set_private_key_fail_conditions(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -118,7 +118,7 @@ def test_tls_set_private_key_fails_upgrade_in_progress(harness: Harness[MongoTes
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -148,7 +148,7 @@ def test_external_certificate_available(
     )
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -194,7 +194,7 @@ def test_internal_certificate_available(
     )
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -235,7 +235,7 @@ def test_unknown_certificate_available(
     )
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -271,7 +271,7 @@ def test_certificate_available_role_invalid_defer(
 ):
     harness.set_leader(True)
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -296,7 +296,7 @@ def test_certificate_available_upgrade_in_progress_defer(
         return_value=True,
     )
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
@@ -324,7 +324,7 @@ def test_tls_relation_broken(harness: Harness[MongoTestCharm], mocker, mock_fs_i
     )
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -350,7 +350,7 @@ def test_tls_relation_broken_fails_db_not_initialised(
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = False
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -378,7 +378,7 @@ def test_tls_relation_broken_log_upgrade_in_progress(
     )
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -400,7 +400,7 @@ def test_external_certificate_expiring(
     manager = harness.charm.operator.tls_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -429,7 +429,7 @@ def test_internal_certificate_expiring(
     manager = harness.charm.operator.tls_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -457,7 +457,7 @@ def test_certificate_expiring_fails_condition(
     """Verifies that when an external certificate expires a csr is made."""
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -476,7 +476,7 @@ def test_unknown_certificate_expiring(
     manager = harness.charm.operator.tls_manager
 
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 

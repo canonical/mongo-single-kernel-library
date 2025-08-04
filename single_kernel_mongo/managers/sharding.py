@@ -289,7 +289,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             return charm_statuses[scope]
 
-        uri = f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT}"
+        uri = (
+            f"mongodb://{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGOS_PORT.value}"
+        )
         if not self.dependent.mongo_manager.mongod_ready(uri):
             charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
@@ -659,7 +661,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             return
         # many secret changed events occur, only listen to those related to our interface with the
         # config-server
-        sharding_secretes_label = f"{self.relation_name}.{relation.id}.extra.secret"
+        sharding_secretes_label = f"{self.relation_name.value}.{relation.id}.extra.secret"
         if secret_label != sharding_secretes_label:
             logger.info(
                 f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."

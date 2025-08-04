@@ -110,7 +110,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         # role won't exist in the databag. We save it in the databag because we
         # don't allow role changing yet.
         if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
-            self.operator.state.app_peer_data.role = self.parsed_config.role
+            self.operator.state.app_peer_data.role = MongoDBRoles(self.parsed_config.role)
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Returns a list of statuses."""

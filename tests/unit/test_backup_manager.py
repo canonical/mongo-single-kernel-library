@@ -31,7 +31,7 @@ def backup_manager(harness: Harness[MongoTestCharm]) -> BackupManager:
 
 def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -42,7 +42,7 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value
+    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS
 
 
 def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
