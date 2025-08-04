@@ -978,12 +978,12 @@ async def clear_continous_writes(
 
 
 async def count_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
+    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit, mongos: bool = False
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
     uri = await generate_mongodb_client(
-        ops_test, substrate, app_name, mongos=False, hosts=[host], unit=unit
+        ops_test, substrate, app_name, mongos=mongos, hosts=[host], unit=unit
     )
 
     client = MongoClient(uri, directConnection=True)

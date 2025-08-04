@@ -11,7 +11,6 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.utils.mongodb_users import CharmUsers
-from tests.integration.helpers.upgrade import set_fcv
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -29,6 +28,7 @@ from ..helpers.common import (
     stop_continous_writes,
 )
 from ..helpers.types import Substrate
+from ..helpers.upgrade import set_fcv
 
 MONGODB_SIX = "mongodb-six"
 MONGODB_SEVEN = "mongodb-seven"

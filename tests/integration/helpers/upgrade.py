@@ -6,7 +6,14 @@ import logging
 
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import find_unit, get_unit_id
+from ..helpers.common import (
+    MONGOD_PORT,
+    execute_on_mongod,
+    find_unit,
+    get_address_of_unit,
+    get_password,
+    get_unit_id,
+)
 from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -83,3 +90,26 @@ async def assert_successful_run_upgrade_sequence(
 async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> None:
     refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:mongodb"
     await ops_test.juju(*refresh_cmd.split())
+
+
+async def set_fcv(
+    ops_test: OpsTest, substrate: Substrate, app_name: str, fcv: str, port: int = MONGOD_PORT
+) -> None:
+    password = await get_password(ops_test, username="operator", app_name=app_name)
+    replica_set_hosts = [
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
+    replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
+
+    hosts = ",".join(replica_set_hosts)
+    replica_set_uri = f"mongodb://monitor:{password}@{hosts}/admin?replicaSet={app_name}"
+
+    admin_mongod_cmd = (
+        f"db.adminCommand({{setFeatureCompatibilityVersion: '{fcv}', confirm: true}})"
+    )
+
+    result = await execute_on_mongod(
+        ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd, expecting_output=False
+    )
+    assert result.succeeded, f"Failed to set fcv to {fcv}."
