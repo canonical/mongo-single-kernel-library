@@ -73,6 +73,9 @@ async def test_deploy_mongodb_6(
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
         channel="6/stable",
+        config_server_name=CONFIG_SERVER_SIX,
+        shard_one_name=SHARD_ONE_SIX,
+        shard_two_name=SHARD_TWO_SIX,
     )
     # deploy the s3 integrator charm
     await ops_test.model.deploy(S3_APP_NAME, channel="edge", config=storage_config)
@@ -165,6 +168,9 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         {},
         num_units_cluster_config=num_units_cluster_config,
         channel="8-transition/edge",
+        config_server_name=CONFIG_SERVER_SEVEN,
+        shard_one_name=SHARD_ONE_SEVEN,
+        shard_two_name=SHARD_TWO_SEVEN,
     )
 
     await ops_test.model.wait_for_idle(
@@ -287,6 +293,9 @@ async def test_deploy_mongodb_8(
         {},
         num_units_cluster_config=num_units_cluster_config,
         channel="8-transition/edge",
+        config_server_name=CONFIG_SERVER_EIGHT,
+        shard_one_name=SHARD_ONE_EIGHT,
+        shard_two_name=SHARD_TWO_EIGHT,
     )
 
     await ops_test.model.wait_for_idle(
