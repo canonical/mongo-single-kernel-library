@@ -678,7 +678,7 @@ class MongoConnection:
             if shard_name == shard_to_ignore:
                 continue
 
-            current_free_space = shard_storage_info["freeStorageSize"]
+            current_free_space = shard_storage_info["totalFreeStorageSize"]
             if current_free_space > candidate_free_space:
                 candidate_shard = shard_name
                 candidate_free_space = current_free_space
