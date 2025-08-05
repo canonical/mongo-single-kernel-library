@@ -185,7 +185,7 @@ async def test_set_operator_password(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_sharding(ops_test: OpsTest, substrate) -> None:
+async def test_sharding_write(ops_test: OpsTest, substrate) -> None:
     """Tests writing data to mongos gets propagated to shards."""
     await ops_test.model.wait_for_idle(apps=CLUSTER_APPS, idle_period=30)
 
@@ -218,41 +218,23 @@ async def test_sharding(ops_test: OpsTest, substrate) -> None:
     )
     mongos_client.admin.command("movePrimary", "animals_database_2", to=SHARD_THREE_APP_NAME)
 
-    shard_two_leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_TWO_APP_NAME)
-    shard_two_host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(shard_two_leader_unit.name), SHARD_TWO_APP_NAME
-    )
-    # log into shard two verify data
-    shard_two_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=SHARD_TWO_APP_NAME, mongos=False, hosts=[shard_two_host]
-    )
-    shard_two_client = MongoClient(shard_two_uri, directConnection=True)
-
     has_correct_data = verify_data_mongodb(
-        shard_two_client,
+        mongos_client,
         db_name="animals_database_1",
         coll_name="horses",
         key="horse-breed",
         value="unicorn",
+        shard=SHARD_TWO_APP_NAME,
     )
     assert has_correct_data, "data not written to shard-two"
 
-    # log into shard 4 verify data
-    shard_three_leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_THREE_APP_NAME)
-    shard_three_host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(shard_three_leader_unit.name), SHARD_THREE_APP_NAME
-    )
-    shard_three_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=SHARD_THREE_APP_NAME, mongos=False, hosts=[shard_three_host]
-    )
-    shard_three_client = MongoClient(shard_three_uri, directConnection=True)
-
     has_correct_data = verify_data_mongodb(
-        shard_three_client,
+        mongos_client,
         db_name="animals_database_2",
         coll_name="horses",
         key="horse-breed",
         value="pegasus",
+        shard=SHARD_THREE_APP_NAME,
     )
     assert has_correct_data, "data not written to shard-three"
 

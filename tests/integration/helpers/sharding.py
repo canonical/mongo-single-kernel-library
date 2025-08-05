@@ -181,9 +181,12 @@ def remove_db_writes(client: MongoClient, db_name: str, coll_name: str):
 
 
 def verify_data_mongodb(
-    client: MongoClient, db_name: str, coll_name: str, key: str, value: str
+    client: MongoClient, db_name: str, coll_name: str, key: str, value: str, shard: str
 ) -> bool:
     """Checks a key/value pair for a provided collection and database."""
+    databases = client["config"]["databases"].find({"_id": db_name})
+    assert databases[0]["primary"] == shard
+
     db = client[db_name]
     test_collection = db[coll_name]
     query = test_collection.find({}, {key: 1})
