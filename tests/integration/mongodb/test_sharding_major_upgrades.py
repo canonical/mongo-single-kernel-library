@@ -2,9 +2,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import time
 from logging import getLogger
 from pathlib import Path
-from time import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
