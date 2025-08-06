@@ -54,7 +54,7 @@ async def test_deploy_mongodb_6(
         substrate,
         app_name=MONGODB_SIX,
         mongod_resource={},  # unused
-        channel="6/stable",
+        channel="6/edge",
         num_units=3,
     )
     # deploy the s3 integrator charm

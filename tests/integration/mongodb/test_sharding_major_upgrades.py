@@ -72,7 +72,7 @@ async def test_deploy_mongodb_6(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="6/stable",
+        channel="6/edge",
         config_server_name=CONFIG_SERVER_SIX,
         shard_one_name=SHARD_ONE_SIX,
         shard_two_name=SHARD_TWO_SIX,
