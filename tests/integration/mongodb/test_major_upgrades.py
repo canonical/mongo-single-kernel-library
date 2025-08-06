@@ -227,7 +227,7 @@ async def test_deploy_mongodb_8(
         raise_on_blocked=False,
     )
 
-    await ops_test.model.integrate(S3_APP_NAME, MONGODB_SEVEN)
+    await ops_test.model.integrate(S3_APP_NAME, MONGODB_EIGHT)
     await ops_test.model.wait_for_idle(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
