@@ -76,6 +76,7 @@ async def test_deploy_mongodb_6(
         config_server_name=CONFIG_SERVER_SIX,
         shard_one_name=SHARD_ONE_SIX,
         shard_two_name=SHARD_TWO_SIX,
+        series="jammy",
     )
     # deploy the s3 integrator charm
     await ops_test.model.deploy(S3_APP_NAME, channel="edge", config=storage_config)

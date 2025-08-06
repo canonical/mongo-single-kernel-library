@@ -81,6 +81,7 @@ async def deploy_cluster_components(
     shard_one_name: str = SHARD_ONE_APP_NAME,
     shard_two_name: str = SHARD_TWO_APP_NAME,
     channel: str | None = None,
+    series: str | None = None,
     extra_config_config_server: dict[str, str] = {},
 ) -> None:
     if not num_units_cluster_config:
@@ -104,6 +105,7 @@ async def deploy_cluster_components(
         num_units=num_units_cluster_config[config_server_name],
         channel=channel,
         config={"role": "config-server"} | extra_config_config_server,
+        series=series,
     )
     await deploy_charm(
         ops_test,
@@ -114,6 +116,7 @@ async def deploy_cluster_components(
         num_units=num_units_cluster_config[shard_one_name],
         channel=channel,
         config={"role": "shard"},
+        series=series,
     )
     await deploy_charm(
         ops_test,
@@ -124,6 +127,7 @@ async def deploy_cluster_components(
         num_units=num_units_cluster_config[shard_two_name],
         channel=channel,
         config={"role": "shard"},
+        series=series,
     )
 
     await ops_test.model.wait_for_idle(

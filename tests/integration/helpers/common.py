@@ -99,14 +99,16 @@ async def deploy_charm(
     config: dict | None = None,
     subordinate: bool = False,
     storage: dict | None = None,
+    series: str | None = None,
 ):
     if substrate == "microk8s":
+        series = series or "noble"
         await ops_test.model.deploy(
             charm,
             resources=(mongod_resource if not channel else None),
             application_name=app_name,
             num_units=0 if subordinate else num_units,
-            series="noble",
+            series=series,
             trust=True,
             config=config,
             channel=channel,
