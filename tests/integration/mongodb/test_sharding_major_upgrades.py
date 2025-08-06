@@ -268,9 +268,7 @@ async def test_backup_mongodb_7(
 
 @pytest.mark.abort_on_fail
 async def test_deploy_mongodb_8(
-    ops_test: OpsTest,
-    substrate: Substrate,
-    mongodb_charm: str,
+    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
 ):
     """Build and deploy one unit of MongoDB."""
     num_units_cluster_config = {
@@ -282,9 +280,8 @@ async def test_deploy_mongodb_8(
         ops_test,
         substrate,
         mongodb_charm,
-        {},
+        mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="8-transition/edge",
         config_server_name=CONFIG_SERVER_EIGHT,
         shard_one_name=SHARD_ONE_EIGHT,
         shard_two_name=SHARD_TWO_EIGHT,
@@ -327,10 +324,14 @@ async def test_deploy_mongodb_8(
             unit_id=get_unit_id(leader_unit.name),
             username=user,
             password=password,
-            app_name=CONFIG_SERVER_SEVEN,
+            app_name=CONFIG_SERVER_EIGHT,
         )
 
-    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_EIGHT, SHARD_ONE_EIGHT, SHARD_TWO_EIGHT],
+        timeout=TIMEOUT,
+        status="active",
+    )
 
 
 @pytest.mark.abort_on_fail
