@@ -103,7 +103,7 @@ async def set_fcv(
     replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
 
     hosts = ",".join(replica_set_hosts)
-    replica_set_uri = f"mongodb://monitor:{password}@{hosts}/admin?replicaSet={app_name}"
+    replica_set_uri = f"mongodb://operator:{password}@{hosts}/admin?replicaSet={app_name}"
 
     admin_mongod_cmd = (
         f"db.adminCommand({{setFeatureCompatibilityVersion: '{fcv}', confirm: true}})"
