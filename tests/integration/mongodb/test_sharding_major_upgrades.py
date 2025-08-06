@@ -207,7 +207,11 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
         await set_password(
-            ops_test, unit_id=get_unit_id(leader_unit.name), username=user, password=password
+            ops_test,
+            unit_id=get_unit_id(leader_unit.name),
+            username=user,
+            password=password,
+            app_name=CONFIG_SERVER_SEVEN,
         )
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
@@ -337,7 +341,11 @@ async def test_deploy_mongodb_8(
         password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
         await set_password(
-            ops_test, unit_id=get_unit_id(leader_unit.name), username=user, password=password
+            ops_test,
+            unit_id=get_unit_id(leader_unit.name),
+            username=user,
+            password=password,
+            app_name=CONFIG_SERVER_SEVEN,
         )
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
