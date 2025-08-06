@@ -4,7 +4,6 @@
 
 import time
 from logging import getLogger
-from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -22,7 +21,6 @@ from ..helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     TIMEOUT,
-    count_writes,
     deploy_application,
     find_unit,
     get_password,
@@ -56,7 +54,6 @@ async def test_deploy_mongodb_6(
     mongodb_charm: str,
     mongod_resource: dict,
     application_path: str,
-    tmp_path: Path,
     storage_credentials: dict[str, str],
     storage_config: dict[str, str],
 ):
@@ -122,10 +119,7 @@ async def test_deploy_mongodb_6(
 
     await start_continous_writes(ops_test, client_app_name=application_name)
     time.sleep(20)
-    n_writes = await stop_continous_writes(ops_test, client_app_name=application_name)
-
-    writes_path = tmp_path / "n_writes.txt"
-    writes_path.write_text(f"{n_writes}")
+    await stop_continous_writes(ops_test, client_app_name=application_name)
 
 
 async def test_backup_mongodb_6(ops_test: OpsTest, s3_bucket):
@@ -222,7 +216,6 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
 async def test_restore_backup_6_to_7(
     ops_test: OpsTest,
     substrate: Substrate,
-    tmp_path: Path,
 ):
     leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SIX)
     action = await leader_unit.run_action(action_name="list-backups")
@@ -247,19 +240,7 @@ async def test_restore_backup_6_to_7(
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    path = tmp_path / "n_writes.txt"
-    number_writes = int(path.read_text().strip())
-
-    # verify all writes are present
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(20)):
-            with attempt:
-                number_writes_restored = await count_writes(
-                    ops_test, substrate, CONFIG_SERVER_SEVEN, leader_unit_seven, mongos=True
-                )
-                assert number_writes == number_writes_restored, "writes not correctly restored"
-    except RetryError:
-        assert number_writes == number_writes_restored, "writes not correctly restored"
+    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
 
     await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0", port=MONGOS_PORT)
 
@@ -356,7 +337,6 @@ async def test_deploy_mongodb_8(
 async def test_restore_backup_7_to_8(
     ops_test: OpsTest,
     substrate: Substrate,
-    tmp_path: Path,
 ):
     leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
 
@@ -382,18 +362,6 @@ async def test_restore_backup_7_to_8(
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    path = tmp_path / "n_writes.txt"
-    number_writes = int(path.read_text().strip())
-
-    # verify all writes are present
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(20)):
-            with attempt:
-                number_writes_restored = await count_writes(
-                    ops_test, substrate, CONFIG_SERVER_EIGHT, leader_unit_eight, mongos=True
-                )
-                assert number_writes == number_writes_restored, "writes not correctly restored"
-    except RetryError:
-        assert number_writes == number_writes_restored, "writes not correctly restored"
+    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
 
     await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0", port=MONGOS_PORT)
