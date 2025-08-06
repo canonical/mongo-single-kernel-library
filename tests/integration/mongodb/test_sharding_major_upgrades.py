@@ -225,7 +225,7 @@ async def test_restore_backup_6_to_7(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0", port=MONGOS_PORT)
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0")
 
     leader_unit_seven = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
     action = await leader_unit_seven.run_action(
@@ -242,7 +242,7 @@ async def test_restore_backup_6_to_7(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0", port=MONGOS_PORT)
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0")
 
 
 @pytest.mark.abort_on_fail
@@ -347,7 +347,7 @@ async def test_restore_backup_7_to_8(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", port=MONGOS_PORT)
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0")
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
     action = await leader_unit_eight.run_action(
@@ -364,4 +364,4 @@ async def test_restore_backup_7_to_8(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0", port=MONGOS_PORT)
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0")
