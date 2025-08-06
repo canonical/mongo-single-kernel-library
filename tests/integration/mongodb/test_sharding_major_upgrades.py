@@ -230,7 +230,13 @@ async def test_restore_backup_6_to_7(
     await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0", port=MONGOS_PORT)
 
     leader_unit_seven = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
-    action = await leader_unit_seven.run_action(action_name="restore", **{"backup-id": backup_id})
+    action = await leader_unit_seven.run_action(
+        action_name="restore",
+        **{
+            "backup-id": backup_id,
+            "remap-pattern": f"{CONFIG_SERVER_SEVEN}={CONFIG_SERVER_SIX},{SHARD_ONE_SEVEN}={SHARD_ONE_SIX},{SHARD_TWO_SEVEN}={SHARD_TWO_SIX}",
+        },
+    )
     restore = await action.wait()
 
     logger.info(f"Restore backup result {restore.results=}")
@@ -355,7 +361,13 @@ async def test_restore_backup_7_to_8(
     await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", port=MONGOS_PORT)
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
-    action = await leader_unit_eight.run_action(action_name="restore", **{"backup-id": backup_id})
+    action = await leader_unit_eight.run_action(
+        action_name="restore",
+        **{
+            "backup-id": backup_id,
+            "remap-pattern": f"{CONFIG_SERVER_EIGHT}={CONFIG_SERVER_SEVEN},{SHARD_ONE_EIGHT}={SHARD_ONE_SEVEN},{SHARD_TWO_EIGHT}={SHARD_TWO_SEVEN}",
+        },
+    )
     restore = await action.wait()
 
     logger.info(f"Restore backup result {restore.results=}")
