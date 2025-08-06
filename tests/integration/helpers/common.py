@@ -99,14 +99,16 @@ async def deploy_charm(
     config: dict | None = None,
     subordinate: bool = False,
     storage: dict | None = None,
+    series: str | None = None,
 ):
     if substrate == "microk8s":
+        series = series or "noble"
         await ops_test.model.deploy(
             charm,
             resources=(mongod_resource if not channel else None),
             application_name=app_name,
             num_units=0 if subordinate else num_units,
-            series="noble",
+            series=series,
             trust=True,
             config=config,
             channel=channel,
@@ -460,13 +462,14 @@ async def set_password(
     unit_id: int,
     username: str = "operator",
     password: str = "secret",
+    app_name: str | None = None,
 ) -> dict[str, any]:
     """Use the charm action to retrieve the password from provided unit.
 
     Returns:
     String with the password stored on the peer relation databag.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = app_name or await get_app_name(ops_test)
     action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
         "set-password", **{"username": username, "password": password}
     )
@@ -978,12 +981,12 @@ async def clear_continous_writes(
 
 
 async def count_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
+    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit, mongos: bool = False
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
     uri = await generate_mongodb_client(
-        ops_test, substrate, app_name, mongos=False, hosts=[host], unit=unit
+        ops_test, substrate, app_name, mongos=mongos, hosts=[host], unit=unit
     )
 
     client = MongoClient(uri, directConnection=True)
