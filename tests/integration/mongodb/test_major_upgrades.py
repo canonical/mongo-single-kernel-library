@@ -62,7 +62,6 @@ async def test_deploy_mongodb_6(
 
     await ops_test.model.wait_for_idle(
         apps=[MONGODB_SIX, S3_APP_NAME],
-        status="active",
         timeout=DEPLOYMENT_TIMEOUT,
         idle_period=120,
         raise_on_error=False,
