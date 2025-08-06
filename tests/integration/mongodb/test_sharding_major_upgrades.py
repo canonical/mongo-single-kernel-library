@@ -21,6 +21,7 @@ from ..helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     TIMEOUT,
+    count_writes,
     deploy_application,
     find_unit,
     get_password,
@@ -366,3 +367,15 @@ async def test_restore_backup_7_to_8(
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
 
     await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0")
+
+    leader_unit_six = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SIX)
+    leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
+    # count total writes
+    n_writes_six = await count_writes(
+        ops_test, substrate, CONFIG_SERVER_SIX, leader_unit_six, mongos=True
+    )
+    n_writes_eight = await count_writes(
+        ops_test, substrate, CONFIG_SERVER_EIGHT, leader_unit_eight, mongos=True
+    )
+
+    assert n_writes_six == n_writes_eight

@@ -15,6 +15,7 @@ from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+    count_writes,
     deploy_application,
     deploy_charm,
     find_unit,
@@ -272,3 +273,11 @@ async def test_restore_backup_7_to_8(
     await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
 
     await set_fcv(ops_test, substrate, MONGODB_EIGHT, "8.0")
+
+    leader_unit_six = await find_unit(ops_test, leader=True, app_name=MONGODB_SIX)
+    leader_unit_eight = await find_unit(ops_test, leader=True, app_name=MONGODB_EIGHT)
+    # count total writes
+    n_writes_six = await count_writes(ops_test, substrate, MONGODB_SIX, leader_unit_six)
+    n_writes_eight = await count_writes(ops_test, substrate, MONGODB_EIGHT, leader_unit_eight)
+
+    assert n_writes_six == n_writes_eight
