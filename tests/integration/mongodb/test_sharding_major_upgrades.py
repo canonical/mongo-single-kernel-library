@@ -83,7 +83,7 @@ async def test_deploy_mongodb_6(
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_SIX, SHARD_ONE_SIX, SHARD_TWO_SIX, S3_APP_NAME],
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
@@ -176,7 +176,7 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_SEVEN, SHARD_ONE_SEVEN, SHARD_TWO_SEVEN],
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
@@ -307,7 +307,7 @@ async def test_deploy_mongodb_8(
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_EIGHT, SHARD_ONE_EIGHT, SHARD_TWO_EIGHT],
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )

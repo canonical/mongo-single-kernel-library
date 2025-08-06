@@ -63,7 +63,7 @@ async def test_deploy_mongodb_6(
     await ops_test.model.wait_for_idle(
         apps=[MONGODB_SIX, S3_APP_NAME],
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
@@ -134,7 +134,7 @@ async def test_deploy_mongodb_7(
         apps=[MONGODB_SEVEN],
         status="active",
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
@@ -236,7 +236,7 @@ async def test_deploy_mongodb_8(
         apps=[MONGODB_EIGHT],
         status="active",
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
