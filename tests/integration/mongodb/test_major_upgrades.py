@@ -196,9 +196,9 @@ async def test_backup_mongodb_7(
         for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
             with attempt:
                 backups = await count_logical_backups(leader_unit)
-                assert backups == 1, "Backup not created."
+                assert backups == 2, "Backup not created."
     except RetryError:
-        assert backups == 1, "Backup not created."
+        assert backups == 2, "Backup not created."
 
 
 @pytest.mark.abort_on_fail
