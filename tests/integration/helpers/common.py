@@ -460,13 +460,14 @@ async def set_password(
     unit_id: int,
     username: str = "operator",
     password: str = "secret",
+    app_name: str | None = None,
 ) -> dict[str, any]:
     """Use the charm action to retrieve the password from provided unit.
 
     Returns:
     String with the password stored on the peer relation databag.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = app_name or await get_app_name(ops_test)
     action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
         "set-password", **{"username": username, "password": password}
     )
