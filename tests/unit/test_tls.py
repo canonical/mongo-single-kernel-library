@@ -13,7 +13,7 @@ from single_kernel_mongo.state.tls_state import SECRET_CSR_LABEL, SECRET_KEY_LAB
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
-def test_tls_relation_joined(harness: Harness[MongoTestCharm]):
+def test_tls_relation_joined(harness: Harness[MongoTestCharm], mongodb_name: str):
     manager = harness.charm.operator.tls_manager
 
     harness.set_leader(True)
@@ -36,8 +36,8 @@ def test_tls_relation_joined(harness: Harness[MongoTestCharm]):
     internal_subject = manager.state.unit_peer_data.get("int_certs_subject")
     external_subject = manager.state.unit_peer_data.get("ext_certs_subject")
 
-    assert internal_subject == "mongodb"
-    assert external_subject == "mongodb"
+    assert internal_subject == mongodb_name
+    assert external_subject == mongodb_name
 
 
 def test_tls_relation_joined_fails_condition_role(harness: Harness[MongoTestCharm], mocker):

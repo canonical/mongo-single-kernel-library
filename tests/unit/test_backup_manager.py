@@ -5,7 +5,7 @@ import pytest
 from data_platform_helpers.advanced_statuses.utils import as_status
 from ops import ActiveStatus, MaintenanceStatus
 from ops.model import BlockedStatus, Relation
-from ops.testing import Harness
+from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.models import BackupState
@@ -22,6 +22,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.managers.backups import BackupManager
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.fixture
@@ -65,6 +66,37 @@ def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager
     assert MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value in statuses
 
 
+def test_backup_without_rel(harness):
+    """Verifies no backups are attempted without s3 relation."""
+    with pytest.raises(ActionFailed):
+        harness.run_action("create-backup")
+
+
+def test_list_backup_without_rel(harness):
+    """Verifies that we can't list backups without s3 relation."""
+    with pytest.raises(ActionFailed):
+        harness.run_action("list-backups")
+
+
+def test_s3_credentials_no_db(harness: Harness[MongoTestCharm], mocker):
+    """Verifies that when there is no DB that setting credentials is deferred."""
+    harness.charm.operator.state.db_initialised = False
+    defer = mocker.patch("ops.framework.EventBase.defer")
+    mocker.patch(
+        "single_kernel_mongo.events.backups.S3Requirer.get_s3_connection_info",
+        return_value={"access-key": "noneya", "secret-key": "business"},
+    )
+
+    relation_id = harness.add_relation("s3-credentials", "s3-integrator")
+    harness.add_relation_unit(relation_id, "s3-integrator/0")
+    harness.update_relation_data(
+        relation_id,
+        "s3-integrator/0",
+        {"bucket": "hat"},
+    )
+    defer.assert_called()
+
+
 def test_environment_is_valid(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
@@ -106,18 +138,28 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
         ("status code: 301", "s3 config options are incompatible."),
         ("Unknown message", "Unknown PBM error, check logs."),
         (
-            '{"cluster": [{"nodes":[{"host": "mongodb/10.0.0.10:27017", "errors": "status code: 403"}], "rs": "mongodb"}]}',
+            '{"cluster": [{"nodes":[{"host": "%s/%s:27017", "errors": "status code: 403"}], "rs": "%s"}]}',
             "s3 credentials are incorrect.",
         ),
     ),
 )
 def test_get_status_pbm_error(
-    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker, pbm_status, expected
+    harness: Harness[MongoTestCharm],
+    substrate: Substrate,
+    backup_manager: BackupManager,
+    mongodb_name: str,
+    mocker,
+    pbm_status: str,
+    expected: str,
+    mongodb_hostname: str,
 ):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.validate_s3_config",
         return_value=True,
@@ -129,6 +171,11 @@ def test_get_status_pbm_error(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
+
+    # Handle the case where we match on the app name
+    host = f"{mongodb_hostname}:27017"
+    if "cluster" in pbm_status:
+        pbm_status = pbm_status % (mongodb_name, host, mongodb_name)
 
     mock = mocker.patch(
         "single_kernel_mongo.managers.backups.BackupManager.pbm_status",
@@ -148,6 +195,9 @@ def test_get_status_success(
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -188,6 +238,9 @@ def test_create_backup_success(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -195,6 +248,10 @@ def test_create_backup_success(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command",
+        return_value="Starting backup '2024-11-25T15:05:40Z'",
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command",
         return_value="Starting backup '2024-11-25T15:05:40Z'",
     )
 
@@ -209,6 +266,9 @@ def test_create_backup_fail_resync(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -216,6 +276,10 @@ def test_create_backup_fail_resync(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command",
+        side_effect=WorkloadExecError(cmd="backup", return_code=1, stdout="Resync", stderr=None),
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command",
         side_effect=WorkloadExecError(cmd="backup", return_code=1, stdout="Resync", stderr=None),
     )
 
@@ -229,6 +293,9 @@ def test_create_backup_fail_other(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -236,6 +303,10 @@ def test_create_backup_fail_other(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command",
+        side_effect=WorkloadExecError(cmd="backup", return_code=1, stdout="deadbeef", stderr=None),
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command",
         side_effect=WorkloadExecError(cmd="backup", return_code=1, stdout="deadbeef", stderr=None),
     )
 
@@ -251,6 +322,9 @@ def test_list_backup_action_success(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -281,6 +355,9 @@ def test_list_backup_action_success_no_backups(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -305,6 +382,9 @@ def test_list_backup_action_error(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -313,21 +393,33 @@ def test_list_backup_action_error(
         "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command",
         side_effect=WorkloadExecError(cmd="status", return_code=1, stdout=None, stderr=None),
     )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command",
+        side_effect=WorkloadExecError(cmd="status", return_code=1, stdout=None, stderr=None),
+    )
     with pytest.raises(ListBackupError):
         backup_manager.list_backup_action()
 
 
 def test_restore_backup_success(
-    harness: Harness[MongoTestCharm], backup_manager: BackupManager, mocker
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, substrate: Substrate, mocker
 ) -> None:
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
     harness.add_relation_unit(relation_id, "s3-integrator/0")
-    mock_call = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command")
+    if substrate == "lxd":
+        mock_call = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command")
+    else:
+        mock_call = mocker.patch(
+            "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command"
+        )
 
     backup_manager.restore_backup("deadbeef", "mongodb=mongodb")
 
@@ -344,6 +436,9 @@ def test_get_backup_error_status(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -375,6 +470,9 @@ def test_can_restore_fail_status(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.active", return_value=True
+    )
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
