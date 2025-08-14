@@ -95,7 +95,12 @@ jobs:
         run: tox run -e lint
 
   unit-test:
-    name: Unit test charm
+    strategy:
+      matrix:
+        env:
+          - lxd
+          - microk8s
+    name: Unit test charm (${{ matrix.env }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -116,7 +121,7 @@ jobs:
           sudo apt update
           sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Run tests
-        run: tox run -e unit
+        run: tox run -e unit-${{ matrix.env }}
 
   build:
     name: Build test charms
