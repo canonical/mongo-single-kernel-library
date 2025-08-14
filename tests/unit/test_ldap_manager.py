@@ -19,6 +19,7 @@ from single_kernel_mongo.exceptions import (
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
 
 def test_valid_ldap_integration(harness: Harness[MongoTestCharm]):
@@ -252,7 +253,7 @@ def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, moc
 
 
 def test_on_certificate_removed_clean_certs(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, substrate: Substrate
 ):
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
@@ -261,7 +262,15 @@ def test_on_certificate_removed_clean_certs(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
     )
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exists", return_value=True)
-    mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.exists", return_value=True
+    )
+    if substrate == "lxd":
+        mock_remove_ca_cert = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.delete")
+    else:
+        mock_remove_ca_cert = mocker.patch(
+            "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.delete"
+        )
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
     )
@@ -446,6 +455,10 @@ def test_ldaps_mongos_invalid_hash(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
         return_value=data,
     )
 
