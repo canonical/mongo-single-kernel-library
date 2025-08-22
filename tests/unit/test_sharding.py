@@ -350,9 +350,7 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
     assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
-def test_shard_manager_synchronise_cluster_invalid_role(
-    harness: Harness[MongoTestCharm], mock_fs_interactions
-):
+def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTestCharm]):
     manager = harness.charm.operator.shard_manager
 
     harness.set_leader(True)
@@ -360,8 +358,7 @@ def test_shard_manager_synchronise_cluster_invalid_role(
     harness.charm.operator.state.db_initialised = True
 
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
-
-    relation: Relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, rel_id)  # type: ignore[assignment]
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
 
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.synchronise_cluster_secrets(relation)
