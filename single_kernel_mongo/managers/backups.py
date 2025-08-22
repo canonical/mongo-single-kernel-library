@@ -245,7 +245,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """Returns true if relation to s3-integrator is valid.
 
         Only replica sets and config_servers can integrate to s3-integrator.
-        """
+        """  # need to check against mongos or unknown?
         return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
 
     def cleanup_certs_and_restart(self, relation: Relation) -> None:

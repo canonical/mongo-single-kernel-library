@@ -90,7 +90,7 @@ class BackupEventsHandler(Object):
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
             self.manager.state.statuses.add(
-                MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
+                MongoDBStatuses.INCOMPATIBLE_S3_REL.value,
                 scope="unit",
                 component=self.manager.name,
             )
@@ -108,7 +108,7 @@ class BackupEventsHandler(Object):
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
             self.manager.state.statuses.add(
-                MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value,
+                MongoDBStatuses.INCOMPATIBLE_S3_REL.value,
                 scope="unit",
                 component=self.manager.name,
             )

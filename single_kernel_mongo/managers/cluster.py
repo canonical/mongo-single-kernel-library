@@ -66,7 +66,7 @@ class ClusterProvider(Object):
 
         if not self.is_valid_mongos_integration():
             self.state.statuses.add(
-                MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value,
+                MongoDBStatuses.INCOMPATIBLE_MONGOS_REL.value,
                 scope="unit",
                 component=self.dependent.name,
             )

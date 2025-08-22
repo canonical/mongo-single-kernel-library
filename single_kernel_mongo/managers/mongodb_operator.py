@@ -913,7 +913,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
             self.state.statuses.add(
-                MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value, scope="unit", component=self.name
+                MongoDBStatuses.INCOMPATIBLE_DB_REL.value, scope="unit", component=self.name
             )
             return False
         if not self.state.is_sharding_component and rel_name == RelationNames.SHARDING:
@@ -923,7 +923,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 rel_name,
             )
             self.state.statuses.add(
-                MongoDBStatuses.SHARDING_ON_REPLICA.value, scope="unit", component=self.name
+                MongoDBStatuses.INCOMPATIBLE_SHARDING_REL.value, scope="unit", component=self.name
             )
             return False
         return True
@@ -993,21 +993,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Basic checks."""
         statuses = []
         if not self.cluster_manager.is_valid_mongos_integration():
-            statuses.append(MongoDBStatuses.UNSUPPORTED_MONGOS_REL.value)
+            statuses.append(MongoDBStatuses.INCOMPATIBLE_MONGOS_REL.value)
 
         if not self.backup_manager.is_valid_s3_integration():
-            statuses.append(MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value)
-
-        if self.state.is_role(MongoDBRoles.REPLICATION) and (
-            self.state.config_server_relation or self.state.shard_relation
-        ):
-            statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
+            statuses.append(MongoDBStatuses.INCOMPATIBLE_S3_REL.value)
 
         if self.state.client_relations and self.state.is_sharding_component:
-            statuses.append(MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value)
+            statuses.append(MongoDBStatuses.INCOMPATIBLE_DB_REL.value)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            statuses.append(MongoDBStatuses.SHARDING_ON_REPLICA.value)
+            statuses.append(MongoDBStatuses.INCOMPATIBLE_SHARDING_REL.value)
         elif rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
             # don't bother checking revision mismatch on sharding interface if replica
             statuses.append(rev_status)
