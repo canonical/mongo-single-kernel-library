@@ -150,7 +150,7 @@ def test_sharding_components_get_status_incompatible_cluster_relation(
     assert status == MongoDBStatuses.INCOMPATIBLE_MONGOS_REL.value
 
 
-def test_replica_set_get_status_incompatible_relation_with_config_server(
+def test_replica_set_get_status_incompatible_config_server_relation(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
@@ -400,7 +400,7 @@ def test_shard_get_status_db_not_initialised(
     assert status is None
 
 
-def test_replica_set_get_status_incompatible_integration_with_shard(
+def test_replica_set_get_status_incompatible_sharding_relation(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
