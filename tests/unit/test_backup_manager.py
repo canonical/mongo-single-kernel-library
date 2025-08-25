@@ -50,22 +50,12 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm], role: MongoDBRol
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert harness.charm.unit.status != MongoDBStatuses.INCOMPATIBLE_S3_REL.value
+    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_REL.value
 
 
-@pytest.mark.parametrize(
-    "role",
-    [
-        MongoDBRoles.SHARD.value,
-        # MongoDBRoles.MONGOS.value,
-        # MongoDBRoles.UNKNOWN.value,
-    ],
-)
-def test_invalid_s3_integration(
-    harness: Harness[MongoTestCharm], backup_manager: BackupManager, role: MongoDBRoles
-):
+def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -80,7 +70,7 @@ def test_invalid_s3_integration(
         scope=Scope.UNIT, component=backup_manager.name
     ).root
 
-    assert MongoDBStatuses.INCOMPATIBLE_S3_REL.value in statuses
+    assert MongoDBStatuses.INVALID_S3_REL.value in statuses
 
 
 def test_backup_without_rel(harness):

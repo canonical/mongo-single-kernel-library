@@ -31,31 +31,31 @@ class MongoDBStatuses(Enum):
         message="Waiting for mongodb-exporter to start...",
         check="MongoDB Exporter status check.",
     )
-    INCOMPATIBLE_SHARDING_REL = StatusObject(
+    INVALID_SHARDING_REL = StatusObject(
         status="blocked",
         message="The sharding interface cannot be used with replica sets.",
-        short_message="Incompatible sharding relation.",
+        short_message="Invalid sharding relation.",
         check="Relation validation.",
         action="Remove the relation on the shards interface (config-server or sharding relation) from this application.",
     )
-    INCOMPATIBLE_MONGOS_REL = StatusObject(
+    INVALID_MONGOS_REL = StatusObject(
         status="blocked",
         message="The cluster relation is can only be used with config servers.",
-        short_message="Incompatible cluster relation.",
+        short_message="Invalid cluster relation.",
         check="Relation validation.",
         action="Remove the cluster relation (config-server interface) from this application.",
     )
-    INCOMPATIBLE_S3_REL = StatusObject(
+    INVALID_S3_REL = StatusObject(
         status="blocked",
         message="The s3-credentials relation cannot be used with config servers and replica sets.",
-        short_message="Incompatible s3-credentials relation.",
+        short_message="Invalid s3-credentials relation.",
         check="Relation validation.",
         action="Remove the s3-credentials relation (s3 interface) from this application.",
     )
-    INCOMPATIBLE_DB_REL = StatusObject(
+    INVALID_DB_REL = StatusObject(
         status="blocked",
         message="The database relation cannot be used with sharding components (shards or config servers).",
-        short_message="Incompatible database relation.",
+        short_message="Invalid database relation.",
         check="Relation validation.",
         action="Remove the database relation (mongodb_client interface) from this application.",
     )
