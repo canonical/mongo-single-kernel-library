@@ -176,7 +176,7 @@ async def test_cannot_use_db_relation(ops_test: OpsTest, substrate: Substrate) -
             ops_test,
             substrate,
             sharded_component,
-            status="Sharding roles do not support database interface.",
+            status="The database relation cannot be used by sharding components (shards or config servers).",
             timeout=300,
         )
 
@@ -208,7 +208,7 @@ async def test_replication_config_server_relation(ops_test: OpsTest, substrate: 
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas.",
+        status="The sharding interface cannot be used by replica sets.",
         timeout=300,
     )
 
@@ -232,7 +232,7 @@ async def test_replication_shard_relation(ops_test: OpsTest, substrate: Substrat
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by rep",
+        status="The sharding interface cannot be used by replica sets.",
         timeout=300,
     )
 
@@ -263,7 +263,7 @@ async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substra
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Relation to mongos not supported",
+        status="The cluster relation can only be used by config servers.",
         timeout=300,
     )
 
@@ -294,14 +294,14 @@ async def test_shard_mongos_relation(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Relation to mongos not supported",
+        status="The cluster relation can only be used by config servers.",
         timeout=300,
     )
     await check_status_detail(
         ops_test,
         SHARD_ONE_APP_NAME,
         status="blocked",
-        message="Relation to mongos not supported, config role must be config-server.",
+        message="The cluster relation can only be used by config servers.",
     )
 
     # clean up relations
@@ -324,14 +324,14 @@ async def test_shard_s3_relation(ops_test: OpsTest, substrate: Substrate) -> Non
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Relation to s3-integrator is not support",
+        status="The s3-credentials relation can only be used by config servers or replica sets.",
         timeout=300,
     )
     await check_status_detail(
         ops_test,
         SHARD_ONE_APP_NAME,
         status="blocked",
-        message="Relation to s3-integrator is not supported, config role must be config-server.",
+        message="The s3-credentials relation can only be used by config servers or replica sets.",
     )
 
     # clean up relations
@@ -361,7 +361,7 @@ async def test_config_server_tls_replication_relation(
         ops_test,
         substrate,
         REPLICATION_APP_NAME,
-        status="Sharding interface cannot be used by replicas.",
+        status="The sharding interface cannot be used by replica sets.",
         timeout=300,
     )
 
