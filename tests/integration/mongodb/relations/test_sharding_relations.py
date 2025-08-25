@@ -294,7 +294,7 @@ async def test_shard_mongos_relation(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="The cluster relation can only be used by config servers.",
+        status="Invalid cluster relation.",
         timeout=300,
     )
     await check_status_detail(
