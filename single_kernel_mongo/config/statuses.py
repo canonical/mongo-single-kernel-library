@@ -33,28 +33,28 @@ class MongoDBStatuses(Enum):
     )
     INVALID_SHARDING_REL = StatusObject(
         status="blocked",
-        message="The sharding interface cannot be used with replica sets.",
+        message="The sharding interface cannot be used by replica sets.",
         short_message="Invalid sharding relation.",
         check="Relation validation.",
         action="Remove the relation on the shards interface (config-server or sharding relation) from this application.",
     )
     INVALID_MONGOS_REL = StatusObject(
         status="blocked",
-        message="The cluster relation is can only be used with config servers.",
+        message="The cluster relation can only be used by config servers.",
         short_message="Invalid cluster relation.",
         check="Relation validation.",
         action="Remove the cluster relation (config-server interface) from this application.",
     )
     INVALID_S3_REL = StatusObject(
         status="blocked",
-        message="The s3-credentials relation cannot be used with config servers and replica sets.",
+        message="The s3-credentials relation can only be used by config servers or replica sets.",
         short_message="Invalid s3-credentials relation.",
         check="Relation validation.",
         action="Remove the s3-credentials relation (s3 interface) from this application.",
     )
     INVALID_DB_REL = StatusObject(
         status="blocked",
-        message="The database relation cannot be used with sharding components (shards or config servers).",
+        message="The database relation cannot be used by sharding components (shards or config servers).",
         short_message="Invalid database relation.",
         check="Relation validation.",
         action="Remove the database relation (mongodb_client interface) from this application.",

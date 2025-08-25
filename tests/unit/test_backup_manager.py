@@ -53,9 +53,19 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm], role: MongoDBRol
     assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_REL.value
 
 
-def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.UNKNOWN.value,
+        MongoDBRoles.SHARD.value,
+        MongoDBRoles.MONGOS.value,
+    ],
+)
+def test_invalid_s3_integration(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, role: MongoDBRoles
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD.value
+    harness.charm.operator.state.app_peer_data.role = role
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -88,6 +98,8 @@ def test_list_backup_without_rel(harness):
 def test_s3_credentials_no_db(harness: Harness[MongoTestCharm], mocker):
     """Verifies that when there is no DB that setting credentials is deferred."""
     harness.charm.operator.state.db_initialised = False
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     defer = mocker.patch("ops.framework.EventBase.defer")
     mocker.patch(
         "single_kernel_mongo.events.backups.S3Requirer.get_s3_connection_info",
