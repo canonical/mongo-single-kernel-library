@@ -75,7 +75,7 @@ class MongosStatuses(Enum):
     MISSING_TLS_REL = StatusObject(
         status="blocked",
         message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
-        short_message="Certificates relation is missing",
+        short_message="Missing certificates relation",
         check="Relation validation failed.",
         action="Add the certificates relation (tls-certificates interface) to mongos.",
     )
@@ -98,7 +98,7 @@ class MongosStatuses(Enum):
     MISSING_CONF_SERVER_REL = StatusObject(
         status="blocked",
         message="The cluster relation with the config-server is missing.",
-        short_message="Cluster relation is missing",
+        short_message="Missing cluster relation",
         check="Relation validation failed.",
         action="Add the cluster relation (config-server interface) to mongos.",
         running="async",

@@ -130,7 +130,7 @@ async def test_build_and_deploy_mongos(
         ops_test,
         substrate,
         app_name,
-        status="Cluster relation is missing",
+        status="Missing cluster relation",
         timeout=300,
         subordinate=(substrate == "lxd"),
     )
