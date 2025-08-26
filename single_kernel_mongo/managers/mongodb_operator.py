@@ -916,7 +916,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 MongoDBStatuses.INVALID_DB_REL.value, scope="unit", component=self.name
             )
             return False
-        if not self.state.is_sharding_component and self.state.has_sharding_integration:
+        if not self.state.is_sharding_component and (
+            rel_name == RelationNames.SHARDING or rel_name == RelationNames.CONFIG_SERVER
+        ):
             logger.error(
                 "Charm is in replication role: %s. Does not support %s interface.",
                 self.state.app_peer_data.role,
