@@ -133,13 +133,13 @@ def test_get_status_fail(harness: Harness[MongoTestCharm], backup_manager: Backu
 @pytest.mark.parametrize(
     ("pbm_status", "expected"),
     (
-        ("status code: 403", "s3 credentials are incorrect."),
-        ("status code: 404", "s3 config options are incompatible."),
-        ("status code: 301", "s3 config options are incompatible."),
+        ("status code: 403", "Incorrect S3 credentials."),
+        ("status code: 404", "Incompatible S3 config options."),
+        ("status code: 301", "Incompatible S3 config options."),
         ("Unknown message", "Unknown PBM error, check logs."),
         (
             '{"cluster": [{"nodes":[{"host": "%s/%s:27017", "errors": "status code: 403"}], "rs": "%s"}]}',
-            "s3 credentials are incorrect.",
+            "Incorrect S3 credentials.",
         ),
     ),
 )

@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 from ..helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
+    check_status_detail,
     execute_on_mongod,
     get_mongodb_hostname_for_unit,
     remove_units,
@@ -65,9 +66,16 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Missing relation to config-server.",
+        status="Cluster relation is missing",
         timeout=300,
         subordinate=(substrate == "lxd"),
+    )
+
+    await check_status_detail(
+        ops_test,
+        MONGOS_APP_NAME,
+        status="blocked",
+        message="The cluster relation with the config-server is missing",
     )
 
 

@@ -127,7 +127,7 @@ class BackupEventsHandler(Object):
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
             self.manager.state.statuses.set(
-                BackupStatuses.PBM_MISSING_CONFIGS.value,
+                BackupStatuses.PBM_MISSING_CONF.value,
                 scope="unit",
                 component=self.manager.name,
             )

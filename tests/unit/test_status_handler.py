@@ -594,7 +594,7 @@ def test_mongos_get_status_tls_status(
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    expected_status = MongosStatuses.REQUIRES_TLS.value
+    expected_status = MongosStatuses.MISSING_TLS_REL.value
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
         return_value=expected_status,
