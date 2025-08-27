@@ -154,7 +154,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Missing certificates relation.",
+        status="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
