@@ -13,6 +13,7 @@ from yaml import safe_load
 from ...helpers.common import (
     ProcessError,
     check_or_scale_app,
+    check_status_detail,
     deploy_charm,
     execute_on_mongod,
     get_app_name,
@@ -97,8 +98,15 @@ async def test_integrate_ldap_only(ops_test: OpsTest, substrate: Substrate):
         ops_test,
         substrate,
         db_app_name,
-        status="TLS is mandatory for LDAP transport.",
+        status="Missing ldap-certificate-transfer relation.",
         timeout=300,
+    )
+
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="Missing ldap-certificate-transfer relation.",
     )
 
 
@@ -186,11 +194,11 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
         assert (
             configuration["security"]["ldap"].get("userToDNMapping", "")
             == '[{"match": "([^@]+)@([^@]+)", "substitution": "cn={0},ou={1},ou=users,dc=glauth,dc=com"}]'
-        ), "Invalid userToDNMapping."
+        ), "Invalid LDAP to DN mapping config."
         assert (
             configuration["security"]["ldap"]["authz"].get("queryTemplate", "")
             == "dc=glauth,dc=com??sub?(&(objectClass=posixGroup)(uniqueMember={USER}))"
-        ), "Invalid ldap Query Template."
+        ), "Invalid LDAP query template."
 
     uri = await generate_mongodb_ldap_client(
         ops_test,
@@ -231,8 +239,14 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
         ops_test,
         substrate,
         db_app_name,
-        status="GLauth TLS is integrated but LDAP is not.",
+        status="ldap relation is missing between LDAP application and this application.",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="ldap relation is missing between LDAP application and this application.",
     )
 
     # John should not be able to log in now.
@@ -278,7 +292,7 @@ async def test_remove_ldap_certs_goes_to_blocked(ops_test: OpsTest, substrate: S
         ops_test,
         substrate,
         db_app_name,
-        status="TLS is mandatory for LDAP transport.",
+        status="Missing ldap-certificate-transfer relation.",
         timeout=300,
     )
 

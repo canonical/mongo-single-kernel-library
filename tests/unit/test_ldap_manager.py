@@ -131,14 +131,14 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     assert as_status(
         harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == BlockedStatus("Cannot integrate LDAP with shard.")
+    ) == BlockedStatus("The ldap relation cannot be used by shards.")
 
     # Case 3, correct role, but missing ldap_cert_relation
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     assert as_status(
         harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == BlockedStatus("TLS is mandatory for LDAP transport.")
+    ) == BlockedStatus("Missing ldap-certificate-transfer relation.")
 
     # Case 4: Both relations good but not valid data.
     ldap_cert_relation_id = harness.add_relation(
@@ -147,7 +147,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     assert as_status(
         harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == WaitingStatus("Waiting for both LDAP data and Glauth certificates.")
+    ) == WaitingStatus("Waiting for LDAP data and certificates.")
 
     # Case 5: We received data from LDAP integration but not from cert integration
     harness.update_relation_data(
@@ -171,7 +171,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
 
     assert as_status(
         harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == WaitingStatus("Waiting for Glauth certificates.")
+    ) == WaitingStatus("Waiting for LDAP certificates...")
 
     # Case 6: We received data from both integrations
     harness.add_relation_unit(ldap_cert_relation_id, "glauth-k8s/0")
@@ -329,7 +329,7 @@ def test_ldap_full_integration_cycle(
 
     harness.evaluate_status()
 
-    assert harness.model.unit.status == BlockedStatus("TLS is mandatory for LDAP transport.")
+    assert harness.model.unit.status == BlockedStatus("Missing ldap-certificate-transfer relation.")
 
     ldap_cert_relation_id = harness.add_relation(
         ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
@@ -448,7 +448,7 @@ def test_ldaps_mongos_invalid_hash(
     mongos_harness.evaluate_status()
 
     assert mongos_harness.model.unit.status == BlockedStatus(
-        "mongos and config-server not integrated with the same ldap server."
+        "mongos and config-server are not integrated with the same LDAP server."
     )
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
@@ -477,7 +477,7 @@ def test_ldaps_mongos_invalid_hash(
 
     assert as_status(
         mongos_harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == BlockedStatus("mongos and config-server not integrated with the same ldap server.")
+    ) == BlockedStatus("mongos and config-server are not integrated with the same LDAP server.")
 
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",

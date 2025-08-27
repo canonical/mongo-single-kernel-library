@@ -127,7 +127,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
 
                 if state == LdapState.LDAP_SERVERS_MISMATCH:
                     raise InvalidLdapHashError(
-                        "mongos and config-server not integrated with the same ldap server."
+                        "mongos and config-server are not integrated with the same ldap server."
                     )
 
     def clean_ldap_credentials_and_uri(self) -> None:
@@ -232,26 +232,26 @@ class LDAPManager(Object, ManagerStatusProtocol):
                     f"`juju integrate {self.state.ldap_relation.app.name}:send-ca-cert"  # type: ignore[union-attr]
                     f"{self.charm.app.name}:{ExternalRequirerRelations.LDAP_CERT}`"
                 )
-                return [LdapStatuses.TLS_REQUIRED.value]
+                return [LdapStatuses.MISSING_CERT_TRANSFERT_REL.value]
             case LdapState.MISSING_LDAP_REL:
                 logger.info(
                     "Integrate glauth with ldap using"
                     f"`juju integrate {self.state.ldap_cert_relation.app.name}:ldap {self.charm.app.name}:{ExternalRequirerRelations.LDAP}`"  # type: ignore[union-attr]
                 )
-                return [LdapStatuses.LDAP_REQUIRED.value]
+                return [LdapStatuses.MISSING_LDAP_REL.value]
             case LdapState.LDAP_SERVERS_MISMATCH:
                 logger.error(
                     "Config Server and mongos integrations with LDAP have a different checksum."
                     "This usually means they are not integrated with the same LDAP application."
                 )
-                return [LdapStatuses.LDAP_SERVERS_MISMATCH.value]
+                return [LdapStatuses.SERVERS_MISMATCH.value]
             case LdapState.WAITING_FOR_DATA:
                 return [LdapStatuses.WAITING_FOR_DATA.value]
             case LdapState.WAITING_FOR_CERTS:
                 return [LdapStatuses.WAITING_FOR_CERTS.value]
             case LdapState.WAITING_FOR_LDAP_DATA:
                 logger.info("Waiting for LDAP data.")
-                return [LdapStatuses.WAITING_FOR_LDAP_DATA.value]
+                return [LdapStatuses.WAITING_FOR_DATA.value]
             case LdapState.MISSING_BASE_DN:
                 return [LdapStatuses.MISSING_BASE_DN.value]
             case LdapState.MISSING_CERT_CHAIN:

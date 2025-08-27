@@ -1026,12 +1026,12 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
-            charm_statuses.append(LdapStatuses.INVALID_LDAP_USER_MAPPING.value)
+            charm_statuses.append(LdapStatuses.INVALID_USER_MAPPING.value)
         if not is_valid_ldap_options(
             self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
         ):
             logger.info("Invalid LDAP Config - Please refer to the config option description.")
-            charm_statuses.append(LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value)
+            charm_statuses.append(LdapStatuses.INVALID_QUERY_TEMPLATE.value)
 
         if not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]

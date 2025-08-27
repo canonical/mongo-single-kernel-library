@@ -83,7 +83,7 @@ class LDAPEventHandler(Object):
             self.manager.store_ldap_credentials_and_uri(event.relation)
         except (WaitingForLdapDataError, ValidationError) as err:
             self.manager.state.statuses.add(
-                LdapStatuses.WAITING_FOR_LDAP_DATA.value,
+                LdapStatuses.WAITING_FOR_DATA.value,
                 scope="unit",
                 component=self.manager.name,
             )

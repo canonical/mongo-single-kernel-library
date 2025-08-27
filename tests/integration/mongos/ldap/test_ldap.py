@@ -12,6 +12,7 @@ from ...helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
+    check_status_detail,
     deploy_charm,
     execute_on_mongod,
     get_app_name,
@@ -161,9 +162,15 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         ops_test,
         substrate,
         app_name,
-        status="TLS is mandatory for LDAP transport.",
+        status="Missing ldap-certificate-transfer relation.",
         timeout=300,
         subordinate=(substrate == "lxd"),
+    )
+    await check_status_detail(
+        ops_test,
+        app_name,
+        status="blocked",
+        message="Missing ldap-certificate-transfer relation.",
     )
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
@@ -173,9 +180,15 @@ async def test_glauth_only_integrated_with_mongos(ops_test: OpsTest, substrate: 
         ops_test,
         substrate,
         app_name,
-        status="mongos and config-server not integrated with the same ldap server.",
+        status="mongos and config-server are not integrated with the same LDAP server.",
         timeout=600,
         subordinate=(substrate == "lxd"),
+    )
+    await check_status_detail(
+        ops_test,
+        app_name,
+        status="blocked",
+        message="mongos and config-server are not integrated with the same LDAP server.",
     )
 
 
@@ -189,8 +202,14 @@ async def test_glauth_fully_integrated(ops_test: OpsTest, substrate: Substrate):
         ops_test,
         substrate,
         CONFIG_SERVER_APP_NAME,
-        status="TLS is mandatory for LDAP transport.",
+        status="Missing ldap-certificate-transfer relation.",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        CONFIG_SERVER_APP_NAME,
+        status="blocked",
+        message="Missing ldap-certificate-transfer relation.",
     )
 
     await ops_test.model.integrate(

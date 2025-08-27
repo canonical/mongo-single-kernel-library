@@ -360,71 +360,104 @@ class UpgradeStatuses(Enum):
 class LdapStatuses(Enum):
     """Ldap Statuses."""
 
-    INVALID_LDAP_USER_MAPPING = StatusObject(
-        status="blocked",
-        message="Invalid LdapUserToDnMapping, please update your config.",
+    ACTIVE_IDLE = StatusObject(
+        status="active",
+        message="",
     )
-    INVALID_LDAP_QUERY_TEMPLATE = StatusObject(
-        status="blocked",
-        message="Invalid LDAP Query template, please update your config",
-    )
-    CONFIGURING_LDAP = StatusObject(
-        status="maintenance", message="Configuring LDAP", running="blocking"
-    )
-    INVALID_LDAP_REL_ON_SHARD = StatusObject(
-        status="blocked",
-        message="Cannot integrate LDAP with shard.",
-    )
-    TLS_REQUIRED = StatusObject(
-        status="blocked",
-        message="TLS is mandatory for LDAP transport.",
-    )
-    LDAP_REQUIRED = StatusObject(
-        status="blocked",
-        message="GLauth TLS is integrated but LDAP is not.",
-    )
-    LDAP_SERVERS_MISMATCH = StatusObject(
-        status="blocked",
-        message="mongos and config-server not integrated with the same ldap server.",
-    )
-    WAITING_FOR_DATA = StatusObject(
+    WAITING_FOR_DATA_AND_CERTS = StatusObject(
         status="waiting",
-        message="Waiting for both LDAP data and Glauth certificates.",
+        message="Waiting for LDAP data and certificates.",
+        short_message="LDAP is not ready...",
     )
     WAITING_FOR_CERTS = StatusObject(
         status="waiting",
-        message="Waiting for Glauth certificates.",
+        message="Waiting for LDAP certificates...",
     )
-    WAITING_FOR_LDAP_DATA = StatusObject(
+    WAITING_FOR_DATA = StatusObject(
         status="waiting",
-        message="Missing LDAP data from Glauth.",
+        message="Waiting for LDAP data...",
+    )
+    INVALID_USER_MAPPING = StatusObject(
+        status="blocked",
+        message="Invalid LDAP to DN mapping config.",
+        action="Check the logs and verify the configuration in the ldap relation.",
+        check="LDAP configuration validation failed.",
+    )
+    INVALID_QUERY_TEMPLATE = StatusObject(
+        status="blocked",
+        message="Invalid LDAP query template config.",
+        action="Check the logs and verify the configuration in the ldap relation.",
+        check="LDAP configuration validation failed.",
+    )
+    INVALID_LDAP_REL_ON_SHARD = StatusObject(
+        status="blocked",
+        message="The ldap relation cannot be used by shards.",
+        short_message="Invalid ldap relation.",
+        action="Remove the ldap relation (ldap interface) from this application.",
+        check="Relation validation failed.",
+    )
+    MISSING_CERT_TRANSFERT_REL = StatusObject(
+        status="blocked",
+        message="Missing ldap-certificate-transfer relation.",
+        short_message="TLS is mandatory for LDAP transport.",
+        action="Add the ldap-certificate-transfer relation between LDAP application and this application.",
+        check="Relation validation failed.",
+    )
+    MISSING_LDAP_REL = StatusObject(
+        status="blocked",
+        message="ldap relation is missing between LDAP application and this application.",
+        short_message="Missing ldap relation.",
+        action="Add the ldap relation (ldap interface) to this application.",
+        check="Relation validation failed.",
+    )
+    SERVERS_MISMATCH = StatusObject(
+        status="blocked",
+        message="mongos and config-server are not integrated with the same LDAP server.",
+        short_message="LDAP servers mismatch.",
+        action="Check the logs and verify the LDAP configuration.",
     )
     MISSING_BASE_DN = StatusObject(
         status="blocked",
         message="Missing base DN for LDAP.",
+        action="Check the logs and verify the LDAP configuration.",
+        check="LDAP configuration validation failed.",
     )
     MISSING_CERT_CHAIN = StatusObject(
         status="blocked",
-        message="Missing chain for LDAP.",
+        message="Missing certificate chain for LDAP.",
+        action="Check the logs and verify the LDAP configuration.",
+        check="LDAP configuration validation failed.",
     )
     MISSING_LDAPS_URLS = StatusObject(
         status="blocked",
         message="Missing LDAPS URLs for LDAP.",
+        action="Check the logs and verify the LDAP configuration.",
+        check="LDAP configuration validation failed.",
     )
     LDAPS_NOT_ENABLED = StatusObject(
         status="blocked",
         message="LDAPS not enabled on LDAP application.",
+        action="Enable LDAPS support in the LDAP application (ldaps_enabled=true for GLAuth).",
+        check="LDAP configuration validation failed.",
     )
     UNABLE_TO_BIND = StatusObject(
         status="blocked",
-        message="Could not bind with ldap",
+        message="Failed to bind with LDAP.",
+        action="Check the logs and verify the LDAP configuration.",
+        check="LDAP connection status check failed.",
     )
-    ACTIVE_IDLE = StatusObject(
-        status="active",
-        message="",
+
+    # RUNNING status:
+    CONFIGURING_LDAP = StatusObject(
+        status="maintenance", message="Configuring LDAP...", running="blocking"
     )
 
     @staticmethod
     def on_error_status(err: Exception):
         """On error."""
-        return StatusObject(status="blocked", message=f"{err}")
+        return StatusObject(
+            status="blocked",
+            message=f"{err}",
+            short_message="Error on LDAP.",
+            action="Check the logs and verify the LDAP configuration.",
+        )

@@ -13,6 +13,7 @@ from yaml import safe_load
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     ProcessError,
+    check_status_detail,
     execute_on_mongod,
     wait_for_mongodb_units_blocked,
 )
@@ -97,8 +98,14 @@ async def test_integrate_ldap_only(ops_test: OpsTest, substrate: Substrate):
         ops_test,
         substrate,
         db_app_name,
-        status="TLS is mandatory for LDAP transport.",
+        status="Missing ldap-certificate-transfer relation.",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="Missing ldap-certificate-transfer relation.",
     )
 
 
@@ -200,8 +207,14 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
         ops_test,
         substrate,
         db_app_name,
-        status="GLauth TLS is integrated but LDAP is not.",
+        status="ldap relation is missing between LDAP application and this application.",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="ldap relation is missing between LDAP application and this application.",
     )
 
 

@@ -498,7 +498,7 @@ def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
-    assert statuses[0] == LdapStatuses.INVALID_LDAP_USER_MAPPING.value
+    assert statuses[0] == LdapStatuses.INVALID_USER_MAPPING.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
@@ -521,7 +521,7 @@ def test_on_config_changed_invalid_ldap_query_template_provided_user(harness):
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
-    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
+    assert statuses[0] == LdapStatuses.INVALID_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_invalid_ldap_query_template_user(harness):
@@ -536,7 +536,7 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
-    assert statuses[0] == LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value
+    assert statuses[0] == LdapStatuses.INVALID_QUERY_TEMPLATE.value
 
 
 def test_on_config_changed_valid_ldap_query_template(harness, mocker):
