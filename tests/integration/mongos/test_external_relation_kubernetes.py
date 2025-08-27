@@ -151,7 +151,7 @@ async def test_mongos_bad_configuration(ops_test: OpsTest, substrate: Substrate)
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Invalid expose-external config.",
+        status="The expose-external config option is invalid. Valid options are `nodeport` and `none`.",
         timeout=300,
     )
 
