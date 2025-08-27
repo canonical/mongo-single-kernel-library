@@ -208,7 +208,7 @@ def test_ldap_get_status(harness: Harness[MongoTestCharm], mocker, mock_fs_inter
     harness.charm.operator.state.ldap.clean_databag()
     assert as_status(
         harness.charm.operator.ldap_manager.get_statuses(scope=Scope.UNIT, recompute=True)[0]
-    ) == WaitingStatus("Missing LDAP data from Glauth.")
+    ) == WaitingStatus("Waiting for LDAP data...")
 
 
 def test_ldap_on_remove_clean_data(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):

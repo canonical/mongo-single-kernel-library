@@ -126,7 +126,7 @@ class LdapState(Enum):
     LDAP_SERVERS_MISMATCH = auto()
     WAITING_FOR_DATA = auto()
     WAITING_FOR_CERTS = auto()
-    WAITING_FOR_LDAP_DATA = auto()
+    WAITING_FOR_DATA_AND_CERTS = auto()
     MISSING_BASE_DN = auto()
     MISSING_CERT_CHAIN = auto()
     MISSING_LDAPS_URLS = auto()

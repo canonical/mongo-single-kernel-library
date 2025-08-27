@@ -211,11 +211,11 @@ class LDAPManager(Object, ManagerStatusProtocol):
         ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()
         match (ldap_relation_status, ldap_certificate_integration_status):
             case False, False:
-                return LdapState.WAITING_FOR_DATA
+                return LdapState.WAITING_FOR_DATA_AND_CERTS
             case True, False:
                 return LdapState.WAITING_FOR_CERTS
             case False, True:
-                return LdapState.WAITING_FOR_LDAP_DATA
+                return LdapState.WAITING_FOR_DATA
             case _:
                 return self.get_ldap_connection_status()
 
@@ -249,9 +249,9 @@ class LDAPManager(Object, ManagerStatusProtocol):
                 return [LdapStatuses.WAITING_FOR_DATA.value]
             case LdapState.WAITING_FOR_CERTS:
                 return [LdapStatuses.WAITING_FOR_CERTS.value]
-            case LdapState.WAITING_FOR_LDAP_DATA:
+            case LdapState.WAITING_FOR_DATA_AND_CERTS:
                 logger.info("Waiting for LDAP data.")
-                return [LdapStatuses.WAITING_FOR_DATA.value]
+                return [LdapStatuses.WAITING_FOR_DATA_AND_CERTS.value]
             case LdapState.MISSING_BASE_DN:
                 return [LdapStatuses.MISSING_BASE_DN.value]
             case LdapState.MISSING_CERT_CHAIN:
