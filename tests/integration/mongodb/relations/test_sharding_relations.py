@@ -324,7 +324,7 @@ async def test_shard_s3_relation(ops_test: OpsTest, substrate: Substrate) -> Non
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Invalid s3-credentials relation",
+        status="Invalid s3-credentials relation.",
         timeout=300,
     )
     await check_status_detail(
