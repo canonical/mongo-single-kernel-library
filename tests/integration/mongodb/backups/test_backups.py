@@ -77,14 +77,14 @@ async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -
     )
 
     await wait_for_mongodb_units_blocked(
-        ops_test, substrate, db_app_name, status="Missing S3 configurations", timeout=300
+        ops_test, substrate, db_app_name, status="Missing S3 configurations.", timeout=300
     )
 
     await check_status_detail(
         ops_test,
         db_app_name,
         status="blocked",
-        message="Missing configurations in the s3-credentials relation",
+        message="Missing configurations in the s3-credentials relation.",
     )
 
 
@@ -117,7 +117,7 @@ async def test_blocked_incorrect_creds(
         ops_test,
         db_app_name,
         status="blocked",
-        message="Incorrect S3 credentials",
+        message="Incorrect S3 credentials.",
     )
 
 

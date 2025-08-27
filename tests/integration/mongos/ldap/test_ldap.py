@@ -12,6 +12,7 @@ from ...helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
+    check_status_detail,
     deploy_charm,
     execute_on_mongod,
     get_app_name,
@@ -130,9 +131,16 @@ async def test_build_and_deploy_mongos(
         ops_test,
         substrate,
         app_name,
-        status="Missing cluster relation",
+        status="Missing cluster relation.",
         timeout=300,
         subordinate=(substrate == "lxd"),
+    )
+
+    await check_status_detail(
+        ops_test,
+        app_name,
+        status="blocked",
+        message="The cluster relation with the config-server is missing.",
     )
 
     # connect sharded cluster to mongos

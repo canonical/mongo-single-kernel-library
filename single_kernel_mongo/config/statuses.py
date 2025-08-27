@@ -68,28 +68,28 @@ class MongosStatuses(Enum):
     INVALID_EXPOSE_EXTERNAL = StatusObject(
         status="blocked",
         message="The expose-external config option is invalid. Valid options are `nodeport` and `none`.",
-        short_message="Invalid expose-external config",
+        short_message="Invalid expose-external config.",
         check="Config validation failed.",
         action="Set the expose-external config to a valid value: `nodeport` or `none`.",
     )
     MISSING_TLS_REL = StatusObject(
         status="blocked",
         message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
-        short_message="Missing certificates relation",
+        short_message="Missing certificates relation.",
         check="Relation validation failed.",
         action="Add the certificates relation (tls-certificates interface) to mongos.",
     )
     INVALID_TLS_REL = StatusObject(
         status="blocked",
         message="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
-        short_message="Invalid certificates relation",
+        short_message="Invalid certificates relation.",
         check="Relation validation failed.",
         action="Remove the certificates relation (tls-certificates interface) from this application.",
     )
     CA_MISMATCH = StatusObject(
         status="blocked",
         message="The mongos CA and Config-Server CA don't match.",
-        short_message="CA mismatch",
+        short_message="CA mismatch.",
         check="Relation validation failed.",
         action="Verify the certificates relations. Use the same CA for all cluster components.",
     )
@@ -98,7 +98,7 @@ class MongosStatuses(Enum):
     MISSING_CONF_SERVER_REL = StatusObject(
         status="blocked",
         message="The cluster relation with the config-server is missing.",
-        short_message="Missing cluster relation",
+        short_message="Missing cluster relation.",
         check="Relation validation failed.",
         action="Add the cluster relation (config-server interface) to mongos.",
         running="async",
@@ -161,14 +161,14 @@ class BackupStatuses(Enum):
     PBM_MISSING_CONF = StatusObject(
         status="blocked",
         message="Missing configurations in the s3-credentials relation.",
-        short_message="Missing S3 configurations",
-        action="Check logs and the configuration in the s3-credentials relation (s3 interface).",
+        short_message="Missing S3 configurations.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
         check="S3 configuration validation failed.",
     )
     PBM_INCOMPATIBLE_CONF = StatusObject(
         status="blocked",
         message="Incompatible S3 config options.",
-        action="Check logs and the configuration in the s3-credentials relation (s3 interface).",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
         check="S3 configuration validation failed.",
     )
     PBM_INCORRECT_CREDS = StatusObject(
@@ -180,20 +180,20 @@ class BackupStatuses(Enum):
     PBM_UNKNOWN_ERROR = StatusObject(
         status="blocked",
         message="Unknown PBM error, check logs.",
-        action="Check logs and the configuration in the s3-credentials relation (s3 interface).",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
         check="PBM error found.",
     )
     CANT_CONFIGURE = StatusObject(
         status="blocked",
         message="Failed to configure S3 backup options.",
-        short_message="Invalid S3 configuration",
-        action="Check logs and the configuration in the s3-credentials relation (s3 interface).",
+        short_message="Invalid S3 configuration.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
         check="S3 configuration validation failed.",
     )
     FAILED_TO_CREATE_BUCKET = StatusObject(
         status="blocked",
         message="Failed to create S3 bucket.",
-        action="Check logs and the configuration in the s3-credentials relation (s3 interface).",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
         check="S3 bucket creation failed.",
     )
 

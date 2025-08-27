@@ -66,7 +66,7 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Missing cluster relation",
+        status="Missing cluster relation.",
         timeout=300,
         subordinate=(substrate == "lxd"),
     )
@@ -75,7 +75,7 @@ async def test_waits_for_config_server(ops_test: OpsTest, substrate: Substrate) 
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="The cluster relation with the config-server is missing",
+        message="The cluster relation with the config-server is missing.",
     )
 
 
