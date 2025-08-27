@@ -128,7 +128,29 @@ def test_mongo_get_status_with_error(
     assert status == expected_status
 
 
-def test_config_server_get_status_invalid_integration(
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.SHARD.value,
+        MongoDBRoles.REPLICATION.value,
+    ],
+)
+def test_sharding_components_get_status_invalid_cluster_relation(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, role: MongoDBRoles
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = role
+
+    harness.add_relation(RelationNames.CLUSTER.value, "mongos")
+
+    statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == MongoDBStatuses.INVALID_MONGOS_REL.value
+
+
+def test_replica_set_get_status_invalid_config_server_relation(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
@@ -140,7 +162,7 @@ def test_config_server_get_status_invalid_integration(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.SHARDING_ON_REPLICA.value
+    assert status == MongoDBStatuses.INVALID_SHARDING_REL.value
 
 
 def test_config_server_get_status_invalid_role(
@@ -189,7 +211,7 @@ def test_config_server_get_status_client_relation(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value
+    assert status == MongoDBStatuses.INVALID_DB_REL.value
 
 
 def test_config_server_get_status_internal_mongos_not_running(
@@ -378,7 +400,7 @@ def test_shard_get_status_db_not_initialised(
     assert status is None
 
 
-def test_shard_get_status_charm_is_replication(
+def test_replica_set_get_status_invalid_sharding_relation(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     harness.set_leader(True)
@@ -390,7 +412,7 @@ def test_shard_get_status_charm_is_replication(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.SHARDING_ON_REPLICA.value
+    assert status == MongoDBStatuses.INVALID_SHARDING_REL.value
 
 
 def test_shard_get_status_charm_client_relation(
@@ -405,7 +427,7 @@ def test_shard_get_status_charm_client_relation(
     statuses = harness.charm.operator.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == MongoDBStatuses.INVALID_DB_REL_ON_SHARD.value
+    assert status == MongoDBStatuses.INVALID_DB_REL.value
 
 
 def test_shard_get_status_charm_missing_relation_not_drained(
