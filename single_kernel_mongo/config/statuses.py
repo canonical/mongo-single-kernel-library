@@ -21,24 +21,43 @@ class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
-    WAITING_FOR_MONGODB_START = StatusObject(status="waiting", message="Waiting to start mongod...")
+    WAITING_FOR_MONGODB_START = StatusObject(
+        status="waiting",
+        message="Waiting for mongod to start...",
+        check="MongoDB process status check.",
+    )
     WAITING_FOR_EXPORTER_START = StatusObject(
-        status="waiting", message="Waiting to start mongodb-exporter..."
+        status="waiting",
+        message="Waiting for mongodb-exporter to start...",
+        check="MongoDB Exporter status check.",
     )
-    SHARDING_ON_REPLICA = StatusObject(
-        status="blocked", message="Sharding interface cannot be used by replicas."
-    )
-    UNSUPPORTED_MONGOS_REL = StatusObject(
+    INVALID_SHARDING_REL = StatusObject(
         status="blocked",
-        message="Relation to mongos not supported, config role must be config-server.",
+        message="The sharding interface cannot be used by replica sets.",
+        short_message="Invalid sharding relation.",
+        check="Relation validation.",
+        action="Remove the relation on the shards interface (config-server or sharding relation) from this application.",
     )
-    INVALID_S3_INTEGRATION_STATUS = StatusObject(
+    INVALID_MONGOS_REL = StatusObject(
         status="blocked",
-        message="Relation to s3-integrator is not supported, config role must be config-server.",
+        message="The cluster relation can only be used by config servers.",
+        short_message="Invalid cluster relation.",
+        check="Relation validation.",
+        action="Remove the cluster relation (config-server interface) from this application.",
     )
-
-    INVALID_DB_REL_ON_SHARD = StatusObject(
-        status="blocked", message="Sharding roles do not support database interface."
+    INVALID_S3_REL = StatusObject(
+        status="blocked",
+        message="The s3-credentials relation can only be used by config servers or replica sets.",
+        short_message="Invalid s3-credentials relation.",
+        check="Relation validation.",
+        action="Remove the s3-credentials relation (s3 interface) from this application.",
+    )
+    INVALID_DB_REL = StatusObject(
+        status="blocked",
+        message="The database relation cannot be used by sharding components (shards or config servers).",
+        short_message="Invalid database relation.",
+        check="Relation validation.",
+        action="Remove the database relation (mongodb_client interface) from this application.",
     )
 
     # RUNNING statuses:

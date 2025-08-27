@@ -30,9 +30,16 @@ def backup_manager(harness: Harness[MongoTestCharm]) -> BackupManager:
     return harness.charm.operator.backup_manager
 
 
-def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.REPLICATION.value,
+        MongoDBRoles.CONFIG_SERVER.value,
+    ],
+)
+def test_valid_s3_integration(harness: Harness[MongoTestCharm], role: MongoDBRoles):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.charm.operator.state.app_peer_data.role = role
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -43,12 +50,22 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm]):
     harness.charm.on[ExternalRequirerRelations.S3_CREDENTIALS.value].relation_joined.emit(
         relation=relation
     )
-    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value
+    assert harness.charm.unit.status != MongoDBStatuses.INVALID_S3_REL.value
 
 
-def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager: BackupManager):
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.UNKNOWN.value,
+        MongoDBRoles.SHARD.value,
+        MongoDBRoles.MONGOS.value,
+    ],
+)
+def test_invalid_s3_integration(
+    harness: Harness[MongoTestCharm], backup_manager: BackupManager, role: MongoDBRoles
+):
     harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    harness.charm.operator.state.app_peer_data.role = role
     relation_id = harness.add_relation(
         ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
     )
@@ -63,7 +80,7 @@ def test_invalid_s3_integration(harness: Harness[MongoTestCharm], backup_manager
         scope=Scope.UNIT, component=backup_manager.name
     ).root
 
-    assert MongoDBStatuses.INVALID_S3_INTEGRATION_STATUS.value in statuses
+    assert MongoDBStatuses.INVALID_S3_REL.value in statuses
 
 
 def test_backup_without_rel(harness):
@@ -81,6 +98,8 @@ def test_list_backup_without_rel(harness):
 def test_s3_credentials_no_db(harness: Harness[MongoTestCharm], mocker):
     """Verifies that when there is no DB that setting credentials is deferred."""
     harness.charm.operator.state.db_initialised = False
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     defer = mocker.patch("ops.framework.EventBase.defer")
     mocker.patch(
         "single_kernel_mongo.events.backups.S3Requirer.get_s3_connection_info",
