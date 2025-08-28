@@ -272,7 +272,7 @@ class ShardStatuses(Enum):
     )
     INVALID_TLS_REL = StatusObject(
         status="blocked",
-        message="TLS must be disabled in mongos, since it is disabled in the related config-server.",
+        message="TLS must be disabled in shard, since it is disabled in the related config-server.",
         short_message="Invalid certificates relation.",
         check="Relation validation failed.",
         action="Align the TLS configuration in all the cluster components: remove the certificates relation from the shard.",

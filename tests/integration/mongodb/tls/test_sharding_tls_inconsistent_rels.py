@@ -141,7 +141,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="TLS must be disabled in mongos, since it is disabled in the related config-server.",
+        status="TLS must be disabled in shard, since it is disabled in the related config-server.",
         timeout=450,
     )
 
