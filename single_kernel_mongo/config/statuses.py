@@ -364,7 +364,12 @@ class MongodStatuses(Enum):
     @staticmethod
     def replset_status(status: str):
         """When we have an unexpected replica set status."""
-        return StatusObject(status="blocked", message=status)
+        return StatusObject(
+            status="blocked",
+            message=status,
+            short_message="Unexpected error found in replica set.",
+            action="Check logs for more information.",
+        )
 
 
 class UpgradeStatuses(Enum):
