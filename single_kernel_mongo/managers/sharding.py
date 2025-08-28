@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
-from ops import StatusBase
 from ops.framework import Object
 from ops.model import (
     Relation,
@@ -294,8 +293,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
-            charm_statuses["app"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
+            charm_statuses["app"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses[scope]
 
@@ -347,7 +346,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return
 
         self.state.statuses.delete(
-            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
+            ConfigServerStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
         )
 
         self.charm.status_handler.set_running_status(
@@ -545,29 +544,11 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        shard_has_tls, config_server_has_tls = self.tls_status()
-        match (shard_has_tls, config_server_has_tls):
-            case False, True:
-                self.state.statuses.add(
-                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Config-Server uses TLS but shard does not. Please synchronise encryption method."
-                )
-            case True, False:
-                self.state.statuses.add(
-                    ShardStatuses.REQUIRES_NO_TLS.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Shard uses TLS but config-server does not. Please synchronise encryption method."
-                )
-            case _:
-                pass
-
-        if not self.is_ca_compatible():
-            raise DeferrableFailedHookChecksError(
-                "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
-            )
+        tls_status = self.get_tls_status()
+        if tls_status:
+            self.state.statuses.add(tls_status.value, scope="unit", component=self.name)
+            exception_msg = f"{tls_status.message} {tls_status.action}"
+            raise DeferrableFailedHookChecksError(exception_msg)
 
         if is_leaving:
             self.dependent.assert_proceed_on_broken_event(relation)
@@ -578,7 +559,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.unit_peer_data.drained = False
 
         self.state.statuses.delete(
-            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
+            ShardStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
         )
         self.state.statuses.add(
             ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
@@ -956,14 +937,14 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def get_tls_status(self) -> StatusBase | None:
+    def get_tls_status(self) -> StatusObject | None:
         """Returns the TLS status of the sharded deployment."""
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return ShardStatuses.REQUIRES_TLS.value
+                return ShardStatuses.MISSING_TLS_REL
             case True, False:
-                return ShardStatuses.REQUIRES_NO_TLS.value
+                return ShardStatuses.INVALID_TLS_REL
             case _:
                 pass
 
@@ -971,7 +952,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return ShardStatuses.CA_MISMATCH.value
+            return ShardStatuses.CA_MISMATCH
         return None
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
@@ -993,14 +974,14 @@ class ShardManager(Object, ManagerStatusProtocol):
                 return [ShardStatuses.SHARD_DRAINED.value]
 
             if not self.state.unit_peer_data.drained:
-                return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
+                return [ShardStatuses.MISSING_SHARDING_REL.value]
 
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # No need to go further if the revision is invalid
             return charm_statuses
 
         if tls_status := self.get_tls_status():
-            charm_statuses.append(tls_status)
+            charm_statuses.append(tls_status.value)
             # if TLS is misconfigured we will get redherrings on the remaining messages
             return charm_statuses
 

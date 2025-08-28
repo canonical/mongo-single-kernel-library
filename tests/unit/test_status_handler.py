@@ -26,14 +26,14 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added...")),
+        ({}, MaintenanceStatus("Adding member...")),
         ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary.")),
         ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
-        ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "STARTUP2"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "RECOVERING"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "REMOVED"}, WaitingStatus("Member is removing...")),
+        ({"10.0.0.10": "STARTUP"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "STARTUP2"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "ROLLBACK"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "RECOVERING"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "REMOVED"}, MaintenanceStatus("Removing member...")),
         ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
@@ -107,7 +107,7 @@ def test_mongo_get_status_no_error_microk8s(
             ServerSelectionTimeoutError,
             MongodStatuses.WAITING_ELECTION.value,
         ),
-        (AutoReconnect, MongodStatuses.WAITING_RECONNECT.value),
+        (AutoReconnect, MongodStatuses.WAITING_RECONNECTION.value),
     ),
 )
 def test_mongo_get_status_with_error(
@@ -306,7 +306,7 @@ def test_config_server_get_status_shard_draining(
     )
     status = next(iter(statuses), None)
 
-    assert as_status(status) == MaintenanceStatus("Draining shard shard0")
+    assert as_status(status) == MaintenanceStatus("Draining shard shard0...")
 
 
 def test_config_server_get_status_unreachable_shards(
@@ -442,7 +442,7 @@ def test_shard_get_status_charm_missing_relation_not_drained(
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == ShardStatuses.MISSING_CONF_SERVER_REL.value
+    assert status == ShardStatuses.MISSING_SHARDING_REL.value
 
 
 def test_shard_get_status_charm_missing_relation_drained(
@@ -497,7 +497,7 @@ def test_shard_get_status_tls_status(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    status_one = ShardStatuses.REQUIRES_TLS.value
+    status_one = ShardStatuses.MISSING_TLS_REL
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.cluster_password_synced",
         return_value=True,
@@ -510,7 +510,7 @@ def test_shard_get_status_tls_status(
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == status_one
+    assert status == status_one.value
 
 
 def test_shard_get_status_shard_not_added_to_cluster(

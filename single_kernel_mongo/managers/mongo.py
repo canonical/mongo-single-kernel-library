@@ -521,15 +521,15 @@ class MongoManager(Object, ManagerStatusProtocol):
 
             match replica_status:
                 case "":
-                    return [MongodStatuses.MEMBER_BEING_ADDED.value]
+                    return [MongodStatuses.ADDING_MEMBER.value]
                 case "PRIMARY":
                     charm_statuses.append(MongodStatuses.PRIMARY.value)
                 case "SECONDARY":
                     charm_statuses.append(MongodStatuses.SECONDARY.value)
                 case "STARTUP" | "STARTUP2" | "ROLLBACK" | "RECOVERING":
-                    return [MongodStatuses.MEMBER_SYNCING.value]
+                    return [MongodStatuses.SYNCING_MEMBER.value]
                 case "REMOVED":
-                    return [MongodStatuses.MEMBER_REMOVING.value]
+                    return [MongodStatuses.REMOVING_MEMBER.value]
                 case _:
                     return [MongodStatuses.replset_status(replica_status)]
 
@@ -544,13 +544,13 @@ class MongoManager(Object, ManagerStatusProtocol):
             # AutoReconnect is raised when a connection to the database is lost and an attempt to
             # auto-reconnect will be made by pymongo.
             logger.debug("Got error: %s, while checking replica set status", str(e))
-            return [MongodStatuses.WAITING_RECONNECT.value]
+            return [MongodStatuses.WAITING_RECONNECTION.value]
         except OperationFailure as e:
             logger.warning("Authentication Failed: %s", e, exc_info=True)
             return [MongodStatuses.WAITING_RECONFIG.value]
         except MissingCredentialsError as e:
             logger.warning("Missing credentials: %s", e, exc_info=True)
-            return [MongodStatuses.MISSING_CREDENTIALS]
+            return [MongodStatuses.WAITING_CREDENTIALS]
 
     def get_leader_statuses(self) -> list[StatusObject]:
         """Returns statuses that juju leader can retrieve for mongo."""
