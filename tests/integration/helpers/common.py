@@ -850,8 +850,12 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
         # juju messes up the string formatting here.
         unit_statuses = json.loads(result["unit"])
 
-        assert unit_statuses[0]["Status"].lower() == status
-        assert unit_statuses[0]["Message"] == message
+        assert (
+            unit_statuses[0]["Status"].lower() == status
+        ), f"unit {unit.name} status is `{unit_statuses[0]['Status'].lower()}`, expected `{status}`"
+        assert (
+            unit_statuses[0]["Message"] == message
+        ), f"unit {unit.name} status message is `{unit_statuses[0]['Message']}`, expected `{message}`"
 
 
 def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
