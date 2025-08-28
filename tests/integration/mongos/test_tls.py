@@ -214,7 +214,7 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="CA mismatch.",
+        status="The mongos CA and Config-Server CA don't match.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
