@@ -205,7 +205,6 @@ class MongoManager(Object, ManagerStatusProtocol):
         self.update_user(relation)
         if relation_departing:
             self.remove_user(relation)
-            self.auto_delete_db(relation)
         if relation_changed:
             self.update_diff(relation)
 
@@ -401,20 +400,6 @@ class MongoManager(Object, ManagerStatusProtocol):
                 relation.id,
                 config.database,
             )
-
-    def auto_delete_db(self, relation: Relation) -> None:
-        """Delete a DB if necessary."""
-        with MongoConnection(self.state.mongo_config) as mongo:
-            if not self.state.config.auto_delete:
-                return
-            data_interface = DatabaseProviderData(self.model, relation.name)
-            database = data_interface.fetch_relation_field(relation.id, "database")
-            if not database:  # Early return, no database to delete.
-                return
-            if database not in mongo.get_databases():  # Early return, database not in mongodb
-                return
-            logger.info(f"Drop database: {database}")
-            mongo.drop_database(database)
 
     def get_config(
         self,

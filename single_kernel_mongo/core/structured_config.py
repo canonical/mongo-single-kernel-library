@@ -97,7 +97,6 @@ class MongoConfigModel(BaseConfigModel):
         default=ExposeExternal.NONE, alias="expose-external"
     )
     role: SerializeLiteralAsStr[MongoDBRoles]
-    auto_delete: bool = Field(default=False, alias="auto-delete")
     ldap_user_to_dn_mapping: str | None = Field(default=None, alias="ldap-user-to-dn-mapping")
     ldap_query_template: str | None = Field(default=None, alias="ldap-query-template")
 
