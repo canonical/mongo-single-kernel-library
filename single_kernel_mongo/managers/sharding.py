@@ -546,7 +546,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         tls_status = self.get_tls_status()
         if tls_status:
-            self.state.statuses.add(tls_status.value, scope="unit", component=self.name)
+            self.state.statuses.add(tls_status, scope="unit", component=self.name)
             exception_msg = f"{tls_status.message} {tls_status.action}"
             raise DeferrableFailedHookChecksError(exception_msg)
 
@@ -942,9 +942,9 @@ class ShardManager(Object, ManagerStatusProtocol):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return ShardStatuses.MISSING_TLS_REL
+                return ShardStatuses.MISSING_TLS_REL.value
             case True, False:
-                return ShardStatuses.INVALID_TLS_REL
+                return ShardStatuses.INVALID_TLS_REL.value
             case _:
                 pass
 
@@ -952,7 +952,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return ShardStatuses.CA_MISMATCH
+            return ShardStatuses.CA_MISMATCH.value
         return None
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
@@ -981,7 +981,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             return charm_statuses
 
         if tls_status := self.get_tls_status():
-            charm_statuses.append(tls_status.value)
+            charm_statuses.append(tls_status)
             # if TLS is misconfigured we will get redherrings on the remaining messages
             return charm_statuses
 

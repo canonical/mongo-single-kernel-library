@@ -500,7 +500,7 @@ def test_shard_get_status_tls_status(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    status_one = ShardStatuses.MISSING_TLS_REL
+    status_one = ShardStatuses.MISSING_TLS_REL.value
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.cluster_password_synced",
         return_value=True,
@@ -513,7 +513,7 @@ def test_shard_get_status_tls_status(
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == status_one.value
+    assert status == status_one
 
 
 def test_shard_get_status_shard_not_added_to_cluster(
