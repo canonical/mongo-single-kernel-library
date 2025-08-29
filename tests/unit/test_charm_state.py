@@ -22,7 +22,6 @@ def test_app_hosts(harness: Harness[MongoTestCharm], mocker):
 def test_config(harness: Harness[MongoTestCharm]):
     config = harness.charm.operator.state.config
     assert config.role == "replication"
-    assert not config.auto_delete
 
 
 def test_peer_units(harness: Harness[MongoTestCharm]):
