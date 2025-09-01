@@ -31,7 +31,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import DBPrivilege
+from single_kernel_mongo.utils.mongodb_users import DBPrivilege, SystemDBS
 
 logger = logging.getLogger(__name__)
 
@@ -318,6 +318,18 @@ class MongoConnection:
         rs_config["config"]["members"].append(new_member)
         logger.debug("rs_config: %r", rs_config["config"])
         self.client.admin.command("replSetReconfig", rs_config["config"])
+
+    def get_databases(self) -> set[str]:
+        """Return list of all non-default databases."""
+        databases: list[str] = self.client.list_database_names()
+        return {db for db in databases if db not in SystemDBS}
+
+    def drop_database(self, database: str):
+        """Drop a non-default database."""
+        if database in SystemDBS:
+            logger.info(f"Not dropping system DB {database}.")
+            return
+        self.client.drop_database(database)
 
     def get_users(self) -> set[str]:
         """Add a new member to replica set config inside MongoDB."""
