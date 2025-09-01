@@ -347,7 +347,7 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
         scope=Scope.UNIT, component=harness.charm.operator.shard_manager.name
     )
 
-    assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server...")
+    assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
 def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTestCharm]):

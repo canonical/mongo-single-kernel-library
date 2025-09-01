@@ -224,11 +224,10 @@ class ConfigServerStatuses(Enum):
     @staticmethod
     def unreachable_shards(unreachable_shards: list[str]) -> StatusObject:
         """Returns unreachable shard status based on list."""
-        unreachable = ", ".join(unreachable_shards)
         msg = (
-            f"Shard {unreachable[0]} is unreachable"
-            if len(unreachable) == 1
-            else f"Shards {', '.join(unreachable)} are unreachable"
+            f"Shards: {unreachable_shards[0]} is unreachable."
+            if len(unreachable_shards) == 1
+            else f"Shards: {', '.join(unreachable_shards)} are unreachable."
         )
         return StatusObject(
             status="blocked",
