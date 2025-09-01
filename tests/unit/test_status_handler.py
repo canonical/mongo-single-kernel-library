@@ -442,7 +442,7 @@ def test_shard_get_status_charm_missing_relation_not_drained(
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == ShardStatuses.MISSING_CONF_SERVER_REL.value
+    assert status == ShardStatuses.MISSING_SHARDING_REL.value
 
 
 def test_shard_get_status_charm_missing_relation_drained(
@@ -497,7 +497,7 @@ def test_shard_get_status_tls_status(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    status_one = ShardStatuses.REQUIRES_TLS.value
+    status_one = ShardStatuses.MISSING_TLS_REL.value
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.cluster_password_synced",
         return_value=True,

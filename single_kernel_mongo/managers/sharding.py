@@ -549,14 +549,14 @@ class ShardManager(Object, ManagerStatusProtocol):
         match (shard_has_tls, config_server_has_tls):
             case False, True:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.name
+                    ShardStatuses.MISSING_TLS_REL.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
                     "Config-Server uses TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_NO_TLS.value, scope="unit", component=self.name
+                    ShardStatuses.INVALID_TLS_REL.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
                     "Shard uses TLS but config-server does not. Please synchronise encryption method."
@@ -578,7 +578,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.unit_peer_data.drained = False
 
         self.state.statuses.delete(
-            ShardStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
+            ShardStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
         )
         self.state.statuses.add(
             ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
@@ -961,9 +961,9 @@ class ShardManager(Object, ManagerStatusProtocol):
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return ShardStatuses.REQUIRES_TLS.value
+                return ShardStatuses.MISSING_TLS_REL.value
             case True, False:
-                return ShardStatuses.REQUIRES_NO_TLS.value
+                return ShardStatuses.INVALID_TLS_REL.value
             case _:
                 pass
 
@@ -993,7 +993,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 return [ShardStatuses.SHARD_DRAINED.value]
 
             if not self.state.unit_peer_data.drained:
-                return [ShardStatuses.MISSING_CONF_SERVER_REL.value]
+                return [ShardStatuses.MISSING_SHARDING_REL.value]
 
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # No need to go further if the revision is invalid
