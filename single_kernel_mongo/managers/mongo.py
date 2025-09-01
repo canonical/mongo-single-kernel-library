@@ -550,7 +550,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return [MongodStatuses.WAITING_RECONFIG.value]
         except MissingCredentialsError as e:
             logger.warning("Missing credentials: %s", e, exc_info=True)
-            return [MongodStatuses.WAITING_CREDENTIALS]
+            return [MongodStatuses.WAITING_CREDENTIALS.value]
 
     def get_leader_statuses(self) -> list[StatusObject]:
         """Returns statuses that juju leader can retrieve for mongo."""

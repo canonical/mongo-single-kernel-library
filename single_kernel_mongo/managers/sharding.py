@@ -544,8 +544,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        tls_status = self.get_tls_status()
-        if tls_status:
+        if tls_status := self.get_tls_status():
             self.state.statuses.add(tls_status, scope="unit", component=self.name)
             exception_msg = f"{tls_status.message} {tls_status.action}"
             raise DeferrableFailedHookChecksError(exception_msg)
