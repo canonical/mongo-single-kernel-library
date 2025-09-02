@@ -132,7 +132,9 @@ class CharmStatuses(Enum):
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
     FAILED_SERVICES_START = StatusObject(
-        status="maintenance", message="Failed to start services. Retrying..."
+        status="blocked",
+        message="Failed to start services. Retrying...",
+        action="Check logs for more information.",
     )
     MONGODB_NOT_INSTALLED = StatusObject(
         status="waiting", message="Waiting for MongoDB to be installed..."
@@ -145,7 +147,7 @@ class CharmStatuses(Enum):
     DEPLOYED_WITHOUT_TRUST = StatusObject(
         status="blocked",
         message="Charm deployed without `trust` option.",
-        action="Run `juju trust <application-name>`.",
+        action="Run `juju trust --scope=cluster <application-name>`.",
         running="async",
     )
 
