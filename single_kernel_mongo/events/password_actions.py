@@ -19,7 +19,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.event_helpers import fail_action_with_error_log
-from single_kernel_mongo.utils.mongodb_users import CharmedOperatorUser, CharmUsers
+from single_kernel_mongo.utils.mongodb_users import CharmedOperatorUser, CharmUsernames
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -59,12 +59,12 @@ class PasswordActionEvents(Object):
         action = "set-password"
         username = event.params.get(PasswordActionParameter.USERNAME, CharmedOperatorUser.username)
         password = event.params.get(PasswordActionParameter.PASSWORD)
-        if username not in CharmUsers:
+        if username not in CharmUsernames:
             fail_action_with_error_log(
                 logger,
                 event,
                 action,
-                f"The action can be run only for users used by the charm: {', '.join(CharmUsers)} not {username}",
+                f"The action can be run only for users used by the charm: {', '.join(CharmUsernames)} not {username}",
             )
             return
         if isinstance(password, str) and password.strip() == "":
@@ -88,12 +88,12 @@ class PasswordActionEvents(Object):
         action = "get-password"
         username = event.params.get(PasswordActionParameter.USERNAME, CharmedOperatorUser.username)
         # breakpoint()
-        if username not in CharmUsers:
+        if username not in CharmUsernames:
             fail_action_with_error_log(
                 logger,
                 event,
                 action,
-                f"The action can be run only for users used by the charm: {', '.join(CharmUsers)} not {username}",
+                f"The action can be run only for users used by the charm: {', '.join(CharmUsernames)} not {username}",
             )
             return
 

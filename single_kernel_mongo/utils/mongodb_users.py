@@ -171,7 +171,7 @@ CharmedLogRotateUser = MongoDBUser(
 )
 
 
-CharmUsers = (
+CharmUsernames = (
     CharmedOperatorUser.username,
     CharmedBackupUser.username,
     CharmedMonitorUser.username,
