@@ -101,10 +101,10 @@ from single_kernel_mongo.utils.helpers import (
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
-    LogRotateUser,
-    MonitorUser,
-    OperatorUser,
+    CharmedBackupUser,
+    CharmedLogRotateUser,
+    CharmedMonitorUser,
+    CharmedOperatorUser,
     get_user_from_username,
 )
 from single_kernel_mongo.workload import (
@@ -469,7 +469,12 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state.set_keyfile(self.workload.generate_keyfile())
 
         # Sets the password for the system users
-        for user in (OperatorUser, BackupUser, MonitorUser, LogRotateUser):
+        for user in (
+            CharmedOperatorUser,
+            CharmedBackupUser,
+            CharmedMonitorUser,
+            CharmedLogRotateUser,
+        ):
             if not self.state.get_user_password(user):
                 self.state.set_user_password(user, self.workload.generate_password())
 
@@ -697,16 +702,18 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         secret_id = self.mongo_manager.set_user_password(user, new_password)
-        if user == BackupUser:
+        if user == CharmedBackupUser:
             # Update and restart PBM Agent.
             self.backup_manager.configure_and_restart()
-        if user == MonitorUser:
+        if user == CharmedMonitorUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
-        if user == LogRotateUser:
+        if user == CharmedLogRotateUser:
             # Update and restart logrotate.
             self.logrotate_config_manager.configure_and_restart()
-        if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if user in (CharmedOperatorUser, CharmedBackupUser) and self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             self.config_server_manager.update_credentials(
                 user.password_key_name,
                 new_password,

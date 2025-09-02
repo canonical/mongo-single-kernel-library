@@ -15,7 +15,11 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    CharmedBackupUser,
+    CharmedMonitorUser,
+    CharmedOperatorUser,
+)
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 PEER_ADDR = {"private-address": "127.4.5.6"}
@@ -281,22 +285,22 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker):
 def test_on_leader_elected(harness):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
-    assert state.get_user_password(MonitorUser) == ""
-    assert state.get_user_password(OperatorUser) == ""
-    assert state.get_user_password(BackupUser) == ""
+    assert state.get_user_password(CharmedMonitorUser) == ""
+    assert state.get_user_password(CharmedOperatorUser) == ""
+    assert state.get_user_password(CharmedBackupUser) == ""
     harness.set_leader(True)
     assert len(state.get_keyfile()) == 1024
-    assert len(state.get_user_password(MonitorUser)) == 32
-    assert len(state.get_user_password(OperatorUser)) == 32
-    assert len(state.get_user_password(BackupUser)) == 32
+    assert len(state.get_user_password(CharmedMonitorUser)) == 32
+    assert len(state.get_user_password(CharmedOperatorUser)) == 32
+    assert len(state.get_user_password(CharmedBackupUser)) == 32
 
 
 def test_on_leader_elected_dont_rotate_if_present(harness):
     state = harness.charm.operator.state
     harness.set_leader(True)
-    operator_password = state.get_user_password(OperatorUser)
+    operator_password = state.get_user_password(CharmedOperatorUser)
     harness.charm.on.leader_elected.emit()
-    assert state.get_user_password(OperatorUser) == operator_password
+    assert state.get_user_password(CharmedOperatorUser) == operator_password
 
 
 def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
@@ -309,7 +313,7 @@ def test_on_secret_changed(harness: Harness[MongoTestCharm], mocker, mock_fs_int
     secret = harness.charm.operator.state.secrets.get(scope=Scope.APP)
     # breakpoint()
     content = secret.get_content()
-    content["monitor-password"] = password
+    content["charmed-monitor-password"] = password
     secret.set_content(content)
 
     harness.charm.operator.update_secrets_and_restart(secret_label, secret.get_info().id)

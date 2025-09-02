@@ -238,7 +238,7 @@ async def fetch_primary(
 ) -> str | None:
     """Returns IP address of current replica set primary."""
     password = await get_password(
-        ops_test, username="operator", app_name=app_name, unit=online_unit
+        ops_test, username="charmed_operator", app_name=app_name, unit=online_unit
     )
 
     uri = await generate_mongodb_client(

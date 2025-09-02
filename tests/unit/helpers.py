@@ -10,7 +10,7 @@ class MongoConfigurationFactory(factory.Factory):
 
     hosts = {LOCALHOST}
     database = "abadcafe"
-    username = "operator"
+    username = "charmed_operator"
     password = "deadbeef"
     roles: set[str] = set()
     tls_external = False

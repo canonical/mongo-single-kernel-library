@@ -18,7 +18,7 @@ def test_configuration_ok():
     assert config.formatted_auth_source == {"authSource": "admin"}
 
     assert config.uri == (
-        "mongodb://operator:deadbeef@127.0.0.1:27017/abadcafe?replicaSet=cafebabe&authSource=admin"
+        "mongodb://charmed_operator:deadbeef@127.0.0.1:27017/abadcafe?replicaSet=cafebabe&authSource=admin"
     )
 
     assert config.supported_roles == []
@@ -61,4 +61,4 @@ def test_valid_formatted():
 
 def test_standalone():
     config = MongoConfigurationFactory.build(standalone=True)
-    assert config.uri == "mongodb://operator:deadbeef@localhost:27017/?authSource=admin"
+    assert config.uri == "mongodb://charmed_operator:deadbeef@localhost:27017/?authSource=admin"

@@ -62,9 +62,9 @@ from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
+    CharmedBackupUser,
+    CharmedOperatorUser,
     MongoDBUser,
-    OperatorUser,
 )
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
@@ -108,10 +108,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             )
         relation_data = {
             AppShardingComponentKeys.OPERATOR_PASSWORD.value: self.state.get_user_password(
-                OperatorUser
+                CharmedOperatorUser
             ),
             AppShardingComponentKeys.BACKUP_PASSWORD.value: self.state.get_user_password(
-                BackupUser
+                CharmedBackupUser
             ),
             AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
             AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
@@ -473,8 +473,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             if not hosts:
                 return unreachable_hosts
 
-            # use a URI that is not dependent on the operator password, as we are not guaranteed
-            # that the shard has received the password yet.
+            # use a URI that is not dependent on the charmed_operator password, as we are
+            # not guaranteed that the shard has received the password yet.
             # To check if the shard is ready, we check the entire replica set for readiness
             uri = f"mongodb://{','.join(hosts)}"
             if not self.dependent.mongo_manager.mongod_ready(uri, direct=False):
@@ -650,7 +650,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
-        """Update operator and backup user passwords when rotation occurs.
+        """Update charmed_operator and chamed_backup user passwords when rotation occurs.
 
         Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
         to secret changes events.
@@ -676,7 +676,9 @@ class ShardManager(Object, ManagerStatusProtocol):
             backup_password = self.state.shard_state.backup_password
 
             if not operator_password or not backup_password:
-                raise WaitingForSecretsError("Missing operator password or backup password")
+                raise WaitingForSecretsError(
+                    "Missing charmed_operator password or chamed_backup password"
+                )
             self.sync_cluster_passwords(operator_password, backup_password)
 
         # Add the certificate if it is present
@@ -765,8 +767,8 @@ class ShardManager(Object, ManagerStatusProtocol):
                     raise NotReadyError
 
         try:
-            self.update_password(user=OperatorUser, new_password=operator_password)
-            self.update_password(user=BackupUser, new_password=backup_password)
+            self.update_password(user=CharmedOperatorUser, new_password=operator_password)
+            self.update_password(user=CharmedBackupUser, new_password=backup_password)
         except (NotReadyError, PyMongoError, ServerSelectionTimeoutError):
             # RelationChangedEvents will only update passwords when the relation is first joined,
             # otherwise all other password changes result in a Secret Changed Event.
@@ -893,7 +895,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             )
             return False
 
-        config = self.state.mongos_config_for_user(OperatorUser, set(mongos_hosts))
+        config = self.state.mongos_config_for_user(CharmedOperatorUser, set(mongos_hosts))
 
         drained = shard_name not in self.dependent.mongo_manager.get_draining_shards(
             config=config, shard_name=shard_name

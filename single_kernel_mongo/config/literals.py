@@ -41,13 +41,13 @@ class MongoPorts(IntEnum):
     MONGOS_PORT = 27018
 
 
-class InternalUsers(str, Enum):
-    """The three allowed internal users."""
+class InternalUsernames(str, Enum):
+    """The allowed internal usernames."""
 
-    OPERATOR = "operator"
-    BACKUP = "backup"
-    MONITOR = "monitor"
-    LOGROTATE = "logrotate"
+    CHARMED_OPERATOR = "charmed_operator"
+    CHARMED_BACKUP = "charmed_backup"
+    CHARMED_MONITOR = "charmed_monitor"
+    CHARMED_LOGROTATE = "charmed_logrotate"
 
 
 class UnitState(str, Enum):
@@ -59,7 +59,9 @@ class UnitState(str, Enum):
     OUTDATED = "outdated"  # Machines only
 
 
-SECRETS_APP = [f"{user}-password" for user in InternalUsers] + ["keyfile"]
+# SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
+
+SECRETS_APP = [f"{user.replace('_', '-')}-password" for user in InternalUsernames] + ["keyfile"]
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,7 @@ from single_kernel_mongo.exceptions import (
     WaitingForSecretsError,
 )
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
-from single_kernel_mongo.utils.mongodb_users import BackupUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import CharmedBackupUser, CharmedOperatorUser
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 ############################
@@ -49,8 +49,8 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock
     assert data.get("database") == "unused"
     assert data.get("username") == "unused"
     assert data.get("password") == "unused"
-    assert data.get("operator-password") is not None
-    assert data.get("backup-password") is not None
+    assert data.get("charmed-operator-password") is not None
+    assert data.get("charmed-backup-password") is not None
     assert data.get("host") == '["10.0.0.10"]'
 
 
@@ -151,9 +151,9 @@ def test_config_server_update_credentials(harness: Harness[MongoTestCharm]):
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
 
-    manager.update_credentials("operator-password", "deadbeef")
+    manager.update_credentials("charmed-operator-password", "deadbeef")
 
-    assert manager.data_interface.as_dict(rel_id).get("operator-password") == "deadbeef"
+    assert manager.data_interface.as_dict(rel_id).get("charmed-operator-password") == "deadbeef"
 
 
 def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
@@ -371,8 +371,8 @@ def test_shard_manager_synchronise_cluster_secrets_success(
         "config-server",
         {
             "key-file": "deadbeef",
-            "operator-password": "test-operator",
-            "backup-password": "test-backup",
+            "charmed-operator-password": "test-operator",
+            "charmed-backup-password": "test-backup",
             "username": "unused",
             "password": "unused",
         },
@@ -404,8 +404,8 @@ def test_shard_manager_synchronise_cluster_secrets_no_keyfile(
         rel_id,
         "config-server",
         {
-            "operator-password": "test-operator",
-            "backup-password": "test-backup",
+            "charmed-operator-password": "test-operator",
+            "charmed-backup-password": "test-backup",
             "username": "unused",
             "password": "unused",
         },
@@ -442,8 +442,8 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         {
             "key-file": "feeddead",
             "int-ca-secret": "deadbeef",
-            "operator-password": "test-operator",
-            "backup-password": "test-backup",
+            "charmed-operator-password": "test-operator",
+            "charmed-backup-password": "test-backup",
             "username": "unused",
             "password": "unused",
         },
@@ -478,8 +478,8 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
         "config-server",
         {
             "key-file": "feeddead",
-            "operator-password": "test-operator",
-            "backup-password": "test-backup",
+            "charmed-operator-password": "test-operator",
+            "charmed-backup-password": "test-backup",
             "username": "unused",
             "password": "unused",
         },
@@ -511,9 +511,9 @@ def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], 
 
     manager.sync_cluster_passwords("test-operator", "test-backup")
 
-    mock_set_user_password.assert_any_call("operator", "test-operator")
-    mock_set_user_password.assert_any_call("backup", "test-backup")
+    mock_set_user_password.assert_any_call("charmed_operator", "test-operator")
+    mock_set_user_password.assert_any_call("charmed_backup", "test-backup")
     patch_config_and_restart.assert_called()
 
-    assert manager.state.get_user_password(OperatorUser) == "test-operator"
-    assert manager.state.get_user_password(BackupUser) == "test-backup"
+    assert manager.state.get_user_password(CharmedOperatorUser) == "test-operator"
+    assert manager.state.get_user_password(CharmedBackupUser) == "test-backup"

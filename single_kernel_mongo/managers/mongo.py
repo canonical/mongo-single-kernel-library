@@ -49,11 +49,11 @@ from single_kernel_mongo.utils.mongo_config import (
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
-    BackupUser,
-    LogRotateUser,
+    CharmedBackupUser,
+    CharmedLogRotateUser,
+    CharmedMonitorUser,
+    CharmedOperatorUser,
     MongoDBUser,
-    MonitorUser,
-    OperatorUser,
 )
 
 if TYPE_CHECKING:
@@ -129,12 +129,12 @@ class MongoManager(Object, ManagerStatusProtocol):
 
     def initialise_charm_admin_users(self) -> None:
         """First initialisation of each user."""
-        self.initialise_operator_user()
-        self.initialise_user(MonitorUser)
-        self.initialise_user(BackupUser)
-        self.initialise_user(LogRotateUser)
+        self.initialise_charmed_operator_user()
+        self.initialise_user(CharmedMonitorUser)
+        self.initialise_user(CharmedBackupUser)
+        self.initialise_user(CharmedLogRotateUser)
 
-    def initialise_operator_user(self):
+    def initialise_charmed_operator_user(self):
         """Creates initial admin user for MongoDB.
 
         Initial admin user can be created only through localhost connection.
@@ -145,7 +145,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         It is needed to install mongodb-clients inside charm container to make
         this function work correctly.
         """
-        if self.state.app_peer_data.is_user_created(OperatorUser.username):
+        if self.state.app_peer_data.is_user_created(CharmedOperatorUser.username):
             return
         config = self.state.mongo_config
         cmd = [
@@ -160,7 +160,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             '})"',
         ]
         self.workload.run_bin_command("mongodb://localhost/admin", cmd, input=config.password)
-        self.state.app_peer_data.set_user_created(OperatorUser.username)
+        self.state.app_peer_data.set_user_created(CharmedOperatorUser.username)
 
     def initialise_user(self, user: MongoDBUser):
         """Creates a user and sets its role on the MongoDB database."""

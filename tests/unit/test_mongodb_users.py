@@ -5,10 +5,10 @@ import pytest
 from parameterized import parameterized
 
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
+    CharmedBackupUser,
+    CharmedMonitorUser,
+    CharmedOperatorUser,
     MongoDBUser,
-    MonitorUser,
-    OperatorUser,
     get_user_from_username,
 )
 
@@ -22,7 +22,7 @@ RANDOM_USER = MongoDBUser(
 )
 
 
-@parameterized.expand([[BackupUser], [MonitorUser], [OperatorUser]])
+@parameterized.expand([[CharmedBackupUser], [CharmedMonitorUser], [CharmedOperatorUser]])
 def test_users_username(user: MongoDBUser):
     assert user.username == user.get_username()
     assert user.database_name == user.get_database_name()

@@ -41,8 +41,8 @@ UNIT_IDS = [0, 1, 2]
 SERIES = "noble"
 TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
-OPERATOR_USERNAME = "operator"
-OPERATOR_PASSWORD = "operator-password"
+CHARMED_OPERATOR_USERNAME = "charmed_operator"
+CHARMED_OPERATOR_PASSWORD = "operator-password"
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
@@ -200,7 +200,7 @@ async def generate_mongodb_client(
     app_name: str,
     mongos: bool,
     hosts: list[str] | None = None,
-    username: str = "operator",
+    username: str = CHARMED_OPERATOR_USERNAME,
     password: str | None = None,
     unit: JujuUnit | None = None,
 ):
@@ -235,7 +235,7 @@ async def mongodb_uri(
     app_name: str,
     unit_ids: list[int] | None = None,
     port: int = MONGOD_PORT,
-    username: str = "operator",
+    username: str = CHARMED_OPERATOR_USERNAME,
     password: str | None = None,
     hostnames: bool = False,
 ) -> str:
@@ -323,7 +323,11 @@ async def destroy_cluster(
 
 
 def unit_uri(
-    ip_address: str, password: str, app: str, username: str = "operator", mongos: bool = False
+    ip_address: str,
+    password: str,
+    app: str,
+    username: str = CHARMED_OPERATOR_USERNAME,
+    mongos: bool = False,
 ) -> str:
     """Generates URI that is used by MongoDB to connect to a single replica.
 
@@ -339,7 +343,7 @@ def unit_uri(
 
 async def get_password(
     ops_test: OpsTest,
-    username="operator",
+    username=CHARMED_OPERATOR_USERNAME,
     app_name: str | None = None,
     unit: JujuUnit | None = None,
 ) -> str:
@@ -422,7 +426,7 @@ async def get_direct_mongo_client(
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     match username, password:
         case None, None:
-            username = "operator"
+            username = CHARMED_OPERATOR_USERNAME
             password = await get_password(ops_test, app_name=app_name, unit=unit)
         case _, None:
             raise Exception("Please provide username and password")
@@ -460,7 +464,7 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
 async def set_password(
     ops_test: OpsTest,
     unit_id: int,
-    username: str = "operator",
+    username: str = CHARMED_OPERATOR_USERNAME,
     password: str = "secret",
     app_name: str | None = None,
 ) -> dict[str, any]:

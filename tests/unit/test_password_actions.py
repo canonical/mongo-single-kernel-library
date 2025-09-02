@@ -6,9 +6,9 @@ from ops.testing import ActionFailed, Harness
 
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
-    MonitorUser,
-    OperatorUser,
+    CharmedBackupUser,
+    CharmedMonitorUser,
+    CharmedOperatorUser,
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
@@ -42,7 +42,7 @@ def test_get_password_action_fail(harness: Harness[MongoTestCharm], mocker):
 
 @pytest.mark.parametrize(
     ("user", "password"),
-    ((MonitorUser, None), (OperatorUser, "deadbeef"), (BackupUser, "cafe")),
+    ((CharmedMonitorUser, None), (CharmedOperatorUser, "deadbeef"), (CharmedBackupUser, "cafe")),
 )
 def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, user, password):
     harness.set_leader(True)
@@ -73,9 +73,9 @@ def test_get_password_action_succeed(harness: Harness[MongoTestCharm], mocker, u
     else:
         assert len(output_password) == 32
 
-    if user == BackupUser:
+    if user == CharmedBackupUser:
         mock_pbm_connect.assert_called()
-    if user == MonitorUser:
+    if user == CharmedMonitorUser:
         mock_exporter_connect.assert_called()
     mock_mongo_connection.assert_called_with(user.username, output_password)
 
@@ -101,10 +101,10 @@ def test_get_password_action_success(harness: Harness[MongoTestCharm], mocker):
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
 
     output = harness.run_action(
-        "set-password", params={"username": "monitor", "password": "deadbeef"}
+        "set-password", params={"username": "charmed_monitor", "password": "deadbeef"}
     )
 
-    output_get_password = harness.run_action("get-password", {"username": "monitor"})
+    output_get_password = harness.run_action("get-password", {"username": "charmed_monitor"})
 
     assert output.results["password"] == output_get_password.results["password"]
 

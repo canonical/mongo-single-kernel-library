@@ -8,9 +8,9 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
+    CHARMED_OPERATOR_PASSWORD,
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
-    OPERATOR_PASSWORD,
-    OPERATOR_USERNAME,
     TIMEOUT,
     deploy_charm,
     find_unit,
@@ -151,14 +151,14 @@ async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_set_operator_password(ops_test: OpsTest):
-    """Tests that the cluster can safely set the operator password."""
+async def test_set_charmed_operator_password(ops_test: OpsTest):
+    """Tests that the cluster can safely set the charmed_operator password."""
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password != OPERATOR_PASSWORD
+            operator_password != CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
@@ -166,8 +166,8 @@ async def test_set_operator_password(ops_test: OpsTest):
     await set_password(
         ops_test,
         unit_id=config_leader_id,
-        username=OPERATOR_USERNAME,
-        password=OPERATOR_PASSWORD,
+        username=CHARMED_OPERATOR_USERNAME,
+        password=CHARMED_OPERATOR_PASSWORD,
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_APPS,
@@ -177,10 +177,10 @@ async def test_set_operator_password(ops_test: OpsTest):
 
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password == OPERATOR_PASSWORD
+            operator_password == CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} did not rotate to new password."
 
 

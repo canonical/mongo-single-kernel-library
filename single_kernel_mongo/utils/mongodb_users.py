@@ -7,7 +7,7 @@ from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel, Field, computed_field
 
-from single_kernel_mongo.config.literals import LOCALHOST, InternalUsers
+from single_kernel_mongo.config.literals import LOCALHOST, InternalUsernames
 
 
 class DBPrivilege(TypedDict, total=False):
@@ -95,7 +95,7 @@ class MongoDBUser(BaseModel):
     @property
     def password_key_name(self) -> str:
         """Returns the key name for the password of the user."""
-        return f"{self.username}-password"
+        return f"{self.username.replace('_', '-')}-password"
 
     # DEPRECATE: All the following methods are for backward compatibility and
     # will be deprecated soon
@@ -128,14 +128,14 @@ class MongoDBUser(BaseModel):
         return self.hosts
 
 
-OperatorUser = MongoDBUser(
-    username=InternalUsers.OPERATOR,
+CharmedOperatorUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_OPERATOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.DEFAULT},
 )
 
-MonitorUser = MongoDBUser(
-    username=InternalUsers.MONITOR,
+CharmedMonitorUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_MONITOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.MONITOR},
     privileges={
@@ -153,16 +153,16 @@ MonitorUser = MongoDBUser(
     hosts={LOCALHOST},  # MongoDB Exporter can only connect to one replica.
 )
 
-BackupUser = MongoDBUser(
-    username=InternalUsers.BACKUP,
+CharmedBackupUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_BACKUP,
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
     hosts={LOCALHOST},  # pbm cannot make a direct connection if multiple hosts are used
 )
 
-LogRotateUser = MongoDBUser(
-    username=InternalUsers.LOGROTATE,
+CharmedLogRotateUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_LOGROTATE,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.LOGROTATE},
     privileges={"resource": {"cluster": True}, "actions": ["logRotate"]},
@@ -172,21 +172,21 @@ LogRotateUser = MongoDBUser(
 
 
 CharmUsers = (
-    OperatorUser.username,
-    BackupUser.username,
-    MonitorUser.username,
-    LogRotateUser.username,
+    CharmedOperatorUser.username,
+    CharmedBackupUser.username,
+    CharmedMonitorUser.username,
+    CharmedLogRotateUser.username,
 )
 
 
 def get_user_from_username(username: str) -> MongoDBUser:
     """Returns the key name for the password of the user."""
-    if username == OperatorUser.username:
-        return OperatorUser
-    if username == MonitorUser.username:
-        return MonitorUser
-    if username == BackupUser.username:
-        return BackupUser
-    if username == LogRotateUser.username:
-        return LogRotateUser
+    if username == CharmedOperatorUser.username:
+        return CharmedOperatorUser
+    if username == CharmedMonitorUser.username:
+        return CharmedMonitorUser
+    if username == CharmedBackupUser.username:
+        return CharmedBackupUser
+    if username == CharmedLogRotateUser.username:
+        return CharmedLogRotateUser
     raise ValueError(f"Unknown user: {username}")

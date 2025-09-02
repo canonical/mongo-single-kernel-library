@@ -404,10 +404,10 @@ async def test_update_backup_password(ops_test: OpsTest) -> None:
         ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
     )
 
-    parameters = {"username": "backup"}
+    parameters = {"username": "charmed_backup"}
     action = await db_unit.run_action("set-password", **parameters)
     action = await action.wait()
-    assert action.status == "completed", "failed to set backup password"
+    assert action.status == "completed", "failed to set charmed_backup password"
 
     # wait for charm to be idle after setting password
     await asyncio.gather(

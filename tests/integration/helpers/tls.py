@@ -72,7 +72,7 @@ async def mongo_tls_command(
             for unit in ops_test.model.applications[app_name].units
         ]
         replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
-        username = "operator"
+        username = "charmed_operator"
         password = await get_password(ops_test, app_name=app_name)
         hosts = ",".join(replica_set_hosts)
         extra_args = f"?replicaSet={app_name}" if not mongos else ""

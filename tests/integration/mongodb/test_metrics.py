@@ -66,7 +66,7 @@ async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     application = ops_test.model.applications[app_name]
     leader_unit = await find_unit(ops_test, leader=True)
-    action = await leader_unit.run_action("set-password", **{"username": "monitor"})
+    action = await leader_unit.run_action("set-password", **{"username": "charmed_monitor"})
     action = await action.wait()
     # wait for non-leader units to receive relation changed event.
     time.sleep(3)

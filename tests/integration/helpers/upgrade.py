@@ -95,7 +95,7 @@ async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> N
 async def set_fcv(
     ops_test: OpsTest, substrate: Substrate, app_name: str, fcv: str, port: int = MONGOD_PORT
 ) -> None:
-    password = await get_password(ops_test, username="operator", app_name=app_name)
+    password = await get_password(ops_test, username="charmed_operator", app_name=app_name)
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
@@ -103,7 +103,7 @@ async def set_fcv(
     replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
 
     hosts = ",".join(replica_set_hosts)
-    replica_set_uri = f"mongodb://operator:{password}@{hosts}/admin?replicaSet={app_name}"
+    replica_set_uri = f"mongodb://charmed_operator:{password}@{hosts}/admin?replicaSet={app_name}"
 
     admin_mongod_cmd = (
         f"db.adminCommand({{setFeatureCompatibilityVersion: '{fcv}', confirm: true}})"

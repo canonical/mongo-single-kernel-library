@@ -19,7 +19,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.utils.event_helpers import fail_action_with_error_log
-from single_kernel_mongo.utils.mongodb_users import CharmUsers, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import CharmedOperatorUser, CharmUsers
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -57,7 +57,7 @@ class PasswordActionEvents(Object):
         Set the password for a specific user, if no passwords are passed, generate them.
         """
         action = "set-password"
-        username = event.params.get(PasswordActionParameter.USERNAME, OperatorUser.username)
+        username = event.params.get(PasswordActionParameter.USERNAME, CharmedOperatorUser.username)
         password = event.params.get(PasswordActionParameter.PASSWORD)
         if username not in CharmUsers:
             fail_action_with_error_log(
@@ -86,7 +86,7 @@ class PasswordActionEvents(Object):
 
     def _get_password_action(self, event: ActionEvent) -> None:
         action = "get-password"
-        username = event.params.get(PasswordActionParameter.USERNAME, OperatorUser.username)
+        username = event.params.get(PasswordActionParameter.USERNAME, CharmedOperatorUser.username)
         # breakpoint()
         if username not in CharmUsers:
             fail_action_with_error_log(
