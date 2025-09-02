@@ -43,6 +43,8 @@ TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 CHARMED_OPERATOR_USERNAME = "charmed_operator"
 CHARMED_OPERATOR_PASSWORD = "operator-password"
+CHARMED_BACKUP_USERNAME = "charmed_backup"
+CHARMED_MONITOR_USERNAME = "charmed_monitor"
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py

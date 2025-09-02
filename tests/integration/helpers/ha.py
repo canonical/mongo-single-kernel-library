@@ -32,6 +32,7 @@ from tenacity import (
 )
 
 from ..helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
@@ -238,7 +239,7 @@ async def fetch_primary(
 ) -> str | None:
     """Returns IP address of current replica set primary."""
     password = await get_password(
-        ops_test, username="charmed_operator", app_name=app_name, unit=online_unit
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name, unit=online_unit
     )
 
     uri = await generate_mongodb_client(

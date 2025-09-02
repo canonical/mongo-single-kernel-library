@@ -59,8 +59,6 @@ class UnitState(str, Enum):
     OUTDATED = "outdated"  # Machines only
 
 
-# SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
-
 SECRETS_APP = [f"{user.replace('_', '-')}-password" for user in InternalUsernames] + ["keyfile"]
 
 

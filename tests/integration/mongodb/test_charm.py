@@ -19,6 +19,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
 from ..helpers.common import (
+    CHARMED_MONITOR_USERNAME,
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
@@ -231,21 +232,23 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_charmed_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test verifies that the charmed_monitor user can perform operations such as 'rs.conf()'."""
     app_name = await get_app_name(ops_test)
-    password = await get_password(ops_test, username="charmed_monitor")
+    password = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
 
     hosts = ",".join(replica_set_hosts)
-    replica_set_uri = f"mongodb://charmed_monitor:{password}@{hosts}/admin?replicaSet={app_name}"
+    replica_set_uri = (
+        f"mongodb://{CHARMED_MONITOR_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
+    )
 
     admin_mongod_cmd = "rs.conf()"
 
     result = await execute_on_mongod(
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd
     )
-    assert result.succeeded, "Failed to get conf with charmed_monitor user."
+    assert result.succeeded, f"Failed to get conf with {CHARMED_MONITOR_USERNAME} user."
 
 
 async def test_only_leader_can_set_while_all_can_read_password_secret(
@@ -259,14 +262,16 @@ async def test_only_leader_can_set_while_all_can_read_password_secret(
 
     password = "blablabla"
     await set_password(
-        ops_test, unit_id=non_leaders[0], username="charmed_monitor", password=password
+        ops_test, unit_id=non_leaders[0], username=CHARMED_MONITOR_USERNAME, password=password
     )
-    password1 = await get_password(ops_test, username="charmed_monitor")
+    password1 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
     assert password1 != password
 
-    await set_password(ops_test, unit_id=leader_id, username="charmed_monitor", password=password)
+    await set_password(
+        ops_test, unit_id=leader_id, username=CHARMED_MONITOR_USERNAME, password=password
+    )
     for _ in UNIT_IDS:
-        password2 = await get_password(ops_test, username="charmed_monitor")
+        password2 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
         assert password2 == password
 
 
@@ -279,11 +284,11 @@ async def test_reset_and_get_password_secret_same_as_cli(ops_test: OpsTest) -> N
     # Resetting existing password
     leader_id = await get_leader_id(ops_test)
     await set_password(
-        ops_test, unit_id=leader_id, username="charmed_monitor", password=new_password
+        ops_test, unit_id=leader_id, username=CHARMED_MONITOR_USERNAME, password=new_password
     )
 
     # Getting back the pw programmatically
-    password = await get_password(ops_test, username="charmed_monitor")
+    password = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
 
     secret_label = f"{app_name}.app"
 
@@ -301,9 +306,9 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     leader_id = await get_leader_id(ops_test)
 
-    password1 = await get_password(ops_test, username="charmed_monitor")
-    await set_password(ops_test, unit_id=leader_id, username="charmed_monitor", password="")
-    password2 = await get_password(ops_test, username="charmed_monitor")
+    password1 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
+    await set_password(ops_test, unit_id=leader_id, username=CHARMED_MONITOR_USERNAME, password="")
+    password2 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
 
     # The password remained unchanged
     assert password1 == password2
@@ -313,13 +318,13 @@ async def test_empty_password(ops_test: OpsTest) -> None:
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
     leader_id = await get_leader_id(ops_test)
-    password1 = await get_password(ops_test, username="charmed_monitor")
+    password1 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
 
     # The password has to be minimum 3 characters
     await set_password(
-        ops_test, unit_id=leader_id, username="charmed_monitor", password="ca" * 1000000
+        ops_test, unit_id=leader_id, username=CHARMED_MONITOR_USERNAME, password="ca" * 1000000
     )
-    password2 = await get_password(ops_test, username="charmed_monitor")
+    password2 = await get_password(ops_test, username=CHARMED_MONITOR_USERNAME)
 
     # The password didn't change
     assert password1 == password2
