@@ -4,7 +4,7 @@
 import pytest
 from data_platform_helpers.advanced_statuses.utils import as_status
 from ops import MaintenanceStatus
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 
@@ -26,14 +26,14 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added...")),
+        ({}, MaintenanceStatus("Adding member...")),
         ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary.")),
         ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
-        ({"10.0.0.10": "STARTUP"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "STARTUP2"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "ROLLBACK"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "RECOVERING"}, WaitingStatus("Member is syncing...")),
-        ({"10.0.0.10": "REMOVED"}, WaitingStatus("Member is removing...")),
+        ({"10.0.0.10": "STARTUP"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "STARTUP2"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "ROLLBACK"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "RECOVERING"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.10": "REMOVED"}, MaintenanceStatus("Removing member...")),
         ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
@@ -59,25 +59,28 @@ def test_mongo_get_status_no_error_lxd(
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
-        ({}, WaitingStatus("Member being added...")),
+        ({}, MaintenanceStatus("Adding member...")),
         ({"mongodb-k8s-0.mongodb-k8s-endpoints": "PRIMARY"}, ActiveStatus("Primary.")),
         ({"mongodb-k8s-0.mongodb-k8s-endpoints": "SECONDARY"}, ActiveStatus("")),
-        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP"}, WaitingStatus("Member is syncing...")),
+        (
+            {"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP"},
+            MaintenanceStatus("Syncing member..."),
+        ),
         (
             {"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP2"},
-            WaitingStatus("Member is syncing..."),
+            MaintenanceStatus("Syncing member..."),
         ),
         (
             {"mongodb-k8s-0.mongodb-k8s-endpoints": "ROLLBACK"},
-            WaitingStatus("Member is syncing..."),
+            MaintenanceStatus("Syncing member..."),
         ),
         (
             {"mongodb-k8s-0.mongodb-k8s-endpoints": "RECOVERING"},
-            WaitingStatus("Member is syncing..."),
+            MaintenanceStatus("Syncing member..."),
         ),
         (
             {"mongodb-k8s-0.mongodb-k8s-endpoints": "REMOVED"},
-            WaitingStatus("Member is removing..."),
+            MaintenanceStatus("Removing member..."),
         ),
         ({"mongodb-k8s-0.mongodb-k8s-endpoints": "ERROR"}, BlockedStatus("ERROR")),
     ),
@@ -107,7 +110,7 @@ def test_mongo_get_status_no_error_microk8s(
             ServerSelectionTimeoutError,
             MongodStatuses.WAITING_ELECTION.value,
         ),
-        (AutoReconnect, MongodStatuses.WAITING_RECONNECT.value),
+        (AutoReconnect, MongodStatuses.WAITING_RECONNECTION.value),
     ),
 )
 def test_mongo_get_status_with_error(
@@ -306,7 +309,7 @@ def test_config_server_get_status_shard_draining(
     )
     status = next(iter(statuses), None)
 
-    assert as_status(status) == MaintenanceStatus("Draining shard shard0")
+    assert as_status(status) == MaintenanceStatus("Draining shard shard0...")
 
 
 def test_config_server_get_status_unreachable_shards(
@@ -339,7 +342,7 @@ def test_config_server_get_status_unreachable_shards(
     )
     status = next(iter(statuses), None)
 
-    assert as_status(status) == BlockedStatus("Shards: shard0 are unreachable.")
+    assert as_status(status) == BlockedStatus("Shards: shard0 is unreachable.")
 
 
 def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):
