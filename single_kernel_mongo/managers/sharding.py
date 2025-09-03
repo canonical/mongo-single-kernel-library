@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
-from ops import StatusBase
 from ops.framework import Object
 from ops.model import (
     Relation,
@@ -545,29 +544,10 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        shard_has_tls, config_server_has_tls = self.tls_status()
-        match (shard_has_tls, config_server_has_tls):
-            case False, True:
-                self.state.statuses.add(
-                    ShardStatuses.MISSING_TLS_REL.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Config-Server uses TLS but shard does not. Please synchronise encryption method."
-                )
-            case True, False:
-                self.state.statuses.add(
-                    ShardStatuses.INVALID_TLS_REL.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Shard uses TLS but config-server does not. Please synchronise encryption method."
-                )
-            case _:
-                pass
-
-        if not self.is_ca_compatible():
-            raise DeferrableFailedHookChecksError(
-                "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
-            )
+        if tls_status := self.get_tls_status():
+            self.state.statuses.add(tls_status, scope="unit", component=self.name)
+            exception_msg = f"{tls_status.message} {tls_status.action}"
+            raise DeferrableFailedHookChecksError(exception_msg)
 
         if is_leaving:
             self.dependent.assert_proceed_on_broken_event(relation)
@@ -956,7 +936,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def get_tls_status(self) -> StatusBase | None:
+    def get_tls_status(self) -> StatusObject | None:
         """Returns the TLS status of the sharded deployment."""
         shard_has_tls, config_server_has_tls = self.tls_status()
         match (shard_has_tls, config_server_has_tls):
