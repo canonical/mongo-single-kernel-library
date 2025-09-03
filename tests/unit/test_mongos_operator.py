@@ -14,40 +14,76 @@ from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import DeferrableError
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
 
-def test_start(mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions):
-    mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
+def test_start(
+    mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions, substrate: Substrate
+):
+    if substrate == "lxd":
+        mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
+    else:
+        mocked_copy = mocker.patch(
+            "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.copy_to_unit"
+        )
 
     mongos_harness.charm.on.start.emit()
     assert mongos_harness.charm.unit.status == as_status(
         MongosStatuses.MISSING_CONF_SERVER_REL.value
     )
 
-    mocked_copy.assert_has_calls(
-        [
-            mocker.call(
-                PosixPath("LICENSE"),
-                PosixPath("src/licenses/LICENSE-charm"),
-            ),
-            mocker.call(
-                PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-snap"),
-                PosixPath("src/licenses/LICENSE-snap"),
-            ),
-            mocker.call(
-                PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-mongodb-exporter"),
-                PosixPath("src/licenses/LICENSE-mongodb-exporter"),
-            ),
-            mocker.call(
-                PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-percona-backup-mongodb"),
-                PosixPath("src/licenses/LICENSE-percona-backup-mongodb"),
-            ),
-            mocker.call(
-                PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-percona-server"),
-                PosixPath("src/licenses/LICENSE-percona-server"),
-            ),
-        ]
-    )
+    if substrate == "lxd":
+        mocked_copy.assert_has_calls(
+            [
+                mocker.call(
+                    PosixPath("LICENSE"),
+                    PosixPath("src/licenses/LICENSE-charm"),
+                ),
+                mocker.call(
+                    PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-snap"),
+                    PosixPath("src/licenses/LICENSE-snap"),
+                ),
+                mocker.call(
+                    PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-mongodb-exporter"),
+                    PosixPath("src/licenses/LICENSE-mongodb-exporter"),
+                ),
+                mocker.call(
+                    PosixPath(
+                        "/snap/charmed-mongodb/current/licenses/LICENSE-percona-backup-mongodb"
+                    ),
+                    PosixPath("src/licenses/LICENSE-percona-backup-mongodb"),
+                ),
+                mocker.call(
+                    PosixPath("/snap/charmed-mongodb/current/licenses/LICENSE-percona-server"),
+                    PosixPath("src/licenses/LICENSE-percona-server"),
+                ),
+            ]
+        )
+    else:
+        mocked_copy.assert_has_calls(
+            [
+                mocker.call(
+                    PosixPath("/licenses/LICENSE-rock"),
+                    PosixPath("LICENSE-rock"),
+                ),
+                mocker.call(
+                    PosixPath("/licenses/LICENSE-snap"),
+                    PosixPath("LICENSE-snap"),
+                ),
+                mocker.call(
+                    PosixPath("/licenses/LICENSE-mongodb-exporter"),
+                    PosixPath("LICENSE-mongodb-exporter"),
+                ),
+                mocker.call(
+                    PosixPath("/licenses/LICENSE-percona-backup-mongodb"),
+                    PosixPath("LICENSE-percona-backup-mongodb"),
+                ),
+                mocker.call(
+                    PosixPath("/licenses/LICENSE-percona-server"),
+                    PosixPath("LICENSE-percona-server"),
+                ),
+            ]
+        )
 
 
 def test_share_connection_info_fail_db_not_initialised(
@@ -122,11 +158,11 @@ def test_share_connection_info_fail_exception(
         (
             {
                 "database": "test",
-                "extra-user-roles": "test-role,admin",
+                "extra-user-roles": "default,admin",
                 "external-node-connectivity": "false",
             },
             "test",
-            {"test-role", "admin"},
+            {"default", "admin"},
             False,
         ),
         (
@@ -151,6 +187,7 @@ def test_share_connection_info_fail_exception(
 )
 def test_proxy_information_to_client_and_handler_connectivity(
     mongos_harness: Harness[MongosTestCharm],
+    substrate: Substrate,
     mocker,
     databag,
     expected_db,
@@ -161,6 +198,18 @@ def test_proxy_information_to_client_and_handler_connectivity(
     mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_open_port = mocker.patch("ops.model.Unit.open_port")
 
+    manager = mongos_harness.charm.operator.cluster_manager
+    manager.share_credentials_to_clients("operator", "password")
+
+    if substrate == "microk8s":
+        mocker.patch(
+            "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists",
+            return_value=False,
+        )
+        mocker.patch(
+            "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
+        )
+
     rel_id = mongos_harness.add_relation(RelationNames.MONGOS_PROXY.value, "client-app")
     mongos_harness.add_relation_unit(rel_id, "client-app/0")
 
@@ -170,15 +219,21 @@ def test_proxy_information_to_client_and_handler_connectivity(
         databag,
     )
 
-    assert mongos_harness.charm.operator.state.app_peer_data.database == expected_db
-    assert (
-        mongos_harness.charm.operator.state.app_peer_data.extra_user_roles
-        == expected_extra_user_roles
-    )
-    assert (
-        mongos_harness.charm.operator.state.app_peer_data.external_connectivity
-        == expected_connectivity
-    )
+    if substrate == "lxd":
+        assert mongos_harness.charm.operator.state.app_peer_data.database == expected_db
+        assert (
+            mongos_harness.charm.operator.state.app_peer_data.extra_user_roles
+            == expected_extra_user_roles
+        )
+        assert (
+            mongos_harness.charm.operator.state.app_peer_data.external_connectivity
+            == expected_connectivity
+        )
 
-    if expected_connectivity:
-        mock_open_port.assert_called()
+        if expected_connectivity:
+            mock_open_port.assert_called()
+    else:
+        data = mongos_harness.get_relation_data(rel_id, mongos_harness.charm.app.name)
+        assert data["database"] == expected_db
+        assert len(data["password"]) == 32
+        assert data["username"] == f"relation-{rel_id}"
