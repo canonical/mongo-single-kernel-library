@@ -10,16 +10,29 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedOperatorUser,
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.integration.helpers.types import Substrate
 
-PEER_ADDR = {"private-address": "127.4.5.6"}
+PEER_ADDR = {
+    "lxd": {"private-address": "127.4.5.6"},
+    "microk8s": {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+}
 
 
-def test_app_hosts(harness: Harness[MongoTestCharm], mocker):
+def test_app_hosts(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name: str, substrate: Substrate
+):
     rel_id = harness.charm.model.get_relation(PeerRelationNames.PEERS.value).id  # type: ignore
-    harness.add_relation_unit(rel_id, "mongodb/1")
-    harness.update_relation_data(rel_id, "mongodb/1", PEER_ADDR)
+    harness.add_relation_unit(rel_id, f"{mongodb_name}/1")
+    harness.update_relation_data(rel_id, f"{mongodb_name}/1", PEER_ADDR[substrate])
     resulting_ips = harness.charm.operator.state.app_hosts
-    expected_ips = {"10.0.0.10", "127.4.5.6"}
+    if substrate == "lxd":
+        expected_ips = {"10.0.0.10", "127.4.5.6"}
+    else:
+        expected_ips = {
+            "mongodb-k8s-1.mongodb-k8s-endpoints",
+            "mongodb-k8s-0.mongodb-k8s-endpoints",
+        }
+
     assert expected_ips == resulting_ips
 
 
@@ -29,16 +42,16 @@ def test_config(harness: Harness[MongoTestCharm]):
     assert not config.auto_delete
 
 
-def test_peer_units(harness: Harness[MongoTestCharm]):
+def test_peer_units(harness: Harness[MongoTestCharm], mongodb_name: str):
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
-    harness.add_relation_unit(rel.id, "mongodb/1")  # type: ignore
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
     assert harness.charm.operator.state.peer_relation.id == rel.id  # type: ignore
-    assert {unit.name for unit in harness.charm.operator.state.peers_units} == {"mongodb/1"}
+    assert {unit.name for unit in harness.charm.operator.state.peers_units} == {f"{mongodb_name}/1"}
 
 
-def test_users_secrets(harness: Harness[MongoTestCharm]):
+def test_users_secrets(harness: Harness[MongoTestCharm], mongodb_name: str):
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
-    harness.add_relation_unit(rel.id, "mongodb/1")  # type: ignore
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
 
     harness.set_leader(True)
     harness.charm.operator.new_leader()
@@ -55,9 +68,9 @@ def test_users_secrets(harness: Harness[MongoTestCharm]):
     )
 
 
-def test_app_peer_data(harness: Harness[MongoTestCharm]):
+def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
-    harness.add_relation_unit(rel.id, "mongodb/1")  # type: ignore
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
     harness.set_leader(True)
     state = harness.charm.operator.state
 
@@ -65,7 +78,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm]):
     assert not state.db_initialised
     assert state.app_peer_data.managed_users == set()
     assert len(state.get_keyfile() or "") == 1024
-    assert state.app_peer_data.replica_set == "mongodb"
+    assert state.app_peer_data.replica_set == mongodb_name
 
     assert not state.app_peer_data.is_user_created(CharmedMonitorUser.username)
     assert not state.app_peer_data.is_user_created(CharmedBackupUser.username)
@@ -85,10 +98,12 @@ def test_app_peer_data(harness: Harness[MongoTestCharm]):
         state.app_peer_data.db_initialised = 0  # type: ignore
 
 
-def test_unit_peer_data(harness: Harness[MongoTestCharm]):
+def test_unit_peer_data(
+    harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate, mongodb_hostname: str
+):
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
-    harness.add_relation_unit(rel.id, "mongodb/1")  # type: ignore
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
     harness.set_leader(True)
     state = harness.charm.operator.state
 
-    assert state.unit_peer_data.internal_address == "10.0.0.10"
+    assert state.unit_peer_data.internal_address == mongodb_hostname

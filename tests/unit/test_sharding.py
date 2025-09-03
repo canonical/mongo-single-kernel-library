@@ -23,13 +23,16 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import CharmedBackupUser, CharmedOperatorUser
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.integration.helpers.types import Substrate
 
 ############################
 # Config Server Side tests #
 ############################
 
 
-def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock_fs_interactions):
+def test_config_server_database_requested(
+    harness: Harness[MongoTestCharm], mock_fs_interactions, mongodb_hostname: str
+):
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
@@ -51,7 +54,7 @@ def test_config_server_database_requested(harness: Harness[MongoTestCharm], mock
     assert data.get("password") == "unused"
     assert data.get("charmed-operator-password") is not None
     assert data.get("charmed-backup-password") is not None
-    assert data.get("host") == '["10.0.0.10"]'
+    assert data.get("host") == f'["{mongodb_hostname}"]'
 
 
 def test_config_server_database_requested_failed_db_not_initialised(
@@ -175,7 +178,7 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
     assert manager.data_interface.as_dict(rel_id).get("int-ca-secret") == "newca"
 
 
-def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker):
+def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):
     manager = harness.charm.operator.config_server_manager
 
     harness.set_leader(True)
@@ -199,7 +202,10 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker):
 
     manager.add_shard(relation)
 
-    mocked_add_shard.assert_called_with("shard0", ["2.2.2.2"])
+    if substrate == "lxd":
+        mocked_add_shard.assert_called_with("shard0", ["2.2.2.2"])
+    else:
+        mocked_add_shard.assert_called_with("shard0", ["shard0-0.shard0-endpoints"])
 
 
 def test_config_server_cluster_password_synced_success(harness: Harness[MongoTestCharm], mocker):
@@ -491,7 +497,9 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
         manager.synchronise_cluster_secrets(relation)
 
 
-def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], mocker):
+def test_shard_manager_sync_cluster_passwords(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str
+):
     manager = harness.charm.operator.shard_manager
 
     harness.set_leader(True)
@@ -500,8 +508,9 @@ def test_shard_manager_sync_cluster_passwords(harness: Harness[MongoTestCharm], 
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.primary",
-        return_value="10.0.0.10",
+        return_value=mongodb_hostname,
     )
+
     mock_set_user_password = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password",
     )

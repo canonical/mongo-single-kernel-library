@@ -14,6 +14,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedOperatorUser,
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.integration.helpers.types import Substrate
 
 
 def test_set_user_password(harness: Harness[MongoTestCharm], mocker):
@@ -81,11 +82,16 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
 
 
-def test_initialise_charmed_operator_user(harness: Harness[MongoTestCharm], mocker):
+def test_initialise_charmed_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):
     harness.set_leader(True)
-    mock_create_user = mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command"
-    )
+    if substrate == "lxd":
+        mock_create_user = mocker.patch(
+            "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command"
+        )
+    else:
+        mock_create_user = mocker.patch(
+            "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command"
+        )
 
     getattr(harness.charm.operator.mongo_manager, "initialise_charmed_operator_user")()
     config = getattr(harness.charm.operator.state, "operator_config")

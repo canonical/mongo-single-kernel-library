@@ -24,6 +24,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
 #################
 # Mongo DB Side #
@@ -104,7 +105,7 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     assert "during an upgrade" in err.value.args[0]
 
 
-def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
+def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -123,10 +124,13 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker):
     data = manager.data_interface.as_dict(rel_id)
 
     assert len(data.get("key-file", "")) == 1024
-    assert data.get("config-server-db") == f"{harness.charm.app.name}/10.0.0.10:27017"
+
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
 
 
-def test_share_secret_to_mongos_also_shares_ldap_config(harness: Harness[MongoTestCharm], mocker):
+def test_share_secret_to_mongos_also_shares_ldap_config(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -162,10 +166,11 @@ def test_share_secret_to_mongos_also_shares_ldap_config(harness: Harness[MongoTe
     data = manager.data_interface.as_dict(rel_id)
 
     assert len(data.get("key-file", "")) == 1024
-    assert data.get("config-server-db") == f"{harness.charm.app.name}/10.0.0.10:27017"
+    assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
     assert data.get("ldap-user-to-dn-mapping") == json.dumps(valid_mapping)
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
 
@@ -313,7 +318,7 @@ def test_cluster_requirer_share_credentials_to_clients(
 
 
 def test_cluster_requirer_update_mongos_and_restart(
-    mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker
+    mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker, substrate: Substrate
 ):
     manager = mongos_harness.charm.operator.cluster_manager
     operator = mongos_harness.charm.operator
@@ -331,8 +336,14 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs")
+
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
         return_value=data,
     )
 
@@ -350,17 +361,23 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     for relation in operator.state.client_relations:
         data = relation.data[mongos_harness.charm.app]
-        assert data["username"] == "charmed_operator"
-        assert data["password"] == "password"
+        if substrate == "lxd":
+            assert data["username"] == "charmed_operator"
+            assert data["password"] == "password"
+            assert (
+                data["endpoints"]
+                == "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
+            )
+            assert (
+                data["uris"]
+                == "mongodb://charmed_operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
+            )
+        else:
+            # on k8s, the router generates the password and user ids.
+            assert data["username"] == f"relation-{relation.id}"
+            assert len(data["password"]) == 32
+            assert data["endpoints"] == "mongos-k8s-0.mongos-k8s-endpoints"
         assert data["database"] == "test-db"
-        assert (
-            data["endpoints"]
-            == "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
-        )
-        assert (
-            data["uris"]
-            == "mongodb://charmed_operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
-        )
 
 
 @pytest.mark.parametrize(
@@ -412,6 +429,10 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
         return_value=data,
     )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
+        return_value=data,
+    )
 
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
@@ -458,6 +479,11 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
         return_value=data,
     )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
+        return_value=data,
+    )
+    mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.drop_user")
 
     mongos_harness.update_relation_data(
         rel_id_cluster,
@@ -515,6 +541,10 @@ def test_cluster_requirer_is_ca_compatible(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
         return_value=data,
     )
 
@@ -582,6 +612,10 @@ def test_cluster_requirer_tls_status(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
         return_value=data,
     )
 
@@ -653,6 +687,10 @@ def test_cluster_requirer_get_tls_statuses(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
         return_value=data,
     )
 
