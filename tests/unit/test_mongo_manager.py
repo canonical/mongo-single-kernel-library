@@ -82,7 +82,9 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
 
 
-def test_initialise_charmed_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):
+def test_initialise_charmed_operator_user(
+    harness: Harness[MongoTestCharm], mocker, substrate: Substrate
+):
     harness.set_leader(True)
     if substrate == "lxd":
         mock_create_user = mocker.patch(

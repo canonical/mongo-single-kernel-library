@@ -17,11 +17,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.utils.mongodb_users import (
-    CharmedBackupUser,
-    CharmedMonitorUser,
-    CharmedOperatorUser,
-)
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     CharmedBackupUser,
@@ -696,7 +691,7 @@ def test_connect_mongodb_exporter_success(
     else:
         harness.charm.on.start.emit()
 
-    password = harness.charm.operator.state.get_user_password(MonitorUser)
+    password = harness.charm.operator.state.get_user_password(CharmedMonitorUser)
 
     uri_template = (
         "mongodb://monitor:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s"
@@ -709,7 +704,7 @@ def test_connect_mongodb_exporter_success(
     params = {"username": "monitor", "password": "mongo123"}
     harness.run_action("set-password", params)
 
-    password = harness.charm.operator.state.get_user_password(MonitorUser)
+    password = harness.charm.operator.state.get_user_password(CharmedMonitorUser)
 
     new_uri = harness.charm.operator.mongodb_exporter_config_manager.get_environment()
 
