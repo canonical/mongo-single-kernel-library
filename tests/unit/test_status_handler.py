@@ -22,6 +22,7 @@ from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
@@ -36,7 +37,52 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
         ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
-def test_mongo_get_status_no_error(
+def test_mongo_get_status_no_error_lxd(
+    harness: Harness[MongoTestCharm], mocker, replset_status, expected_status
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_status",
+        return_value=replset_status,
+    )
+
+    statuses = harness.charm.operator.mongo_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert as_status(status) == expected_status
+
+
+@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.parametrize(
+    ("replset_status", "expected_status"),
+    (
+        ({}, WaitingStatus("Member being added...")),
+        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "PRIMARY"}, ActiveStatus("Primary.")),
+        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "SECONDARY"}, ActiveStatus("")),
+        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP"}, WaitingStatus("Member is syncing...")),
+        (
+            {"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP2"},
+            WaitingStatus("Member is syncing..."),
+        ),
+        (
+            {"mongodb-k8s-0.mongodb-k8s-endpoints": "ROLLBACK"},
+            WaitingStatus("Member is syncing..."),
+        ),
+        (
+            {"mongodb-k8s-0.mongodb-k8s-endpoints": "RECOVERING"},
+            WaitingStatus("Member is syncing..."),
+        ),
+        (
+            {"mongodb-k8s-0.mongodb-k8s-endpoints": "REMOVED"},
+            WaitingStatus("Member is removing..."),
+        ),
+        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "ERROR"}, BlockedStatus("ERROR")),
+    ),
+)
+def test_mongo_get_status_no_error_microk8s(
     harness: Harness[MongoTestCharm], mocker, replset_status, expected_status
 ):
     harness.set_leader(True)
