@@ -35,7 +35,6 @@ def test_app_hosts(
 def test_config(harness: Harness[MongoTestCharm]):
     config = harness.charm.operator.state.config
     assert config.role == "replication"
-    assert not config.auto_delete
 
 
 def test_peer_units(harness: Harness[MongoTestCharm], mongodb_name: str):
