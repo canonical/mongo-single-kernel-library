@@ -309,7 +309,7 @@ def test_config_server_get_status_shard_draining(
     )
     status = next(iter(statuses), None)
 
-    assert as_status(status) == MaintenanceStatus("Draining shard shard0")
+    assert as_status(status) == MaintenanceStatus("Draining shard shard0...")
 
 
 def test_config_server_get_status_unreachable_shards(
@@ -342,7 +342,7 @@ def test_config_server_get_status_unreachable_shards(
     )
     status = next(iter(statuses), None)
 
-    assert as_status(status) == BlockedStatus("Shards: shard0 are unreachable.")
+    assert as_status(status) == BlockedStatus("Shards: shard0 is unreachable.")
 
 
 def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock_fs_interactions):

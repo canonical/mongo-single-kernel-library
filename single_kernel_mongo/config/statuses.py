@@ -186,20 +186,28 @@ class BackupStatuses(Enum):
 class ConfigServerStatuses(Enum):
     """Config server statuses."""
 
-    # todo consider this status to be put in charm
-    MONGOS_NOT_RUNNING = StatusObject(status="blocked", message="Internal mongos is not running.")
-    MISSING_SHARDING_REL = StatusObject(status="blocked", message="Missing relation to shard(s).")
-    SYNCING_PASSWORDS = StatusObject(
-        status="waiting", message="Waiting to sync passwords across the cluster..."
-    )
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    SYNCING_PASSWORDS = StatusObject(
+        status="waiting",
+        message="Waiting for passwords to be synced across the cluster...",
+        short_message="Syncing passwords...",
+    )
+    # todo consider this status to be put in charm
+    MONGOS_NOT_RUNNING = StatusObject(status="waiting", message="Internal mongos is not running...")
+    MISSING_CONF_SERVER_REL = StatusObject(
+        status="blocked",
+        message="Missing relation to shard(s).",
+        check="Relation validation failed.",
+        action="Add the config-server relation to the config-server.",
+    )
 
     @staticmethod
     def adding_shard(shard: str) -> StatusObject:
         """Returns add shard status."""
         return StatusObject(
             status="maintenance",
-            message=f"Adding shard {shard} to config-server.",
+            message=f"Adding shard {shard} to config-server...",
+            short_message="Adding shard to config-server...",
             running="blocking",
         )
 
@@ -207,14 +215,26 @@ class ConfigServerStatuses(Enum):
     def draining_shard(shard: str) -> StatusObject:
         """Returns draining shard status based on shard."""
         return StatusObject(
-            status="maintenance", message=f"Draining shard {shard}", running="async"
+            status="maintenance",
+            message=f"Draining shard {shard}...",
+            short_message="Draining shard...",
+            running="async",
         )
 
     @staticmethod
     def unreachable_shards(unreachable_shards: list[str]) -> StatusObject:
         """Returns unreachable shard status based on list."""
-        unreachable = ", ".join(unreachable_shards)
-        return StatusObject(status="blocked", message=f"Shards: {unreachable} are unreachable.")
+        msg = (
+            f"Shards: {unreachable_shards[0]} is unreachable."
+            if len(unreachable_shards) == 1
+            else f"Shards: {', '.join(unreachable_shards)} are unreachable."
+        )
+        return StatusObject(
+            status="blocked",
+            message=msg,
+            short_message="Unreachable shards.",
+            action="Check logs for more information.",
+        )
 
     @staticmethod
     def waiting_for_shard_upgrade(
