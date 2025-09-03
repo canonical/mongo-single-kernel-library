@@ -18,6 +18,7 @@ from tests.integration.helpers.upgrade import set_fcv
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     TIMEOUT,
@@ -228,7 +229,7 @@ async def test_restore_backup_6_to_7(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0", "operator")
 
     leader_unit_seven = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
     action = await leader_unit_seven.run_action(
@@ -245,7 +246,7 @@ async def test_restore_backup_6_to_7(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0", "operator")
 
 
 @pytest.mark.abort_on_fail
@@ -351,7 +352,7 @@ async def test_restore_backup_7_to_8(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", "operator")
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
     action = await leader_unit_eight.run_action(
@@ -368,7 +369,7 @@ async def test_restore_backup_7_to_8(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_six = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SIX)
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
