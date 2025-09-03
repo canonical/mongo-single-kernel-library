@@ -417,7 +417,7 @@ def test_start_mongod_error_initialising_users(
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.init_replset")
     defer = mocker.patch("ops.framework.EventBase.defer")
     init_operator_user = mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.initialise_operator_user"
+        "single_kernel_mongo.managers.mongo.MongoManager.initialise_charmed_operator_user"
     )
     init_user = mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_user")
     # presets
@@ -637,14 +637,14 @@ def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
 
 
 def test_connect_to_mongo_exporter_on_set_password(harness, mocker, mock_fs_interactions):
-    """Test configure_and_restart is called when the password is set for 'monitor' user."""
+    """Test configure_and_restart is called when the password is set for charmed_monitor user."""
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
     connect_exporter = mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
     harness.set_leader(True)
 
-    harness.run_action("set-password", {"username": "monitor"})
+    harness.run_action("set-password", {"username": "charmed_monitor"})
     connect_exporter.assert_called()
 
 
@@ -658,7 +658,7 @@ def test_event_auto_reset_password_secrets_when_no_pw_value_shipped(
     )
     harness.set_leader(True)
 
-    params = {"username": "monitor"}
+    params = {"username": "charmed_monitor"}
     output = harness.run_action("get-password", params)
 
     pw1 = output.results["password"]
@@ -694,14 +694,14 @@ def test_connect_mongodb_exporter_success(
     password = harness.charm.operator.state.get_user_password(CharmedMonitorUser)
 
     uri_template = (
-        "mongodb://monitor:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s"
+        "mongodb://charmed_monitor:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s"
     )
 
     env = harness.charm.operator.mongodb_exporter_config_manager.get_environment()
 
     assert env == uri_template.format(password=password, mongodb_hostname=mongodb_hostname)
 
-    params = {"username": "monitor", "password": "mongo123"}
+    params = {"username": "charmed_monitor", "password": "mongo123"}
     harness.run_action("set-password", params)
 
     password = harness.charm.operator.state.get_user_password(CharmedMonitorUser)
