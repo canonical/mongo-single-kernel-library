@@ -310,28 +310,34 @@ class ShardStatuses(Enum):
 class MongodStatuses(Enum):
     """MongoD statuses."""
 
+    ACTIVE_IDLE = StatusObject(status="active", message="")
+    PRIMARY = StatusObject(status="active", message="Primary.")
+    SECONDARY = StatusObject(status="active", message="")
+
+    ADDING_MEMBER = StatusObject(status="maintenance", message="Adding member...")
+    REMOVING_MEMBER = StatusObject(status="maintenance", message="Removing member...")
+    SYNCING_MEMBER = StatusObject(status="maintenance", message="Syncing member...")
     WAITING_REPL_SET_INIT = StatusObject(
         status="waiting", message="Waiting for replica set initialisation..."
     )
     WAITING_RECONFIG = StatusObject(
-        status="waiting", message="Waiting to reconfigure replica set..."
+        status="waiting", message="Waiting for replica set reconfiguration..."
     )
     WAITING_ELECTION = StatusObject(status="waiting", message="Waiting for primary re-election...")
-    WAITING_RECONNECT = StatusObject(status="waiting", message="Waiting to reconnect to unit...")
-    MEMBER_BEING_ADDED = StatusObject(status="waiting", message="Member being added...")
-    MEMBER_REMOVING = StatusObject(status="waiting", message="Member is removing...")
-    MEMBER_SYNCING = StatusObject(status="waiting", message="Member is syncing...")
-    PRIMARY = StatusObject(status="active", message="Primary.")
-    SECONDARY = StatusObject(status="active", message="")
-
-    ACTIVE_IDLE = StatusObject(status="active", message="")
-
-    MISSING_CREDENTIALS = StatusObject(status="waiting", message="Missing credentials for mongo")
+    WAITING_RECONNECTION = StatusObject(
+        status="maintenance", message="Waiting for reconnection to mongo..."
+    )
+    WAITING_CREDENTIALS = StatusObject(status="waiting", message="Waiting for mongo credentials...")
 
     @staticmethod
     def replset_status(status: str):
         """When we have an unexpected replica set status."""
-        return StatusObject(status="blocked", message=status)
+        return StatusObject(
+            status="blocked",
+            message=status,
+            short_message="Unexpected error found in replica set.",
+            action="Check logs for more information.",
+        )
 
 
 class UpgradeStatuses(Enum):
