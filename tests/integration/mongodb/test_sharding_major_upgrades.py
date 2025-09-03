@@ -352,7 +352,7 @@ async def test_restore_backup_7_to_8(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", "operator")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
     action = await leader_unit_eight.run_action(
