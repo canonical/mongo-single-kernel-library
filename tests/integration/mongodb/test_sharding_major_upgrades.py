@@ -117,7 +117,7 @@ async def test_deploy_mongodb_6(
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
 
     mongos_uri: str = await mongodb_uri(
-        ops_test, substrate, app_name=CONFIG_SERVER_SIX, port=MONGOS_PORT
+        ops_test, substrate, app_name=CONFIG_SERVER_SIX, port=MONGOS_PORT, username="operator"
     )
     await ops_test.model.applications[application_name].set_config({"mongos-uri": mongos_uri})
 
