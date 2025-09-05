@@ -103,8 +103,8 @@ class MongoManager(Object, ManagerStatusProtocol):
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
 
-    def set_user_password(self, user: MongoDBUser, password: str) -> str:
-        """Sets the password for a given username and return the secret id.
+    def set_user_password(self, user: MongoDBUser, password: str):
+        """Sets the password for a given username.
 
         Raises:
             SetPasswordError
@@ -119,7 +119,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             except PyMongoError as e:
                 raise SetPasswordError(f"Failed changing the password: {e}")
 
-        return self.state.set_user_password(user, password)
+        self.state.set_user_password(user, password)
 
     def initialise_replica_set(self) -> None:
         """Initialises the replica set."""

@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import CharmUsers
+from single_kernel_mongo.utils.mongodb_users import CharmUsernames
 from tests.integration.helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
@@ -199,7 +199,7 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
+    for user in CharmUsernames:
         password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
         await set_password(
@@ -317,7 +317,7 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
+    for user in CharmUsernames:
         password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
         await set_password(

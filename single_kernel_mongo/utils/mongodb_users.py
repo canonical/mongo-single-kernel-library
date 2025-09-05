@@ -7,7 +7,7 @@ from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel, Field, computed_field
 
-from single_kernel_mongo.config.literals import LOCALHOST, InternalUsers
+from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, InternalUsers
 
 
 class DBPrivilege(TypedDict, total=False):
@@ -171,11 +171,18 @@ LogRotateUser = MongoDBUser(
 )
 
 
-CharmUsers = (
+CharmUsernames = {
     OperatorUser.username,
     BackupUser.username,
     MonitorUser.username,
     LogRotateUser.username,
+}
+
+CharmUsers = (
+    OperatorUser,
+    BackupUser,
+    MonitorUser,
+    LogRotateUser,
 )
 
 
@@ -190,3 +197,18 @@ def get_user_from_username(username: str) -> MongoDBUser:
     if username == LogRotateUser.username:
         return LogRotateUser
     raise ValueError(f"Unknown user: {username}")
+
+
+def is_valid_charm_user_password_config(user_passwords: dict) -> bool:
+    """Validate a user_passwords mapping.
+
+    A configuration is considered valid if:
+    - It contains exactly one entry for each internal username in CharmUsernames.
+    - It does not contain any extra usernames.
+    - Each password is non-empty and not only whitespace.
+    - Each password length is less than or equal to MAX_PASSWORD_LENGTH.
+    """
+    return set(user_passwords.keys()) == CharmUsernames and all(
+        user_passwords[username].strip() and len(user_passwords[username]) <= MAX_PASSWORD_LENGTH
+        for username in CharmUsernames
+    )

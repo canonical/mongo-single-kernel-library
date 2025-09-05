@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import CharmUsers
+from single_kernel_mongo.utils.mongodb_users import CharmUsernames
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -140,7 +140,7 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
+    for user in CharmUsernames:
         password = await get_password(ops_test, username=user, app_name=MONGODB_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_SEVEN)
         await set_password(
@@ -233,7 +233,7 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
+    for user in CharmUsernames:
         password = await get_password(ops_test, username=user, app_name=MONGODB_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_EIGHT)
         await set_password(

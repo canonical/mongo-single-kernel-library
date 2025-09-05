@@ -428,3 +428,21 @@ class LdapStatuses(Enum):
     def on_error_status(err: Exception):
         """On error."""
         return StatusObject(status="blocked", message=f"{err}")
+
+
+class PasswordManagementStatuses(Enum):
+    """Password Management Statuses."""
+
+    PASSWORD_UPDATE_FAILED = StatusObject(
+        status="blocked",
+        message="failed to update password",
+        running="async",
+        action="",
+    )
+
+    INVALID_USER_PASSWORDS = StatusObject(
+        status="blocked",
+        message="failed to update password",
+        running="async",
+        action="",
+    )
