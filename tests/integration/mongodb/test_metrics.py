@@ -61,7 +61,9 @@ async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
         await verify_endpoints(ops_test, substrate, unit)
 
 
-async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
+async def test_endpoints_new_password(
+    ops_test: OpsTest, substrate: Substrate
+):  #####################
     """Verify that endpoints still function correctly after the monitor user password changes."""
     app_name = await get_app_name(ops_test)
     application = ops_test.model.applications[app_name]

@@ -337,7 +337,7 @@ def unit_uri(
     return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
-async def get_password(
+async def get_password(  ###############################################################
     ops_test: OpsTest,
     username="operator",
     app_name: str | None = None,
@@ -457,7 +457,7 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
     return -1
 
 
-async def set_password(
+async def set_password(  ###########################################################
     ops_test: OpsTest,
     unit_id: int,
     username: str = "operator",

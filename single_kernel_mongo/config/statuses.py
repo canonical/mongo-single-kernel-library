@@ -433,16 +433,30 @@ class LdapStatuses(Enum):
 class PasswordManagementStatuses(Enum):
     """Password Management Statuses."""
 
-    PASSWORD_UPDATE_FAILED = StatusObject(
+    PASSWORD_ON_SHARD = StatusObject(
         status="blocked",
-        message="failed to update password",
-        running="async",
-        action="",
+        message="Invalid system-users config. Shard do not manage passwords.",
+        short_message="Invalid system-users config.",
+        action="Remove the system-users config from shard.",
+        check="Configuration validation failure.",
     )
-
+    INVALID_SECRET = StatusObject(
+        status="blocked",
+        message="Failed to retrieve user-system secret.",
+        action="Check logs and verify the secret existence and permissions.",
+        check="Configuration update failure.",
+        running="async",
+    )
     INVALID_USER_PASSWORDS = StatusObject(
         status="blocked",
-        message="failed to update password",
+        message="Invalid password found in system-users config.",
+        short_message="Invalid system-users config.",
         running="async",
+        action="Check the passwords set in the system-users secret.",
+    )
+    PASSWORD_UPDATE_FAILED = StatusObject(
+        status="maintenance",
+        message="Failed to update user passwords.",
+        running="async",  # blocking ????
         action="",
     )

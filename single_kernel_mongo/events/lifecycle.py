@@ -51,8 +51,11 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DeferrableFailedHookChecksError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
+    NonDeferrableFailedHookChecksError,
+    SetPasswordError,
     UpgradeInProgressError,
     WaitingForLeaderError,
     WorkloadNotReadyError,
@@ -161,7 +164,13 @@ class LifecycleEventsHandler(Object):
         """Config Changed Event."""
         try:
             self.dependent.update_config_and_restart()
-        except (UpgradeInProgressError, WaitingForLeaderError):
+        except (
+            UpgradeInProgressError,
+            WaitingForLeaderError,
+            DeferrableFailedHookChecksError,
+            WorkloadServiceError,
+            SetPasswordError,
+        ):
             event.defer()
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
@@ -175,6 +184,8 @@ class LifecycleEventsHandler(Object):
                 scope="unit",
                 component=self.dependent.name,
             )
+        except NonDeferrableFailedHookChecksError:
+            pass
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
@@ -196,6 +207,8 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
+        except (DeferrableFailedHookChecksError, UpgradeInProgressError, SetPasswordError):
+            event.defer()
 
     def on_relation_joined(self, event: RelationJoinedEvent):
         """Relation joined event."""

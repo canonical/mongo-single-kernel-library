@@ -289,7 +289,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
 
 
 @pytest.mark.parametrize("cloud_provider", ["AWS", "GCP"])
-async def test_restore_new_cluster(
+async def test_restore_new_cluster(  ######################################
     ops_test: OpsTest,
     substrate: Substrate,
     cloud_configs,
@@ -393,7 +393,9 @@ async def test_restore_new_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_update_backup_password(ops_test: OpsTest) -> None:
+async def test_update_backup_password(
+    ops_test: OpsTest,
+) -> None:  ###################################
     """Verifies that after changing the backup password the pbm tool is updated and functional."""
     db_app_name = await get_app_name(ops_test)
 

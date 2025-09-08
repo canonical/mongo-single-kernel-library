@@ -9,7 +9,12 @@ from ops.testing import ActionFailed, Harness
 from pymongo.errors import ConfigurationError, ConnectionFailure, OperationFailure
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.statuses import LdapStatuses, MongoDBStatuses, MongodStatuses
+from single_kernel_mongo.config.statuses import (
+    LdapStatuses,
+    MongoDBStatuses,
+    MongodStatuses,
+    PasswordManagementStatuses,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
@@ -626,8 +631,12 @@ def test_on_config_changed_valid_system_users_password_is_updated(
         ],
         any_order=True,
     )
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert len(statuses.root) == 0
     # Check status
-    # should be done only of initialized?
+    # should be done only if initialized?
     # test restart ?
 
 
@@ -646,8 +655,10 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
         }
     )
     set_user_password_mock.assert_not_called()
-    # Check status
-    # Should raise?
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.INVALID_USER_PASSWORDS.value
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -673,7 +684,10 @@ def test_on_config_changed_system_users_password_did_not_changed(
     )
 
     set_user_password_mock.assert_not_called()
-    # Check status
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert len(statuses.root) == 0
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -697,7 +711,10 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
     )
 
     set_user_password_mock.assert_called_once()
-    # Check status
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert len(statuses.root) == 0
     # should be done only if initialized?
     # test restart?
 
@@ -718,7 +735,10 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
         }
     )
     set_user_password_mock.assert_not_called()
-    # Check status
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -735,8 +755,37 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
         }
     )
     set_user_password_mock.assert_not_called()
-    # Check status?
-    # should raise?
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.INVALID_SECRET.value
+
+
+@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+def test_on_config_changed_system_users_fail_to_update_password(
+    harness, mocker, mongodb_name, role
+):
+    defer = mocker.patch("ops.framework.EventBase.defer")
+    set_user_password_mock = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password",
+        side_effect=NotReadyError(),
+    )
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+
+    harness.update_config(
+        {
+            "role": f"{role}",
+            "system-users": f"{secret_id}",
+        }
+    )
+    set_user_password_mock.assert_called_once()
+    defer.assert_called_once()
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.PASSWORD_UPDATE_FAILED.value
 
 
 def test_on_leader_elected_passwords_are_generated(harness):
@@ -803,7 +852,10 @@ def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongod
         ],
         any_order=True,
     )
-    # check status?
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert len(statuses.root) == 0
     # test restart?
 
 
@@ -832,8 +884,10 @@ def test_on_secret_changed_system_users_update_on_leader_invalid_passwords(
     harness.charm.operator.update_secrets_and_restart("label", secret_id)
 
     set_user_password_mock.assert_not_called()
-    # Check status
-    # should raise?
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.INVALID_USER_PASSWORDS.value
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -889,6 +943,10 @@ def test_on_secret_changed_system_users_update_on_leader_shard(harness, mocker, 
     harness.charm.operator.update_secrets_and_restart("label", secret_id)
 
     set_user_password_mock.assert_not_called()
+    statuses = harness.charm.operator.state.statuses.get(
+        scope=Scope.UNIT, component=harness.charm.operator.name
+    )
+    assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_on_secret_changed_update_system_users_update_on_non_leader(harness):

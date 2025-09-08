@@ -178,7 +178,7 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> None:
+async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> None:  ##############
     """Tests that action set-password outputs resets the password on app data and mongod."""
     # verify that password is correctly rotated by comparing old password with rotated one.
     old_password = await get_password(ops_test)
