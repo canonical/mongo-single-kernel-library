@@ -80,6 +80,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
+    CharmUsers,
     LogRotateUser,
     MongoDBUser,
     MonitorUser,
@@ -507,9 +508,9 @@ class CharmState(Object, StatusesStateProtocol):
         """Sets the user password for a system user."""
         return self.secrets.set(user.password_key_name, content, Scope.APP).label
 
-    # def internal_user_passwords_is_initialized(self) -> bool:
-    #    return all(self.get_user_password(get_user_from_username(username)) != ""
-    # for username in CharmUsernames)
+    def internal_user_passwords_are_initialized(self) -> bool:
+        """Returns true if all the charmed users have a password."""
+        return all(self.get_user_password(user) for user in CharmUsers)
 
     def get_user_credentials(self) -> tuple[str | None, str | None]:
         """Retrieve the user credentials."""

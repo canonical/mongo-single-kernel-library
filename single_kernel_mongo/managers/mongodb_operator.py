@@ -464,14 +464,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
         except (ModelError, SecretNotFoundError) as e:
-            logger.error(f"Failed to retrieve secret: {e}.")
+            logger.error(f"Failed to retrieve system-users secret: {e}.")
             self.charm.status_handler.set_running_status(
                 PasswordManagementStatuses.INVALID_SECRET.value,
                 scope="unit",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
-            return  # not retry
+            raise SetPasswordError("Failed to retrieve system-users secret.")
         if not is_valid_charm_user_password_config(user_passwords):
             logger.error("Invalid system-users config.")
             self.charm.status_handler.set_running_status(
@@ -544,21 +544,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
-        # if not (self.state.is_role(MongoDBRoles.CONFIG_SERVER)
-        # or self.state.is_role(MongoDBRoles.REPLICATION)):
-        #    return
-        # if self.state.internal_user_passwords_is_initialized():
-        #    return
-        # if user_passwords_secret_id := self.charm.config.get("system-users"):
-        #    self.update_internal_users_password_from_secret(user_passwords_secret_id)
-        # else:
-        #    #for username in CharmUsernames:
-        #    for user in CharmUsers:
-        #        new_password = self.workload.generate_password()
-        #        #self.set_charmed_user_password(username, new_password)
-        #        self.state.set_user_password(user, new_password) # I need to set it here first
-        #        self.set_charmed_user_password(user.username, new_password)
-        #        #otherwise the password in mongo connection is not set
+        if self.state.internal_user_passwords_are_initialized():
+            return
+
+        if system_users_secret_id := self.config.system_users:
+            try:
+                user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
+                if is_valid_charm_user_password_config(user_passwords):
+                    for user in CharmUsers:
+                        self.state.set_user_password(user, user_passwords[user.username])
+                else:
+                    logger.error("Invalid passwords found in system-users secret.")
+            except (ModelError, SecretNotFoundError) as e:
+                logger.error(f"Failed to retrieve system-users secret: {e}.")
 
         for user in CharmUsers:
             if not self.state.get_user_password(user):
@@ -634,7 +632,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             ## check that is not during an unwanted event ? #####################
             if system_users_secret_id := self.config.system_users:
                 if system_users_secret_id == secret_id:
-                    logging.info("system-users secret was updated. Refreshing credentials.")
+                    logger.info("system-users secret was updated. Refreshing credentials.")
                     self.update_internal_users_password_from_secret(system_users_secret_id)
             return
         if generate_secret_label(self.charm.app.name, Scope.APP) == secret_label:
@@ -642,9 +640,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         elif generate_secret_label(self.charm.app.name, Scope.UNIT) == secret_label:
             scope = Scope.UNIT
         else:
-            logging.debug("Secret %s changed, but it's unknown", secret_id)
+            logger.debug("Secret %s changed, but it's unknown", secret_id)
             return
-        logging.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
+        logger.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
         self.state.secrets.get(scope)
 
         # Always update the PBM and mongodb exporter configuration so that if

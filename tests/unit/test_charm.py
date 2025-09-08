@@ -743,6 +743,7 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, mongodb_name, role):
+    defer = mocker.patch("ops.framework.EventBase.defer")
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -755,6 +756,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
         }
     )
     set_user_password_mock.assert_not_called()
+    defer.assert_called_once()
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
@@ -799,12 +801,39 @@ def test_on_leader_elected_passwords_are_generated(harness):
         assert len(state.get_user_password(user)) == 32
 
 
-def test_on_leader_elected_sets_password_from_secret_in_config(harness):
-    pass
+def test_on_leader_elected_sets_password_from_secret_in_config(harness, mongodb_name):
+    state = harness.charm.operator.state
+    assert state.get_keyfile() is None
+    for user in CharmUsers:
+        assert state.get_user_password(user) == ""
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "system-users": f"{secret_id}",
+            }
+        )
+    harness.set_leader(True)
+    assert state.get_user_password(OperatorUser) == "123"
+    assert state.get_user_password(MonitorUser) == "abc"
+    assert state.get_user_password(LogRotateUser) == "something"
+    assert state.get_user_password(BackupUser) == "123abc"
 
 
 def test_on_leader_elected_failure_on_secret_obtained_from_config(harness):
-    pass
+    state = harness.charm.operator.state
+    assert state.get_keyfile() is None
+    for user in CharmUsers:
+        assert state.get_user_password(user) == ""
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "system-users": "secret:123405663",
+            }
+        )
+    harness.set_leader(True)
+    for user in CharmUsers:
+        assert len(state.get_user_password(user)) == 32
 
 
 def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
