@@ -339,46 +339,13 @@ def unit_uri(
     return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
-async def get_password_action(  ###############################################################
-    ops_test: OpsTest,
-    username="operator",
-    app_name: str | None = None,
-    unit: JujuUnit | None = None,
-) -> str:
-    """Use the charm action to retrieve the password from provided unit.
-
-    Returns:
-        String with the password stored on the peer relation databag.
-    """
-    app_name = app_name or await get_app_name(ops_test)
-
-    # Can retrieve from any unit running unit so we pick the first
-    # Optionally select a unit to get the password from (useful if unit/0 was deleted)
-    if unit:
-        unit_name = unit.name
-        unit_id = get_unit_id(unit.name)
-    else:
-        unit_name = ops_test.model.applications[app_name].units[0].name
-        unit_id = unit_name.split("/")[1]
-
-    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
-        "get-password", **{"username": username}
-    )
-    action = await action.wait()
-    try:
-        return action.results["password"]
-    except KeyError:
-        logger.error("Failed to get password. Action %s. Results %s", action, action.results)
-        return None
-
-
 class SecretNotFoundError(Exception):
     """Raised when a secret is not found."""
 
 
 async def get_password(  ###############################################################
     ops_test: OpsTest,
-    username="operator",
+    username=OPERATOR_USERNAME,
     app_name: str | None = None,
     unit: JujuUnit | None = None,
 ) -> str:
@@ -493,32 +460,11 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
     return -1
 
 
-async def set_password_action(  ###########################################################
-    ops_test: OpsTest,
-    unit_id: int,
-    username: str = "operator",
-    password: str = "secret",
-    app_name: str | None = None,
-) -> dict[str, any]:
-    """Use the charm action to retrieve the password from provided unit.
-
-    Returns:
-    String with the password stored on the peer relation databag.
-    """
-    app_name = app_name or await get_app_name(ops_test)
-    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
-        "set-password", **{"username": username, "password": password}
-    )
-    action = await action.wait()
-    return action.results
-
-
 async def set_password(
     ops_test: OpsTest,
-    unit_id: int,
-    username: str = "operator",
-    password: str = "secret",
-    app_name: str | None = None,
+    username: str,
+    password: str,
+    app_name: str,
 ) -> None:
     """Set a user password via secret.
 
@@ -531,10 +477,10 @@ async def set_password(
     secret_name = "system_users_secret"
 
     arguments = {
-        "operator": "1234",
-        "monitor": "abcd",
-        "logrotate": "loglog",
-        "backup": "back",
+        "operator": "12345",
+        "monitor": "67890",
+        "logrotate": "abcde",
+        "backup": "fghij",
     }
 
     arguments[username] = password

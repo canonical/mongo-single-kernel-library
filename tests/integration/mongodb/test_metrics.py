@@ -13,11 +13,11 @@ from ..helpers.common import (
     UNIT_IDS,
     check_or_scale_app,
     deploy_charm,
-    find_unit,
     get_address_of_unit,
     get_app_name,
     get_unit_app,
     get_unit_id,
+    set_password,
     unit_hostname,
 )
 from ..helpers.ha import cut_network_from_unit, restore_network_for_unit, wait_network_restore
@@ -61,18 +61,13 @@ async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
         await verify_endpoints(ops_test, substrate, unit)
 
 
-async def test_endpoints_new_password(
-    ops_test: OpsTest, substrate: Substrate
-):  #####################
+async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
     """Verify that endpoints still function correctly after the monitor user password changes."""
     app_name = await get_app_name(ops_test)
+    await set_password(ops_test, username="monitor", password="new_password", app_name=app_name)
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
+
     application = ops_test.model.applications[app_name]
-    leader_unit = await find_unit(ops_test, leader=True)
-    action = await leader_unit.run_action("set-password", **{"username": "monitor"})
-    action = await action.wait()
-    # wait for non-leader units to receive relation changed event.
-    time.sleep(3)
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", idle_period=15)
     for unit in application.units:
         await verify_endpoints(ops_test, substrate, unit)
 

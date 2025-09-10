@@ -12,7 +12,6 @@ from uuid import uuid4
 
 import pytest
 from bson.json_util import loads as bson_loads
-from more_itertools import one
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from pytest_operator.plugin import OpsTest
@@ -39,7 +38,6 @@ from ..helpers.common import (
     generate_mongodb_client,
     get_address_of_unit,
     get_app_name,
-    get_leader_id,
     get_password,
     relate_mongodb_and_application,
     remove_units,
@@ -53,7 +51,8 @@ from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 
-PASSWORD = "something"
+NEW_OPERATOR_PASSWORD = "something"
+MONITOR_USERNAME = "monitor"
 
 
 @pytest.mark.abort_on_fail
@@ -181,18 +180,15 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> None:  ##############
-    """Tests that action set-password outputs resets the password on app data and mongod."""
-    # verify that password is correctly rotated by comparing old password with rotated one.
+async def test_update_password(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Tests that update config sets the new password in app data and mongod."""
     app_name = await get_app_name(ops_test)
-    # old_password = await get_password(ops_test, OPERATOR_USERNAME, app_name)
-
-    await set_password(ops_test, OPERATOR_USERNAME, PASSWORD, app_name)
+    await set_password(ops_test, OPERATOR_USERNAME, NEW_OPERATOR_PASSWORD, app_name)
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
 
-    assert PASSWORD == new_password_reported
+    assert NEW_OPERATOR_PASSWORD == new_password_reported
 
     unit = await find_unit(ops_test, leader=True)
     unit_id = int(unit.name.split("/")[1])
@@ -201,7 +197,7 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
     # verify that the password is updated in mongod by inserting into the collection.
     try:
         client = MongoClient(
-            unit_uri(ip_address, PASSWORD, app_name),
+            unit_uri(ip_address, NEW_OPERATOR_PASSWORD, app_name),
             directConnection=True,
         )
         client[DEFAULT_DATABASE_NAME].list_collection_names()
@@ -212,58 +208,49 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
 
 
 @pytest.mark.abort_on_fail
+async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
+    """Test password is updated for the monitor user."""
+    app_name = await get_app_name(ops_test)
+    new_password = str(uuid4())
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password=new_password, app_name=app_name
+    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
+    password = await get_password(ops_test, username=MONITOR_USERNAME)
+    assert password == new_password
+
+
+@pytest.mark.abort_on_fail
 async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test verifies that the monitor user can perform operations such as 'rs.conf()'."""
     app_name = await get_app_name(ops_test)
-    password = await get_password(ops_test, username="monitor", app_name=app_name)
+    password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
 
     hosts = ",".join(replica_set_hosts)
-    replica_set_uri = f"mongodb://monitor:{password}@{hosts}/admin?replicaSet={app_name}"
+    replica_set_uri = f"mongodb://{MONITOR_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
 
     admin_mongod_cmd = "rs.conf()"
 
     result = await execute_on_mongod(
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd
     )
-    assert result.succeeded, "Failed to get conf with monitor user."
-
-
-@pytest.mark.abort_on_fail
-async def test_reset_and_get_password_secret_same_as_cli(ops_test: OpsTest) -> None:
-    """Test verifies that we can set and retrieve the correct password using Juju 3.x secrets."""
-    app_name = await get_app_name(ops_test)
-    new_password = str(uuid4())
-
-    # Resetting existing password
-    leader_id = await get_leader_id(ops_test)
-    await set_password(ops_test, unit_id=leader_id, username="monitor", password=new_password)
-
-    # Getting back the pw programmatically
-    password = await get_password(ops_test, username="monitor")
-
-    secret_label = f"{app_name}.app"
-
-    # Getting back the pw from juju CLI
-    complete_command = f"show-secret {secret_label} --reveal --format=json"
-    _, stdout, _ = await ops_test.juju(*complete_command.split())
-    data = one(json.loads(stdout).values())
-
-    assert password == new_password
-
-    assert data["content"]["Data"]["monitor-password"] == password
+    assert result.succeeded, f"Failed to get conf with {MONITOR_USERNAME} user."
 
 
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
-    leader_id = await get_leader_id(ops_test)
-
-    password1 = await get_password(ops_test, username="monitor")
-    await set_password(ops_test, unit_id=leader_id, username="monitor", password="")
-    password2 = await get_password(ops_test, username="monitor")
+    app_name = await get_app_name(ops_test)
+    password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    await set_password(ops_test, username=MONITOR_USERNAME, password="", app_name=app_name)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT
+    )
+    # test status
+    password2 = await get_password(ops_test, username=MONITOR_USERNAME)
 
     # The password remained unchanged
     assert password1 == password2
@@ -272,12 +259,18 @@ async def test_empty_password(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
-    leader_id = await get_leader_id(ops_test)
-    password1 = await get_password(ops_test, username="monitor")
+    app_name = await get_app_name(ops_test)
+    password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
-    # The password has to be minimum 3 characters
-    await set_password(ops_test, unit_id=leader_id, username="monitor", password="ca" * 1000000)
-    password2 = await get_password(ops_test, username="monitor")
+    # The password has to be maximum 4096-character long
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password="ca" * 1000000, app_name=app_name
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT
+    )
+    # test status
+    password2 = await get_password(ops_test, username=MONITOR_USERNAME)
 
     # The password didn't change
     assert password1 == password2

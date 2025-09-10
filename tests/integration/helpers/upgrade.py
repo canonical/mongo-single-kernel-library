@@ -113,3 +113,46 @@ async def set_fcv(
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd, expecting_output=False
     )
     assert result.succeeded, f"Failed to set fcv to {fcv}."
+
+
+async def set_password_action(
+    ops_test: OpsTest,
+    unit_id: int,
+    username: str,
+    password: str,
+    app_name: str,
+) -> dict[str, any]:
+    """Use the charm action to retrieve the password from provided unit.
+
+    Returns:
+    String with the password stored on the peer relation databag.
+    """
+    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
+        "set-password", **{"username": username, "password": password}
+    )
+    action = await action.wait()
+    return action.results
+
+
+async def get_password_action(
+    ops_test: OpsTest,
+    username: str,
+    app_name: str,
+) -> str:
+    """Use the charm action to retrieve the password from provided unit.
+
+    Returns:
+        String with the password stored on the peer relation databag.
+    """
+    unit_name = ops_test.model.applications[app_name].units[0].name
+    unit_id = unit_name.split("/")[1]
+
+    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
+        "get-password", **{"username": username}
+    )
+    action = await action.wait()
+    try:
+        return action.results["password"]
+    except KeyError:
+        logger.error("Failed to get password. Action %s. Results %s", action, action.results)
+        return None

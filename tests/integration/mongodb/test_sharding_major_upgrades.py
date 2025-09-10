@@ -25,9 +25,11 @@ from ..helpers.common import (
     deploy_application,
     find_unit,
     get_password,
+    get_password_action,
     get_unit_id,
     mongodb_uri,
     set_password,
+    set_password_action,
     start_continous_writes,
     stop_continous_writes,
 )
@@ -199,13 +201,15 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsernames:
-        password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
+    for username in CharmUsernames:
+        password = await get_password_action(
+            ops_test, username=username, app_name=CONFIG_SERVER_SIX
+        )
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
-        await set_password(
+        await set_password_action(
             ops_test,
             unit_id=get_unit_id(leader_unit.name),
-            username=user,
+            username=username,
             password=password,
             app_name=CONFIG_SERVER_SEVEN,
         )
@@ -317,13 +321,11 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsernames:
-        password = await get_password(ops_test, username=user, app_name=CONFIG_SERVER_SIX)
-        leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
+    for username in CharmUsernames:
+        password = await get_password(ops_test, username=username, app_name=CONFIG_SERVER_SIX)
         await set_password(
             ops_test,
-            unit_id=get_unit_id(leader_unit.name),
-            username=user,
+            username=username,
             password=password,
             app_name=CONFIG_SERVER_EIGHT,
         )
