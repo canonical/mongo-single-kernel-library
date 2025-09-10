@@ -107,7 +107,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     MonitorUser,
     OperatorUser,
-    is_valid_charm_user_password_config,
+    validate_charm_user_password_config,
 )
 from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
@@ -457,7 +457,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Internal user passwords cannot be managed by shards.")
             self.state.statuses.add(
                 PasswordManagementStatuses.PASSWORD_ON_SHARD.value,
-                scope="unit",
+                scope="app",
                 component=self.name,
             )
             return  # not retry
@@ -467,16 +467,18 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error(f"Failed to retrieve system-users secret: {e}.")
             self.charm.status_handler.set_running_status(
                 PasswordManagementStatuses.INVALID_SECRET.value,
-                scope="unit",
+                scope="app",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
             raise SetPasswordError("Failed to retrieve system-users secret.")
-        if not is_valid_charm_user_password_config(user_passwords):
-            logger.error("Invalid system-users config. Passwords will not be updated.")
+        try:
+            validate_charm_user_password_config(user_passwords)
+        except ValueError as e:
+            logger.error(f"Invalid system-users config. {e}")
             self.charm.status_handler.set_running_status(
                 PasswordManagementStatuses.INVALID_USER_PASSWORDS.value,
-                scope="unit",
+                scope="app",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
@@ -499,7 +501,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     logger.error(f"Failed to update password for {user.username}: {e}.")
                     self.charm.status_handler.set_running_status(
                         PasswordManagementStatuses.PASSWORD_UPDATE_FAILED.value,
-                        scope="unit",
+                        scope="app",
                         statuses_state=self.state.statuses,
                         component_name=self.name,
                     )
@@ -507,17 +509,17 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info(f"Password updated for {user.username}.")
         self.state.statuses.delete(
             PasswordManagementStatuses.INVALID_SECRET.value,
-            scope="unit",
+            scope="app",
             component=self.name,
         )
         self.state.statuses.delete(
             PasswordManagementStatuses.INVALID_USER_PASSWORDS.value,
-            scope="unit",
+            scope="app",
             component=self.name,
         )
         self.state.statuses.delete(
             PasswordManagementStatuses.PASSWORD_UPDATE_FAILED.value,
-            scope="unit",
+            scope="app",
             component=self.name,
         )
 
@@ -550,7 +552,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if system_users_secret_id := self.config.system_users:
             try:
                 user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
-                if is_valid_charm_user_password_config(user_passwords):
+                if validate_charm_user_password_config(user_passwords): #try
                     for user in CharmUsers:
                         self.state.set_user_password(user, user_passwords[user.username])
                 else:

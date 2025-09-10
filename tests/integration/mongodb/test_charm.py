@@ -180,11 +180,13 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_update_password(ops_test: OpsTest, substrate: Substrate) -> None:
+async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
     app_name = await get_app_name(ops_test)
     await set_password(ops_test, OPERATOR_USERNAME, NEW_OPERATOR_PASSWORD, app_name)
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
+    )
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
 
@@ -215,7 +217,9 @@ async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
     await set_password(
         ops_test, username=MONITOR_USERNAME, password=new_password, app_name=app_name
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
+    )
     password = await get_password(ops_test, username=MONITOR_USERNAME)
     assert password == new_password
 
@@ -245,7 +249,9 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = await get_app_name(ops_test)
     password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
-    await set_password(ops_test, username=MONITOR_USERNAME, password="", app_name=app_name)
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password="", idle_period=15, app_name=app_name
+    )
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT
     )
@@ -264,7 +270,11 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
 
     # The password has to be maximum 4096-character long
     await set_password(
-        ops_test, username=MONITOR_USERNAME, password="ca" * 1000000, app_name=app_name
+        ops_test,
+        username=MONITOR_USERNAME,
+        password="ca" * 1000000,
+        idle_period=15,
+        app_name=app_name,
     )
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT

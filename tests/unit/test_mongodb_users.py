@@ -13,7 +13,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MonitorUser,
     OperatorUser,
     get_user_from_username,
-    is_valid_charm_user_password_config,
+    validate_charm_user_password_config,
 )
 
 RANDOM_USER = MongoDBUser(
@@ -46,33 +46,38 @@ def test_get_user_invalid_username():
 
 def test_valid_system_users_password():
     user_passwords = {username: "valid-password" for username in CharmUsernames}
-    assert is_valid_charm_user_password_config(user_passwords) is True
+    validate_charm_user_password_config(user_passwords)
 
 
 def test_invalid_system_users_missing_a_user():
     user_passwords = {username: "123-some" for username in CharmUsernames if username != "backup"}
-    assert is_valid_charm_user_password_config(user_passwords) is False
+    with pytest.raises(ValueError):
+        validate_charm_user_password_config(user_passwords)
 
 
 def test_invalid_system_users_extra_user():
     user_passwords = {username: "something-valid123" for username in CharmUsernames}
     user_passwords["intruder"] = "my-new_password"
-    assert is_valid_charm_user_password_config(user_passwords) is False
+    with pytest.raises(ValueError):
+        validate_charm_user_password_config(user_passwords)
 
 
 def test_invalid_system_users_empty_password():
     user_passwords = {username: "something-valid123" for username in CharmUsernames}
     user_passwords["operator"] = ""
-    assert is_valid_charm_user_password_config(user_passwords) is False
+    with pytest.raises(ValueError):
+        validate_charm_user_password_config(user_passwords)
 
 
 def test_invalid_system_users_empty_space_password():
     user_passwords = {username: "something-valid123" for username in CharmUsernames}
     user_passwords["operator"] = " "
-    assert is_valid_charm_user_password_config(user_passwords) is False
+    with pytest.raises(ValueError):
+        validate_charm_user_password_config(user_passwords)
 
 
 def test_invalid_system_users_password_too_long():
     user_passwords = {username: "something-valid123" for username in CharmUsernames}
     user_passwords["monitor"] = "x" * (MAX_PASSWORD_LENGTH + 1)
-    assert is_valid_charm_user_password_config(user_passwords) is False
+    with pytest.raises(ValueError):
+        validate_charm_user_password_config(user_passwords)

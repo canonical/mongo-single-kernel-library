@@ -199,7 +199,7 @@ def get_user_from_username(username: str) -> MongoDBUser:
     raise ValueError(f"Unknown user: {username}")
 
 
-def is_valid_charm_user_password_config(user_passwords: dict) -> bool:
+def validate_charm_user_password_config(user_passwords: dict):
     """Validate a user_passwords mapping.
 
     A configuration is considered valid if:
@@ -208,7 +208,19 @@ def is_valid_charm_user_password_config(user_passwords: dict) -> bool:
     - Each password is non-empty and not only whitespace.
     - Each password length is less than or equal to MAX_PASSWORD_LENGTH.
     """
-    return set(user_passwords.keys()) == CharmUsernames and all(
-        user_passwords[username].strip() and len(user_passwords[username]) <= MAX_PASSWORD_LENGTH
-        for username in CharmUsernames
-    )
+    missing_users = CharmUsernames - set(user_passwords.keys())
+    extra_users = set(user_passwords.keys()) - CharmUsernames
+
+    if missing_users:
+        raise ValueError(f"Missing required usernames: {', '.join(missing_users)}")
+    if extra_users:
+        raise ValueError(f"Unexpected usernames provided: {', '.join(extra_users)}")
+
+    for username in CharmUsernames:
+        pwd = user_passwords[username].strip()
+        if not pwd:
+            raise ValueError(f"Password for user '{username}' cannot be empty or whitespace")
+        if len(pwd) > MAX_PASSWORD_LENGTH:
+            raise ValueError(
+                f"Password for user '{username}' exceeds max length of {MAX_PASSWORD_LENGTH} characters"
+            )
