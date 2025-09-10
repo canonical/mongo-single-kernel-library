@@ -435,7 +435,7 @@ class PasswordManagementStatuses(Enum):
 
     PASSWORD_ON_SHARD = StatusObject(
         status="blocked",
-        message="Invalid system-users config. Shard do not manage passwords.",
+        message="Invalid system-users config. Shards do not manage passwords.",
         short_message="Invalid system-users config.",
         action="Remove the system-users config from shard.",
         check="Configuration validation failure.",
@@ -452,11 +452,12 @@ class PasswordManagementStatuses(Enum):
         message="Invalid password found in system-users config.",
         short_message="Invalid system-users config.",
         running="async",
-        action="Check the passwords set in the system-users secret.",
+        action="Check the logs and verify the content of the system-users secret.",
+        check="Configuration update failure.",
     )
     PASSWORD_UPDATE_FAILED = StatusObject(
         status="maintenance",
         message="Failed to update user passwords.",
-        running="async",  # blocking ????
+        running="blocking",
         action="",
     )

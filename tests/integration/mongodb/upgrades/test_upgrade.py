@@ -144,9 +144,10 @@ async def test_upgrade_password_change_fail(
     ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
 ):
     app_name = await get_app_name(ops_test)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     current_password = await get_password(
-        ops_test, username=OPERATOR_USERNAME, app_name=app_name, unit=leader_unit
+        ops_test,
+        username=OPERATOR_USERNAME,
+        app_name=app_name,
     )
 
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
@@ -160,6 +161,10 @@ async def test_upgrade_password_change_fail(
     # test status
 
     after_action_password = await get_password(
-        ops_test, username=OPERATOR_USERNAME, app_name=app_name, unit=leader_unit
+        ops_test,
+        username=OPERATOR_USERNAME,
+        app_name=app_name,
     )
     assert current_password == after_action_password
+
+    # wait for update to be finished and check password

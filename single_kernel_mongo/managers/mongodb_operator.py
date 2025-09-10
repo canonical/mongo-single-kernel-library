@@ -460,7 +460,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope="app",
                 component=self.name,
             )
-            return  # not retry
+            return
         try:
             user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
         except (ModelError, SecretNotFoundError) as e:
@@ -482,7 +482,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 statuses_state=self.state.statuses,
                 component_name=self.name,
             )
-            return  # not retry
+            return
         for user in CharmUsers:
             old_password = self.charm.state.get_user_password(user)
             new_password = user_passwords[user.username]
@@ -1103,6 +1103,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             return self.state.statuses.get(scope=scope, component=self.name).root
 
         if scope == "app":
+            if self.state.is_role(MongoDBRoles.SHARD) and self.config.system_users:
+                charm_statuses.append(PasswordManagementStatuses.PASSWORD_ON_SHARD.value)
             return charm_statuses
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):

@@ -22,6 +22,7 @@ from ..helpers.common import (
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOD_PORT,
+    MONITOR_USERNAME,
     OPERATOR_USERNAME,
     TEST_DOCUMENTS,
     UNIT_IDS,
@@ -50,9 +51,6 @@ from ..helpers.common import (
 from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
-
-NEW_OPERATOR_PASSWORD = "something"
-MONITOR_USERNAME = "monitor"
 
 
 @pytest.mark.abort_on_fail
@@ -84,7 +82,7 @@ async def test_consistency_between_workload_and_metadata(
 ):
     app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     ip_address = await get_address_of_unit(
         ops_test, substrate, int(leader_unit.name.split("/")[1]), app_name
     )
@@ -134,7 +132,7 @@ async def test_exactly_one_primary(ops_test: OpsTest, substrate: Substrate) -> N
     """Tests that there is exactly one primary in the deployed units."""
     app_name = await get_app_name(ops_test)
     try:
-        password = await get_password(ops_test, app_name=app_name)
+        password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
         number_of_primaries = await count_primaries(
             ops_test, substrate, password, app_name=app_name
         )
@@ -156,7 +154,7 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
         unit_id = int(unit.name.split("/")[1])
         ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
         # connect to mongod
-        password = await get_password(ops_test)
+        password = await get_password(ops_test, OPERATOR_USERNAME, app_name)
         client = MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
 
         # check primary status
@@ -183,14 +181,15 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
     app_name = await get_app_name(ops_test)
-    await set_password(ops_test, OPERATOR_USERNAME, NEW_OPERATOR_PASSWORD, app_name)
+    new_password = "something"
+    await set_password(ops_test, OPERATOR_USERNAME, new_password, app_name)
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
     )
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
 
-    assert NEW_OPERATOR_PASSWORD == new_password_reported
+    assert new_password == new_password_reported
 
     unit = await find_unit(ops_test, leader=True)
     unit_id = int(unit.name.split("/")[1])
@@ -199,7 +198,7 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
     # verify that the password is updated in mongod by inserting into the collection.
     try:
         client = MongoClient(
-            unit_uri(ip_address, NEW_OPERATOR_PASSWORD, app_name),
+            unit_uri(ip_address, new_password, app_name),
             directConnection=True,
         )
         client[DEFAULT_DATABASE_NAME].list_collection_names()
@@ -220,7 +219,7 @@ async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
     )
-    password = await get_password(ops_test, username=MONITOR_USERNAME)
+    password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
     assert password == new_password
 
 
@@ -257,7 +256,7 @@ async def test_empty_password(ops_test: OpsTest) -> None:
         idle_period=15,
     )
     # test status
-    password2 = await get_password(ops_test, username=MONITOR_USERNAME)
+    password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password remained unchanged
     assert password1 == password2
@@ -283,7 +282,7 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
         idle_period=15,
     )
     # test status
-    password2 = await get_password(ops_test, username=MONITOR_USERNAME)
+    password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password didn't change
     assert password1 == password2

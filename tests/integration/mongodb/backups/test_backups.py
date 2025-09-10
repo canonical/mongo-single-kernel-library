@@ -291,7 +291,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
 
 
 @pytest.mark.parametrize("cloud_provider", ["AWS", "GCP"])
-async def test_restore_new_cluster(  ######################################
+async def test_restore_new_cluster(
     ops_test: OpsTest,
     substrate: Substrate,
     cloud_configs,
@@ -324,7 +324,7 @@ async def test_restore_new_cluster(  ######################################
     await create_and_verify_backup(ops_test, db_app_name)
 
     # save old password, since after restoring we will need this password to authenticate.
-    old_password = await get_password(ops_test, app_name=db_app_name)
+    old_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=db_app_name)
 
     # deploy a new cluster with a different name
     await deploy_charm(

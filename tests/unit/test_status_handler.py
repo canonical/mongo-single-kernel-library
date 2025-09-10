@@ -15,6 +15,7 @@ from single_kernel_mongo.config.statuses import (
     MongoDBStatuses,
     MongodStatuses,
     MongosStatuses,
+    PasswordManagementStatuses,
     ShardStatuses,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -391,6 +392,26 @@ def test_shard_get_status_charm_is_replication(
     status = next(iter(statuses), None)
 
     assert status == MongoDBStatuses.SHARDING_ON_REPLICA.value
+
+
+@pytest.mark.skip()
+def test_shard_get_status_shard_with_system_users_config(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+
+    harness.update_config(
+        {
+            "role": f"{ MongoDBRoles.SHARD}",
+            "system-users": "some-secret",
+        }
+    )
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_shard_get_status_charm_client_relation(

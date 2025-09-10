@@ -43,6 +43,7 @@ TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 OPERATOR_USERNAME = "operator"
 OPERATOR_PASSWORD = "operator-password"
+MONITOR_USERNAME = "monitor"
 INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
 
@@ -88,6 +89,10 @@ def mongosh(substrate: Substrate) -> str:
 
 class ProcessError(Exception):
     """Raised when a process fails."""
+
+
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
 
 
 async def deploy_charm(
@@ -202,9 +207,8 @@ async def generate_mongodb_client(
     app_name: str,
     mongos: bool,
     hosts: list[str] | None = None,
-    username: str = "operator",
+    username: str = OPERATOR_USERNAME,
     password: str | None = None,
-    unit: JujuUnit | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
     hosts = hosts or [
@@ -212,7 +216,7 @@ async def generate_mongodb_client(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    password = password or await get_password(ops_test, app_name=app_name, unit=unit)
+    password = password or await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     username = username
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = [f"{host}:{port}" for host in hosts]
@@ -339,16 +343,12 @@ def unit_uri(
     return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
-class SecretNotFoundError(Exception):
-    """Raised when a secret is not found."""
-
-
-async def get_password(  ###############################################################
+async def get_password(
     ops_test: OpsTest,
     username=OPERATOR_USERNAME,
     app_name: str | None = None,
-    unit: JujuUnit | None = None,
 ) -> str:
+    """Retrieve the password for a given user from the application's Juju secret."""
     app_name = app_name or await get_app_name(ops_test)
     secret = await get_secret_by_label(ops_test, label=f"{app_name}.app")
     return secret.get(f"{username}-password")
@@ -370,7 +370,7 @@ async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
         if label == secret_data[secret_id].get("label"):
             return secret_data[secret_id]["content"]["Data"]
 
-    raise SecretNotFoundError(f"Secret with label {label} not found")
+    raise SecretNotFoundError(f"Secret with label {label} not found.")
 
 
 @retry(
@@ -425,8 +425,8 @@ async def get_direct_mongo_client(
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     match username, password:
         case None, None:
-            username = "operator"
-            password = await get_password(ops_test, app_name=app_name, unit=unit)
+            username = OPERATOR_USERNAME
+            password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
         case _, None:
             raise Exception("Please provide username and password")
         case None, _:
@@ -1013,7 +1013,11 @@ async def count_writes(
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
     uri = await generate_mongodb_client(
-        ops_test, substrate, app_name, mongos=mongos, hosts=[host], unit=unit
+        ops_test,
+        substrate,
+        app_name,
+        mongos=mongos,
+        hosts=[host],
     )
 
     client = MongoClient(uri, directConnection=True)
@@ -1173,7 +1177,7 @@ def mongodb_log_path(substrate: Substrate) -> str:
 async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
     """Verifies replica is running and available."""
     app_name = app_name or await get_app_name(ops_test)
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(unit_ip, password, app_name), directConnection=True)
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
