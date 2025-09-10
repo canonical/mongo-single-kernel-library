@@ -606,6 +606,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
     mocked_defer.assert_called()
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_valid_system_users_password_is_updated(
     harness, mocker, mongodb_name, role
@@ -640,6 +641,7 @@ def test_on_config_changed_valid_system_users_password_is_updated(
     # test restart ?
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
@@ -661,6 +663,7 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
     assert statuses[0] == PasswordManagementStatuses.INVALID_USER_PASSWORDS.value
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_password_did_not_changed(
     harness, mocker, mongodb_name, role
@@ -690,6 +693,7 @@ def test_on_config_changed_system_users_password_did_not_changed(
     assert len(statuses.root) == 0
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_one_password_changed(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
@@ -719,6 +723,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
     # test restart?
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     harness, mocker, mongodb_name: str
 ):
@@ -741,6 +746,7 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, mongodb_name, role):
     defer = mocker.patch("ops.framework.EventBase.defer")
@@ -763,6 +769,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
     assert statuses[0] == PasswordManagementStatuses.INVALID_SECRET.value
 
 
+@pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_fail_to_update_password(
     harness, mocker, mongodb_name, role
