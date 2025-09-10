@@ -546,7 +546,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.state.internal_user_passwords_are_initialized():
             return
-
+        """
         if system_users_secret_id := self.config.system_users:
             try:
                 user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
@@ -557,7 +557,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     logger.error("Invalid passwords found in system-users secret.")
             except (ModelError, SecretNotFoundError) as e:
                 logger.error(f"Failed to retrieve system-users secret: {e}.")
-
+        """
         for user in CharmUsers:
             if not self.state.get_user_password(user):
                 self.state.set_user_password(user, self.workload.generate_password())

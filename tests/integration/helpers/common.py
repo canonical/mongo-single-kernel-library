@@ -43,6 +43,8 @@ TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 OPERATOR_USERNAME = "operator"
 OPERATOR_PASSWORD = "operator-password"
+INTERNAL_USER_PASSWORD_CONFIG = "system-users"
+
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
@@ -337,7 +339,7 @@ def unit_uri(
     return f"mongodb://{username}:{password}@{ip_address}:{MONGOD_PORT}/admin?replicaSet={app}"
 
 
-async def get_password(  ###############################################################
+async def get_password_action(  ###############################################################
     ops_test: OpsTest,
     username="operator",
     app_name: str | None = None,
@@ -368,6 +370,40 @@ async def get_password(  #######################################################
     except KeyError:
         logger.error("Failed to get password. Action %s. Results %s", action, action.results)
         return None
+
+
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
+
+
+async def get_password(  ###############################################################
+    ops_test: OpsTest,
+    username="operator",
+    app_name: str | None = None,
+    unit: JujuUnit | None = None,
+) -> str:
+    app_name = app_name or await get_app_name(ops_test)
+    secret = await get_secret_by_label(ops_test, label=f"{app_name}.app")
+    return secret.get(f"{username}-password")
+
+
+async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    logger.info("Secret IDs %s.", secret_ids)
+    for secret_id in secret_ids:
+        secret_data_raw = await ops_test.juju(
+            "show-secret", "--format", "json", "--reveal", secret_id
+        )
+        secret_data = json.loads(secret_data_raw[1])
+
+        if label == secret_data[secret_id].get("label"):
+            return secret_data[secret_id]["content"]["Data"]
+
+    raise SecretNotFoundError(f"Secret with label {label} not found")
 
 
 @retry(
@@ -457,7 +493,7 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
     return -1
 
 
-async def set_password(  ###########################################################
+async def set_password_action(  ###########################################################
     ops_test: OpsTest,
     unit_id: int,
     username: str = "operator",
@@ -475,6 +511,50 @@ async def set_password(  #######################################################
     )
     action = await action.wait()
     return action.results
+
+
+async def set_password(
+    ops_test: OpsTest,
+    unit_id: int,
+    username: str = "operator",
+    password: str = "secret",
+    app_name: str | None = None,
+) -> None:
+    """Set a user password via secret.
+
+    Args:
+        ops_test: ops_test instance.
+        username: the user to set the password.
+        password: password to use
+        app_name: the application the created secret will be granted to
+    """
+    secret_name = "system_users_secret"
+
+    arguments = {
+        "operator": "1234",
+        "monitor": "abcd",
+        "logrotate": "loglog",
+        "backup": "back",
+    }
+
+    arguments[username] = password
+    result = " ".join(f"{user}={pwd}" for user, pwd in arguments.items())
+
+    try:
+        secret_id = await ops_test.model.add_secret(name=secret_name, data_args=[result])
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"name": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name, data_args=[result], new_name=secret_name
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    # update the application config to include the secret
+    await ops_test.model.applications[app_name].set_config(
+        {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
+    )
 
 
 async def get_application_relation_data(

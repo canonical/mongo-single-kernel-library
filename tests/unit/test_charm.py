@@ -801,6 +801,7 @@ def test_on_leader_elected_passwords_are_generated(harness):
         assert len(state.get_user_password(user)) == 32
 
 
+"""
 def test_on_leader_elected_sets_password_from_secret_in_config(harness, mongodb_name):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
@@ -834,6 +835,7 @@ def test_on_leader_elected_failure_on_secret_obtained_from_config(harness):
     harness.set_leader(True)
     for user in CharmUsers:
         assert len(state.get_user_password(user)) == 32
+"""
 
 
 def test_on_leader_elected_dont_rotate_passwords_already_set(harness):

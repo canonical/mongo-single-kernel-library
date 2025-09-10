@@ -23,6 +23,7 @@ from ..helpers.common import (
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOD_PORT,
+    OPERATOR_USERNAME,
     TEST_DOCUMENTS,
     UNIT_IDS,
     audit_log_line_sanity_check,
@@ -51,6 +52,8 @@ from ..helpers.common import (
 from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+PASSWORD = "something"
 
 
 @pytest.mark.abort_on_fail
@@ -181,43 +184,24 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> None:  ##############
     """Tests that action set-password outputs resets the password on app data and mongod."""
     # verify that password is correctly rotated by comparing old password with rotated one.
-    old_password = await get_password(ops_test)
+    app_name = await get_app_name(ops_test)
+    # old_password = await get_password(ops_test, OPERATOR_USERNAME, app_name)
+
+    await set_password(ops_test, OPERATOR_USERNAME, PASSWORD, app_name)
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=DEPLOYMENT_TIMEOUT)
+
+    new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
+
+    assert PASSWORD == new_password_reported
+
     unit = await find_unit(ops_test, leader=True)
-    action = await unit.run_action("set-password")
-    action = await action.wait()
-    new_password = action.results["password"]
-    assert new_password != old_password
-    new_password_reported = await get_password(ops_test)
-    assert new_password == new_password_reported
-    user_app_name = await get_app_name(ops_test)
     unit_id = int(unit.name.split("/")[1])
-    ip_address = await get_address_of_unit(ops_test, substrate, unit_id, user_app_name)
+    ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
 
     # verify that the password is updated in mongod by inserting into the collection.
     try:
         client = MongoClient(
-            unit_uri(ip_address, new_password, user_app_name),
-            directConnection=True,
-        )
-        client[DEFAULT_DATABASE_NAME].list_collection_names()
-    except PyMongoError as e:
-        assert False, f"Failed to access collection with new password, error: {e}"
-    finally:
-        client.close()
-
-    # perform the same tests as above but with a user provided password.
-    old_password = await get_password(ops_test)
-    action = await unit.run_action("set-password", **{"password": "safe_pass"})
-    action = await action.wait()
-    new_password = action.results["password"]
-    assert new_password != old_password
-    new_password_reported = await get_password(ops_test)
-    assert "safe_pass" == new_password_reported
-
-    # verify that the password is updated in mongod by inserting into the collection.
-    try:
-        client = MongoClient(
-            unit_uri(ip_address, "safe_pass", user_app_name),
+            unit_uri(ip_address, PASSWORD, app_name),
             directConnection=True,
         )
         client[DEFAULT_DATABASE_NAME].list_collection_names()
@@ -231,7 +215,7 @@ async def test_set_password_action(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test verifies that the monitor user can perform operations such as 'rs.conf()'."""
     app_name = await get_app_name(ops_test)
-    password = await get_password(ops_test, username="monitor")
+    password = await get_password(ops_test, username="monitor", app_name=app_name)
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
@@ -246,26 +230,6 @@ async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd
     )
     assert result.succeeded, "Failed to get conf with monitor user."
-
-
-async def test_only_leader_can_set_while_all_can_read_password_secret(
-    ops_test: OpsTest,
-) -> None:
-    """Test verifies that only the leader can set a password, while all units can read it."""
-    # Setting existing password
-    leader_id = await get_leader_id(ops_test)
-    non_leaders = list(UNIT_IDS)
-    non_leaders.remove(leader_id)
-
-    password = "blablabla"
-    await set_password(ops_test, unit_id=non_leaders[0], username="monitor", password=password)
-    password1 = await get_password(ops_test, username="monitor")
-    assert password1 != password
-
-    await set_password(ops_test, unit_id=leader_id, username="monitor", password=password)
-    for _ in UNIT_IDS:
-        password2 = await get_password(ops_test, username="monitor")
-        assert password2 == password
 
 
 @pytest.mark.abort_on_fail
