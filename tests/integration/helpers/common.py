@@ -484,15 +484,15 @@ async def set_password(
     }
 
     arguments[username] = password
-    result = " ".join(f"{user}={pwd}" for user, pwd in arguments.items())
+    data_args = [f"{k}={v}" for k, v in arguments.items()]
 
     try:
-        secret_id = await ops_test.model.add_secret(name=secret_name, data_args=[result])
+        secret_id = await ops_test.model.add_secret(name=secret_name, data_args=data_args)
     except Exception:
         secrets = await ops_test.model.list_secrets({"name": secret_name})
         secret_id = secrets[0].uri
         await ops_test.model.update_secret(
-            name=secret_name, data_args=[result], new_name=secret_name
+            name=secret_name, data_args=data_args, new_name=secret_name
         )
 
     await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)

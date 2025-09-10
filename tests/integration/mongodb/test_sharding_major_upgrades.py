@@ -14,7 +14,7 @@ from tests.integration.helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.upgrade import set_fcv
+from tests.integration.helpers.upgrade import get_password_action, set_fcv, set_password_action
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -25,11 +25,9 @@ from ..helpers.common import (
     deploy_application,
     find_unit,
     get_password,
-    get_password_action,
     get_unit_id,
     mongodb_uri,
     set_password,
-    set_password_action,
     start_continous_writes,
     stop_continous_writes,
 )

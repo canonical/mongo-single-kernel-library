@@ -20,16 +20,14 @@ from ..helpers.common import (
     deploy_charm,
     find_unit,
     get_password,
-    get_password_action,
     get_unit_id,
     relate_mongodb_and_application,
     set_password,
-    set_password_action,
     start_continous_writes,
     stop_continous_writes,
 )
 from ..helpers.types import Substrate
-from ..helpers.upgrade import set_fcv
+from ..helpers.upgrade import get_password_action, set_fcv, set_password_action
 
 MONGODB_SIX = "mongodb-six"
 MONGODB_SEVEN = "mongodb-seven"

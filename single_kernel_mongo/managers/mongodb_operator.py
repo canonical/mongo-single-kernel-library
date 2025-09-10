@@ -473,7 +473,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             raise SetPasswordError("Failed to retrieve system-users secret.")
         if not is_valid_charm_user_password_config(user_passwords):
-            logger.error("Invalid system-users config.")
+            logger.error("Invalid system-users config. Passwords will not be updated.")
             self.charm.status_handler.set_running_status(
                 PasswordManagementStatuses.INVALID_USER_PASSWORDS.value,
                 scope="unit",
