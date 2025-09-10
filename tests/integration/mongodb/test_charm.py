@@ -249,11 +249,12 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = await get_app_name(ops_test)
     password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
-    await set_password(
-        ops_test, username=MONITOR_USERNAME, password="", idle_period=15, app_name=app_name
-    )
+    await set_password(ops_test, username=MONITOR_USERNAME, password="", app_name=app_name)
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT
+        apps=[app_name],
+        status="blocked",
+        timeout=DEPLOYMENT_TIMEOUT,
+        idle_period=15,
     )
     # test status
     password2 = await get_password(ops_test, username=MONITOR_USERNAME)
@@ -272,12 +273,14 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
     await set_password(
         ops_test,
         username=MONITOR_USERNAME,
-        password="ca" * 1000000,
-        idle_period=15,
+        password="c" * 4097,
         app_name=app_name,
     )
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="blocked", timeout=DEPLOYMENT_TIMEOUT
+        apps=[app_name],
+        status="blocked",
+        timeout=DEPLOYMENT_TIMEOUT,
+        idle_period=15,
     )
     # test status
     password2 = await get_password(ops_test, username=MONITOR_USERNAME)
