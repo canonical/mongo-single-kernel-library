@@ -633,7 +633,7 @@ def test_on_config_changed_valid_system_users_password_is_updated(
         any_order=True,
     )
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
     # Check status
@@ -658,7 +658,7 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
     )
     set_user_password_mock.assert_not_called()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert statuses[0] == PasswordManagementStatuses.INVALID_USER_PASSWORDS.value
 
@@ -688,7 +688,7 @@ def test_on_config_changed_system_users_password_did_not_changed(
 
     set_user_password_mock.assert_not_called()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
 
@@ -716,7 +716,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
 
     set_user_password_mock.assert_called_once()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
     # should be done only if initialized?
@@ -741,7 +741,7 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     )
     set_user_password_mock.assert_not_called()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
@@ -764,7 +764,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
     set_user_password_mock.assert_not_called()
     defer.assert_called_once()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert statuses[0] == PasswordManagementStatuses.INVALID_SECRET.value
 
@@ -891,7 +891,7 @@ def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongod
         any_order=True,
     )
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
     # test restart?
@@ -923,7 +923,7 @@ def test_on_secret_changed_system_users_update_on_leader_invalid_passwords(
 
     set_user_password_mock.assert_not_called()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert statuses[0] == PasswordManagementStatuses.INVALID_USER_PASSWORDS.value
 
@@ -982,7 +982,7 @@ def test_on_secret_changed_system_users_update_on_leader_shard(harness, mocker, 
 
     set_user_password_mock.assert_not_called()
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.APP, component=harness.charm.operator.name
     )
     assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
