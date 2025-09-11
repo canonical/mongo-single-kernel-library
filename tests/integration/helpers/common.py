@@ -484,7 +484,7 @@ async def set_password(
     }
 
     arguments[username] = password
-    data_args = [f'{k}=""' if not v else f"{k}={v}" for k, v in arguments.items()]
+    data_args = [f"{k}={v}" for k, v in arguments.items()]
 
     try:
         secret_id = await ops_test.model.add_secret(name=secret_name, data_args=data_args)

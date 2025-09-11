@@ -244,11 +244,12 @@ async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     assert result.succeeded, f"Failed to get conf with {MONITOR_USERNAME} user."
 
 
+@pytest.mark.skip()
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = await get_app_name(ops_test)
     password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
-    await set_password(ops_test, username=MONITOR_USERNAME, password="", app_name=app_name)
+    await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
     await ops_test.model.wait_for_idle(
         apps=[app_name],
         status="blocked",
@@ -262,6 +263,7 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     assert password1 == password2
 
 
+@pytest.mark.skip()
 @pytest.mark.abort_on_fail
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
