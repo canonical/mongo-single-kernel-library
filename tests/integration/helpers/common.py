@@ -480,13 +480,13 @@ async def set_password(
 
     try:
         secret_id = await ops_test.model.add_secret(
-            name=secret_name, data_args=f"{username}={password}"
+            name=secret_name, data_args=[f"{username}={password}"]
         )
     except Exception:
         secrets = await ops_test.model.list_secrets({"label": secret_name})
         secret_id = secrets[0].uri
         await ops_test.model.update_secret(
-            name=secret_name, data_args=f"{username}={password}", new_name=secret_name
+            name=secret_name, data_args=[f"{username}={password}"], new_name=secret_name
         )
 
     await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
