@@ -283,3 +283,7 @@ class MissingCredentialsError(Exception):
 
 class InvalidLdapHashError(DeferrableError):
     """Raised when the hash shared by config server is invalid."""
+
+
+class InvalidPasswordError(Exception):
+    """Raised when an invalid password if found in the system-users config secret."""

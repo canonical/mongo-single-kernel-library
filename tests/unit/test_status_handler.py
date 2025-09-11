@@ -11,11 +11,11 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
     ConfigServerStatuses,
     MongoDBStatuses,
     MongodStatuses,
     MongosStatuses,
-    PasswordManagementStatuses,
     ShardStatuses,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -411,7 +411,7 @@ def test_shard_get_status_shard_with_system_users_config(
     statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
+    assert status == CharmStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_shard_get_status_charm_client_relation(

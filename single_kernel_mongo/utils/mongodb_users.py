@@ -8,6 +8,7 @@ from typing import Any, NewType, TypedDict
 from pydantic import BaseModel, Field, computed_field
 
 from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, InternalUsers
+from single_kernel_mongo.exceptions import InvalidPasswordError
 
 
 class DBPrivilege(TypedDict, total=False):
@@ -203,24 +204,21 @@ def validate_charm_user_password_config(user_passwords: dict):
     """Validate a user_passwords mapping.
 
     A configuration is considered valid if:
-    - It contains exactly one entry for each internal username in CharmUsernames.
     - It does not contain any extra usernames.
     - Each password is non-empty and not only whitespace.
     - Each password length is less than or equal to MAX_PASSWORD_LENGTH.
     """
-    missing_users = CharmUsernames - set(user_passwords.keys())
     extra_users = set(user_passwords.keys()) - CharmUsernames
-
-    if missing_users:
-        raise ValueError(f"Missing required usernames: {', '.join(missing_users)}")
     if extra_users:
-        raise ValueError(f"Unexpected usernames provided: {', '.join(extra_users)}")
+        raise InvalidPasswordError(f"Unexpected usernames provided: {', '.join(extra_users)}")
 
-    for username in CharmUsernames:
-        pwd = user_passwords[username].strip()
+    for username, password in user_passwords.items():
+        pwd = password.strip()
         if not pwd:
-            raise ValueError(f"Password for user '{username}' cannot be empty or whitespace")
+            raise InvalidPasswordError(
+                f"Password for user '{username}' cannot be empty or whitespace"
+            )
         if len(pwd) > MAX_PASSWORD_LENGTH:
-            raise ValueError(
+            raise InvalidPasswordError(
                 f"Password for user '{username}' exceeds max length of {MAX_PASSWORD_LENGTH} characters"
             )

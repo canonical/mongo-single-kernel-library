@@ -85,6 +85,13 @@ class CharmStatuses(Enum):
     WAITING_TO_START = StatusObject(status="waiting", message="Starting services.")
     MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
+    PASSWORD_ON_SHARD = StatusObject(
+        status="blocked",
+        message="Invalid system-users config. Shards do not manage passwords.",
+        short_message="Invalid system-users config.",
+        action="Remove the system-users config from shard.",
+        check="Configuration validation failure.",
+    )
 
     # RUNNING Statuses
     INSTALLING_MONGODB = StatusObject(
@@ -92,6 +99,18 @@ class CharmStatuses(Enum):
     )
     DEPLOYED_WITHOUT_TRUST = StatusObject(
         status="blocked", message="Charm deployed without `trust`", running="async"
+    )
+    INVALID_SYSTEM_USERS = StatusObject(
+        status="blocked",
+        message="Invalid secret in system-users config.",
+        action="Check logs and verify the content of the system-users config.",
+        check="Configuration update failure.",
+        running="async",
+    )
+    PASSWORD_UPDATE_FAILED = StatusObject(
+        status="maintenance",
+        message="Failed to update user passwords.",
+        running="blocking",
     )
 
 
@@ -428,36 +447,3 @@ class LdapStatuses(Enum):
     def on_error_status(err: Exception):
         """On error."""
         return StatusObject(status="blocked", message=f"{err}")
-
-
-class PasswordManagementStatuses(Enum):
-    """Password Management Statuses."""
-
-    PASSWORD_ON_SHARD = StatusObject(
-        status="blocked",
-        message="Invalid system-users config. Shards do not manage passwords.",
-        short_message="Invalid system-users config.",
-        action="Remove the system-users config from shard.",
-        check="Configuration validation failure.",
-    )
-    INVALID_SECRET = StatusObject(
-        status="blocked",
-        message="Failed to retrieve user-system secret.",
-        action="Check logs and verify the secret existence and permissions.",
-        check="Configuration update failure.",
-        running="async",
-    )
-    INVALID_USER_PASSWORDS = StatusObject(
-        status="blocked",
-        message="Invalid password found in system-users config.",
-        short_message="Invalid system-users config.",
-        running="async",
-        action="Check the logs and verify the content of the system-users secret.",
-        check="Configuration update failure.",
-    )
-    PASSWORD_UPDATE_FAILED = StatusObject(
-        status="maintenance",
-        message="Failed to update user passwords.",
-        running="blocking",
-        action="",
-    )

@@ -168,7 +168,6 @@ class LifecycleEventsHandler(Object):
             UpgradeInProgressError,
             WaitingForLeaderError,
             DeferrableFailedHookChecksError,
-            WorkloadServiceError,
             SetPasswordError,
         ):
             event.defer()
@@ -184,7 +183,7 @@ class LifecycleEventsHandler(Object):
                 scope="unit",
                 component=self.dependent.name,
             )
-        except NonDeferrableFailedHookChecksError:
+        except (NonDeferrableFailedHookChecksError, WorkloadServiceError):
             pass
 
     def on_update_status(self, event: UpdateStatusEvent):
@@ -207,7 +206,7 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
-        except (DeferrableFailedHookChecksError, UpgradeInProgressError, SetPasswordError):
+        except (DeferrableFailedHookChecksError, SetPasswordError):
             event.defer()
 
     def on_relation_joined(self, event: RelationJoinedEvent):

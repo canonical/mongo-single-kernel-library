@@ -360,7 +360,6 @@ async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
         secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
     ]
 
-    logger.info("Secret IDs %s.", secret_ids)
     for secret_id in secret_ids:
         secret_data_raw = await ops_test.juju(
             "show-secret", "--format", "json", "--reveal", secret_id
@@ -468,6 +467,9 @@ async def set_password(
 ) -> None:
     """Set a user password via secret.
 
+    Beware that if the function is called, subsequently, the secret will only
+    keep the content of the username in the latest call.
+
     Args:
         ops_test: ops_test instance.
         username: the user to set the password.
@@ -476,23 +478,15 @@ async def set_password(
     """
     secret_name = "system_users_secret"
 
-    arguments = {
-        "operator": "12345",
-        "monitor": "67890",
-        "logrotate": "abcde",
-        "backup": "fghij",
-    }
-
-    arguments[username] = password
-    data_args = [f"{k}={v}" for k, v in arguments.items()]
-
     try:
-        secret_id = await ops_test.model.add_secret(name=secret_name, data_args=data_args)
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=f"{username}={password}"
+        )
     except Exception:
         secrets = await ops_test.model.list_secrets({"label": secret_name})
         secret_id = secrets[0].uri
         await ops_test.model.update_secret(
-            name=secret_name, data_args=data_args, new_name=secret_name
+            name=secret_name, data_args=f"{username}={password}", new_name=secret_name
         )
 
     await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
