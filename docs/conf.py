@@ -15,7 +15,6 @@ import yaml
 # to keep all documentation based on it consistent and on brand:
 # https://github.com/canonical/canonical-sphinx
 
-
 #######################
 # Project information #
 #######################
@@ -24,7 +23,7 @@ import yaml
 #
 # TODO: Update with the official name of your project or product
 
-project = "Documentation starter pack"
+project = "Charmed MongoDB"
 author = "Canonical Ltd."
 
 
