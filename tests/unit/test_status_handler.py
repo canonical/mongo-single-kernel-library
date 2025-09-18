@@ -134,8 +134,8 @@ def test_mongo_get_status_with_error(
 @pytest.mark.parametrize(
     "role",
     [
-        MongoDBRoles.SHARD.value,
-        MongoDBRoles.REPLICATION.value,
+        MongoDBRoles.SHARD,
+        MongoDBRoles.REPLICATION,
     ],
 )
 def test_sharding_components_get_status_invalid_cluster_relation(

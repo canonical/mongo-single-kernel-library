@@ -33,8 +33,8 @@ def backup_manager(harness: Harness[MongoTestCharm]) -> BackupManager:
 @pytest.mark.parametrize(
     "role",
     [
-        MongoDBRoles.REPLICATION.value,
-        MongoDBRoles.CONFIG_SERVER.value,
+        MongoDBRoles.REPLICATION,
+        MongoDBRoles.CONFIG_SERVER,
     ],
 )
 def test_valid_s3_integration(harness: Harness[MongoTestCharm], role: MongoDBRoles):
@@ -54,9 +54,9 @@ def test_valid_s3_integration(harness: Harness[MongoTestCharm], role: MongoDBRol
 @pytest.mark.parametrize(
     "role",
     [
-        MongoDBRoles.UNKNOWN.value,
-        MongoDBRoles.SHARD.value,
-        MongoDBRoles.MONGOS.value,
+        MongoDBRoles.UNKNOWN,
+        MongoDBRoles.SHARD,
+        MongoDBRoles.MONGOS,
     ],
 )
 def test_invalid_s3_integration(
