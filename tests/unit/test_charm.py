@@ -615,7 +615,7 @@ def test_on_config_changed_valid_system_users_password_is_updated(
     harness.charm.operator.state.app_peer_data.role = role
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -634,7 +634,6 @@ def test_on_config_changed_valid_system_users_password_is_updated(
     assert len(statuses.root) == 0
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
@@ -645,7 +644,7 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
     harness.charm.operator.state.app_peer_data.role = role
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -656,7 +655,6 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
     assert statuses[0] == CharmStatuses.INVALID_SYSTEM_USERS.value
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_password_did_not_changed(
     harness, mocker, mongodb_name, role
@@ -674,7 +672,7 @@ def test_on_config_changed_system_users_password_did_not_changed(
 
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -686,7 +684,6 @@ def test_on_config_changed_system_users_password_did_not_changed(
     assert len(statuses.root) == 0
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_one_password_changed(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
@@ -702,7 +699,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
 
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -714,7 +711,6 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
     assert len(statuses.root) == 0
 
 
-@pytest.mark.skip()
 def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     harness, mocker, mongodb_name: str
 ):
@@ -726,7 +722,7 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.update_config(
         {
-            "role": f"{MongoDBRoles.SHARD}",
+            "role": f"{MongoDBRoles.SHARD.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -737,7 +733,6 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     assert statuses[0] == CharmStatuses.PASSWORD_ON_SHARD.value
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
@@ -758,7 +753,6 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
     assert statuses[0] == CharmStatuses.INVALID_SYSTEM_USERS.value
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_system_users_fail_to_update_password(
     harness, mocker, mongodb_name, role
@@ -774,7 +768,7 @@ def test_on_config_changed_system_users_fail_to_update_password(
 
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": f"{secret_id}",
         }
     )
@@ -884,7 +878,7 @@ def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongod
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -923,7 +917,7 @@ def test_on_secret_changed_system_users_update_on_leader_invalid_passwords(
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -952,7 +946,7 @@ def test_on_secret_changed_on_leader_not_system_users_secret(harness, mocker, mo
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -980,7 +974,7 @@ def test_on_secret_changed_system_users_update_during_upgrade(harness, mocker, m
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -1005,7 +999,7 @@ def test_on_secret_changed_system_users_update_on_leader_shard(harness, mocker, 
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{MongoDBRoles.SHARD}",
+                "role": f"{MongoDBRoles.SHARD.value}",
                 "system-users": f"{secret_id}",
             }
         )

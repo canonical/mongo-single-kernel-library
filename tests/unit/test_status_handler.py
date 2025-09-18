@@ -360,7 +360,7 @@ def test_get_statuses_system_users_no_secret_found(harness: Harness[MongoTestCha
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": "some-secret-id",
             }
         )
@@ -382,7 +382,7 @@ def test_get_statuses_system_users_invalid_content(
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -402,7 +402,7 @@ def test_get_statuses_valid_system_users(harness: Harness[MongoTestCharm], mongo
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{role}",
+                "role": f"{role.value}",
                 "system-users": f"{secret_id}",
             }
         )
@@ -462,7 +462,7 @@ def test_shard_get_status_shard_with_system_users_config(
     with harness.hooks_disabled():
         harness.update_config(
             {
-                "role": f"{ MongoDBRoles.SHARD}",
+                "role": f"{MongoDBRoles.SHARD.value}",
                 "system-users": "some-secret",
             }
         )
