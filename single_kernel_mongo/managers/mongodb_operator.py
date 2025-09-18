@@ -1113,7 +1113,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         return charm_statuses
 
     def get_password_management_statuses(self) -> list[StatusObject]:
-        """Returns the statuses relatated to the system-users configuration."""
+        """Returns the statuses related to the system-users configuration."""
         statuses = []
         if self.state.is_role(MongoDBRoles.SHARD) and self.config.system_users:
             statuses.append(CharmStatuses.PASSWORD_ON_SHARD.value)

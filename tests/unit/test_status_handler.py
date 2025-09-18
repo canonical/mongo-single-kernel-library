@@ -357,6 +357,7 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
 def test_get_statuses_system_users_no_secret_found(harness: Harness[MongoTestCharm], role):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.config.role = role
     with harness.hooks_disabled():
         harness.update_config(
             {
@@ -377,6 +378,7 @@ def test_get_statuses_system_users_invalid_content(
 ):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.config.role = role
     system_users = {"invalid": "123"}
     secret_id = harness.add_model_secret(mongodb_name, system_users)
     with harness.hooks_disabled():
@@ -397,6 +399,7 @@ def test_get_statuses_system_users_invalid_content(
 def test_get_statuses_valid_system_users(harness: Harness[MongoTestCharm], mongodb_name, role):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.config.role = role
     system_users = {"operator": "123"}
     secret_id = harness.add_model_secret(mongodb_name, system_users)
     with harness.hooks_disabled():
@@ -458,6 +461,7 @@ def test_shard_get_status_shard_with_system_users_config(
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    harness.charm.operator.config.role = MongoDBRoles.SHARD
 
     harness.update_config(
         {
