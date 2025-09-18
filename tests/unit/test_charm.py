@@ -742,7 +742,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
     harness.charm.operator.state.app_peer_data.role = role
     harness.update_config(
         {
-            "role": f"{role}",
+            "role": f"{role.value}",
             "system-users": "secret:1234-567443",
         }
     )
