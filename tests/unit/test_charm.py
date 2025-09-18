@@ -633,9 +633,6 @@ def test_on_config_changed_valid_system_users_password_is_updated(
         scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
-    # Check status
-    # should be done only if initialized?
-    # test restart ?
 
 
 @pytest.mark.skip()
@@ -716,8 +713,6 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
         scope=Scope.APP, component=harness.charm.operator.name
     )
     assert len(statuses.root) == 0
-    # should be done only if initialized?
-    # test restart?
 
 
 @pytest.mark.skip()

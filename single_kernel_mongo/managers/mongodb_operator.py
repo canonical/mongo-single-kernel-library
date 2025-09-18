@@ -1086,9 +1086,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return self.state.statuses.get(scope=scope, component=self.name).root
 
         if scope == "app":
-            if self.state.is_role(MongoDBRoles.SHARD) and self.config.system_users:
-                charm_statuses.append(CharmStatuses.PASSWORD_ON_SHARD.value)
-            return charm_statuses
+            return self.get_password_management_statuses()
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
@@ -1113,3 +1111,19 @@ class MongoDBOperator(OperatorProtocol, Object):
             return charm_statuses
 
         return charm_statuses
+
+    def get_password_management_statuses(self) -> list[StatusObject]:
+        """Returns the statuses relatated to the system-users configuration."""
+        statuses = []
+        if self.state.is_role(MongoDBRoles.SHARD) and self.config.system_users:
+            statuses.append(CharmStatuses.PASSWORD_ON_SHARD.value)
+            return statuses
+
+        if system_users_secret_id := self.config.system_users:
+            try:
+                user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
+                validate_charm_user_password_config(user_passwords)
+            except (ModelError, SecretNotFoundError, InvalidPasswordError) as e:
+                logger.error(f"Invalid system-users secret: {e}.")
+                statuses.append(CharmStatuses.INVALID_SYSTEM_USERS.value)
+        return statuses

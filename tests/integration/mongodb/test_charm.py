@@ -8,7 +8,6 @@ import pathlib
 import subprocess
 import time
 from subprocess import check_output
-from uuid import uuid4
 
 import pytest
 from bson.json_util import loads as bson_loads
@@ -51,6 +50,8 @@ from ..helpers.common import (
 from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+MONITOR_PASSWORD = "my-new-secret-password"
 
 
 @pytest.mark.abort_on_fail
@@ -184,7 +185,7 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
     new_password = "something"
     await set_password(ops_test, OPERATOR_USERNAME, new_password, app_name)
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
+        apps=[app_name], status="active", idle_period=15, timeout=1000
     )
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
@@ -212,12 +213,12 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
 async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
     """Test password is updated for the monitor user."""
     app_name = await get_app_name(ops_test)
-    new_password = str(uuid4())
+    new_password = MONITOR_PASSWORD
     await set_password(
         ops_test, username=MONITOR_USERNAME, password=new_password, app_name=app_name
     )
     await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
+        apps=[app_name], status="active", idle_period=15, timeout=1000
     )
     password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
     assert password == new_password
@@ -227,7 +228,7 @@ async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
 async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test verifies that the monitor user can perform operations such as 'rs.conf()'."""
     app_name = await get_app_name(ops_test)
-    password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password = MONITOR_PASSWORD
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
@@ -244,31 +245,26 @@ async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
     assert result.succeeded, f"Failed to get conf with {MONITOR_USERNAME} user."
 
 
-@pytest.mark.skip()
+@pytest.mark.abort_on_fail
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = await get_app_name(ops_test)
-    password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password1 = MONITOR_PASSWORD
     await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
     await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="blocked",
-        timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=15,
+        apps=[app_name], status="blocked", timeout=1000, idle_period=15
     )
-    # test status
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password remained unchanged
     assert password1 == password2
 
 
-@pytest.mark.skip()
 @pytest.mark.abort_on_fail
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
     app_name = await get_app_name(ops_test)
-    password1 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password1 = MONITOR_PASSWORD
 
     # The password has to be maximum 4096-character long
     await set_password(
@@ -278,12 +274,8 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
         app_name=app_name,
     )
     await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="blocked",
-        timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=15,
+        apps=[app_name], status="blocked", timeout=1000, idle_period=15
     )
-    # test status
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password didn't change
