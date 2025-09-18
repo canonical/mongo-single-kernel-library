@@ -603,7 +603,6 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
     mocked_defer.assert_called()
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
 def test_on_config_changed_valid_system_users_password_is_updated(
     harness, mocker, mongodb_name, role
