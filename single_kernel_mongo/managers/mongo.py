@@ -555,3 +555,16 @@ class MongoManager(Object, ManagerStatusProtocol):
             return [MongodStatuses.WAITING_RECONFIG.value]
 
         return charm_statuses
+
+    def set_feature_compatibility_version(self, feature_version: str) -> None:
+        """Sets the mongos feature compatibility version."""
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            config = self.state.mongo_config
+        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            config = self.state.mongos_config
+        else:
+            return
+        with MongoConnection(config) as mongos:
+            mongos.client.admin.command(
+                "setFeatureCompatibilityVersion", value=feature_version, confirm=True
+            )

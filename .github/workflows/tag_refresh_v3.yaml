@@ -1,0 +1,40 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+on:
+  workflow_call:
+    inputs:
+      track:
+        description: Charmhub track to release to
+        required: true
+        type: string
+      tag:
+        description: Charmhub initial tag to compute from
+        required: true
+        type: string
+    outputs:
+      refresh-tag:
+        description: Tag used from refreshes
+        value: ${{ jobs.compute-tag.outputs.refresh-tag}}
+
+jobs:
+  compute-tag:
+    name: Compute Tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install CLI
+        run: pipx install git+https://github.com/canonical/mongo-single-kernel-library@'8/edge'#subdirectory=scripts/tags
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Checkout history with git tags
+      - name: Compute release tag
+        id: compute-tag
+        run:
+          compute-tag --track ${{ inputs.track }} --tag ${{ inputs.tag }}
+      - name: Create refresh tag
+        id: create-tag
+        run:
+          create-tag --tag ${{ steps.compute-tag.outputs.refresh_tag }}
+    outputs:
+      refresh-tag: ${{ steps.compute-tag.outputs.refresh_tag }}

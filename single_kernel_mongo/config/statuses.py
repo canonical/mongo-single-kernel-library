@@ -112,16 +112,16 @@ class MongosStatuses(Enum):
         check="Relation validation failed.",
         action="Verify the certificates relations. Use the same CA for all cluster components.",
     )
-
-    # Running statuses:
+    MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
     MISSING_CONF_SERVER_REL = StatusObject(
         status="blocked",
         message="The cluster relation with the config-server is missing.",
         short_message="Missing cluster relation.",
         check="Relation validation failed.",
         action="Add the cluster relation (config-server interface) to mongos.",
-        running="async",
     )
+
+    # Running statuses:
     STARTING_MONGOS = StatusObject(
         status="maintenance", message="Starting mongos.", running="blocking"
     )
@@ -404,66 +404,8 @@ class MongodStatuses(Enum):
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    ACTIVE_IDLE = StatusObject(status="active", message="")
-    WAITING_POST_UPGRADE_STATUS = StatusObject(
-        status="waiting", message="Waiting for post upgrade checks..."
-    )
-    UNHEALTHY_UPGRADE = StatusObject(
-        status="blocked",
-        message="Unhealthy after refresh. Rollback to previous revision with `juju refresh`.",
-        approved_critical_component=True,
-    )
-    INCOMPATIBLE_UPGRADE = StatusObject(
-        status="blocked",
-        message="Refresh incompatible. Rollback to previous revision with `juju refresh`.",
-        approved_critical_component=True,
-    )
-    REFRESH_IN_PROGRESS = StatusObject(
-        status="maintenance",
-        message="Refreshing...",
-        action="To rollback, run `juju refresh` to the previous revision.",
-        approved_critical_component=True,
-    )
-
-    @staticmethod
-    def vm_active_upgrade(
-        unit_workload_version: str | None,
-        unit_workload_container_version: str | None,
-        current_versions: str,
-        outdated: bool = False,
-    ) -> StatusObject:
-        """Returns the active status for a vm unit."""
-        outdated_str = " (outdated)" if outdated else ""
-        return StatusObject(
-            status="active",
-            message=f"MongoDB {unit_workload_version} running; "
-            f"Snap revision {unit_workload_container_version}{outdated_str}; "
-            f"Charm revision {current_versions}.",
-            approved_critical_component=True,
-        )
-
-    @staticmethod
-    def k8s_active_upgrade(
-        workload_version: str, charm_version: str, outdated=False
-    ) -> StatusObject:
-        """Returns the active status for a k8s unit."""
-        outdated_str = " (restart pending)" if outdated else ""
-        return StatusObject(
-            status="active",
-            message=f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}.",
-            approved_critical_component=True,
-        )
-
-    @staticmethod
-    def refreshing_needs_resume(
-        resume_string: str,
-    ) -> StatusObject:
-        """Returns refreshing status."""
-        return StatusObject(
-            status="blocked",
-            message=f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision.",
-            approved_critical_component=True,
-        )
+    ACTIVE_IDLE = (StatusObject(status="active", message=""),)
+    HEALTH_CHECK_FAILED = StatusObject(status="maintenance", message="health check failed")
 
 
 class LdapStatuses(Enum):

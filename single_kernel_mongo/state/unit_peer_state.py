@@ -23,6 +23,7 @@ class UnitPeerRelationKeys(str, Enum):
     INGRESS_ADDRESS = "ingress-address"
     EGRESS_SUBNETS = "egress-subnets"
     DRAINED = "drained"
+    CURRENT_REVISION = "current_revision"
 
 
 class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
@@ -112,3 +113,12 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         if not isinstance(value, bool):
             raise ValueError(f"drained value is not boolean but {value}")
         self.update({UnitPeerRelationKeys.DRAINED.value: json.dumps(value)})
+
+    @property
+    def current_revision(self) -> str:
+        """The revision of the charm that's running before the upgrade."""
+        return self.relation_data.get(UnitPeerRelationKeys.CURRENT_REVISION, "-1")
+
+    @current_revision.setter
+    def current_revision(self, value: str):
+        self.update({UnitPeerRelationKeys.CURRENT_REVISION.value: value})

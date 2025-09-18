@@ -185,7 +185,7 @@ def test_install_success(monkeypatch):
     monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap)
     monkeypatch.setattr(workload.mongod_snap, "hold", mock_snap)
 
-    assert workload.install() is None
+    assert workload.install()
 
 
 def test_read_file_fail():

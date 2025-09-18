@@ -8,7 +8,7 @@ from enum import Enum
 from ops.model import Application, Model, Relation
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import SECRETS_APP, Substrates
+from single_kernel_mongo.config.literals import FEATURE_VERSION, SECRETS_APP, Substrates
 from single_kernel_mongo.core.structured_config import ExposeExternal, MongoDBRoles
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (  # type: ignore
     DataPeerData,
@@ -28,6 +28,7 @@ class AppPeerDataKeys(str, Enum):
 
     # Shared
     ROLE = "role"
+    FCV = "feature-compatibility-version"
 
     # Mongos
     DATABASE = "database"
@@ -185,7 +186,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         return set(
             self.relation_data.get(
                 AppPeerDataKeys.EXTRA_USER_ROLES.value,
-                "default",
+                "",
             ).split(",")
         )
 
@@ -205,3 +206,12 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @expose_external.setter
     def expose_external(self, value: ExposeExternal):
         self.update({AppPeerDataKeys.EXPOSE_EXTERNAL.value: f"{value}"})
+
+    @property
+    def feature_compatibility_version(self) -> str:
+        """The value of the feature-compatibility-version."""
+        return self.relation_data.get(AppPeerDataKeys.FCV.value, FEATURE_VERSION)
+
+    @feature_compatibility_version.setter
+    def feature_compatibility_version(self, value: str):
+        self.update({AppPeerDataKeys.FCV.value: value})

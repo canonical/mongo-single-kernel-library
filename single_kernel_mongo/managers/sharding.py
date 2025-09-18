@@ -214,7 +214,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 "Cannot add/remove shards while a backup/restore is in progress."
             )
 
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
             )
@@ -512,7 +512,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
             )

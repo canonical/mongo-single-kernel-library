@@ -92,10 +92,7 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=True),
-    )
+    harness.charm.operator.refresh.in_progress = True
 
     harness.add_relation(RelationNames.CLUSTER.value, "mongos")
 
@@ -260,10 +257,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
         return_value=is_waiting_to_request_certs,
     )
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=upgrade_in_progress),
-    )
+    mongos_harness.charm.operator.refresh.in_progress = upgrade_in_progress
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
         manager.assert_pass_hook_checks()
@@ -293,10 +287,7 @@ def test_cluster_requirer_share_credentials_to_clients(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=True),
-    )
+    mongos_harness.charm.operator.refresh.in_progress = True
 
     # No credentials
     with pytest.raises(WaitingForSecretsError):
@@ -306,10 +297,7 @@ def test_cluster_requirer_share_credentials_to_clients(
     with pytest.raises(DeferrableFailedHookChecksError):
         manager.share_credentials_to_clients("operator", "password")
 
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=False),
-    )
+    mongos_harness.charm.operator.refresh.in_progress = False
 
     manager.share_credentials_to_clients("operator", "password")
 

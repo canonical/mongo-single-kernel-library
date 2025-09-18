@@ -77,7 +77,7 @@ class TLSEventsHandler(Object):
             )
             event.fail("Mongos cannot set TLS keys until integrated to config-server.")
             return
-        if self.manager.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             fail_action_with_error_log(
                 logger,
                 event,
@@ -106,7 +106,8 @@ class TLSEventsHandler(Object):
             )
             event.defer()
             return
-        if self.manager.state.upgrade_in_progress:
+
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -131,7 +132,7 @@ class TLSEventsHandler(Object):
             event.defer()
             return
 
-        if self.manager.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -162,7 +163,7 @@ class TLSEventsHandler(Object):
             logger.info(f"Deferring {str(type(event))}: db is not initialised")
             event.defer()
             return
-        if self.manager.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )

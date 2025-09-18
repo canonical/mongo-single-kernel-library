@@ -4,10 +4,6 @@
 
 """All general exceptions."""
 
-from data_platform_helpers.advanced_statuses.models import StatusObject
-
-from single_kernel_mongo.config.statuses import UpgradeStatuses
-
 
 class InvalidCharmKindError(Exception):
     """Raised when calling a function on the wrong charm kind."""
@@ -122,6 +118,10 @@ class UpgradeInProgressError(Exception):
     """Raised when an upgrade is in progress."""
 
 
+class MongoDBUpgradeError(Exception):
+    """Raised when the snap upgrade fails."""
+
+
 class OpenPortFailedError(Exception):
     """Raised when we fail to open ports."""
 
@@ -207,22 +207,6 @@ class MissingConfigServerError(Exception):
 
 class EarlyRemovalOfConfigServerError(Exception):
     """Raised when we try to remove config server while it still has shards."""
-
-
-class StatusError(Exception):
-    """Exception with ops status."""
-
-    def __init__(self, status: StatusObject) -> None:
-        super().__init__(status.message)
-        self.status = status
-
-
-class PrecheckFailedError(StatusError):
-    """App is not ready to upgrade."""
-
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(UpgradeStatuses.REFRESH_IN_PROGRESS.value)
 
 
 class FailedToElectNewPrimaryError(Exception):

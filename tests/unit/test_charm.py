@@ -82,6 +82,9 @@ def test_mongod_pebble_ready(harness, mocker):
     mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
+    )
     defer = mocker.patch("ops.framework.EventBase.defer")
     expected_plan = {
         "services": {
@@ -337,7 +340,7 @@ def test_start_success(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
-def test_start_already_initialised(harness, mocker, mock_fs_interactions):
+def test_start_already_initialised(harness, mocker, mock_refresh, mock_fs_interactions):
     """Tests that if the replica set has already been set up that we return.
 
     Verifies that if the replica set is already set up that no attempts to set it up again are
@@ -349,6 +352,9 @@ def test_start_already_initialised(harness, mocker, mock_fs_interactions):
     )
     init_user = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users"
+    )
+    set_fcv = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
     )
     # presets
     harness.set_leader(True)
@@ -362,6 +368,7 @@ def test_start_already_initialised(harness, mocker, mock_fs_interactions):
     init_replset.assert_not_called()
     init_user.assert_not_called()
     defer.assert_not_called()
+    set_fcv.assert_called()
 
 
 def test_start_mongod_error_initialising_replica_set(
@@ -596,10 +603,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     mocked_defer = mocker.patch("ops.framework.EventBase.defer")
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     harness.update_config(
         {
             "ldap-query-template": "{PROVIDED_USER}",
@@ -970,10 +974,7 @@ def test_on_secret_changed_system_users_update_during_upgrade(harness, mocker, m
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
     harness.set_leader(True)
     harness.charm.operator.state.set_user_password(MonitorUser, "aaaa")
@@ -1061,6 +1062,9 @@ def test_connect_mongodb_exporter_success(
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.managers.config.LogRotateConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
+    )
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -1195,10 +1199,7 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     mock_on_relation_changed = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.peer_changed"
     )
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     spied = mocker.spy(harness.charm.operator, "new_peer")
     harness.set_leader(True)
     harness.add_relation_unit(rel.id, "mongodb/1")
@@ -1586,10 +1587,7 @@ def test_password_management_context_not_leader(harness, mongodb_name, role):
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_password_management_context_update_in_progress(harness, mocker, mongodb_name, role):
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role

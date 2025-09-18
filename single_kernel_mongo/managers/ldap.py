@@ -76,7 +76,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             raise DeferrableFailedHookChecksError(
                 "Adding LDAP is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )

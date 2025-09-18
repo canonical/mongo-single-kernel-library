@@ -121,9 +121,10 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError):
-            logger.info("Not ready to start.")
-            event.defer()
+        except (ContainerNotReadyError, WorkloadServiceError) as e:
+            defer_event_with_info_log(
+                logger, event, "start", f"Not ready to start: {e.__class__.__name__}({e})"
+            )
             return
         except WorkloadNotReadyError:
             logger.info("Still starting service.")

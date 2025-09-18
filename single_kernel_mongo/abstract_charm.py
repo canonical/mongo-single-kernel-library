@@ -26,6 +26,7 @@ a DB Engine and storage), and the main peer relation name will be
 import logging
 from typing import ClassVar, Generic, TypeVar
 
+import ops.log
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
@@ -43,6 +44,8 @@ T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
@@ -68,6 +71,11 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     def __init__(self, *args):
         # Init the Juju object Object
         super(Generic, self).__init__(*args)
+
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler, ops.log.JujuLogHandler):
+                handler.setFormatter(logging.Formatter("{name}:{message}", style="{"))
 
         # Create the operator instance (one of MongoDBOperator or MongosOperator)
         self.operator = self.operator_type(self)

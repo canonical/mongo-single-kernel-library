@@ -23,7 +23,6 @@ from pymongo.errors import (
 
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
-    SNAP,
     CharmKind,
     MongoPorts,
     Scope,
@@ -480,15 +479,7 @@ class CharmState(Object, StatusesStateProtocol):
         """
         if self.substrate == Substrates.K8S:
             return self.k8s_manager.get_revision()
-        return SNAP.revision
-
-    @property
-    def upgrade_in_progress(self) -> bool:
-        """Is the charm in upgrade?"""
-        app_version = self.app_workload_container_version
-        unit_versions = self.unit_workload_container_versions
-        logger.debug(f"Upgrade in progress check: {app_version = } / {unit_versions = }")
-        return any(version != app_version for version in unit_versions.values())
+        return "133"  # FIXME remove this
 
     @property
     def bind_address(self) -> IPv4Address | IPv6Address | str:
