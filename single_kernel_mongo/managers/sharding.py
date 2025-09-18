@@ -294,8 +294,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
-            charm_statuses["app"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
+            charm_statuses["app"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses[scope]
 
@@ -347,7 +347,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return
 
         self.state.statuses.delete(
-            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
+            ConfigServerStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
         )
 
         self.charm.status_handler.set_running_status(
