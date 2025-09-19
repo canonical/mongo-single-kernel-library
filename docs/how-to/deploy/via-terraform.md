@@ -1,11 +1,22 @@
 (via-terraform)=
-# How to deploy MongoDB via Terraform
+# How to deploy via Terraform
 
-Make sure you have a working Terraform 1.8+ installed in your machine. You can install [Terraform](https://snapcraft.io/terraform) or [OpenTofu](https://snapcraft.io/terraform) via a snap.
+These modules require the [Terraform Juju provider](https://registry.terraform.io/providers/juju/juju/latest/docs). For general Terraform usage, see the [official documentation](https://developer.hashicorp.com/terraform/docs).
 
-Terraform modules make use of the Terraform Juju provider. More information about the Juju provider can be found [here](https://registry.terraform.io/providers/juju/juju/latest/docs). For more information about Terraform, please refer to the [official docs](https://developer.hashicorp.com/terraform/docs).
+Charmed MongoDB offers a base module with core resources: [VM](https://github.com/canonical/mongodb-operator/tree/6/edge/terraform) | [K8s](https://github.com/canonical/mongodb-k8s-operator/tree/6/edge/terraform)
 
-Charmed MongoDB has a [base module](https://github.com/canonical/mongodb-operator/tree/6/edge/terraform) that bundles all the base resources of the Charmed MongoDB solution. But it also provides two product modules that bundle all the resources and integrations for [replica set deployments](#deploy-a-replica-set-with-terraform) and [sharded deployments](#deploy-a-sharded-cluster-with-terraform). These deployments also integrate with necessary applications for: backups ([s3-integrator](https://charmhub.io/s3-integrator)), client connections ([data-integrator](https://charmhub.io/data-integrator)), monitoring ([grafana-agent](https://charmhub.io/grafana-agent)), encryption ([self-signed-certificates](https://charmhub.io/self-signed-certificates)), and in the case of a sharded cluster a [mongos router](https://charmhub.io/mongos).
+This includes modules for both replica set and sharded cluster deployments. 
+
+These modules support integrations for:
+- Backups via [s3-integrator](https://charmhub.io/s3-integrator)
+- Client connections via [data-integrator](https://charmhub.io/data-integrator)
+- Monitoring via [grafana-agent](https://charmhub.io/grafana-agent)
+- Encryptionvia [self-signed-certificates](https://charmhub.io/self-signed-certificates)
+- Sharded clusters via the [`mongos` router](https://charmhub.io/mongos)
+
+## Prerequisites
+
+Ensure you have [Terraform 1.8+](https://snapcraft.io/terraform) or [OpenTofu](https://snapcraft.io/terraform) installed.
 
 ## Deploy a replica set
 
