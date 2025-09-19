@@ -184,9 +184,7 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
     app_name = await get_app_name(ops_test)
     new_password = "something"
     await set_password(ops_test, OPERATOR_USERNAME, new_password, app_name)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", idle_period=15, timeout=1000
-    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
 
@@ -217,9 +215,7 @@ async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
     await set_password(
         ops_test, username=MONITOR_USERNAME, password=new_password, app_name=app_name
     )
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", idle_period=15, timeout=1000
-    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
     password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
     assert password == new_password
 
@@ -251,13 +247,22 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     app_name = await get_app_name(ops_test)
     password1 = MONITOR_PASSWORD
     await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="blocked", timeout=1000, idle_period=15
+
+    app = ops_test.model.applications[app_name]
+    expected_message = "Invalid secret in system-users config."
+    await ops_test.model.block_until(
+        *[lambda: app.status == "blocked" and app.status_message == expected_message], timeout=1000
     )
+
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password remained unchanged
     assert password1 == password2
+
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
+    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
 
 @pytest.mark.abort_on_fail
@@ -273,13 +278,21 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
         password="c" * 4097,
         app_name=app_name,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="blocked", timeout=1000, idle_period=15
+    app = ops_test.model.applications[app_name]
+    expected_message = "Invalid secret in system-users config."
+    await ops_test.model.block_until(
+        *[lambda: app.status == "blocked" and app.status_message == expected_message], timeout=1000
     )
+
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password didn't change
     assert password1 == password2
+
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
+    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
 
 async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
