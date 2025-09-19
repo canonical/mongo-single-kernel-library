@@ -349,7 +349,7 @@ async def test_restore_new_cluster(
         ops_test, username=OPERATOR_USERNAME, password=old_password, app_name=new_cluster_app_name
     )
     await ops_test.model.wait_for_idle(
-        apps=[new_cluster_app_name], status="active", timeout=DEPLOYMENT_TIMEOUT
+        apps=[new_cluster_app_name], status="active", timeout=TIMEOUT
     )
 
     # relate to s3 - s3 has the necessary configurations
@@ -413,9 +413,7 @@ async def test_update_backup_password(
     await set_password(ops_test, username="backup", password="new-password", app_name=db_app_name)
 
     # wait for charm to be idle after setting password
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify we still have connection to pbm via creating a backup
     action = await db_unit.run_action(action_name="create-backup")

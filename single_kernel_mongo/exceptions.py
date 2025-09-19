@@ -286,4 +286,4 @@ class InvalidLdapHashError(DeferrableError):
 
 
 class InvalidPasswordError(Exception):
-    """Raised when an invalid password if found in the system-users config secret."""
+    """Raised when an invalid password is found in the system-users config secret."""

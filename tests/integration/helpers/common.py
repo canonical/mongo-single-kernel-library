@@ -492,7 +492,9 @@ async def set_password(
     await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
 
     # update the application config to include the secret
-    logger.info(f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config to {secret_id}")
+    logger.info(
+        f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config to {secret_id} {username}={password}"
+    )
     await ops_test.model.applications[app_name].set_config(
         {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
     )

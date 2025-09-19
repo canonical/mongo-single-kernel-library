@@ -201,12 +201,15 @@ def get_user_from_username(username: str) -> MongoDBUser:
 
 
 def validate_charm_user_password_config(user_passwords: dict):
-    """Validate a user_passwords mapping.
+    """Validate a mapping of charm usernames to passwords.
 
-    A configuration is considered valid if:
-    - It does not contain any extra usernames.
-    - Each password is non-empty and not only whitespace.
-    - Each password length is less than or equal to MAX_PASSWORD_LENGTH.
+    Rules:
+      - Only internal charmed usernames are allowed.
+      - Passwords must not be empty or only whitespace.
+      - Passwords must not exceed MAX_PASSWORD_LENGTH characters.
+
+    Raises:
+        InvalidPasswordError: if any validation rule is violated.
     """
     extra_users = set(user_passwords.keys()) - CharmUsernames
     if extra_users:

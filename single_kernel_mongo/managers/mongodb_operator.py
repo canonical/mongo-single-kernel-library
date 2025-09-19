@@ -607,10 +607,15 @@ class MongoDBOperator(OperatorProtocol, Object):
     def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
 
-        When password is updated via a config changed, juju leader changes the password inside
-        the database and inside the secret object. This action runs the restart for monitoring
-        tool and for backup tool on non-leader units to keep them working with MongoDB.
-        The same workflow occurs on TLS certs change.
+        Leader units:
+            - If the changed secret is the one configured in `system-users`,
+            update the corresponding database user password and sync it
+            with the secret object.
+
+        Non-leader units:
+            - If the changed secret correspond to an internal user password,
+            refresh internal state and restart the MongoDB exporter and backup manager
+            to ensure they keep working with updated passwords.
         """
         if self.charm.unit.is_leader():
             if system_users_secret_id := self.config.system_users:
@@ -628,9 +633,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         logger.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
         self.state.secrets.get(scope)
 
-        # Always update the PBM and mongodb exporter configuration so that if
-        # the secret changed, the configuration is updated and will still work
-        # afterwards.
+        # Update the PBM and mongodb exporter configuration so that ifthe secret changed,
+        # the configuration is updated and will still work afterwards.
         if self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
             self.backup_manager.configure_and_restart()

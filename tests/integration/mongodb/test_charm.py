@@ -249,16 +249,14 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
 
     app = ops_test.model.applications[app_name]
-    expected_message = "Invalid secret in system-users config."
-    await ops_test.model.block_until(
-        *[lambda: app.status == "blocked" and app.status_message == expected_message], timeout=1000
-    )
+    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
+    assert app.status_message == "Invalid secret in system-users config."
 
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
-
     # The password remained unchanged
     assert password1 == password2
 
+    # Restore valid password
     await set_password(
         ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
     )
@@ -279,16 +277,15 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
         app_name=app_name,
     )
     app = ops_test.model.applications[app_name]
-    expected_message = "Invalid secret in system-users config."
-    await ops_test.model.block_until(
-        *[lambda: app.status == "blocked" and app.status_message == expected_message], timeout=1000
-    )
+    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
+    assert app.status_message == "Invalid secret in system-users config."
 
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 
     # The password didn't change
     assert password1 == password2
 
+    # Restore valid password
     await set_password(
         ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
     )

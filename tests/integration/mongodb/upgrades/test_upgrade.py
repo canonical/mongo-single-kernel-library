@@ -9,12 +9,10 @@ from pytest_operator.plugin import OpsTest
 
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
-    OPERATOR_USERNAME,
     deploy_charm,
     find_unit,
     get_app_name,
     get_password,
-    set_password,
     unit_hostname,
 )
 from ...helpers.ha import (
@@ -144,27 +142,22 @@ async def test_upgrade_password_change_fail(
     ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
 ):
     app_name = await get_app_name(ops_test)
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    leader_id = leader_unit.name.split("/")[1]
     current_password = await get_password(
-        ops_test,
-        username=OPERATOR_USERNAME,
-        app_name=app_name,
+        ops_test, username="operator", app_name=app_name, unit=leader_unit
     )
 
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
-    app_name = await get_app_name(ops_test)
-    await set_password(
-        ops_test, username=OPERATOR_USERNAME, password="new-password", app_name=app_name
+    action = await ops_test.model.units.get(f"{app_name}/{leader_id}").run_action(
+        "set-password", **{"username": "operator", "password": "new-password"}
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="blocked", idle_period=12)
-    # test status
+    action = await action.wait()
 
+    assert "Cannot set passwords while an upgrade is in progress" == action.message
     after_action_password = await get_password(
-        ops_test,
-        username=OPERATOR_USERNAME,
-        app_name=app_name,
+        ops_test, username="operator", app_name=app_name, unit=leader_unit
     )
     assert current_password == after_action_password
-
-    # wait for update to be finished and check password

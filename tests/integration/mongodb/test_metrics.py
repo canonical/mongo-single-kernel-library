@@ -10,6 +10,8 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
     DEPLOYMENT_TIMEOUT,
+    MONITOR_USERNAME,
+    TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
     deploy_charm,
@@ -64,10 +66,10 @@ async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
 async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
     """Verify that endpoints still function correctly after the monitor user password changes."""
     app_name = await get_app_name(ops_test)
-    await set_password(ops_test, username="monitor", password="new_password", app_name=app_name)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", idle_period=15, timeout=DEPLOYMENT_TIMEOUT
+    await set_password(
+        ops_test, username=MONITOR_USERNAME, password="new_password", app_name=app_name
     )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
     application = ops_test.model.applications[app_name]
     for unit in application.units:

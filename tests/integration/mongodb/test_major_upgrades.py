@@ -19,7 +19,6 @@ from ..helpers.common import (
     deploy_application,
     deploy_charm,
     find_unit,
-    get_password,
     get_unit_id,
     relate_mongodb_and_application,
     set_password,
@@ -234,7 +233,7 @@ async def test_deploy_mongodb_8(
     )
 
     for username in CharmUsernames:
-        password = await get_password(ops_test, username=username, app_name=MONGODB_SIX)
+        password = await get_password_action(ops_test, username=username, app_name=MONGODB_SIX)
         await set_password(
             ops_test,
             username=username,
@@ -242,7 +241,7 @@ async def test_deploy_mongodb_8(
             app_name=MONGODB_EIGHT,
         )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
+        await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail

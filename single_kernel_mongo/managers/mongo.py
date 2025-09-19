@@ -104,7 +104,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return direct_mongo.is_ready
 
     def set_user_password(self, user: MongoDBUser, password: str):
-        """Sets the password for a given username.
+        """Sets the password for a given username in the workload and secrets.
 
         Raises:
             SetPasswordError

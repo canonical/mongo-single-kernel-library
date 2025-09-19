@@ -24,7 +24,6 @@ from ..helpers.common import (
     count_writes,
     deploy_application,
     find_unit,
-    get_password,
     get_unit_id,
     mongodb_uri,
     set_password,
@@ -320,7 +319,9 @@ async def test_deploy_mongodb_8(
     )
 
     for username in CharmUsernames:
-        password = await get_password(ops_test, username=username, app_name=CONFIG_SERVER_SIX)
+        password = await get_password_action(
+            ops_test, username=username, app_name=CONFIG_SERVER_SIX
+        )
         await set_password(
             ops_test,
             username=username,
@@ -328,11 +329,11 @@ async def test_deploy_mongodb_8(
             app_name=CONFIG_SERVER_EIGHT,
         )
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_EIGHT, SHARD_ONE_EIGHT, SHARD_TWO_EIGHT],
-        timeout=TIMEOUT,
-        status="active",
-    )
+        await ops_test.model.wait_for_idle(
+            apps=[CONFIG_SERVER_EIGHT, SHARD_ONE_EIGHT, SHARD_TWO_EIGHT],
+            timeout=TIMEOUT,
+            status="active",
+        )
 
 
 @pytest.mark.abort_on_fail
