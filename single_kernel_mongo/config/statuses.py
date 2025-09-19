@@ -21,24 +21,43 @@ class MongoDBStatuses(Enum):
     """MongoDB related statuses."""
 
     # STATE statuses:
-    WAITING_FOR_MONGODB_START = StatusObject(status="waiting", message="Waiting to start mongod...")
+    WAITING_FOR_MONGODB_START = StatusObject(
+        status="waiting",
+        message="Waiting for mongod to start...",
+        check="MongoDB process status check.",
+    )
     WAITING_FOR_EXPORTER_START = StatusObject(
-        status="waiting", message="Waiting to start mongodb-exporter..."
+        status="waiting",
+        message="Waiting for mongodb-exporter to start...",
+        check="MongoDB Exporter status check.",
     )
-    SHARDING_ON_REPLICA = StatusObject(
-        status="blocked", message="Sharding interface cannot be used by replicas."
-    )
-    UNSUPPORTED_MONGOS_REL = StatusObject(
+    INVALID_SHARDING_REL = StatusObject(
         status="blocked",
-        message="Relation to mongos not supported, config role must be config-server.",
+        message="The sharding interface cannot be used by replica sets.",
+        short_message="Invalid sharding relation.",
+        check="Relation validation.",
+        action="Remove the relation on the shards interface (config-server or sharding relation) from this application.",
     )
-    INVALID_S3_INTEGRATION_STATUS = StatusObject(
+    INVALID_MONGOS_REL = StatusObject(
         status="blocked",
-        message="Relation to s3-integrator is not supported, config role must be config-server.",
+        message="The cluster relation can only be used by config servers.",
+        short_message="Invalid cluster relation.",
+        check="Relation validation.",
+        action="Remove the cluster relation (config-server interface) from this application.",
     )
-
-    INVALID_DB_REL_ON_SHARD = StatusObject(
-        status="blocked", message="Sharding roles do not support database interface."
+    INVALID_S3_REL = StatusObject(
+        status="blocked",
+        message="The s3-credentials relation can only be used by config servers or replica sets.",
+        short_message="Invalid s3-credentials relation.",
+        check="Relation validation.",
+        action="Remove the s3-credentials relation (s3 interface) from this application.",
+    )
+    INVALID_DB_REL = StatusObject(
+        status="blocked",
+        message="The database relation cannot be used by sharding components (shards or config servers).",
+        short_message="Invalid database relation.",
+        check="Relation validation.",
+        action="Remove the database relation (mongodb_client interface) from this application.",
     )
 
     # RUNNING statuses:
@@ -167,20 +186,28 @@ class BackupStatuses(Enum):
 class ConfigServerStatuses(Enum):
     """Config server statuses."""
 
-    # todo consider this status to be put in charm
-    MONGOS_NOT_RUNNING = StatusObject(status="blocked", message="Internal mongos is not running.")
-    MISSING_SHARDING_REL = StatusObject(status="blocked", message="Missing relation to shard(s).")
-    SYNCING_PASSWORDS = StatusObject(
-        status="waiting", message="Waiting to sync passwords across the cluster..."
-    )
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    SYNCING_PASSWORDS = StatusObject(
+        status="waiting",
+        message="Waiting for passwords to be synced across the cluster...",
+        short_message="Syncing passwords...",
+    )
+    # todo consider this status to be put in charm
+    MONGOS_NOT_RUNNING = StatusObject(status="waiting", message="Internal mongos is not running...")
+    MISSING_CONF_SERVER_REL = StatusObject(
+        status="blocked",
+        message="Missing relation to shard(s).",
+        check="Relation validation failed.",
+        action="Add the config-server relation to the config-server.",
+    )
 
     @staticmethod
     def adding_shard(shard: str) -> StatusObject:
         """Returns add shard status."""
         return StatusObject(
             status="maintenance",
-            message=f"Adding shard {shard} to config-server.",
+            message=f"Adding shard {shard} to config-server...",
+            short_message="Adding shard to config-server...",
             running="blocking",
         )
 
@@ -188,14 +215,26 @@ class ConfigServerStatuses(Enum):
     def draining_shard(shard: str) -> StatusObject:
         """Returns draining shard status based on shard."""
         return StatusObject(
-            status="maintenance", message=f"Draining shard {shard}", running="async"
+            status="maintenance",
+            message=f"Draining shard {shard}...",
+            short_message="Draining shard...",
+            running="async",
         )
 
     @staticmethod
     def unreachable_shards(unreachable_shards: list[str]) -> StatusObject:
         """Returns unreachable shard status based on list."""
-        unreachable = ", ".join(unreachable_shards)
-        return StatusObject(status="blocked", message=f"Shards: {unreachable} are unreachable.")
+        msg = (
+            f"Shards: {unreachable_shards[0]} is unreachable."
+            if len(unreachable_shards) == 1
+            else f"Shards: {', '.join(unreachable_shards)} are unreachable."
+        )
+        return StatusObject(
+            status="blocked",
+            message=msg,
+            short_message="Unreachable shards.",
+            action="Check logs for more information.",
+        )
 
     @staticmethod
     def waiting_for_shard_upgrade(
@@ -271,28 +310,34 @@ class ShardStatuses(Enum):
 class MongodStatuses(Enum):
     """MongoD statuses."""
 
+    ACTIVE_IDLE = StatusObject(status="active", message="")
+    PRIMARY = StatusObject(status="active", message="Primary.")
+    SECONDARY = StatusObject(status="active", message="")
+
+    ADDING_MEMBER = StatusObject(status="maintenance", message="Adding member...")
+    REMOVING_MEMBER = StatusObject(status="maintenance", message="Removing member...")
+    SYNCING_MEMBER = StatusObject(status="maintenance", message="Syncing member...")
     WAITING_REPL_SET_INIT = StatusObject(
         status="waiting", message="Waiting for replica set initialisation..."
     )
     WAITING_RECONFIG = StatusObject(
-        status="waiting", message="Waiting to reconfigure replica set..."
+        status="waiting", message="Waiting for replica set reconfiguration..."
     )
     WAITING_ELECTION = StatusObject(status="waiting", message="Waiting for primary re-election...")
-    WAITING_RECONNECT = StatusObject(status="waiting", message="Waiting to reconnect to unit...")
-    MEMBER_BEING_ADDED = StatusObject(status="waiting", message="Member being added...")
-    MEMBER_REMOVING = StatusObject(status="waiting", message="Member is removing...")
-    MEMBER_SYNCING = StatusObject(status="waiting", message="Member is syncing...")
-    PRIMARY = StatusObject(status="active", message="Primary.")
-    SECONDARY = StatusObject(status="active", message="")
-
-    ACTIVE_IDLE = StatusObject(status="active", message="")
-
-    MISSING_CREDENTIALS = StatusObject(status="waiting", message="Missing credentials for mongo")
+    WAITING_RECONNECTION = StatusObject(
+        status="maintenance", message="Waiting for reconnection to mongo..."
+    )
+    WAITING_CREDENTIALS = StatusObject(status="waiting", message="Waiting for mongo credentials...")
 
     @staticmethod
     def replset_status(status: str):
         """When we have an unexpected replica set status."""
-        return StatusObject(status="blocked", message=status)
+        return StatusObject(
+            status="blocked",
+            message=status,
+            short_message="Unexpected error found in replica set.",
+            action="Check logs for more information.",
+        )
 
 
 class UpgradeStatuses(Enum):
