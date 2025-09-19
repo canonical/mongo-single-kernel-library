@@ -85,6 +85,13 @@ class CharmStatuses(Enum):
     WAITING_TO_START = StatusObject(status="waiting", message="Starting services.")
     MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
+    PASSWORD_ON_SHARD = StatusObject(
+        status="blocked",
+        message="Invalid system-users config. Shards do not manage passwords.",
+        short_message="Invalid system-users config.",
+        action="Remove the system-users config from shard.",
+        check="Configuration validation failure.",
+    )
 
     # RUNNING Statuses
     INSTALLING_MONGODB = StatusObject(
@@ -92,6 +99,18 @@ class CharmStatuses(Enum):
     )
     DEPLOYED_WITHOUT_TRUST = StatusObject(
         status="blocked", message="Charm deployed without `trust`", running="async"
+    )
+    INVALID_SYSTEM_USERS = StatusObject(
+        status="blocked",
+        message="Invalid secret in system-users config.",
+        action="Check logs and verify the content of the system-users config.",
+        check="Configuration update failure.",
+        running="async",
+    )
+    PASSWORD_UPDATE_FAILED = StatusObject(
+        status="maintenance",
+        message="Failed to update user passwords.",
+        running="blocking",
     )
 
 

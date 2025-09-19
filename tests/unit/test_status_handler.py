@@ -11,6 +11,7 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
     ConfigServerStatuses,
     MongoDBStatuses,
     MongodStatuses,
@@ -352,6 +353,64 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
     assert status == ConfigServerStatuses.ACTIVE_IDLE.value
 
 
+@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+def test_get_statuses_system_users_no_secret_found(harness: Harness[MongoTestCharm], role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": "some-secret-id",
+            }
+        )
+
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == CharmStatuses.INVALID_SYSTEM_USERS.value
+
+
+@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+def test_get_statuses_system_users_invalid_content(
+    harness: Harness[MongoTestCharm], mongodb_name, role
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    system_users = {"invalid": "123"}
+    secret_id = harness.add_model_secret(mongodb_name, system_users)
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == CharmStatuses.INVALID_SYSTEM_USERS.value
+
+
+@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+def test_get_statuses_valid_system_users(harness: Harness[MongoTestCharm], mongodb_name, role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    system_users = {"operator": "123"}
+    secret_id = harness.add_model_secret(mongodb_name, system_users)
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    assert len(statuses) == 0
+
+
 def test_shard_get_status_invalid_role(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
@@ -391,6 +450,26 @@ def test_shard_get_status_charm_is_replication(
     status = next(iter(statuses), None)
 
     assert status == MongoDBStatuses.SHARDING_ON_REPLICA.value
+
+
+def test_shard_get_status_shard_with_system_users_config(
+    harness: Harness[MongoTestCharm],
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{MongoDBRoles.SHARD.value}",
+                "system-users": "some-secret",
+            }
+        )
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == CharmStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_shard_get_status_charm_client_relation(

@@ -17,13 +17,12 @@ from data_platform_helpers.version_check import (
     get_charm_revision,
 )
 from ops.framework import Object
-from ops.model import Container, Unit
+from ops.model import Container, ModelError, SecretNotFoundError, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
-    MAX_PASSWORD_LENGTH,
     OS_REQUIREMENTS,
     CharmKind,
     MongoPorts,
@@ -53,7 +52,6 @@ from single_kernel_mongo.events.backups import (
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
-from single_kernel_mongo.events.password_actions import PasswordActionEvents
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import (
     ConfigServerEventHandler,
@@ -63,10 +61,12 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
+    InvalidPasswordError,
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
     SetPasswordError,
@@ -102,10 +102,13 @@ from single_kernel_mongo.utils.helpers import (
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
+    CharmUsers,
     LogRotateUser,
+    MongoDBUser,
     MonitorUser,
     OperatorUser,
     get_user_from_username,
+    validate_charm_user_password_config,
 )
 from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
@@ -215,7 +218,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
 
         # Event Handlers
-        self.password_actions = PasswordActionEvents(self)
         self.backup_events = BackupEventsHandler(self)
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
@@ -441,9 +443,65 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise ShardingMigrationError(
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
+        if not self.charm.unit.is_leader():
+            return
+        self._handle_ldap_config_changes()
+        if system_users_secret_id := self.config.system_users:
+            self.update_internal_users_password_from_secret(system_users_secret_id)
 
-        if self.charm.unit.is_leader():
-            self._handle_ldap_config_changes()
+    def update_internal_users_password_from_secret(self, system_users_secret_id: str) -> None:
+        """Validate the secret content and update the password for each user."""
+        if not (
+            self.state.is_role(MongoDBRoles.CONFIG_SERVER)
+            or self.state.is_role(MongoDBRoles.REPLICATION)
+        ):
+            logger.debug("Internal user passwords cannot be managed by shards.")
+            self.state.statuses.add(
+                CharmStatuses.PASSWORD_ON_SHARD.value,
+                scope="app",
+                component=self.name,
+            )
+            return
+        try:
+            user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
+            validate_charm_user_password_config(user_passwords)
+        except (ModelError, SecretNotFoundError, InvalidPasswordError) as e:
+            logger.error(f"Invalid system-users secret: {e}.")
+            self.charm.status_handler.set_running_status(
+                CharmStatuses.INVALID_SYSTEM_USERS.value,
+                scope="app",
+                statuses_state=self.state.statuses,
+                component_name=self.name,
+            )
+            return
+        for username, new_password in user_passwords.items():
+            user = get_user_from_username(username)
+            old_password = self.charm.state.get_user_password(user)
+            # only update user credentials if the password has changed
+            if new_password != old_password:
+                logger.debug(f"{user.username} password changed.")
+                try:
+                    self.set_charmed_user_password(user, new_password)
+                except (
+                    NonDeferrableFailedHookChecksError,
+                    DeferrableFailedHookChecksError,
+                    SetPasswordError,
+                    WorkloadServiceError,
+                ) as e:
+                    logger.error(f"Failed to update password for {user.username}: {e}.")
+                    self.charm.status_handler.set_running_status(
+                        CharmStatuses.PASSWORD_UPDATE_FAILED.value,
+                        scope="app",
+                        statuses_state=self.state.statuses,
+                        component_name=self.name,
+                    )
+                    raise
+                logger.info(f"Password updated for {user.username}.")
+        self.state.statuses.delete(
+            CharmStatuses.INVALID_SYSTEM_USERS.value,
+            scope="app",
+            component=self.name,
+        )
 
     def _handle_ldap_config_changes(self):
         """Helpful method to handle the ldap changes and a restart if necessary."""
@@ -468,8 +526,23 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
-        # Sets the password for the system users
-        for user in (OperatorUser, BackupUser, MonitorUser, LogRotateUser):
+        if self.state.internal_user_passwords_are_initialized():
+            return
+
+        if system_users_secret_id := self.config.system_users:
+            user_passwords = None
+            try:
+                user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
+                validate_charm_user_password_config(user_passwords)
+            except (ModelError, SecretNotFoundError, InvalidPasswordError) as e:
+                logger.error(f"Invalid system-users secret: {e}.")
+
+            if user_passwords:
+                for username, password in user_passwords.items():
+                    user = get_user_from_username(username)
+                    self.state.set_user_password(user, password)
+
+        for user in CharmUsers:
             if not self.state.get_user_password(user):
                 self.state.set_user_password(user, self.workload.generate_password())
 
@@ -534,24 +607,34 @@ class MongoDBOperator(OperatorProtocol, Object):
     def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
         """Handles secrets changes event.
 
-        When user run set-password action, juju leader changes the password inside the database
-        and inside the secret object. This action runs the restart for monitoring tool and
-        for backup tool on non-leader units to keep them working with MongoDB. The same workflow
-        occurs on TLS certs change.
+        Leader units:
+            - If the changed secret is the one configured in `system-users`,
+            update the corresponding database user password and sync it
+            with the secret object.
+
+        Non-leader units:
+            - If the changed secret correspond to an internal user password,
+            refresh internal state and restart the MongoDB exporter and backup manager
+            to ensure they keep working with updated passwords.
         """
+        if self.charm.unit.is_leader():
+            if system_users_secret_id := self.config.system_users:
+                if system_users_secret_id == secret_id:
+                    logger.info("system-users secret was updated. Refreshing credentials.")
+                    self.update_internal_users_password_from_secret(system_users_secret_id)
+            return
         if generate_secret_label(self.charm.app.name, Scope.APP) == secret_label:
             scope = Scope.APP
         elif generate_secret_label(self.charm.app.name, Scope.UNIT) == secret_label:
             scope = Scope.UNIT
         else:
-            logging.debug("Secret %s changed, but it's unknown", secret_id)
+            logger.debug("Secret %s changed, but it's unknown", secret_id)
             return
-        logging.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
+        logger.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
         self.state.secrets.get(scope)
 
-        # Always update the PBM and mongodb exporter configuration so that if
-        # the secret changed, the configuration is updated and will still work
-        # afterwards.
+        # Update the PBM and mongodb exporter configuration so that ifthe secret changed,
+        # the configuration is updated and will still work afterwards.
         if self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
             self.backup_manager.configure_and_restart()
@@ -685,18 +768,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             except NotDrainedError:
                 logger.warning("Still draining shard.")
 
-    def set_password(self, username: str, password: str | None = None) -> tuple[str, str]:
-        """Handler for the set password action."""
+    def set_charmed_user_password(self, user: MongoDBUser, new_password: str) -> None:
+        """Handler for the set password."""
         self.assert_pass_password_checks()
-
-        user = get_user_from_username(username)
-        new_password = password or self.workload.generate_password()
-        if len(new_password) > MAX_PASSWORD_LENGTH:
-            raise SetPasswordError(
-                f"Password cannot be longer than {MAX_PASSWORD_LENGTH} characters."
-            )
-
-        secret_id = self.mongo_manager.set_user_password(user, new_password)
+        self.mongo_manager.set_user_password(user, new_password)
         if user == BackupUser:
             # Update and restart PBM Agent.
             self.backup_manager.configure_and_restart()
@@ -712,8 +787,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 new_password,
             )
 
-        return new_password, secret_id
-
     # END: Handlers.
 
     def assert_pass_password_checks(self) -> None:
@@ -723,7 +796,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Password rotation must be called on leader unit."
             )
         if self.state.upgrade_in_progress:
-            raise NonDeferrableFailedHookChecksError(
+            raise DeferrableFailedHookChecksError(
                 "Cannot set passwords while an upgrade is in progress"
             )
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -732,14 +805,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
         pbm_status = self.backup_manager.backup_state()
         if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
-            raise NonDeferrableFailedHookChecksError(
+            raise DeferrableFailedHookChecksError(
                 "Cannot change a password while a backup/restore is in progress."
             )
-
-    def get_password(self, username: str) -> str:
-        """Gets the password for the relevant username."""
-        user = get_user_from_username(username)
-        return self.state.get_user_password(user)
 
     def perform_self_healing(self) -> None:
         """Reconfigures the replica set if necessary.
@@ -1022,7 +1090,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return self.state.statuses.get(scope=scope, component=self.name).root
 
         if scope == "app":
-            return charm_statuses
+            return self.get_password_management_statuses()
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
@@ -1047,3 +1115,19 @@ class MongoDBOperator(OperatorProtocol, Object):
             return charm_statuses
 
         return charm_statuses
+
+    def get_password_management_statuses(self) -> list[StatusObject]:
+        """Returns the statuses related to the system-users configuration."""
+        statuses = []
+        if self.state.is_role(MongoDBRoles.SHARD) and self.config.system_users:
+            statuses.append(CharmStatuses.PASSWORD_ON_SHARD.value)
+            return statuses
+
+        if system_users_secret_id := self.config.system_users:
+            try:
+                user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
+                validate_charm_user_password_config(user_passwords)
+            except (ModelError, SecretNotFoundError, InvalidPasswordError) as e:
+                logger.error(f"Invalid system-users secret: {e}.")
+                statuses.append(CharmStatuses.INVALID_SYSTEM_USERS.value)
+        return statuses

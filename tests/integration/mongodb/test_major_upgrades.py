@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import CharmUsers
+from single_kernel_mongo.utils.mongodb_users import CharmUsernames
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -19,7 +19,6 @@ from ..helpers.common import (
     deploy_application,
     deploy_charm,
     find_unit,
-    get_password,
     get_unit_id,
     relate_mongodb_and_application,
     set_password,
@@ -27,7 +26,7 @@ from ..helpers.common import (
     stop_continous_writes,
 )
 from ..helpers.types import Substrate
-from ..helpers.upgrade import set_fcv
+from ..helpers.upgrade import get_password_action, set_fcv, set_password_action
 
 MONGODB_SIX = "mongodb-six"
 MONGODB_SEVEN = "mongodb-seven"
@@ -140,13 +139,13 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
-        password = await get_password(ops_test, username=user, app_name=MONGODB_SIX)
+    for username in CharmUsernames:
+        password = await get_password_action(ops_test, username=username, app_name=MONGODB_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_SEVEN)
-        await set_password(
+        await set_password_action(
             ops_test,
             unit_id=get_unit_id(leader_unit.name),
-            username=user,
+            username=username,
             password=password,
             app_name=MONGODB_SEVEN,
         )
@@ -233,18 +232,16 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in CharmUsers:
-        password = await get_password(ops_test, username=user, app_name=MONGODB_SIX)
-        leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_EIGHT)
+    for username in CharmUsernames:
+        password = await get_password_action(ops_test, username=username, app_name=MONGODB_SIX)
         await set_password(
             ops_test,
-            unit_id=get_unit_id(leader_unit.name),
-            username=user,
+            username=username,
             password=password,
             app_name=MONGODB_EIGHT,
         )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
+        await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail
