@@ -20,6 +20,7 @@ from ..helpers.common import (
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
+    INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     MONITOR_USERNAME,
     OPERATOR_USERNAME,
@@ -52,6 +53,7 @@ from ..helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 MONITOR_PASSWORD = "my-new-secret-password"
+OPERATOR_PASSWORD = "SOMETHING"
 
 
 @pytest.mark.abort_on_fail
@@ -182,13 +184,12 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
     app_name = await get_app_name(ops_test)
-    new_password = "something"
-    await set_password(ops_test, OPERATOR_USERNAME, new_password, app_name)
+    await set_password(ops_test, OPERATOR_USERNAME, OPERATOR_PASSWORD, app_name)
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
     new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
 
-    assert new_password == new_password_reported
+    assert OPERATOR_PASSWORD == new_password_reported
 
     unit = await find_unit(ops_test, leader=True)
     unit_id = int(unit.name.split("/")[1])
@@ -197,7 +198,7 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
     # verify that the password is updated in mongod by inserting into the collection.
     try:
         client = MongoClient(
-            unit_uri(ip_address, new_password, app_name),
+            unit_uri(ip_address, OPERATOR_PASSWORD, app_name),
             directConnection=True,
         )
         client[DEFAULT_DATABASE_NAME].list_collection_names()
@@ -205,6 +206,34 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
         assert False, f"Failed to access collection with new password, error: {e}"
     finally:
         client.close()
+
+
+@pytest.mark.abort_on_fail
+async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None:
+    """Test password update for a secret not granted to the application."""
+    new_password = "NEW-PASSWORD"
+    secret_name = "test-secret"
+    secret_id = await ops_test.model.add_secret(
+        name=secret_name, data_args=[f"{OPERATOR_USERNAME}={new_password}"]
+    )
+    app_name = await get_app_name(ops_test)
+    await ops_test.model.applications[app_name].set_config(
+        {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
+    )
+    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
+
+    app = ops_test.model.applications[app_name]
+    assert app.status_message == "Invalid secret in system-users config."
+
+    reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    # The password remained unchanged
+    assert OPERATOR_PASSWORD == reported_password
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+
+    reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    assert new_password == reported_password
 
 
 @pytest.mark.abort_on_fail

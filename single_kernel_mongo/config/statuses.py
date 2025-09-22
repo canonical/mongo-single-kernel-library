@@ -103,7 +103,7 @@ class CharmStatuses(Enum):
     INVALID_SYSTEM_USERS = StatusObject(
         status="blocked",
         message="Invalid secret in system-users config.",
-        action="Check logs and verify the content of the system-users config.",
+        action="Check logs and verify the content and permissions of the secret in the system-users config.",
         check="Configuration update failure.",
         running="async",
     )

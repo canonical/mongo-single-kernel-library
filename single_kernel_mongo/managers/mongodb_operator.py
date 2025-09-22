@@ -465,7 +465,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             user_passwords = self.charm.state.get_secret_from_id(system_users_secret_id)
             validate_charm_user_password_config(user_passwords)
-        except (ModelError, SecretNotFoundError, InvalidPasswordError) as e:
+        except ModelError as e:
+            logger.error(f"Invalid system-users secret: {e}.")
+            self.charm.status_handler.set_running_status(
+                CharmStatuses.INVALID_SYSTEM_USERS.value,
+                scope="app",
+                statuses_state=self.state.statuses,
+                component_name=self.name,
+            )
+            raise SetPasswordError("The charm has no permission to access the secret.")
+        except (SecretNotFoundError, InvalidPasswordError) as e:
             logger.error(f"Invalid system-users secret: {e}.")
             self.charm.status_handler.set_running_status(
                 CharmStatuses.INVALID_SYSTEM_USERS.value,
