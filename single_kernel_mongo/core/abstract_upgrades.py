@@ -872,7 +872,9 @@ class GenericMongoDBUpgradeManager(ManagerStatusProtocol, Generic[T], Object, AB
     def set_mongos_feature_compatibilty_version(self, feature_version: str) -> None:
         """Sets the mongos feature compatibility version."""
         with MongoConnection(self.state.mongos_config) as mongos:
-            mongos.client.admin.command("setFeatureCompatibilityVersion", feature_version)
+            mongos.client.admin.command(
+                "setFeatureCompatibilityVersion", feature_version, confirm=True
+            )
 
     @retry(
         stop=stop_after_attempt(10),
