@@ -220,9 +220,8 @@ async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None
     await ops_test.model.applications[app_name].set_config(
         {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
     )
-    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
-
     app = ops_test.model.applications[app_name]
+    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
     assert app.status_message == "Invalid secret in system-users config."
 
     reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
