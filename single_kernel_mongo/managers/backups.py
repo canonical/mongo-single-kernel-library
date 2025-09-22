@@ -246,7 +246,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         Only replica sets and config_servers can integrate to s3-integrator.
         """
-        return (self.state.s3_relation is None) or (not self.state.is_role(MongoDBRoles.SHARD))
+        return (
+            self.state.s3_relation is None
+            or self.state.is_role(MongoDBRoles.REPLICATION)
+            or self.state.is_role(MongoDBRoles.CONFIG_SERVER)
+        )
 
     def cleanup_certs_and_restart(self, relation: Relation) -> None:
         """On relation broken event, we need to remove the certificate from the trust store."""
