@@ -360,6 +360,7 @@ class UpgradeStatuses(Enum):
     REFRESH_IN_PROGRESS = StatusObject(
         status="maintenance",
         message="Refreshing...",
+        action="To rollback, run `juju refresh` to the previous revision.",
         approved_critical_component=True,
     )
 
