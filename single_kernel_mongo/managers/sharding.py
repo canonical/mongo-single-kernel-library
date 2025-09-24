@@ -180,6 +180,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         Raises:
             NonDeferrableFailedHookChecksError, DeferrableFailedHookChecksError
         """
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
@@ -196,8 +198,6 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         ):
             self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            raise NonDeferrableFailedHookChecksError("is only executed by config-server")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
         """Runs pre hooks checks and raises the appropriate error if it fails.
@@ -296,8 +296,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             charm_statuses["unit"].append(ConfigServerStatuses.MONGOS_NOT_RUNNING.value)
 
         if not self.state.config_server_relation:
-            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
-            charm_statuses["app"].append(ConfigServerStatuses.MISSING_SHARDING_REL.value)
+            charm_statuses["unit"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
+            charm_statuses["app"].append(ConfigServerStatuses.MISSING_CONF_SERVER_REL.value)
             # return as other statuses require shard(s) to compute
             return charm_statuses[scope]
 
@@ -349,7 +349,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             return
 
         self.state.statuses.delete(
-            ConfigServerStatuses.MISSING_SHARDING_REL.value, scope="unit", component=self.name
+            ConfigServerStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
         )
 
         self.charm.status_handler.set_running_status(
@@ -506,6 +506,8 @@ class ShardManager(Object, ManagerStatusProtocol):
 
     def assert_pass_sanity_hook_checks(self, is_leaving: bool) -> None:
         """Returns True if all the sanity hook checks for sharding pass."""
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            raise NonDeferrableFailedHookChecksError("is only executed by shards")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
         if not self.dependent.is_relation_feasible(self.relation_name):
@@ -526,8 +528,6 @@ class ShardManager(Object, ManagerStatusProtocol):
         ):
             self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
-        if not self.state.is_role(MongoDBRoles.SHARD):
-            raise NonDeferrableFailedHookChecksError("is only executed by shards")
 
     def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:
         """Runs the pre-hooks checks, returns True if all pass."""

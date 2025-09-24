@@ -350,6 +350,22 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
     assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
+def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTestCharm]):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.db_initialised = True
+
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(NonDeferrableFailedHookChecksError) as err:
+        manager.synchronise_cluster_secrets(relation)
+
+    assert err.value.args[0] == "is only executed by shards"
+
+
 def test_shard_manager_synchronise_cluster_secrets_success(
     harness: Harness[MongoTestCharm], mocker
 ):

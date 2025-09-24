@@ -120,7 +120,7 @@ class MongoDBCharmConfig(MongoConfigModel):
     @field_validator("role", mode="before")
     @classmethod
     def invalid_role_to_unknown(cls, v: str) -> MongoDBRoles:
-        """If the value is neither none or nodeport, returns unknown."""
+        """If the value is neither replication, config-server, or shard, returns unknown."""
         if v not in MongoDBRoles.valid_roles():
             return MongoDBRoles.UNKNOWN
         return MongoDBRoles(v)
