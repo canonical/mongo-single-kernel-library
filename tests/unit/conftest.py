@@ -50,8 +50,10 @@ def harness(substrate: Substrate, mongod_base_path: Path) -> Harness:
         container = harness.model.unit.get_container("mongod")
         harness.set_can_connect(container, True)
     with harness.hooks_disabled():
+        harness.add_storage(storage_name="archive", count=1, attach=True)
         harness.add_storage(storage_name="data", count=1, attach=True)
         harness.add_storage(storage_name="logs", count=1, attach=True)
+        harness.add_storage(storage_name="temp", count=1, attach=True)
 
     return harness
 
