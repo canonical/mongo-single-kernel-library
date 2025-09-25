@@ -7,7 +7,7 @@ from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel, Field, computed_field
 
-from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, InternalUsers
+from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, InternalUsernames
 from single_kernel_mongo.exceptions import InvalidPasswordError
 
 
@@ -130,13 +130,13 @@ class MongoDBUser(BaseModel):
 
 
 OperatorUser = MongoDBUser(
-    username=InternalUsers.OPERATOR,
+    username=InternalUsernames.OPERATOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.DEFAULT},
 )
 
 MonitorUser = MongoDBUser(
-    username=InternalUsers.MONITOR,
+    username=InternalUsernames.MONITOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.MONITOR},
     privileges={
@@ -155,7 +155,7 @@ MonitorUser = MongoDBUser(
 )
 
 BackupUser = MongoDBUser(
-    username=InternalUsers.BACKUP,
+    username=InternalUsernames.BACKUP,
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
@@ -163,7 +163,7 @@ BackupUser = MongoDBUser(
 )
 
 LogRotateUser = MongoDBUser(
-    username=InternalUsers.LOGROTATE,
+    username=InternalUsernames.LOGROTATE,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.LOGROTATE},
     privileges={"resource": {"cluster": True}, "actions": ["logRotate"]},

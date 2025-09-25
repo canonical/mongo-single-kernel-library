@@ -558,7 +558,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 user_passwords[username] = password
 
         for user in InternalUsers:
-            if password := user_passwords.get(user.username):
+            if password := user_passwords.get(user.username, ""):
                 self.state.set_user_password(user, password)
             elif not self.state.get_user_password(user):
                 password = self.workload.generate_password()
@@ -1206,7 +1206,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def map_password_management_state_to_status(
         self, state: PasswordManagementState
-    ) -> list[StatusObject] | None:
+    ) -> list[StatusObject]:
         """Map from password management state to password management status."""
         match state:
             case PasswordManagementState.PASSWORD_ON_SHARD:
@@ -1219,7 +1219,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
         return []
 
-    def clear_password_management_statuses(self):
+    def clear_password_management_statuses(self) -> None:
         """Remove the password management statuses related to invalid system-users."""
         for status in {
             PasswordManagementStatuses.SECRET_NOT_GRANTED,
