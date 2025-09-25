@@ -11,11 +11,11 @@ from pymongo.errors import AutoReconnect, ServerSelectionTimeoutError
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
-    CharmStatuses,
     ConfigServerStatuses,
     MongoDBStatuses,
     MongodStatuses,
     MongosStatuses,
+    PasswordManagementStatuses,
     ShardStatuses,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -361,14 +361,14 @@ def test_get_statuses_system_users_no_secret_found(harness: Harness[MongoTestCha
         harness.update_config(
             {
                 "role": f"{role.value}",
-                "system-users": "some-secret-id",
+                "system-users": "secret:12345",
             }
         )
 
     statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == CharmStatuses.INVALID_SYSTEM_USERS.value
+    assert status == PasswordManagementStatuses.SECRET_NOT_FOUND.value
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -390,7 +390,25 @@ def test_get_statuses_system_users_invalid_content(
     statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == CharmStatuses.INVALID_SYSTEM_USERS.value
+    assert status == PasswordManagementStatuses.INVALID_SYSTEM_USERS.value
+
+
+@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+def test_get_statuses_system_users_invalid_secret_uri(harness: Harness[MongoTestCharm], role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": "1234",
+            }
+        )
+
+    statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == PasswordManagementStatuses.INVALID_SYSTEM_USERS.value
 
 
 @pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
@@ -469,7 +487,7 @@ def test_shard_get_status_shard_with_system_users_config(
     statuses = harness.charm.operator.get_statuses(scope=Scope.APP, recompute=True)
     status = next(iter(statuses), None)
 
-    assert status == CharmStatuses.PASSWORD_ON_SHARD.value
+    assert status == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_shard_get_status_charm_client_relation(

@@ -61,6 +61,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 
 logger = logging.getLogger(__name__)
@@ -169,8 +170,8 @@ class LifecycleEventsHandler(Object):
             WaitingForLeaderError,
             DeferrableFailedHookChecksError,
             SetPasswordError,
-        ):
-            event.defer()
+        ) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
@@ -184,7 +185,7 @@ class LifecycleEventsHandler(Object):
                 component=self.dependent.name,
             )
         except (NonDeferrableFailedHookChecksError, WorkloadServiceError):
-            pass
+            logger.info(f"{str(type(event))} will be skipped.")
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
@@ -206,8 +207,10 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
-        except (DeferrableFailedHookChecksError, SetPasswordError):
-            event.defer()
+        except (DeferrableFailedHookChecksError, SetPasswordError) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"{str(type(event))} will be skipped: {str(e)}")
 
     def on_relation_joined(self, event: RelationJoinedEvent):
         """Relation joined event."""

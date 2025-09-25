@@ -171,15 +171,7 @@ LogRotateUser = MongoDBUser(
     hosts={LOCALHOST},
 )
 
-
-CharmUsernames = {
-    OperatorUser.username,
-    BackupUser.username,
-    MonitorUser.username,
-    LogRotateUser.username,
-}
-
-CharmUsers = (
+InternalUsers = (
     OperatorUser,
     BackupUser,
     MonitorUser,
@@ -188,7 +180,11 @@ CharmUsers = (
 
 
 def get_user_from_username(username: str) -> MongoDBUser:
-    """Returns the key name for the password of the user."""
+    """Return the MongoDBUser instance that matches the given username.
+
+    Raises:
+        ValueError: If the username is not one of the known users.
+    """
     if username == OperatorUser.username:
         return OperatorUser
     if username == MonitorUser.username:
@@ -211,7 +207,8 @@ def validate_charm_user_password_config(user_passwords: dict):
     Raises:
         InvalidPasswordError: if any validation rule is violated.
     """
-    extra_users = set(user_passwords.keys()) - CharmUsernames
+    internal_usernames = {user.username for user in InternalUsers}
+    extra_users = set(user_passwords.keys()) - internal_usernames
     if extra_users:
         raise InvalidPasswordError(f"Unexpected usernames provided: {', '.join(extra_users)}")
 

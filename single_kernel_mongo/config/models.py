@@ -148,3 +148,33 @@ class BackupState(Enum):
     WAITING_TO_SYNC = auto()
     FAILED_TO_CREATE_BUCKET = auto()
     ACTIVE = auto()
+
+
+class PasswordManagementState(Enum):
+    """Password management state that can be mapped to a status."""
+
+    EMPTY = auto()
+    NOT_LEADER = auto()
+    PASSWORD_ON_SHARD = auto()
+    UPGRADE_RUNNING = auto()
+    BACKUP_RUNNING = auto()
+    SECRET_NOT_FOUND = auto()
+    SECRET_NOT_GRANTED = auto()
+    INVALID_CONTENT = auto()
+    NEED_PASSWORD_UPDATE = auto()
+
+
+@dataclass
+class PasswordManagementContext:
+    """Represents the current context of password management for internal users.
+
+    Attributes:
+        state (PasswordManagementState): The state of password management,
+        message (str): Optional human-readable message providing context about the state,
+        system_users (dict[str, str]): A mapping of usernames to passwords if the
+            system-users secret is valid. Empty otherwise.
+    """
+
+    state: PasswordManagementState
+    message: str = ""
+    system_users: dict[str, str] = field(default_factory=dict)

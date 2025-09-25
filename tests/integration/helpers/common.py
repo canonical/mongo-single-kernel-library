@@ -880,6 +880,12 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
         assert unit_statuses[0]["Message"] == message
 
 
+async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    app = ops_test.model.applications[app_name]
+    await ops_test.model.block_until(*[lambda: app.status == status], timeout=TIMEOUT)
+    assert app.status_message == message
+
+
 def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
     """Check if a relation is joined.
 

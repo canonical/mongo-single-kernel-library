@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import CharmUsernames
+from single_kernel_mongo.utils.mongodb_users import InternalUsers
 from tests.integration.helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
@@ -198,15 +198,15 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for username in CharmUsernames:
+    for user in InternalUsers:
         password = await get_password_action(
-            ops_test, username=username, app_name=CONFIG_SERVER_SIX
+            ops_test, username=user.username, app_name=CONFIG_SERVER_SIX
         )
         leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
         await set_password_action(
             ops_test,
             unit_id=get_unit_id(leader_unit.name),
-            username=username,
+            username=user.username,
             password=password,
             app_name=CONFIG_SERVER_SEVEN,
         )
@@ -318,15 +318,12 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for username in CharmUsernames:
+    for user in InternalUsers:
         password = await get_password_action(
-            ops_test, username=username, app_name=CONFIG_SERVER_SIX
+            ops_test, username=user.username, app_name=CONFIG_SERVER_SIX
         )
         await set_password(
-            ops_test,
-            username=username,
-            password=password,
-            app_name=CONFIG_SERVER_EIGHT,
+            ops_test, username=user.username, password=password, app_name=CONFIG_SERVER_EIGHT
         )
 
         await ops_test.model.wait_for_idle(

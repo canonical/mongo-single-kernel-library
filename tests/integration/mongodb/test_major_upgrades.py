@@ -9,7 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import CharmUsernames
+from single_kernel_mongo.utils.mongodb_users import InternalUsers
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -139,13 +139,13 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for username in CharmUsernames:
-        password = await get_password_action(ops_test, username=username, app_name=MONGODB_SIX)
+    for user in InternalUsers:
+        password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
         leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_SEVEN)
         await set_password_action(
             ops_test,
             unit_id=get_unit_id(leader_unit.name),
-            username=username,
+            username=user.username,
             password=password,
             app_name=MONGODB_SEVEN,
         )
@@ -232,11 +232,11 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for username in CharmUsernames:
-        password = await get_password_action(ops_test, username=username, app_name=MONGODB_SIX)
+    for user in InternalUsers:
+        password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
         await set_password(
             ops_test,
-            username=username,
+            username=user.username,
             password=password,
             app_name=MONGODB_EIGHT,
         )

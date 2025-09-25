@@ -27,6 +27,7 @@ from ..helpers.common import (
     TEST_DOCUMENTS,
     UNIT_IDS,
     audit_log_line_sanity_check,
+    check_app_status,
     check_if_test_documents_stored,
     check_or_scale_app,
     clear_continous_writes,
@@ -220,9 +221,8 @@ async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None
     await ops_test.model.applications[app_name].set_config(
         {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
     )
-    app = ops_test.model.applications[app_name]
-    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
-    assert app.status_message == "Invalid secret in system-users config."
+    expected_message = "Secret in system-users not granted."
+    await check_app_status(ops_test, app_name, "blocked", expected_message)
 
     reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
     # The password remained unchanged
@@ -276,9 +276,8 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     password1 = MONITOR_PASSWORD
     await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
 
-    app = ops_test.model.applications[app_name]
-    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
-    assert app.status_message == "Invalid secret in system-users config."
+    expected_message = "Invalid secret in system-users config."
+    await check_app_status(ops_test, app_name, "blocked", expected_message)
 
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
     # The password remained unchanged
@@ -304,9 +303,8 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
         password="c" * 4097,
         app_name=app_name,
     )
-    app = ops_test.model.applications[app_name]
-    await ops_test.model.block_until(*[lambda: app.status == "blocked"], timeout=1000)
-    assert app.status_message == "Invalid secret in system-users config."
+    expected_message = "Invalid secret in system-users config."
+    await check_app_status(ops_test, app_name, "blocked", expected_message)
 
     password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
 

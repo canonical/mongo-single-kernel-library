@@ -85,13 +85,6 @@ class CharmStatuses(Enum):
     WAITING_TO_START = StatusObject(status="waiting", message="Starting services.")
     MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
     MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
-    PASSWORD_ON_SHARD = StatusObject(
-        status="blocked",
-        message="Invalid system-users config. Shards do not manage passwords.",
-        short_message="Invalid system-users config.",
-        action="Remove the system-users config from shard.",
-        check="Configuration validation failure.",
-    )
 
     # RUNNING Statuses
     INSTALLING_MONGODB = StatusObject(
@@ -99,18 +92,6 @@ class CharmStatuses(Enum):
     )
     DEPLOYED_WITHOUT_TRUST = StatusObject(
         status="blocked", message="Charm deployed without `trust`", running="async"
-    )
-    INVALID_SYSTEM_USERS = StatusObject(
-        status="blocked",
-        message="Invalid secret in system-users config.",
-        action="Check logs and verify the content and permissions of the secret in the system-users config.",
-        check="Configuration update failure.",
-        running="async",
-    )
-    PASSWORD_UPDATE_FAILED = StatusObject(
-        status="maintenance",
-        message="Failed to update user passwords.",
-        running="blocking",
     )
 
 
@@ -447,3 +428,39 @@ class LdapStatuses(Enum):
     def on_error_status(err: Exception):
         """On error."""
         return StatusObject(status="blocked", message=f"{err}")
+
+
+class PasswordManagementStatuses(Enum):
+    """Password management statuses."""
+
+    PASSWORD_ON_SHARD = StatusObject(
+        status="blocked",
+        message="Invalid system-users config. Shards do not manage passwords.",
+        short_message="Invalid system-users config.",
+        action="Remove the system-users config from shard.",
+        check="Configuration validation failure.",
+    )
+    SECRET_NOT_GRANTED = StatusObject(
+        status="blocked",
+        message="Secret in system-users not granted.",
+        action="Check logs and verify permissions of the secret in the system-users config.",
+        check="Password update failure.",
+    )
+    SECRET_NOT_FOUND = StatusObject(
+        status="blocked",
+        message="Secret in system-users not found.",
+        action="Check logs and verify the existence of the secret in the system-users config.",
+        check="Password update failure.",
+    )
+    INVALID_SYSTEM_USERS = StatusObject(
+        status="blocked",
+        message="Invalid secret in system-users config.",
+        action="Check logs and verify the content of the secret in the system-users config.",
+        check="Password update failure.",
+    )
+    PASSWORD_UPDATE_FAILED = StatusObject(
+        status="maintenance",
+        message="Failed to update user passwords.",
+        action="Check logs.",
+        running="blocking",
+    )

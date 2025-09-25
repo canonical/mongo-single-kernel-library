@@ -4,20 +4,27 @@
 import json
 
 import pytest
+from ops.model import ModelError
 from ops.pebble import PathError, ProtocolError
 from ops.testing import ActionFailed, Harness
 from pymongo.errors import ConfigurationError, ConnectionFailure, OperationFailure
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import (
+    BackupState,
+    PasswordManagementContext,
+    PasswordManagementState,
+)
 from single_kernel_mongo.config.statuses import (
-    CharmStatuses,
     LdapStatuses,
     MongoDBStatuses,
     MongodStatuses,
+    PasswordManagementStatuses,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
+    NonDeferrableFailedHookChecksError,
     ShardingMigrationError,
     WorkloadExecError,
     WorkloadNotReadyError,
@@ -26,7 +33,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
-    CharmUsers,
+    InternalUsers,
     LogRotateUser,
     MonitorUser,
     OperatorUser,
@@ -603,7 +610,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
     mocked_defer.assert_called()
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_valid_system_users_password_is_updated(
     harness, mocker, mongodb_name, role
 ):
@@ -631,10 +638,10 @@ def test_on_config_changed_valid_system_users_password_is_updated(
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert len(statuses.root) == 0
+    assert statuses.root == []
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -652,10 +659,10 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert statuses[0] == CharmStatuses.INVALID_SYSTEM_USERS.value
+    assert statuses[0] == PasswordManagementStatuses.INVALID_SYSTEM_USERS.value
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_password_did_not_changed(
     harness, mocker, mongodb_name, role
 ):
@@ -681,10 +688,10 @@ def test_on_config_changed_system_users_password_did_not_changed(
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert len(statuses.root) == 0
+    assert statuses.root == []
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_one_password_changed(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -708,7 +715,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert len(statuses.root) == 0
+    assert statuses.root == []
 
 
 def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
@@ -730,14 +737,15 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert statuses[0] == CharmStatuses.PASSWORD_ON_SHARD.value
+    assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
-def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, mongodb_name, role):
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
+    defer = mocker.patch("ops.framework.EventBase.defer")
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
     harness.update_config(
@@ -750,10 +758,11 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, m
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert statuses[0] == CharmStatuses.INVALID_SYSTEM_USERS.value
+    assert statuses[0] == PasswordManagementStatuses.SECRET_NOT_FOUND.value
+    defer.assert_not_called()
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_fail_to_update_password(
     harness, mocker, mongodb_name, role
 ):
@@ -779,18 +788,18 @@ def test_on_config_changed_system_users_fail_to_update_password(
 def test_on_leader_elected_passwords_are_generated(harness):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert state.get_user_password(user) == ""
     harness.set_leader(True)
     assert len(state.get_keyfile()) == 1024
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert len(state.get_user_password(user)) == 32
 
 
 def test_on_leader_elected_sets_password_from_secret_in_config(harness, mongodb_name):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert state.get_user_password(user) == ""
     secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
     with harness.hooks_disabled():
@@ -811,7 +820,7 @@ def test_on_leader_elected_sets_password_from_secret_in_config_only_some_users(
 ):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert state.get_user_password(user) == ""
 
     new_passwords = {
@@ -836,7 +845,7 @@ def test_on_leader_elected_sets_password_from_secret_in_config_only_some_users(
 def test_on_leader_elected_failure_on_secret_obtained_from_config(harness):
     state = harness.charm.operator.state
     assert state.get_keyfile() is None
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert state.get_user_password(user) == ""
     with harness.hooks_disabled():
         harness.update_config(
@@ -845,7 +854,7 @@ def test_on_leader_elected_failure_on_secret_obtained_from_config(harness):
             }
         )
     harness.set_leader(True)
-    for user in CharmUsers:
+    for user in InternalUsers:
         assert len(state.get_user_password(user)) == 32
 
 
@@ -863,7 +872,7 @@ def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
     assert state.get_user_password(BackupUser) == backup_password
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -897,10 +906,10 @@ def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongod
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert len(statuses.root) == 0
+    assert statuses.root == []
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_secret_changed_system_users_update_on_leader_invalid_passwords(
     harness, mocker, mongodb_name, role
 ):
@@ -922,16 +931,17 @@ def test_on_secret_changed_system_users_update_on_leader_invalid_passwords(
             }
         )
 
-    harness.charm.operator.update_secrets_and_restart("label", secret_id)
+    with pytest.raises(NonDeferrableFailedHookChecksError):
+        harness.charm.operator.update_secrets_and_restart("label", secret_id)
 
-    set_user_password_mock.assert_not_called()
-    statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.APP, component=harness.charm.operator.name
-    )
-    assert statuses[0] == CharmStatuses.INVALID_SYSTEM_USERS.value
+        set_user_password_mock.assert_not_called()
+        statuses = harness.charm.operator.state.statuses.get(
+            scope=Scope.APP, component=harness.charm.operator.name
+        )
+        assert statuses[0] == PasswordManagementStatuses.INVALID_SYSTEM_USERS.value
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_secret_changed_on_leader_not_system_users_secret(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -955,7 +965,7 @@ def test_on_secret_changed_on_leader_not_system_users_secret(harness, mocker, mo
     set_user_password_mock.assert_not_called()
 
 
-@pytest.mark.parametrize(("role"), ((MongoDBRoles.CONFIG_SERVER), (MongoDBRoles.REPLICATION)))
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_secret_changed_system_users_update_during_upgrade(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -1010,7 +1020,7 @@ def test_on_secret_changed_system_users_update_on_leader_shard(harness, mocker, 
     statuses = harness.charm.operator.state.statuses.get(
         scope=Scope.APP, component=harness.charm.operator.name
     )
-    assert statuses[0] == CharmStatuses.PASSWORD_ON_SHARD.value
+    assert statuses[0] == PasswordManagementStatuses.PASSWORD_ON_SHARD.value
 
 
 def test_on_secret_changed_non_leader(
@@ -1528,3 +1538,226 @@ def test_primary_other_unit(
     harness.update_relation_data(rel.id, f"{mongodb_name}/1", PEER_ADDR[substrate])
     output = harness.run_action("get-primary")
     assert output.results["replica-set-primary"] == f"{mongodb_name}/1"
+
+
+@pytest.mark.parametrize(
+    "role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION, MongoDBRoles.SHARD]
+)
+def test_password_management_context_system_users_not_set(harness, role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(PasswordManagementState.EMPTY)
+    assert expected_context == context
+
+
+def test_password_management_context_shard_with_system_users(harness, mongodb_name):
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{MongoDBRoles.SHARD.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(PasswordManagementState.PASSWORD_ON_SHARD)
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_not_leader(harness, mongodb_name, role):
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.charm.operator.state.app_peer_data.role = role
+    with harness.hooks_disabled():
+        harness.set_leader(False)
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(PasswordManagementState.NOT_LEADER)
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_update_in_progress(harness, mocker, mongodb_name, role):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
+        return_value=True,
+    )
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.UPGRADE_RUNNING,
+        "Cannot update passwords while an upgrade is in progress.",
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("pbm_state", [BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING])
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_backup_running(harness, mocker, mongodb_name, role, pbm_state):
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state", return_value=pbm_state
+    )
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.BACKUP_RUNNING,
+        "Cannot update passwords while a backup/restore is in progress.",
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_invalid_secret_format(harness, role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": "12345",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.INVALID_CONTENT,
+        "Invalid secret URI '12345'. It must start with 'secret:'",
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_secret_not_found(harness, role):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": "secret:123445",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.SECRET_NOT_FOUND, "The secret 'secret:123445' does not exist."
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_secret_not_granted(harness, mocker, role):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.CharmState.get_secret_from_id",
+        side_effect=ModelError,
+    )
+    secret_id = harness.add_model_secret("some_application", VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.SECRET_NOT_GRANTED,
+        f"Secret '{secret_id}' has not be granted to the application.",
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_invalid_system_users_content(harness, mongodb_name, role):
+    secret_id = harness.add_model_secret(mongodb_name, INVALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.INVALID_CONTENT,
+        "Invalid system-users secret content. Unexpected usernames provided: invalid-user",
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_need_password_update(harness, mongodb_name, role):
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.NEED_PASSWORD_UPDATE, system_users=VALID_SYSTEM_USERS
+    )
+    assert expected_context == context
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_password_management_context_password_did_not_change(harness, mongodb_name, role):
+    secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
+    harness.set_leader(True)
+    harness.charm.operator.state.set_user_password(MonitorUser, "abc")
+    harness.charm.operator.state.set_user_password(OperatorUser, "123")
+    harness.charm.operator.state.set_user_password(LogRotateUser, "something")
+    harness.charm.operator.state.set_user_password(BackupUser, "123abc")
+    harness.charm.operator.state.app_peer_data.role = role
+    harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config(
+            {
+                "role": f"{role.value}",
+                "system-users": f"{secret_id}",
+            }
+        )
+    context = harness.charm.operator.get_password_management_context()
+    expected_context = PasswordManagementContext(
+        PasswordManagementState.EMPTY, system_users=VALID_SYSTEM_USERS
+    )
+    assert expected_context == context

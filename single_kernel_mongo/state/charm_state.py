@@ -80,7 +80,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
-    CharmUsers,
+    InternalUsers,
     LogRotateUser,
     MongoDBUser,
     MonitorUser,
@@ -510,7 +510,7 @@ class CharmState(Object, StatusesStateProtocol):
 
     def internal_user_passwords_are_initialized(self) -> bool:
         """Returns true if all the charmed users have a password."""
-        return all(self.get_user_password(user) for user in CharmUsers)
+        return all(self.get_user_password(user) for user in InternalUsers)
 
     def get_user_credentials(self) -> tuple[str | None, str | None]:
         """Retrieve the user credentials."""
@@ -885,6 +885,8 @@ class CharmState(Object, StatusesStateProtocol):
         Returns:
             dict: The content of the secret.
         """
+        if not secret_id.startswith("secret:"):
+            raise ValueError(f"Invalid secret URI '{secret_id}'. It must start with 'secret:'")
         try:
             secret_content = self.charm.model.get_secret(id=secret_id).get_content(refresh=True)
         except SecretNotFoundError:
