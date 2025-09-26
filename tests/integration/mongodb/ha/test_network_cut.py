@@ -141,7 +141,6 @@ async def test_network_cut(
         substrate,
         app_name=app_name,
         replica_set_hosts=ip_addresses,
-        online_unit=other_unit,
     )
     assert new_primary.name != primary.name
 
