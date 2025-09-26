@@ -467,7 +467,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not (context := self.get_password_management_context()):
             return
 
-        for status in self.map_password_management_state_to_status(context.state):
+        for status in context.map_state_to_status():
             self.state.statuses.add(status, scope="app", component=self.name)
 
         match context.state:
@@ -515,11 +515,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.update_single_user_password(user, new_password)
             except (SetPasswordError, WorkloadServiceError) as e:
                 logger.error(f"Failed to update password for {user.username}: {e}.")
-                self.charm.status_handler.set_running_status(
+                self.state.statuses.add(
                     PasswordManagementStatuses.PASSWORD_UPDATE_FAILED.value,
                     scope="app",
-                    statuses_state=self.state.statuses,
-                    component_name=self.name,
+                    component=self.name,
                 )
                 raise
             logger.info(f"Password updated for {user.username}.")
@@ -651,7 +650,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         logger.debug("Secret %s for scope %s changed, refreshing", secret_id, scope)
         self.state.secrets.get(scope)
 
-        # Update the PBM and mongodb exporter configuration so that ifthe secret changed,
+        # Update the PBM and mongodb exporter configuration so that if the secret changed,
         # the configuration is updated and will still work afterwards.
         if self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
@@ -1200,24 +1199,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def get_password_management_statuses(self) -> list[StatusObject]:
         """Returns the statuses related to password management."""
-        return self.map_password_management_state_to_status(
-            self.get_password_management_context().state
-        )
-
-    def map_password_management_state_to_status(
-        self, state: PasswordManagementState
-    ) -> list[StatusObject]:
-        """Map from password management state to password management status."""
-        match state:
-            case PasswordManagementState.PASSWORD_ON_SHARD:
-                return [PasswordManagementStatuses.PASSWORD_ON_SHARD.value]
-            case PasswordManagementState.SECRET_NOT_GRANTED:
-                return [PasswordManagementStatuses.SECRET_NOT_GRANTED.value]
-            case PasswordManagementState.SECRET_NOT_FOUND:
-                return [PasswordManagementStatuses.SECRET_NOT_FOUND.value]
-            case PasswordManagementState.INVALID_CONTENT:
-                return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
-        return []
+        return self.get_password_management_context().map_state_to_status()
 
     def clear_password_management_statuses(self) -> None:
         """Remove the password management statuses related to invalid system-users."""
@@ -1225,6 +1207,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             PasswordManagementStatuses.SECRET_NOT_GRANTED,
             PasswordManagementStatuses.SECRET_NOT_FOUND,
             PasswordManagementStatuses.INVALID_SYSTEM_USERS,
+            PasswordManagementStatuses.PASSWORD_UPDATE_FAILED,
         }:
             self.state.statuses.delete(
                 status.value,

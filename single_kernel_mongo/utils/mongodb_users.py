@@ -196,7 +196,7 @@ def get_user_from_username(username: str) -> MongoDBUser:
     raise ValueError(f"Unknown user: {username}")
 
 
-def validate_charm_user_password_config(user_passwords: dict):
+def validate_charm_user_password_config(user_passwords: dict) -> None:
     """Validate a mapping of charm usernames to passwords.
 
     Rules:
@@ -208,13 +208,11 @@ def validate_charm_user_password_config(user_passwords: dict):
         InvalidPasswordError: if any validation rule is violated.
     """
     internal_usernames = {user.username for user in InternalUsers}
-    extra_users = set(user_passwords.keys()) - internal_usernames
-    if extra_users:
+    if extra_users := set(user_passwords.keys()) - internal_usernames:
         raise InvalidPasswordError(f"Unexpected usernames provided: {', '.join(extra_users)}")
 
     for username, password in user_passwords.items():
-        pwd = password.strip()
-        if not pwd:
+        if not (pwd := password.strip()):
             raise InvalidPasswordError(
                 f"Password for user '{username}' cannot be empty or whitespace"
             )

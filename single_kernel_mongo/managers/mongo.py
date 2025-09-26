@@ -103,7 +103,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
 
-    def set_user_password(self, user: MongoDBUser, password: str):
+    def set_user_password(self, user: MongoDBUser, password: str) -> None:
         """Sets the password for a given username in the workload and secrets.
 
         Raises:

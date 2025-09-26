@@ -13,8 +13,11 @@ from importlib import resources as impresources
 from importlib.abc import Traversable
 from pathlib import Path
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
+
 from single_kernel_mongo import observability_rules, templates
 from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.statuses import PasswordManagementStatuses
 
 TEMPLATE_DIRECTORY = impresources.files(templates)
 OBSERVABILITY_DIRECTORY = impresources.files(observability_rules)
@@ -178,3 +181,16 @@ class PasswordManagementContext:
     state: PasswordManagementState
     message: str = ""
     system_users: dict[str, str] = field(default_factory=dict)
+
+    def map_state_to_status(self) -> list[StatusObject]:
+        """Map from password management state to password management status."""
+        match self.state:
+            case PasswordManagementState.PASSWORD_ON_SHARD:
+                return [PasswordManagementStatuses.PASSWORD_ON_SHARD.value]
+            case PasswordManagementState.SECRET_NOT_GRANTED:
+                return [PasswordManagementStatuses.SECRET_NOT_GRANTED.value]
+            case PasswordManagementState.SECRET_NOT_FOUND:
+                return [PasswordManagementStatuses.SECRET_NOT_FOUND.value]
+            case PasswordManagementState.INVALID_CONTENT:
+                return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
+        return []
