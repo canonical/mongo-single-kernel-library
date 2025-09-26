@@ -13,8 +13,11 @@ from importlib import resources as impresources
 from importlib.abc import Traversable
 from pathlib import Path
 
+from data_platform_helpers.advanced_statuses.models import StatusObject
+
 from single_kernel_mongo import observability_rules, templates
 from single_kernel_mongo.config.literals import CharmKind, Substrates
+from single_kernel_mongo.config.statuses import PasswordManagementStatuses
 
 TEMPLATE_DIRECTORY = impresources.files(templates)
 OBSERVABILITY_DIRECTORY = impresources.files(observability_rules)
@@ -148,3 +151,46 @@ class BackupState(Enum):
     WAITING_TO_SYNC = auto()
     FAILED_TO_CREATE_BUCKET = auto()
     ACTIVE = auto()
+
+
+class PasswordManagementState(Enum):
+    """Password management state that can be mapped to a status."""
+
+    EMPTY = auto()
+    NOT_LEADER = auto()
+    PASSWORD_ON_SHARD = auto()
+    UPGRADE_RUNNING = auto()
+    BACKUP_RUNNING = auto()
+    SECRET_NOT_FOUND = auto()
+    SECRET_NOT_GRANTED = auto()
+    INVALID_CONTENT = auto()
+    NEED_PASSWORD_UPDATE = auto()
+
+
+@dataclass
+class PasswordManagementContext:
+    """Represents the current context of password management for internal users.
+
+    Attributes:
+        state (PasswordManagementState): The state of password management,
+        message (str): Optional human-readable message providing context about the state,
+        system_users (dict[str, str]): A mapping of usernames to passwords if the
+            system-users secret is valid. Empty otherwise.
+    """
+
+    state: PasswordManagementState
+    message: str = ""
+    system_users: dict[str, str] = field(default_factory=dict)
+
+    def map_state_to_status(self) -> list[StatusObject]:
+        """Map from password management state to password management status."""
+        match self.state:
+            case PasswordManagementState.PASSWORD_ON_SHARD:
+                return [PasswordManagementStatuses.PASSWORD_ON_SHARD.value]
+            case PasswordManagementState.SECRET_NOT_GRANTED:
+                return [PasswordManagementStatuses.SECRET_NOT_GRANTED.value]
+            case PasswordManagementState.SECRET_NOT_FOUND:
+                return [PasswordManagementStatuses.SECRET_NOT_FOUND.value]
+            case PasswordManagementState.INVALID_CONTENT:
+                return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
+        return []

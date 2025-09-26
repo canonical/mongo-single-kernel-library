@@ -7,7 +7,8 @@ from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel, Field, computed_field
 
-from single_kernel_mongo.config.literals import LOCALHOST, InternalUsers
+from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, InternalUsernames
+from single_kernel_mongo.exceptions import InvalidPasswordError
 
 
 class DBPrivilege(TypedDict, total=False):
@@ -129,13 +130,13 @@ class MongoDBUser(BaseModel):
 
 
 OperatorUser = MongoDBUser(
-    username=InternalUsers.OPERATOR,
+    username=InternalUsernames.OPERATOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.DEFAULT},
 )
 
 MonitorUser = MongoDBUser(
-    username=InternalUsers.MONITOR,
+    username=InternalUsernames.MONITOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.MONITOR},
     privileges={
@@ -154,7 +155,7 @@ MonitorUser = MongoDBUser(
 )
 
 BackupUser = MongoDBUser(
-    username=InternalUsers.BACKUP,
+    username=InternalUsernames.BACKUP,
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
@@ -162,7 +163,7 @@ BackupUser = MongoDBUser(
 )
 
 LogRotateUser = MongoDBUser(
-    username=InternalUsers.LOGROTATE,
+    username=InternalUsernames.LOGROTATE,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.LOGROTATE},
     privileges={"resource": {"cluster": True}, "actions": ["logRotate"]},
@@ -171,16 +172,20 @@ LogRotateUser = MongoDBUser(
 )
 
 
-CharmUsers = (
-    OperatorUser.username,
-    BackupUser.username,
-    MonitorUser.username,
-    LogRotateUser.username,
+InternalUsers = (
+    OperatorUser,
+    BackupUser,
+    MonitorUser,
+    LogRotateUser,
 )
 
 
 def get_user_from_username(username: str) -> MongoDBUser:
-    """Returns the key name for the password of the user."""
+    """Return the MongoDBUser instance that matches the given username.
+
+    Raises:
+        ValueError: If the username is not one of the known users.
+    """
     if username == OperatorUser.username:
         return OperatorUser
     if username == MonitorUser.username:
@@ -190,3 +195,29 @@ def get_user_from_username(username: str) -> MongoDBUser:
     if username == LogRotateUser.username:
         return LogRotateUser
     raise ValueError(f"Unknown user: {username}")
+
+
+def validate_charm_user_password_config(user_passwords: dict) -> None:
+    """Validate a mapping of charm usernames to passwords.
+
+    Rules:
+      - Only internal charmed usernames are allowed.
+      - Passwords must not be empty or only whitespace.
+      - Passwords must not exceed MAX_PASSWORD_LENGTH characters.
+
+    Raises:
+        InvalidPasswordError: if any validation rule is violated.
+    """
+    internal_usernames = {user.username for user in InternalUsers}
+    if extra_users := set(user_passwords.keys()) - internal_usernames:
+        raise InvalidPasswordError(f"Unexpected usernames provided: {', '.join(extra_users)}")
+
+    for username, password in user_passwords.items():
+        if not (pwd := password.strip()):
+            raise InvalidPasswordError(
+                f"Password for user '{username}' cannot be empty or whitespace"
+            )
+        if len(pwd) > MAX_PASSWORD_LENGTH:
+            raise InvalidPasswordError(
+                f"Password for user '{username}' exceeds max length of {MAX_PASSWORD_LENGTH} characters"
+            )

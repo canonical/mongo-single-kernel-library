@@ -41,8 +41,8 @@ class MongoPorts(IntEnum):
     MONGOS_PORT = 27018
 
 
-class InternalUsers(str, Enum):
-    """The three allowed internal users."""
+class InternalUsernames(str, Enum):
+    """The allowed internal usernames."""
 
     OPERATOR = "operator"
     BACKUP = "backup"
@@ -59,7 +59,7 @@ class UnitState(str, Enum):
     OUTDATED = "outdated"  # Machines only
 
 
-SECRETS_APP = [f"{user}-password" for user in InternalUsers] + ["keyfile"]
+SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
 
 
 @dataclass(frozen=True)

@@ -43,6 +43,8 @@ TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
 OPERATOR_USERNAME = "operator"
 OPERATOR_PASSWORD = "operator-password"
+MONITOR_USERNAME = "monitor"
+INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
@@ -86,6 +88,10 @@ def mongosh(substrate: Substrate) -> str:
 
 class ProcessError(Exception):
     """Raised when a process fails."""
+
+
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
 
 
 async def deploy_charm(
@@ -198,9 +204,8 @@ async def generate_mongodb_client(
     app_name: str,
     mongos: bool,
     hosts: list[str] | None = None,
-    username: str = "operator",
+    username: str = OPERATOR_USERNAME,
     password: str | None = None,
-    unit: JujuUnit | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
     hosts = hosts or [
@@ -208,7 +213,7 @@ async def generate_mongodb_client(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    password = password or await get_password(ops_test, app_name=app_name, unit=unit)
+    password = password or await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     username = username
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = [f"{host}:{port}" for host in hosts]
@@ -337,35 +342,32 @@ def unit_uri(
 
 async def get_password(
     ops_test: OpsTest,
-    username="operator",
+    username=OPERATOR_USERNAME,
     app_name: str | None = None,
     unit: JujuUnit | None = None,
 ) -> str:
-    """Use the charm action to retrieve the password from provided unit.
-
-    Returns:
-        String with the password stored on the peer relation databag.
-    """
+    """Retrieve the password for a given user from the application's Juju secret."""
     app_name = app_name or await get_app_name(ops_test)
+    secret = await get_secret_by_label(ops_test, label=f"{app_name}.app")
+    return secret.get(f"{username}-password")
 
-    # Can retrieve from any unit running unit so we pick the first
-    # Optionally select a unit to get the password from (useful if unit/0 was deleted)
-    if unit:
-        unit_name = unit.name
-        unit_id = get_unit_id(unit.name)
-    else:
-        unit_name = ops_test.model.applications[app_name].units[0].name
-        unit_id = unit_name.split("/")[1]
 
-    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
-        "get-password", **{"username": username}
-    )
-    action = await action.wait()
-    try:
-        return action.results["password"]
-    except KeyError:
-        logger.error("Failed to get password. Action %s. Results %s", action, action.results)
-        return None
+async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    for secret_id in secret_ids:
+        secret_data_raw = await ops_test.juju(
+            "show-secret", "--format", "json", "--reveal", secret_id
+        )
+        secret_data = json.loads(secret_data_raw[1])
+
+        if label == secret_data[secret_id].get("label"):
+            return secret_data[secret_id]["content"]["Data"]
+
+    raise SecretNotFoundError(f"Secret with label {label} not found.")
 
 
 @retry(
@@ -420,8 +422,8 @@ async def get_direct_mongo_client(
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     match username, password:
         case None, None:
-            username = "operator"
-            password = await get_password(ops_test, app_name=app_name, unit=unit)
+            username = OPERATOR_USERNAME
+            password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
         case _, None:
             raise Exception("Please provide username and password")
         case None, _:
@@ -458,20 +460,43 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
 async def set_password(
     ops_test: OpsTest,
     unit_id: int,
-    username: str = "operator",
-    password: str = "secret",
-) -> dict[str, any]:
-    """Use the charm action to retrieve the password from provided unit.
+    username: str,
+    password: str,
+    app_name: str,
+) -> None:
+    """Set a user password via secret.
 
-    Returns:
-    String with the password stored on the peer relation databag.
+    Beware that if the function is called, subsequently, the secret will only
+    keep the content of the username in the latest call.
+
+    Args:
+        ops_test: ops_test instance.
+        username: the user to set the password.
+        password: password to use
+        app_name: the application the created secret will be granted to
     """
-    app_name = await get_app_name(ops_test)
-    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
-        "set-password", **{"username": username, "password": password}
+    secret_name = "system_users_secret"
+
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"{username}={password}"]
+        )
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"label": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name, data_args=[f"{username}={password}"], new_name=secret_name
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    # update the application config to include the secret
+    logger.info(
+        f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config to {secret_id} {username}={password}"
     )
-    action = await action.wait()
-    return action.results
+    await ops_test.model.applications[app_name].set_config(
+        {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
+    )
 
 
 async def get_application_relation_data(
@@ -854,6 +879,12 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
         assert unit_statuses[0]["Message"] == message
 
 
+async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    app = ops_test.model.applications[app_name]
+    await ops_test.model.block_until(*[lambda: app.status == status], timeout=TIMEOUT)
+    assert app.status_message == message
+
+
 def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
     """Check if a relation is joined.
 
@@ -983,7 +1014,11 @@ async def count_writes(
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
     uri = await generate_mongodb_client(
-        ops_test, substrate, app_name, mongos=False, hosts=[host], unit=unit
+        ops_test,
+        substrate,
+        app_name,
+        mongos=False,
+        hosts=[host],
     )
 
     client = MongoClient(uri, directConnection=True)
@@ -1143,7 +1178,7 @@ def mongodb_log_path(substrate: Substrate) -> str:
 async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
     """Verifies replica is running and available."""
     app_name = app_name or await get_app_name(ops_test)
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(unit_ip, password, app_name), directConnection=True)
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
