@@ -114,6 +114,7 @@ class MongoDBCharmConfig(MongoConfigModel):
     """The structured configuration of a MongoDB charm."""
 
     model_config = ConfigDict(use_enum_values=True, extra="allow")
+    system_users: str | None = Field(default=None, alias="system-users")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.REPLICATION)
 

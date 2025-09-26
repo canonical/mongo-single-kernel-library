@@ -35,6 +35,7 @@ from ..helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
+    OPERATOR_USERNAME,
     TIMEOUT,
     ProcessError,
     count_primaries,
@@ -234,11 +235,12 @@ async def fetch_primary(
     ops_test: OpsTest,
     substrate: Substrate,
     app_name: str,
-    online_unit: JujuUnit | None = None,
 ) -> str | None:
     """Returns IP address of current replica set primary."""
     password = await get_password(
-        ops_test, username="operator", app_name=app_name, unit=online_unit
+        ops_test,
+        username=OPERATOR_USERNAME,
+        app_name=app_name,
     )
 
     uri = await generate_mongodb_client(
@@ -277,14 +279,13 @@ async def replica_set_primary(
     substrate: Substrate,
     app_name: str,
     replica_set_hosts: list[str],
-    online_unit: JujuUnit | None = None,
 ) -> JujuUnit | None:
     """Returns the primary of the replica set.
 
     Retrying 5 times to give the replica set time to elect a new primary, also checks against the
     valid_ips to verify that the primary is not outdated.
     """
-    primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name, online_unit)
+    primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name)
 
     if substrate == "microk8s":
         unit_name = host_to_unit(primary_ip)
@@ -527,8 +528,6 @@ async def verify_writes(
     ops_test: OpsTest,
     substrate: Substrate,
     app_name: str,
-    secondary: JujuUnit | None = None,
-    online_unit: JujuUnit | None = None,
 ) -> int:
     # verify that no writes to the db were missed
     total_expected_writes = await stop_continous_writes(
@@ -541,7 +540,10 @@ async def verify_writes(
     ]
 
     primary_unit = await replica_set_primary(
-        ops_test, substrate, app_name, hosts, online_unit=online_unit
+        ops_test,
+        substrate,
+        app_name,
+        hosts,
     )
 
     assert primary_unit, "No primary unit"
@@ -590,7 +592,7 @@ async def insert_release_to_cluster(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
     db = client[DEFAULT_DATABASE_NAME]
     test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
@@ -617,7 +619,7 @@ async def retrieve_entries(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
 
     db = client[db_name]
@@ -920,7 +922,7 @@ async def verify_replica_set_configuration(
     member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
     assert set(member_ips) == set(hosts), "all members not running under the same replset"
 
-    password = await get_password(ops_test, app_name=app_name)
+    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
 
     # verify there is only one primary
     assert (

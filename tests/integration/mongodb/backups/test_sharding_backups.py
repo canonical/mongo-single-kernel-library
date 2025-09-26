@@ -17,7 +17,6 @@ from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
-    get_leader_id,
     get_password,
     set_password,
 )
@@ -143,7 +142,6 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
         timeout=TIMEOUT,
         status="active",
     )
-    config_leader_id = await get_leader_id(ops_test, app_name=CONFIG_SERVER_APP_NAME)
     new_password = "new-password"
 
     shard_backup_password = await get_password(
@@ -160,7 +158,9 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
         shard_backup_password != new_password
     ), "shard-two is incorrectly already set to the new password."
 
-    await set_password(ops_test, unit_id=config_leader_id, username="backup", password=new_password)
+    await set_password(
+        ops_test, username="backup", password=new_password, app_name=CONFIG_SERVER_APP_NAME
+    )
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
         idle_period=20,

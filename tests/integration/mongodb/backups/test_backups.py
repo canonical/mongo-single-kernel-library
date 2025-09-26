@@ -21,6 +21,7 @@ from ...helpers.backups import (
 )
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
+    OPERATOR_USERNAME,
     TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
@@ -31,6 +32,7 @@ from ...helpers.common import (
     get_app_name,
     get_password,
     is_relation_joined,
+    set_password,
     wait_for_mongodb_units_blocked,
 )
 from ...helpers.types import Substrate
@@ -322,7 +324,7 @@ async def test_restore_new_cluster(
     await create_and_verify_backup(ops_test, db_app_name)
 
     # save old password, since after restoring we will need this password to authenticate.
-    old_password = await get_password(ops_test, app_name=db_app_name)
+    old_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=db_app_name)
 
     # deploy a new cluster with a different name
     await deploy_charm(
@@ -343,10 +345,12 @@ async def test_restore_new_cluster(
         ),
     )
 
-    db_unit = await find_unit(ops_test, leader=True, app_name=new_cluster_app_name)
-    action = await db_unit.run_action("set-password", **{"password": old_password})
-    action = await action.wait()
-    assert action.status == "completed"
+    await set_password(
+        ops_test, username=OPERATOR_USERNAME, password=old_password, app_name=new_cluster_app_name
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[new_cluster_app_name], status="active", timeout=TIMEOUT
+    )
 
     # relate to s3 - s3 has the necessary configurations
     await ops_test.model.integrate(S3_APP_NAME, new_cluster_app_name)
@@ -361,6 +365,7 @@ async def test_restore_new_cluster(
     )
 
     # verify that the listed backups from the old cluster are not listed as failed.
+    db_unit = await find_unit(ops_test, leader=True, app_name=new_cluster_app_name)
     assert await count_failed_backups(db_unit) == 0, "Backups from old cluster are listed as failed"
 
     # find most recent backup id and restore
@@ -393,10 +398,11 @@ async def test_restore_new_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_update_backup_password(ops_test: OpsTest) -> None:
+async def test_update_backup_password(
+    ops_test: OpsTest,
+) -> None:
     """Verifies that after changing the backup password the pbm tool is updated and functional."""
     db_app_name = await get_app_name(ops_test)
-
     db_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
 
     # wait for charm to be idle before setting password
@@ -404,15 +410,10 @@ async def test_update_backup_password(ops_test: OpsTest) -> None:
         ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
     )
 
-    parameters = {"username": "backup"}
-    action = await db_unit.run_action("set-password", **parameters)
-    action = await action.wait()
-    assert action.status == "completed", "failed to set backup password"
+    await set_password(ops_test, username="backup", password="new-password", app_name=db_app_name)
 
     # wait for charm to be idle after setting password
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
+    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
 
     # verify we still have connection to pbm via creating a backup
     action = await db_unit.run_action(action_name="create-backup")
