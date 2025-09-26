@@ -344,7 +344,6 @@ async def get_password(
     ops_test: OpsTest,
     username=OPERATOR_USERNAME,
     app_name: str | None = None,
-    unit: JujuUnit | None = None,
 ) -> str:
     """Retrieve the password for a given user from the application's Juju secret."""
     app_name = app_name or await get_app_name(ops_test)
