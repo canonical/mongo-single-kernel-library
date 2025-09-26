@@ -161,7 +161,12 @@ async def test_set_operator_password(ops_test: OpsTest):
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
-    await set_password(ops_test, username=OPERATOR_USERNAME, password=OPERATOR_PASSWORD)
+    await set_password(
+        ops_test,
+        username=OPERATOR_USERNAME,
+        password=OPERATOR_PASSWORD,
+        app_name=CONFIG_SERVER_APP_NAME,
+    )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_APPS,
         status="active",

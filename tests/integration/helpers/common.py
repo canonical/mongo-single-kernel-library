@@ -459,7 +459,6 @@ async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
 
 async def set_password(
     ops_test: OpsTest,
-    unit_id: int,
     username: str,
     password: str,
     app_name: str,
