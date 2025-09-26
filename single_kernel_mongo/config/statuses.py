@@ -507,5 +507,4 @@ class PasswordManagementStatuses(Enum):
         status="maintenance",
         message="Failed to update user passwords.",
         action="Check logs.",
-        running="blocking",
     )
