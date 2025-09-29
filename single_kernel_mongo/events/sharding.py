@@ -174,7 +174,9 @@ class ShardEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             self.manager.state.statuses.set(
-                ShardStatuses.MISSING_CONF_SERVER_REL, scope="unit", component=self.manager.name
+                ShardStatuses.MISSING_CONF_SERVER_REL.value,
+                scope="unit",
+                component=self.manager.name,
             )
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
