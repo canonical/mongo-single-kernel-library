@@ -542,3 +542,22 @@ def test_shard_manager_sync_cluster_passwords(
 
     assert manager.state.get_user_password(OperatorUser) == "test-operator"
     assert manager.state.get_user_password(BackupUser) == "test-backup"
+
+
+def test_shard_manager_remove_invalid_relation(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname
+):
+    manager = harness.charm.operator.shard_manager
+
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    harness.charm.operator.state.db_initialised = True
+
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(NonDeferrableFailedHookChecksError) as err:
+        manager.assert_pass_hook_checks(relation, is_leaving=True)
+
+    assert err.value == "Config-server never set up, no need to process broken event."
