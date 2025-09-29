@@ -141,14 +141,11 @@ async def test_network_cut(
         substrate,
         app_name=app_name,
         replica_set_hosts=ip_addresses,
-        online_unit=other_unit,
     )
     assert new_primary.name != primary.name
 
     # verify that no writes to the db were missed
-    total_expected_writes = await verify_writes(
-        ops_test, substrate, app_name, online_unit=new_primary
-    )
+    total_expected_writes = await verify_writes(ops_test, substrate, app_name)
 
     # restore network connectivity to old primary
     restore_network_for_unit(ops_test, substrate, primary_hostname)

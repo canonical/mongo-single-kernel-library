@@ -3,9 +3,8 @@
 
 import httpx
 import pytest
-from data_platform_helpers.advanced_statuses.models import StatusObject
 from lightkube import ApiError
-from ops.testing import ActionFailed, Harness
+from ops.testing import Harness
 from tenacity import Future, RetryError
 
 from single_kernel_mongo.config.literals import UnitState
@@ -56,25 +55,6 @@ def test_on_relation_handler(
     getattr(harness.charm.on[relation.name], handler).emit(relation)
 
     defer.assert_called()
-
-
-def test_pass_pre_set_password_check_fails(harness: Harness[MongoTestCharm], mocker, mock_upgrade):
-    """Checks that pre set password fails."""
-    harness.set_leader(True)
-
-    def mock_shard_role(role_name: str):
-        return role_name != "shard"
-
-    mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.get_statuses",
-        return_value=[StatusObject(status="active", message="")],
-    )
-    harness.charm.is_role = mock_shard_role
-
-    with pytest.raises(ActionFailed) as action_failed:
-        harness.run_action("set-password")
-
-    assert action_failed.value.message == "Cannot set passwords while an upgrade is in progress"
 
 
 @pytest.mark.skip_if_substrate("lxd")

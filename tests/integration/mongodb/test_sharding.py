@@ -16,7 +16,6 @@ from ..helpers.common import (
     find_unit,
     generate_mongodb_client,
     get_address_of_unit,
-    get_leader_id,
     get_password,
     get_unit_id,
     remove_units,
@@ -162,12 +161,11 @@ async def test_set_operator_password(ops_test: OpsTest):
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
-    config_leader_id = await get_leader_id(ops_test, app_name=CONFIG_SERVER_APP_NAME)
     await set_password(
         ops_test,
-        unit_id=config_leader_id,
         username=OPERATOR_USERNAME,
         password=OPERATOR_PASSWORD,
+        app_name=CONFIG_SERVER_APP_NAME,
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_APPS,
