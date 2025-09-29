@@ -51,13 +51,17 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DeferrableFailedHookChecksError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
+    NonDeferrableFailedHookChecksError,
+    SetPasswordError,
     UpgradeInProgressError,
     WaitingForLeaderError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
+from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 
 logger = logging.getLogger(__name__)
@@ -173,8 +177,13 @@ class LifecycleEventsHandler(Object):
         """Config Changed Event."""
         try:
             self.dependent.update_config_and_restart()
-        except (UpgradeInProgressError, WaitingForLeaderError):
-            event.defer()
+        except (
+            UpgradeInProgressError,
+            WaitingForLeaderError,
+            DeferrableFailedHookChecksError,
+            SetPasswordError,
+        ) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
@@ -187,6 +196,8 @@ class LifecycleEventsHandler(Object):
                 scope="unit",
                 component=self.dependent.name,
             )
+        except (NonDeferrableFailedHookChecksError, WorkloadServiceError):
+            logger.info(f"{str(type(event))} will be skipped.")
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
@@ -208,6 +219,10 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
+        except (DeferrableFailedHookChecksError, SetPasswordError) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"{str(type(event))} will be skipped: {str(e)}")
 
     def on_relation_joined(self, event: RelationJoinedEvent):
         """Relation joined event."""

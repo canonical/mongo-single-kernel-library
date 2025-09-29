@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
 from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
-from ops import Object, Relation, Unit
+from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
 from pymongo.errors import (
     AutoReconnect,
     NotPrimaryError,
@@ -80,6 +80,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
+    InternalUsers,
     LogRotateUser,
     MongoDBUser,
     MonitorUser,
@@ -507,6 +508,10 @@ class CharmState(Object, StatusesStateProtocol):
         """Sets the user password for a system user."""
         return self.secrets.set(user.password_key_name, content, Scope.APP).label
 
+    def internal_user_passwords_are_initialized(self) -> bool:
+        """Returns true if all the charmed users have a password."""
+        return all(self.get_user_password(user) for user in InternalUsers)
+
     def get_user_credentials(self) -> tuple[str | None, str | None]:
         """Retrieve the user credentials."""
         return (
@@ -870,3 +875,23 @@ class CharmState(Object, StatusesStateProtocol):
         return self.mongos_config
 
     # END: Configuration accessors
+
+    def get_secret_from_id(self, secret_id: str) -> dict[str, str]:
+        """Resolve the given id of a Juju secret and return the content as a dict.
+
+        Args:
+            secret_id (str): The id of the secret.
+
+        Returns:
+            dict: The content of the secret.
+        """
+        if not secret_id.startswith("secret:"):
+            raise ValueError(f"Invalid secret URI '{secret_id}'. It must start with 'secret:'")
+        try:
+            secret_content = self.charm.model.get_secret(id=secret_id).get_content(refresh=True)
+        except SecretNotFoundError:
+            raise SecretNotFoundError(f"The secret '{secret_id}' does not exist.")
+        except ModelError:
+            raise
+
+        return secret_content
