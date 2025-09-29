@@ -560,4 +560,6 @@ def test_shard_manager_remove_invalid_relation(
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.assert_pass_hook_checks(relation, is_leaving=True)
 
-    assert err.value == "Config-server never set up, no need to process broken event."
+    assert err.value == NonDeferrableFailedHookChecksError(
+        "Config-server never set up, no need to process broken event."
+    )
