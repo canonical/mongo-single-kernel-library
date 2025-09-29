@@ -33,15 +33,21 @@ storage:
     description: storage for logfiles.
   temp:
     type: filesystem
-    location: /var/common/mongodb/temp
+    location: /tmp
     description: Storage mount used for storing temporary tablespaces.
 
 containers:
   mongod:
     resource: mongodb-image
     mounts:
-      - storage: mongodb
+      - storage: archive
+        location: /var/common/mongodb/archive
+      - storage: data
         location: /var/lib/mongodb
+      - storage: logs
+        location: /var/log/mongodb
+      - storage: temp
+        location: /tmp
 
 provides:
   database:

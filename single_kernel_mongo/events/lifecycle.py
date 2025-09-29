@@ -106,7 +106,19 @@ class LifecycleEventsHandler(Object):
                 self.on_storage_attached,
             )
             self.framework.observe(
+                getattr(self.charm.on, "archive_storage_detaching"),
+                self.on_storage_detaching,
+            )
+            self.framework.observe(
                 getattr(self.charm.on, "data_storage_detaching"),
+                self.on_storage_detaching,
+            )
+            self.framework.observe(
+                getattr(self.charm.on, "logs_storage_detaching"),
+                self.on_storage_detaching,
+            )
+            self.framework.observe(
+                getattr(self.charm.on, "temp_storage_detaching"),
                 self.on_storage_detaching,
             )
 
