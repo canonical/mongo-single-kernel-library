@@ -13,6 +13,7 @@ from botocore.exceptions import ConnectTimeoutError, SSLError
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
@@ -122,6 +123,15 @@ class BackupEventsHandler(Object):
             )
             return
 
+        match self.manager.backup_state():
+            case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
+                defer_event_with_info_log(
+                    logger, event, action, "Backup/Restore running, not changing credentials."
+                )
+                return
+            case _:
+                pass
+
         if not self.manager.validate_s3_config():
             logger.warning(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
@@ -137,6 +147,12 @@ class BackupEventsHandler(Object):
         credentials = self.s3_client.get_s3_connection_info()
 
         try:
+            # We can clear all statuses as they will get rewritten right after if needed.
+            # The only ones we don't want to lose were checked earlier and returned early.
+            self.manager.state.statuses.clear(
+                scope="unit",
+                component=self.manager.name,
+            )
             # First create the bucket if it does not exist.
             self.manager.create_bucket(credentials=credentials)
             # Then set the config options on PBM.
@@ -207,6 +223,7 @@ class BackupEventsHandler(Object):
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
         self.manager.cleanup_certs_and_restart(event.relation)
+        self.manager.state.statuses.clear(scope="unit", component=self.manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"

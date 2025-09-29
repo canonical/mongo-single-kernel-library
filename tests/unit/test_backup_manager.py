@@ -116,6 +116,29 @@ def test_s3_credentials_no_db(harness: Harness[MongoTestCharm], mocker):
     defer.assert_called()
 
 
+def test_credentials_changed_backup_running(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.active", return_value=True)
+    mocker.patch(
+        "single_kernel_mongo.events.backups.S3Requirer.get_s3_connection_info",
+        return_value={"access-key": "noneya", "secret-key": "business"},
+    )
+    defer = mocker.patch("ops.framework.EventBase.defer")
+    relation_id = harness.add_relation(
+        ExternalRequirerRelations.S3_CREDENTIALS.value, "s3-integrator"
+    )
+
+    harness.add_relation_unit(relation_id, "s3-integrator/0")
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        return_value=BackupState.BACKUP_RUNNING,
+    )
+    harness.update_relation_data(relation_id, "s3-integrator/0", {"bucket": "hat"})
+    defer.assert_called()
+
+
 def test_environment_is_valid(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
