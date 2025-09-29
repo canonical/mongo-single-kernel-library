@@ -78,7 +78,7 @@ async def test_build_and_deploy(
         return
 
     if substrate == "lxd":
-        storage = {"mongodb": {"pool": "lxd", "size": 2048}}
+        storage = {"data": {"pool": "lxd", "size": 2048}}
     else:
         storage = None
 
