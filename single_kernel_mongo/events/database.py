@@ -122,9 +122,12 @@ class DatabaseEventsHandler(Object):
     def pass_hook_checks(self, event: RelationEvent) -> bool:
         """Runs the pre-hooks checks for MongoDBProvider, returns True if all pass."""
         # First, ensure that the relation is valid, useless to do anything else otherwise
-        if not self.dependent.state.is_role(
-            MongoDBRoles.MONGOS
-        ) and not self.dependent.is_relation_feasible(event.relation.name):
+        if (
+            not self.dependent.state.is_role(MongoDBRoles.MONGOS)
+            and (status := self.dependent.get_relation_feasible_status(self.relation_name))
+            is not None
+        ):
+            self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             return False
 
         # We shouldn't try to create or update users if the database is not

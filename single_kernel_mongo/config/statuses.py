@@ -38,6 +38,20 @@ class MongoDBStatuses(Enum):
         check="Relation validation.",
         action="Remove the relation on the shards interface (config-server or sharding relation) from this application.",
     )
+    INVALID_CFG_SRV_ON_SHARD_REL = StatusObject(
+        status="blocked",
+        message="The config-server interface cannot be used by shards.",
+        short_message="Invalid config-server relation.",
+        check="Relation validation.",
+        action="Remove the relation on the config-server interface from this application.",
+    )
+    INVALID_SHARD_ON_CFG_SRV_REL = StatusObject(
+        status="blocked",
+        message="The sharding interface cannot be used by a config-server.",
+        short_message="Invalid sharding relation.",
+        check="Relation validation.",
+        action="Remove the relation on the sharding interface from this application.",
+    )
     INVALID_MONGOS_REL = StatusObject(
         status="blocked",
         message="The cluster relation can only be used by config servers.",
@@ -90,6 +104,12 @@ class MongosStatuses(Enum):
         status="waiting",
         message="Waiting for mongos to start...",
         check="mongos process status check.",
+    )
+    INVALID_REL = StatusObject(
+        status="blocked",
+        message="The relation is invalid.",
+        check="Mongos charm relation check",
+        action="Remove the relation on mongos",
     )
     INVALID_EXPOSE_EXTERNAL = StatusObject(
         status="blocked",
