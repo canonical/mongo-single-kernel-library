@@ -14,7 +14,6 @@ from single_kernel_mongo.config.statuses import LdapStatuses, MongoDBStatuses, M
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
-    WaitingForLeaderError,
     WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
@@ -491,11 +490,13 @@ def test_on_config_changed_invalid_role(harness):
         harness.update_config({"role": "shard"})
 
 
-def test_on_config_changed_no_role_yet(harness):
+def test_on_config_changed_no_role_yet(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.UNKNOWN.value
-    with pytest.raises(WaitingForLeaderError):
-        harness.update_config({"role": "shard"})
+    harness.update_config({"role": "shard"})
+    harness.evaluate_status()
+
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
 
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
