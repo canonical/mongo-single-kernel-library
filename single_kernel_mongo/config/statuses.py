@@ -404,21 +404,24 @@ class MongodStatuses(Enum):
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    UNHEALTHY_UPGRADE = StatusObject(
-        status="blocked", message="Unhealthy after refresh.", approved_critical_component=True
-    )
-    INCOMPATIBLE_UPGRADE = StatusObject(
-        status="blocked",
-        message="Refresh incompatible. Rollback to previous revision with `juju refresh`",
-        approved_critical_component=True,
-    )
     ACTIVE_IDLE = StatusObject(status="active", message="")
     WAITING_POST_UPGRADE_STATUS = StatusObject(
         status="waiting", message="Waiting for post upgrade checks..."
     )
+    UNHEALTHY_UPGRADE = StatusObject(
+        status="blocked",
+        message="Unhealthy after refresh. Rollback to previous revision with `juju refresh`.",
+        approved_critical_component=True,
+    )
+    INCOMPATIBLE_UPGRADE = StatusObject(
+        status="blocked",
+        message="Refresh incompatible. Rollback to previous revision with `juju refresh`.",
+        approved_critical_component=True,
+    )
     REFRESH_IN_PROGRESS = StatusObject(
         status="maintenance",
-        message="Refreshing. To rollback, `juju refresh` to the previous revision",
+        message="Refreshing...",
+        action="To rollback, run `juju refresh` to the previous revision.",
         approved_critical_component=True,
     )
 
@@ -435,7 +438,7 @@ class UpgradeStatuses(Enum):
             status="active",
             message=f"MongoDB {unit_workload_version} running; "
             f"Snap revision {unit_workload_container_version}{outdated_str}; "
-            f"Charm revision {current_versions}",
+            f"Charm revision {current_versions}.",
             approved_critical_component=True,
         )
 
@@ -447,7 +450,7 @@ class UpgradeStatuses(Enum):
         outdated_str = " (restart pending)" if outdated else ""
         return StatusObject(
             status="active",
-            message=f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}",
+            message=f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}.",
             approved_critical_component=True,
         )
 
@@ -458,7 +461,7 @@ class UpgradeStatuses(Enum):
         """Returns refreshing status."""
         return StatusObject(
             status="blocked",
-            message=f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision",
+            message=f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision.",
             approved_critical_component=True,
         )
 
