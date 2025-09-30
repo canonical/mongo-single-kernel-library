@@ -25,6 +25,7 @@ from ...helpers.common import (
     TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
+    check_status_detail,
     count_writes,
     deploy_charm,
     destroy_cluster,
@@ -78,7 +79,18 @@ async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -
     )
 
     await wait_for_mongodb_units_blocked(
-        ops_test, substrate, db_app_name, status="s3 configurations missing.", timeout=300
+        ops_test,
+        substrate,
+        db_app_name,
+        status="Missing configurations in the s3-credentials relation.",
+        timeout=300,
+    )
+
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="Missing configurations in the s3-credentials relation.",
     )
 
 
@@ -105,7 +117,13 @@ async def test_blocked_incorrect_creds(
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active")
 
     await wait_for_mongodb_units_blocked(
-        ops_test, substrate, db_app_name, status="s3 credentials are incorrect.", timeout=300
+        ops_test, substrate, db_app_name, status="Incorrect S3 credentials.", timeout=300
+    )
+    await check_status_detail(
+        ops_test,
+        db_app_name,
+        status="blocked",
+        message="Incorrect S3 credentials.",
     )
 
 
