@@ -1073,7 +1073,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.mongodb_exporter_config_manager.workload.active():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_EXPORTER_START.value)
 
-        if not self.backup_manager.workload.active():
-            charm_statuses.append(BackupStatuses.WAITING_FOR_PBM_START.value)
+        # PBM does not start until the shard is integrated with a config-server
+        # So if we're everything BUT a shard or not added to cluster, let's check PBM as well
+        if not self.state.is_role(MongoDBRoles.SHARD) or self.state.is_shard_added_to_cluster():
+            if not self.backup_manager.workload.active():
+                charm_statuses.append(BackupStatuses.WAITING_FOR_PBM_START.value)
 
         return charm_statuses
