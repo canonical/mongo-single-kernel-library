@@ -4,6 +4,7 @@
 import json
 
 import pytest
+from ops import BlockedStatus
 from ops.pebble import PathError, ProtocolError
 from ops.testing import ActionFailed, Harness
 from pymongo.errors import ConfigurationError, ConnectionFailure, OperationFailure
@@ -13,6 +14,7 @@ from single_kernel_mongo.config.statuses import LdapStatuses, MongoDBStatuses, M
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
+    WaitingForLeaderError,
     WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
@@ -489,6 +491,13 @@ def test_on_config_changed_invalid_role(harness):
         harness.update_config({"role": "shard"})
 
 
+def test_on_config_changed_no_role_yet(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.UNKNOWN.value
+    with pytest.raises(WaitingForLeaderError):
+        harness.update_config({"role": "shard"})
+
+
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
@@ -599,6 +608,23 @@ def test_on_leader_elected_dont_rotate_if_present(harness):
     operator_password = state.get_user_password(OperatorUser)
     harness.charm.on.leader_elected.emit()
     assert state.get_user_password(OperatorUser) == operator_password
+
+
+def test_leader_elected_invalid_role(harness: Harness[MongoTestCharm]):
+    state = harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config({"role": "invalidrole"})
+
+    assert state.is_role(MongoDBRoles.UNKNOWN)
+
+    harness.set_leader(True)
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+    assert state.app_peer_data.role == MongoDBRoles.UNKNOWN
+
+    harness.update_config({"role": "replication"})
+    harness.set_leader(True)
+
+    assert state.app_peer_data.role == MongoDBRoles.REPLICATION
 
 
 def test_on_secret_changed(

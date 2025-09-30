@@ -283,3 +283,7 @@ class MissingCredentialsError(Exception):
 
 class InvalidLdapHashError(DeferrableError):
     """Raised when the hash shared by config server is invalid."""
+
+
+class InvalidConfigRoleError(Exception):
+    """Raised when the role is invalid."""

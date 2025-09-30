@@ -51,6 +51,7 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    InvalidConfigRoleError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     UpgradeInProgressError,
@@ -121,6 +122,10 @@ class LifecycleEventsHandler(Object):
             logger.info("Not ready to start.")
             event.defer()
             return
+        except InvalidConfigRoleError:
+            logger.info("Missing a valid role.")
+            event.defer()
+            return
         except WorkloadNotReadyError:
             logger.info("Still starting service.")
             self.dependent.state.statuses.add(
@@ -163,6 +168,16 @@ class LifecycleEventsHandler(Object):
             self.dependent.update_config_and_restart()
         except (UpgradeInProgressError, WaitingForLeaderError):
             event.defer()
+        except InvalidConfigRoleError:
+            logger.info("Invalid config role.")
+            if self.charm.unit.is_leader():
+                self.dependent.state.statuses.add(
+                    MongoDBStatuses.INVALID_ROLE.value,
+                    scope="app",
+                    component=self.dependent.name,
+                )
+            event.defer()
+            return
         except InvalidLdapUserToDnMappingError:
             self.dependent.state.statuses.add(
                 LdapStatuses.INVALID_LDAP_USER_MAPPING.value,
