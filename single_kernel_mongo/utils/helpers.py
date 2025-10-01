@@ -4,8 +4,6 @@
 
 """Some helpers functions that doesn't belong anywhere else."""
 
-import base64
-import re
 from functools import partial
 from logging import getLogger
 
@@ -19,19 +17,19 @@ from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
 logger = getLogger(__name__)
 
 
-def parse_tls_file(raw_content: str) -> bytes:
-    """Parse TLS files from both plain text or base64 format."""
-    if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
-        return (
-            re.sub(
-                r"(-+(BEGIN|END) [A-Z ]+-+)",
-                "\\1",
-                raw_content,
-            )
-            .rstrip()
-            .encode("utf-8")
-        )
-    return base64.b64decode(raw_content)
+# def parse_tls_file(raw_content: str) -> bytes:
+#    """Parse TLS files from both plain text or base64 format."""
+#    if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
+#        return (
+#            re.sub(
+#                r"(-+(BEGIN|END) [A-Z ]+-+)",
+#                "\\1",
+#                raw_content,
+#            )
+#            .rstrip()
+#            .encode("utf-8")
+#        )
+#    return base64.b64decode(raw_content)
 
 
 def generate_relation_departed_key(rel_id: int) -> str:  # noqa

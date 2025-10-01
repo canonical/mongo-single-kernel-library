@@ -134,10 +134,6 @@ class InvalidArgumentForActionError(Exception):
     """Raised when arguments for an action are invalid."""
 
 
-class UnknownCertificateExpiringError(Exception):
-    """Raised when an unknown certificate is expiring."""
-
-
 class UnknownCertificateAvailableError(Exception):
     """Raised when an unknown certificate is available."""
 

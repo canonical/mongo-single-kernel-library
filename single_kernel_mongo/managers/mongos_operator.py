@@ -157,7 +157,8 @@ class MongosOperator(OperatorProtocol, Object):
         self.charm.unit.set_workload_version(self.workload.get_version())
 
     def _configure_workloads(self) -> None:
-        self.tls_manager.push_tls_files_to_workload()
+        for internal in [True, False]:
+            self.tls_manager.push_tls_files_to_workload(internal)
         self.ldap_manager.save_certificates(self.state.ldap.chain)
         self.handle_licenses()
         self.set_permissions()

@@ -9,24 +9,20 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
-from ops.framework import Object
+from ops.charm import RelationBrokenEvent, RelationJoinedEvent
+from ops.framework import EventBase, EventSource, Object
 
+from single_kernel_mongo.config.literals import TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import MongosStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     UnknownCertificateAvailableError,
-    UnknownCertificateExpiringError,
 )
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
+from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
-    CertificateExpiringEvent,
-    TLSCertificatesRequiresV3,
-)
-from single_kernel_mongo.utils.event_helpers import (
-    fail_action_with_error_log,
+    TLSCertificatesRequiresV4,
 )
 
 if TYPE_CHECKING:
@@ -36,64 +32,51 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class RefreshTLSCertificatesEvent(EventBase):
+    """Event for refreshing peer TLS certificates."""
+
+
 class TLSEventsHandler(Object):
     """Event Handler for managing TLS events."""
+
+    refresh_tls_certificates_event = EventSource(RefreshTLSCertificatesEvent)
 
     def __init__(self, dependent: OperatorProtocol):
         super().__init__(parent=dependent, key="tls")
         self.dependent = dependent
         self.manager = self.dependent.tls_manager
         self.charm: AbstractMongoCharm = dependent.charm
-        self.relation_name = ExternalRequirerRelations.TLS.value
-        self.certs_client = TLSCertificatesRequiresV3(self.charm, self.relation_name)
+        self.peer_relation_name = ExternalRequirerRelations.PEER_TLS.value
+        self.client_relation_name = ExternalRequirerRelations.CLIENT_TLS.value
 
-        self.framework.observe(
-            self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
-        )
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_joined,
-            self._on_tls_relation_joined,
-        )
-        self.framework.observe(
-            self.charm.on[self.relation_name].relation_broken,
-            self._on_tls_relation_broken,
-        )
-        self.framework.observe(
-            self.certs_client.on.certificate_available, self._on_certificate_available
-        )
-        self.framework.observe(
-            self.certs_client.on.certificate_expiring, self._on_certificate_expiring
+        self.peer_certificate = TLSCertificatesRequiresV4(
+            self.charm,
+            self.peer_relation_name,
+            certificate_requests=[self.manager.get_certificate_request_attributes(TLSType.PEER)],
+            private_key=None,
+            refresh_events=[self.refresh_tls_certificates_event],
         )
 
-    def _on_set_tls_private_key(self, event: ActionEvent) -> None:
-        """Set the TLS private key which will be used for requesting the certificates."""
-        logger.debug("Request to set TLS private key received.")
-        if (
-            self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and self.manager.state.config_server_name is None
-        ):
-            logger.info(
-                "mongos is not running (not integrated to config-server) deferring renewal of certificates."
+        self.client_certificate = TLSCertificatesRequiresV4(
+            self.charm,
+            self.client_relation_name,
+            certificate_requests=[self.manager.get_certificate_request_attributes(TLSType.CLIENT)],
+            private_key=None,
+            refresh_events=[self.refresh_tls_certificates_event],
+        )
+
+        for relation in [self.peer_certificate, self.client_certificate]:
+            self.framework.observe(
+                relation.on.certificate_available, self._on_certificate_available
             )
-            event.fail("Mongos cannot set TLS keys until integrated to config-server.")
-            return
-        if self.manager.state.upgrade_in_progress:
-            fail_action_with_error_log(
-                logger,
-                event,
-                "set-tls-private-key",
-                "Setting TLS keys during an upgrade is not supported.",
+
+        for relation_name in [self.peer_relation_name, self.client_relation_name]:
+            self.framework.observe(
+                self.charm.on[relation_name].relation_created, self._on_tls_relation_joined
+            )  # why created and not joined
+            self.framework.observe(
+                self.charm.on[relation_name].relation_broken, self._on_tls_relation_broken
             )
-            return
-        try:
-            for internal in (True, False):
-                param = "internal-key" if internal else "external-key"
-                key = event.params.get(param, None)
-                csr = self.manager.generate_certificate_request(key, internal=internal)
-                self.certs_client.request_certificate_creation(certificate_signing_request=csr)
-                self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
-        except ValueError as e:
-            event.fail(str(e))
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handler for relation joined."""
@@ -119,13 +102,20 @@ class TLSEventsHandler(Object):
                 MongosStatuses.REQUIRES_TLS.value, scope="unit", component=self.dependent.name
             )
 
-        for internal in (True, False):
-            csr = self.manager.generate_certificate_request(None, internal=internal)
-            self.certs_client.request_certificate_creation(certificate_signing_request=csr)
-            self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
+        internal = event.relation.name == self.peer_relation_name
+        # csr = self.manager.generate_certificate_request(
+        # None,
+        # internal=internal,
+        # common_name=self.common_name
+        # )
+        self.manager.set_certificate_requested(internal)
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Handler for relation joined."""
+        """Handle the `certificates-broken` event.
+
+        Args:
+            event (RelationBrokenEvent): The event object.
+        """
         if not self.manager.state.db_initialised:
             logger.info(f"Deferring {str(type(event))}. db is not initialised.")
             event.defer()
@@ -136,11 +126,20 @@ class TLSEventsHandler(Object):
                 "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
         logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
-        self.charm.status_handler.set_running_status(
-            TLSStatuses.DISABLING_TLS.value,
-            scope="unit",
+
+        cert_type = (
+            TLSType.PEER if event.relation.name == self.peer_relation_name else TLSType.CLIENT
         )
-        self.manager.disable_certificates_for_unit()
+        self.charm.status_handler.set_running_status(
+            TLSStatuses.DISABLING_PEER_TLS.value
+            if cert_type == TLSType.PEER
+            else TLSStatuses.DISABLING_CLIENT_TLS.value,
+            scope="unit",
+            # statuses_state=self.manager.state.statuses,
+            # component_name=self.manager.name,
+        )
+        internal = cert_type == TLSType.PEER
+        self.manager.disable_certificates_for_unit(internal)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -168,46 +167,42 @@ class TLSEventsHandler(Object):
             )
             event.defer()
             return
+        logger.info("Certificate available")
+
+        cert = event.certificate
+        client_certificates, client_private_key = (
+            self.client_certificate.get_assigned_certificates()
+        )
+        peer_certificates, peer_private_key = self.peer_certificate.get_assigned_certificates()
+
+        if client_certificates and client_certificates[0].certificate == cert:
+            cert_type = TLSType.CLIENT
+            provider_cert = client_certificates[0]
+            private_key = client_private_key.raw if client_private_key else None
+        elif peer_certificates and peer_certificates[0].certificate == cert:
+            cert_type = TLSType.PEER
+            provider_cert = peer_certificates[0]
+            private_key = peer_private_key.raw if peer_private_key else None
+        else:
+            logger.error(f"Received certificate does not match any assigned certificates: {cert}")
+            return
+
+        logger.debug(f"Received certificate for {cert_type}")
+
+        internal = cert_type == TLSType.PEER
         try:
             self.manager.set_certificates(
-                event.certificate_signing_request,
-                event.chain,
-                event.certificate,
-                event.ca,
+                # certificate_signing_request=provider_cert.certificate_signing_request,
+                secret_chain=[c.raw for c in provider_cert.chain],
+                certificate=provider_cert.certificate.raw,
+                ca=provider_cert.ca.raw,
+                private_key=private_key,
+                internal=internal,
             )
-            self.dependent.state.update_ca_secrets(event.ca)
+            if internal:
+                self.dependent.state.update_internal_ca_secrets(provider_cert.ca.raw)
 
-            # If we don't have both certificates, we early return, the next
-            # certificate available event will enable certificates for this
-            # unit.
-            if self.manager.is_waiting_for_both_certs():
-                logger.info(
-                    "Waiting for both internal and external TLS certificates available to avoid second restart."
-                )
-                event.defer()
-                return
-
-            self.manager.enable_certificates_for_unit()
+            self.manager.enable_certificates_for_unit(internal)
         except UnknownCertificateAvailableError:
             logger.error("An unknown certificate is available -- ignoring.")
             return
-
-    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
-        """Handle certificate expiring events."""
-        if (
-            self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and not self.manager.state.config_server_name is not None
-        ):
-            logger.info(
-                "mongos is not running (not integrated to config-server) deferring renewal of certificates."
-            )
-            event.defer()
-            return
-        try:
-            old_csr, new_csr = self.manager.renew_expiring_certificate(event.certificate)
-            self.certs_client.request_certificate_renewal(
-                old_certificate_signing_request=old_csr,
-                new_certificate_signing_request=new_csr,
-            )
-        except UnknownCertificateExpiringError:
-            logger.debug("An unknown certificate is expiring.")

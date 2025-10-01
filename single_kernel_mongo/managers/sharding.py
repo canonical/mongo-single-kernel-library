@@ -712,7 +712,7 @@ class ShardManager(Object, ManagerStatusProtocol):
     def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = tls_ca is not None
-        tls_integrated = self.state.tls_relation is not None
+        tls_integrated = self.state.client_tls_relation is not None
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
         # sharded MongoDB clusters it is necessary that the subject and organisation name are the
@@ -721,12 +721,13 @@ class ShardManager(Object, ManagerStatusProtocol):
         if cluster_auth_tls and tls_integrated and self._should_request_new_certs():
             logger.info("Cluster implements internal membership auth via certificates")
             for internal in (True, False):
-                csr = self.dependent.tls_manager.generate_certificate_request(
-                    param=None, internal=internal
-                )
-                self.dependent.tls_events.certs_client.request_certificate_creation(
-                    certificate_signing_request=csr
-                )
+                # common_name = f"{self.charm.unit.name.replace('/', '')}-{self.charm.model.uuid}"
+                # csr = self.dependent.tls_manager.generate_certificate_request(
+                #    param=None, internal=internal, common_name=common_name
+                # )
+                # self.dependent.tls_events.certs_client.request_certificate_creation(
+                #    certificate_signing_request=csr
+                # )
                 self.dependent.tls_manager.set_waiting_for_cert_to_update(
                     internal=internal, waiting=True
                 )
@@ -821,7 +822,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Returns the TLS integration status for shard and config-server."""
         shard_relation = self.state.shard_relation
         if shard_relation:
-            shard_has_tls = self.state.tls_relation is not None
+            shard_has_tls = self.state.client_tls_relation is not None
             config_server_has_tls = self.state.shard_state.internal_ca_secret is not None
             return shard_has_tls, config_server_has_tls
 

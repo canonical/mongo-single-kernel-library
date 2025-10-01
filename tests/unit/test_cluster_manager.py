@@ -532,7 +532,9 @@ def test_cluster_requirer_is_ca_compatible(
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
     # Create the TLS relation
-    mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    mongos_harness.add_relation(
+        ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+    )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -603,7 +605,9 @@ def test_cluster_requirer_tls_status(
 
     # Create the TLS relation if it should have one
     if mongos_has_tls:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+        )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -674,7 +678,9 @@ def test_cluster_requirer_get_tls_statuses(
 
     # Create the TLS relation if it should have one
     if mongos_ca_secret:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+        )
         # Local certificate
         manager.state.tls.set_secret(
             internal=True, label_name=SECRET_CA_LABEL, contents=mongos_ca_secret

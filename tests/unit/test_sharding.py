@@ -173,7 +173,7 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
 
-    manager.state.update_ca_secrets("newca")
+    manager.state.update_internal_ca_secrets("newca")
 
     assert manager.data_interface.as_dict(rel_id).get("int-ca-secret") == "newca"
 
@@ -455,7 +455,9 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         side_effect=WaitingForCertificatesError,
     )
 
-    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    rel_id = harness.add_relation(
+        ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+    )
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
     harness.update_relation_data(

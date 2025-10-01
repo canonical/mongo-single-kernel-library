@@ -222,9 +222,14 @@ class CharmState(Object, StatusesStateProtocol):
         return set(self.model.relations[RelationNames.CONFIG_SERVER.value])
 
     @property
-    def tls_relation(self) -> Relation | None:
-        """The TLS relation."""
-        return self.model.get_relation(ExternalRequirerRelations.TLS.value)
+    def client_tls_relation(self) -> Relation | None:
+        """The client TLS relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.CLIENT_TLS.value)
+
+    @property
+    def peer_tls_relation(self) -> Relation | None:
+        """The peer TLS relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.PEER_TLS.value)
 
     @property
     def s3_relation(self) -> Relation | None:
@@ -665,7 +670,7 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def update_ca_secrets(self, new_ca: str | None) -> None:
+    def update_internal_ca_secrets(self, new_ca: str | None) -> None:
         """Updates the CA secret in the cluster and config-server relations."""
         # Only the leader can update the databag
         if not self.charm.unit.is_leader():

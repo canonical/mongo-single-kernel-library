@@ -92,13 +92,19 @@ class MongoPaths:
         return Path(f"{self.conf_path}/internal-ca.crt")
 
     @property
-    def tls_files(self) -> set[Path]:
-        """Set of all TLS files."""
+    def tls_peer_files(self) -> set[Path]:
+        """Set of peer TLS files."""
+        return {
+            self.int_pem_file,
+            self.int_ca_file,
+        }
+
+    @property
+    def tls_client_files(self) -> set[Path]:
+        """Set of client TLS files."""
         return {
             self.ext_pem_file,
             self.ext_ca_file,
-            self.int_pem_file,
-            self.int_ca_file,
         }
 
     @property

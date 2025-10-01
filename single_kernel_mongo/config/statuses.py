@@ -117,15 +117,26 @@ class CharmStatuses(Enum):
 class TLSStatuses(Enum):
     """TLS statuses."""
 
-    ACTIVE_IDLE = StatusObject(status="active", message="")
-
-    # RUNNING statuses:
-    DISABLING_TLS = StatusObject(
-        status="maintenance", message="Disabling TLS...", running="blocking"
+    DISABLING_PEER_TLS = StatusObject(
+        status="maintenance",
+        message="Disabling peer TLS...",
+        check="Certificates relation (tls-certificates interface) removed.",
+        running="blocking",
+    )
+    DISABLING_CLIENT_TLS = StatusObject(
+        status="maintenance",
+        message="Disabling client TLS...",
+        check="Certificates relation (tls-certificates interface) removed.",
+        running="blocking",
     )
     # Enabling TLS takes a while because we wait for multiple certs so it's
     # async to span over multiple events.
-    ENABLING_TLS = StatusObject(status="maintenance", message="Enabling TLS...", running="blocking")
+    ENABLING_TLS = StatusObject(
+        status="maintenance",
+        message="Enabling TLS...",
+        check="Certificates relation (tls-certificates interface) added.",
+        running="async",
+    )
 
 
 class BackupStatuses(Enum):
