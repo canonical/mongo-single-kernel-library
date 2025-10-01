@@ -221,6 +221,8 @@ class TLSManager:
         self.charm.status_handler.set_running_status(
             TLSStatuses.ENABLING_TLS.value,
             scope="unit",
+            statuses_state=self.state.statuses,
+            component_name=self.charm.name,
         )
         try:
             self.dependent.restart_charm_services(force=True)
