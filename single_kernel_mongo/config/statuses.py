@@ -249,6 +249,11 @@ class BackupStatuses(Enum):
     PBM_WAITING_TO_SYNC = StatusObject(
         status="waiting", message="Waiting to sync S3 configurations...", running="async"
     )
+    ACTION_RUNNING = StatusObject(
+        status="waiting",
+        message="Waiting for backup/restore to finish before removing the relation",
+        running="blocking",
+    )
 
     @staticmethod
     def backup_running(backup_id: str) -> StatusObject:

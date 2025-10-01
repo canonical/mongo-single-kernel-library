@@ -342,7 +342,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         In the mongos case, we only allow the mongos proxy client relation.
         """
-        if name != RelationNames.MONGOS_PROXY:
+        if name not in (RelationNames.MONGOS_PROXY, RelationNames.CLUSTER):
             return MongosStatuses.INVALID_REL.value
         return None
 

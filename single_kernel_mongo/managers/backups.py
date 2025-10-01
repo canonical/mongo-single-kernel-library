@@ -258,6 +258,17 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Relation broken event occurring due to scale down.")
             return
 
+        # We have to wait until the backup / restore finishes if it is running.
+        while True:
+            match self.backup_state():
+                case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
+                    self.dependent.charm.status_handler.set_running_status(
+                        scope="unit",
+                        component_name=self.name,
+                    )
+                case _:
+                    break
+
         # cleanup local certificate if it exists
         local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         if local_cert_file.exists() and local_cert_file.is_file():
