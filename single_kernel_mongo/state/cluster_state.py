@@ -38,7 +38,7 @@ class ClusterState(AbstractRelationState[Data]):
 
     @property
     def config_server_uri(self) -> str:
-        """Is TLS enabled."""
+        """Return config-server URI in the databag."""
         return self.relation_data.get(ClusterStateKeys.CONFIG_SERVER_DB.value, "")
 
     @property
