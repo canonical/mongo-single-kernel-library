@@ -25,7 +25,7 @@ tail -f /var/log/syslog
 
 The console will now display audit log messages, for example:
 
-```shell
+```text
 Jan 26 13:22:56 juju-f6ba89-2 mongod: { "atype" : "updateOperation", "ts" : { "$date" : "2024-01-26T13:22:56.300+00:00" }, "local" : { "ip" : "10.55.47.232", "port" : 27017 }, "remote" : {}, "users" : [], "roles" : [], "param" : { "ns" : "local.replset.oplogTruncateAfterPoint", "doc" : { "_id" : "oplogTruncateAfterPoint", "oplogTruncateAfterPoint" : { "$timestamp" : { "t" : 1706275376, "i" : 1 } } } }, "result" : 0 }
 ```
 
@@ -46,7 +46,7 @@ tail -f /var/log/mongodb/audit.log
 ``` 
 The console will now display audit log messages, for example:
 
-```shell
+```text
 Jan 26 13:22:56 juju-f6ba89-2 mongod: { "atype" : "updateOperation", "ts" : { "$date" : "2024-01-26T13:22:56.300+00:00" }, "local" : { "ip" : "10.55.47.232", "port" : 27017 }, "remote" : {}, "users" : [], "roles" : [], "param" : { "ns" : "local.replset.oplogTruncateAfterPoint", "doc" : { "_id" : "oplogTruncateAfterPoint", "oplogTruncateAfterPoint" : { "$timestamp" : { "t" : 1706275376, "i" : 1 } } } }, "result" : 0 }
 ```
 ````
