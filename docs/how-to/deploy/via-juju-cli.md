@@ -10,8 +10,9 @@ The basic requirements for deploying any charm are the [**`juju` client**](https
 You must have a [bootstrapped](https://juju.is/docs/juju/juju-bootstrap) cloud controller and a [Juju model](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/model/) on which MongoDB will be deployed.
 
 ```{note}
-If you're new to these concepts and vocabulary, check out the [](tutorial).
+If you're new to these concepts and vocabulary, check out the Tutorial.
 ```
+<!--TODO: Tutorial link>
 
 ## Deploy a replica set
 
@@ -76,6 +77,8 @@ For example, to deploy a shard and a config-server with 3 replicas each:
 ```
 ````
 
+<!--TODO: link
 ```{seealso}
 [](/explanation/sharding)
 ```
+-->
