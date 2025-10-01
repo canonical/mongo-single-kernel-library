@@ -483,20 +483,27 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
-def test_on_config_changed_invalid_role(harness):
+def test_on_config_changed_inmpossible_to_change_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
 
 
-def test_on_config_changed_no_role_yet(harness: Harness[MongoTestCharm]):
+def test_on_config_changed_invalid_role(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.update_config({"role": "invalidrole"})
+    harness.evaluate_status()
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+
+
+def test_on_config_changed_no_role_yet(harness: Harness[MongoTestCharm], mocker):
+    mocked_defer = mocker.patch("ops.framework.EventBase.defer")
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.UNKNOWN.value
     harness.update_config({"role": "shard"})
-    harness.evaluate_status()
-
-    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+    mocked_defer.assert_called()
 
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):

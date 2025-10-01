@@ -1050,7 +1050,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
         if self.config.role == MongoDBRoles.INVALID:
-            charm_statuses = MongoDBStatuses.INVALID_ROLE.value
+            charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
