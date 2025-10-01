@@ -7,7 +7,7 @@ This guide goes over how to scale replicas of any application by adding and remo
 
 ## Scale a replica set
 
-To scale a replica set, simply use `juju`'s  [`add-unit`](https://juju.is/docs/juju/juju-add-unit) and [`remove-unit`](https://juju.is/docs/juju/juju-remove-unit) commands. 
+To scale a replica set, use `juju`'s  [`add-unit`](https://juju.is/docs/juju/juju-add-unit) and [`remove-unit`](https://juju.is/docs/juju/juju-remove-unit) commands. 
 
 To add more replicas, run:
 
@@ -15,9 +15,7 @@ To add more replicas, run:
 juju add-unit <application_name> -n <num_of_replicas_to_add>
 ```
 
-Where an `application` can be either a bare replica set, shard, or config-server.
-
-The `remove-unit` allows removing more than one replica so long as they **do not constitute the majority of the replicas**. 
+where an `application` can be either a bare replica set, shard, or config-server.
 
 To remove replicas, run:
 
@@ -25,7 +23,11 @@ To remove replicas, run:
 juju remove-unit <application_name>/<unit_number> <application_name>/<unit_number>
 ```
 
-Where an `application` can be either a bare replica set, shard, or config-server.
+where an `application` can be either a bare replica set, shard, or config-server.
+
+```{note}
+`juju remove-unit` allows removing more than one replica so long as they do not constitute the **majority** of the replicas. 
+```
 
 ## Scale a sharded cluster
 
