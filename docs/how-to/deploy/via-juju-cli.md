@@ -79,6 +79,6 @@ For example, to deploy a shard and a config-server with 3 replicas each:
 
 <!--TODO: link
 ```{seealso}
-[](/explanation/sharding)
+{ref}`sharding`
 ```
 -->

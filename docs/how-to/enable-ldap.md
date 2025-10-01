@@ -132,7 +132,7 @@ juju consume <k8s_controller>:admin/glauth.send-ca-cert
 ````{tab-item} K8s
 :sync: k8s
 
-This step is not needed with MongoDB K8s. Proceed to the next section: [](configure-roles).
+This step is not needed with MongoDB K8s. Proceed to the next section: {ref}`configure-roles`.
 ````
 `````
 
