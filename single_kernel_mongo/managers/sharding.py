@@ -695,9 +695,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Waits for the shard to be fully drained from the cluster."""
         self.assert_pass_hook_checks(relation, is_leaving=True)
 
-        mongos_hosts = self.state.app_peer_data.mongos_hosts
-
-        if not mongos_hosts:
+        if not (mongos_hosts := self.state.app_peer_data.mongos_hosts):
             return
 
         self.wait_for_draining(mongos_hosts)
