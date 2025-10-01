@@ -1038,7 +1038,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         statuses = []
         if not self.backup_manager.is_valid_s3_integration():
             statuses.append(MongoDBStatuses.INVALID_S3_REL.value)
-        # Add valid statuses for all invalid relations integratedd
+        # Add valid statuses for all invalid integrated relations
         for relation_name in [
             RelationNames.DATABASE,
             RelationNames.SHARDING,

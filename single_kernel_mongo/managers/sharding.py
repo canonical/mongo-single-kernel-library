@@ -184,7 +184,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             raise NonDeferrableFailedHookChecksError("is only executed by config-server")
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("db is not initialised.")
-        if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
+        if status := self.dependent.get_relation_feasible_status(self.relation_name):
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if not self.charm.unit.is_leader():
