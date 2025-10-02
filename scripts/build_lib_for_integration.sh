@@ -37,7 +37,7 @@ for directory in "${TEST_CHARMS[@]}"; do
     python3 -m venv /tmp/refresh-version-venv
     source /tmp/refresh-version-venv/bin/activate
     poetry install --only build-refresh-version
-    write-charm-version
+    /tmp/refresh-version-venv/bin/write-charm-version
     deactivate
     rm /tmp/refresh-version-venv/ -rf
 

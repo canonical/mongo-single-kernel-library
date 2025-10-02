@@ -63,7 +63,6 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
-    harness.add_relation("upgrade-version-a", "upgrade-version-a")
     harness.begin()
 
     if substrate == "microk8s":
