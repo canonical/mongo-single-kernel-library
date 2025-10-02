@@ -20,4 +20,30 @@ First, determine the name of the application to pass to Juju when running back u
 
 ---
 
-(wip)
+To list all available backups, run
+
+```shell
+juju run <replica-set name | config-server name>/leader list-backups
+```
+
+The output will be similar to the format below:
+
+```text
+backup-id             | backup-type  | backup-status
+----------------------------------------------------
+YYYY-MM-DDTHH:MM:SSZ  | logical      | finished 
+```
+
+## Restore a backup
+
+```{caution}
+Before restoring a backup, make sure your Charmed MongoDB deployment is `active` and `idle`.
+```
+
+To restore a backup from the list, use the {command}`restore` command:
+
+```shell
+juju run <replica-set name | config-server name>/leader restore backup-id=YYYY-MM-DDTHH:MM:SSZ
+```
+
+The restore will now be in progress.
