@@ -20,10 +20,11 @@ from ..helpers.common import (
     mongodb_uri,
 )
 from ..helpers.tls import (
+    CLIENT_TLS_RELATION_NAME,
+    PEER_TLS_RELATION_NAME,
     SNAP_MONGOD_SERVICE,
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -228,14 +229,22 @@ def count_users(mongos_client: MongoClient) -> int:
     return users_collection.count_documents({})
 
 
-async def integrate_with_tls(ops_test: OpsTest, applications: list[str] | None = None) -> None:
+async def integrate_with_tls(
+    ops_test: OpsTest,
+    applications: list[str] | None = None,
+    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+) -> None:
     """Integrates cluster components with self-signed certs operator."""
     if not applications:
         applications = CLUSTER_COMPONENTS
     for app in applications:
         await ops_test.model.integrate(
-            f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-            f"{app}:{TLS_RELATION_NAME}",
+            f"{cert_provider_app}:{PEER_TLS_RELATION_NAME}",
+            f"{app}",
+        )
+        await ops_test.model.integrate(
+            f"{cert_provider_app}:{CLIENT_TLS_RELATION_NAME}",
+            f"{app}",
         )
 
 
@@ -245,8 +254,12 @@ async def remove_tls_integrations(ops_test: OpsTest, applications: list[str] | N
         applications = CLUSTER_COMPONENTS
     for app in applications:
         await ops_test.model.applications[app].remove_relation(
-            f"{app}:{TLS_RELATION_NAME}",
-            f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
+            f"{app}:{PEER_TLS_RELATION_NAME}",
+            f"{TLS_CERTIFICATES_APP_NAME}",
+        )
+        await ops_test.model.applications[app].remove_relation(
+            f"{app}:{CLIENT_TLS_RELATION_NAME}",
+            f"{TLS_CERTIFICATES_APP_NAME}",
         )
 
 

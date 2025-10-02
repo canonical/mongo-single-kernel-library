@@ -28,7 +28,8 @@ from ..helpers.types import Substrate
 logger = getLogger(__name__)
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-TLS_RELATION_NAME = "certificates"
+PEER_TLS_RELATION_NAME = "peer-certificates"
+CLIENT_TLS_RELATION_NAME = "client-certificates"
 
 DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
@@ -281,8 +282,8 @@ async def check_certs_correctly_distributed(
     unit_secret_content = await get_secret_content(ops_test, unit_secret_id)
 
     # Get the values for certs from the relation, as provided by TLS Charm
-    certificates_raw_data: str = await get_application_relation_data(
-        ops_test, app_name, TLS_RELATION_NAME, "certificates"
+    certificates_raw_data: str = await get_application_relation_data(  ###############
+        ops_test, app_name, PEER_TLS_RELATION_NAME, "certificates"
     )
     certificates_data = json.loads(certificates_raw_data)
 

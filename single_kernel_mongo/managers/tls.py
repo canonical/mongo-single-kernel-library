@@ -255,7 +255,7 @@ class TLSManager:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             return
 
-    def delete_certificates_from_workload(self, internal: bool):
+    def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""
         logger.info("Deleting TLS certificates from filesystem")
 
@@ -312,7 +312,6 @@ class TLSManager:
         """Sets the databag."""
         scope = "int" if internal else "ext"
         label_name = f"{scope}-{WAIT_CERT_UPDATE}"
-        print(json.dumps(waiting))
         self.state.unit_peer_data.update({label_name: json.dumps(waiting)})
 
     def is_set_waiting_for_cert_to_update(
@@ -384,4 +383,4 @@ class TLSManager:
             #    old_certificate_signing_request=old_csr,
             #    new_certificate_signing_request=new_csr,
             # )
-            self.dependent.tls_events.request_certificate(internal)
+            self.dependent.tls_events.request_certificate(internal)  # this triggers update twice

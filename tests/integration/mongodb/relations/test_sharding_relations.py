@@ -28,8 +28,10 @@ from ...helpers.sharding import (
     CONFIG_SERVER_TWO_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
+    integrate_with_tls,
+    remove_tls_integrations,
 )
-from ...helpers.tls import TLS_CERTIFICATES_APP_NAME, TLS_RELATION_NAME
+from ...helpers.tls import TLS_CERTIFICATES_APP_NAME
 from ...helpers.types import Substrate
 
 SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
@@ -347,10 +349,7 @@ async def test_config_server_tls_replication_relation(
 ) -> None:
     """Verifies that using a replica as a shard fails even when TLS is integrated."""
     # attempt to add a shard to a replication deployment as a config server.
-    await ops_test.model.integrate(
-        f"{REPLICATION_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_with_tls(ops_test, [REPLICATION_APP_NAME])
 
     await ops_test.model.integrate(
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
@@ -366,10 +365,7 @@ async def test_config_server_tls_replication_relation(
     )
 
     # clean up relations
-    await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{REPLICATION_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await remove_tls_integrations(ops_test, [REPLICATION_APP_NAME])
 
     await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",

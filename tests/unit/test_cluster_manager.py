@@ -203,7 +203,7 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     (
         "mongo_has_tls",
         "config_server_has_tls",
-        "is_waiting_to_request_certs",
+        "is_waiting_for_config_server_rel_to_request_certs",
         "upgrade_in_progress",
         "expected_error",
     ),
@@ -242,7 +242,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
     mongo_has_tls,
-    is_waiting_to_request_certs,
+    is_waiting_for_config_server_rel_to_request_certs,
     upgrade_in_progress,
     config_server_has_tls,
     expected_error,
@@ -253,12 +253,12 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_status",
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_tls_status",
         return_value=(mongo_has_tls, config_server_has_tls),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
-        return_value=is_waiting_to_request_certs,
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_for_config_server_rel_to_request_certs",
+        return_value=is_waiting_for_config_server_rel_to_request_certs,
     )
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
@@ -635,7 +635,7 @@ def test_cluster_requirer_tls_status(
     )
 
     # Actual check
-    assert manager.tls_status() == expected_statuses
+    assert manager.mongos_and_config_server_tls_status() == expected_statuses
 
 
 @pytest.mark.parametrize(

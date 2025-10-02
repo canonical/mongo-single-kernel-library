@@ -28,9 +28,10 @@ from ..helpers.common import (
     wait_for_mongodb_units_blocked,
 )
 from ..helpers.tls import (
+    CLIENT_TLS_RELATION_NAME,
+    PEER_TLS_RELATION_NAME,
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -188,11 +189,15 @@ async def build_cluster(
 
 
 async def integrate_cluster_with_tls(ops_test: OpsTest) -> None:
-    """Integrate cluster components to the TLS interface."""
+    """Integrate cluster components to the TLS provider."""
     for cluster_component in MONGOS_CLUSTER_COMPONENTS:
         await ops_test.model.integrate(
-            f"{cluster_component}:{TLS_RELATION_NAME}",
-            f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
+            f"{cluster_component}:{PEER_TLS_RELATION_NAME}",
+            f"{TLS_CERTIFICATES_APP_NAME}",
+        )
+        await ops_test.model.integrate(
+            f"{cluster_component}:{CLIENT_TLS_RELATION_NAME}",
+            f"{TLS_CERTIFICATES_APP_NAME}",
         )
 
     await ops_test.model.wait_for_idle(
@@ -453,13 +458,21 @@ async def toggle_tls_mongos(
     """Toggles TLS on mongos application to the specified enabled state."""
     if enable:
         await ops_test.model.integrate(
-            f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
-            f"{certs_app_name}:{TLS_RELATION_NAME}",
+            f"{MONGOS_APP_NAME}:{PEER_TLS_RELATION_NAME}",
+            f"{certs_app_name}",
+        )
+        await ops_test.model.integrate(
+            f"{MONGOS_APP_NAME}:{CLIENT_TLS_RELATION_NAME}",
+            f"{certs_app_name}",
         )
     else:
         await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
-            f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
-            f"{certs_app_name}:{TLS_RELATION_NAME}",
+            f"{MONGOS_APP_NAME}:{PEER_TLS_RELATION_NAME}",
+            f"{certs_app_name}",
+        )
+        await ops_test.model.applications[MONGOS_APP_NAME].remove_relation(
+            f"{MONGOS_APP_NAME}:{CLIENT_TLS_RELATION_NAME}",
+            f"{certs_app_name}",
         )
 
 

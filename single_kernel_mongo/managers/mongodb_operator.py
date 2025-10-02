@@ -760,7 +760,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         if self.state.is_role(MongoDBRoles.SHARD):
-            shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
+            shard_has_tls, config_server_has_tls = (
+                self.shard_manager.shard_and_config_server_tls_status()
+            )
             if config_server_has_tls and not shard_has_tls:
                 logger.info("Shard is missing TLS.")
                 return

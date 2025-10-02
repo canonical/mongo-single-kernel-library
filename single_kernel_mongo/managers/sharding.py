@@ -547,7 +547,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        shard_has_tls, config_server_has_tls = self.tls_status()
+        shard_has_tls, config_server_has_tls = self.shard_and_config_server_tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
                 self.state.statuses.add(
@@ -709,14 +709,14 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
-    def update_member_auth(self, keyfile: str, tls_ca: str | None) -> None:
+    def update_member_auth(self, keyfile: str, internal_tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
-        cluster_auth_tls = tls_ca is not None
+        cluster_auth_tls = internal_tls_ca is not None
         tls_integrated = self.state.peer_tls_relation is not None
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
-        # sharded MongoDB clusters it is necessary that the subject and organisation name are the
-        # same in their CSRs. Re-requesting a cert after integrated with the config-server
+        # sharded MongoDB clusters it is necessary that the common name and organisation name are
+        # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and tls_integrated and self._should_request_new_certs():
             logger.info("Cluster implements internal membership auth via certificates")
@@ -732,7 +732,9 @@ class ShardManager(Object, ManagerStatusProtocol):
                 # self.dependent.tls_manager.set_waiting_for_cert_to_update(
                 #    internal=internal, waiting=True
                 # )
-                self.dependent.tls_events.request_certificate(internal)
+                self.dependent.tls_events.request_certificate(
+                    internal
+                )  # this triggers update twice
         else:
             logger.info("Cluster implements internal membership auth via keyFile")
 
@@ -746,7 +748,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             self.state.set_keyfile(keyfile)
 
         # Prevents restarts if we haven't received certificates
-        if tls_ca is not None and self.dependent.tls_manager.is_waiting_for_both_certs():
+        if internal_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_both_certs():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
             raise WaitingForCertificatesError
 
@@ -820,7 +822,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
         return {int_subject, ext_subject} != {self.state.config_server_name}
 
-    def tls_status(self) -> tuple[bool, bool]:
+    def shard_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for shard and config-server."""
         shard_relation = self.state.shard_relation
         if shard_relation:
@@ -963,7 +965,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
     def get_tls_status(self) -> StatusBase | None:
         """Returns the TLS status of the sharded deployment."""
-        shard_has_tls, config_server_has_tls = self.tls_status()
+        shard_has_tls, config_server_has_tls = self.shard_and_config_server_tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
                 return ShardStatuses.REQUIRES_TLS.value

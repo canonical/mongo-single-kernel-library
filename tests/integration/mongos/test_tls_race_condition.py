@@ -12,11 +12,8 @@ from ..helpers.mongos import (
     deploy_cluster_components,
     integrate_cluster_with_tls,
 )
-from ..helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
-from ..helpers.tls import (
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
-)
+from ..helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME, integrate_with_tls
+from ..helpers.tls import TLS_CERTIFICATES_APP_NAME
 from ..helpers.types import Substrate
 
 
@@ -50,10 +47,7 @@ async def test_build_and_deploy(
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests race condition: mongos charm can integrate with TLS and then the config-server."""
     await integrate_cluster_with_tls(ops_test)
-    await ops_test.model.integrate(
-        f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_with_tls(ops_test, [MONGOS_APP_NAME])
 
     # integrate mongos with config-server
     await ops_test.model.integrate(

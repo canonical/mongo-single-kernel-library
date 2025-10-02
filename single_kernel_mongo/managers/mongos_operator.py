@@ -158,9 +158,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     def _configure_workloads(self) -> None:
         for internal in [True, False]:
-            self.tls_manager.push_tls_files_to_workload(
-                internal
-            )  # mongos has internal and external?
+            self.tls_manager.push_tls_files_to_workload(internal)
         self.ldap_manager.save_certificates(self.state.ldap.chain)
         self.handle_licenses()
         self.set_permissions()

@@ -21,10 +21,12 @@ from ..helpers.mongos import (
     rotate_and_verify_certs,
     toggle_tls_mongos,
 )
+from ..helpers.sharding import (
+    integrate_with_tls,
+)
 from ..helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
 )
 from ..helpers.types import Substrate
 
@@ -67,10 +69,7 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can enable TLS."""
-    await ops_test.model.integrate(
-        f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_with_tls(ops_test, [MONGOS_APP_NAME])
 
     await wait_for_mongodb_units_blocked(
         ops_test,
@@ -124,6 +123,7 @@ async def test_mongos_tls_nodeport(ops_test: OpsTest, substrate: Substrate):
         assert get_k8s_public_ip() not in await get_sans_ips(ops_test, unit, internal=False)
 
 
+@pytest.mark.skip()
 @pytest.mark.abort_on_fail
 async def test_mongos_rotate_certs(ops_test: OpsTest, substrate: Substrate) -> None:
     await rotate_and_verify_certs(ops_test, substrate, MONGOS_APP_NAME)

@@ -15,11 +15,11 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
     integrate_with_tls,
+    remove_tls_integrations,
 )
 from ...helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
 )
 from ...helpers.types import Substrate
 
@@ -91,10 +91,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 1: Config-server has TLS enabled - but shard does not
-    await ops_test.model.applications[SHARD_ONE_APP_NAME].remove_relation(
-        f"{SHARD_ONE_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await remove_tls_integrations(ops_test, [SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -112,10 +109,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # Re-integrate to bring cluster back to steady state
-    await ops_test.model.integrate(
-        f"{SHARD_ONE_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_with_tls(ops_test, [SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -126,10 +120,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 2: Config-server does not have TLS enabled - but shard does
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{CONFIG_SERVER_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await remove_tls_integrations(ops_test, [CONFIG_SERVER_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -148,10 +139,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     # CASE 3: Cluster components are using different CA's
 
     # Re-integrate to bring cluster back to steady state
-    await ops_test.model.integrate(
-        f"{CONFIG_SERVER_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{DIFFERENT_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_with_tls(ops_test, [CONFIG_SERVER_APP_NAME], DIFFERENT_CERTIFICATES_APP_NAME)
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,

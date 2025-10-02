@@ -253,7 +253,7 @@ class ClusterRequirer(Object):
 
     def assert_pass_hook_checks(self) -> None:
         """Runs pre-hook checks, raises if one fails."""
-        mongos_has_tls, config_server_has_tls = self.tls_status()
+        mongos_has_tls, config_server_has_tls = self.mongos_and_config_server_tls_status()
         match (mongos_has_tls, config_server_has_tls):
             case False, True:
                 raise DeferrableFailedHookChecksError(
@@ -265,7 +265,7 @@ class ClusterRequirer(Object):
                 )
             case _:
                 pass
-        if self.is_waiting_to_request_certs():
+        if self.is_waiting_for_config_server_rel_to_request_certs():
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
@@ -445,19 +445,19 @@ class ClusterRequirer(Object):
 
         return config_server_tls_ca == mongos_tls_ca
 
-    def is_waiting_to_request_certs(self) -> bool:
+    def is_waiting_for_config_server_rel_to_request_certs(self) -> bool:
         """Returns True if mongos has been waiting for config server in order to request certs."""
-        if not self.state.peer_tls_relation:  # what about client relation?
+        if not self.state.peer_tls_relation:
             return False
-        mongos_tls_ca = self.state.tls.get_secret(
-            internal=True, label_name=SECRET_CA_LABEL
-        )  # should this be based on CA?
 
-        # our CA is none until certs have been requested. We cannot request certs until integrated
+        # our CA is none until certs have been received. We cannot request certs until integrated
         # to config-server.
-        return not mongos_tls_ca
+        mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
+        if mongos_tls_ca:
+            return False
+        return not self.dependent.tls_manager.is_set_waiting_for_cert_to_update()
 
-    def tls_status(self) -> tuple[bool, bool]:
+    def mongos_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
             mongos_has_tls = self.state.peer_tls_relation is not None
@@ -468,7 +468,7 @@ class ClusterRequirer(Object):
 
     def get_tls_statuses(self) -> StatusObject | None:
         """Return statuses relevant to TLS."""
-        mongos_has_tls, config_server_has_tls = self.tls_status()
+        mongos_has_tls, config_server_has_tls = self.mongos_and_config_server_tls_status()
         match (mongos_has_tls, config_server_has_tls):
             case False, True:
                 return MongosStatuses.REQUIRES_TLS.value
