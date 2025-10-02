@@ -104,7 +104,6 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import (
     is_valid_ldap_options,
     is_valid_ldapusertodnmapping,
-    unit_number,
 )
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
@@ -262,7 +261,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
-        # self.upgrade_events = UpgradeEventHandler(self)
         self.config_server_events = ConfigServerEventHandler(self)
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
@@ -501,13 +499,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if self.substrate == Substrates.VM:
             return
-
-        # Raise partition to prevent other units from restarting if an upgrade is in progress.
-        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
-        current_unit_number = unit_number(self.state.unit_upgrade_peer_data)
-        if self.state.k8s_manager.get_partition() < current_unit_number:
-            self.state.k8s_manager.set_partition(value=current_unit_number)
-            logger.debug(f"Partition set to {current_unit_number} during stop event")
 
         # According to the MongoDB documentation, before upgrading the primary, we must ensure a
         # safe primary re-election.

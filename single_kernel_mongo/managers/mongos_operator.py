@@ -55,7 +55,6 @@ from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import unit_number
 from single_kernel_mongo.workload import (
     get_mongos_workload_for_substrate,
 )
@@ -323,7 +322,6 @@ class MongosOperator(OperatorProtocol, Object):
             # The connection info will be updated when we receive the new certificates.
             if self.substrate == Substrates.K8S:
                 self.tls_manager.update_tls_sans()
-                # self.upgrade_manager._reconcile_upgrade()
 
     @override
     def new_peer(self) -> None:
@@ -342,22 +340,7 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def prepare_for_shutdown(self) -> None:
-        if self.substrate == Substrates.VM:
-            return
-
-        # Raise partition to prevent other units from restarting if an upgrade is in progress.
-        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
-        current_unit_number = unit_number(self.state.unit_upgrade_peer_data)
-        if self.state.k8s_manager.get_partition() < current_unit_number:
-            self.state.k8s_manager.set_partition(value=current_unit_number)
-            logger.debug(f"Partition set to {current_unit_number} during stop event")
-
-        # if not self.upgrade_manager._upgrade:
-        #    logger.debug("Upgrade Peer relation missing during stop event")
-        #    return
-
-        ## We update the state to set up the unit as restarting
-        # self.upgrade_manager._upgrade.unit_state = UnitState.RESTARTING
+        return
 
     @override
     def start_charm_services(self) -> None:

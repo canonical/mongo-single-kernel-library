@@ -50,7 +50,6 @@ if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
-    from single_kernel_mongo.events.upgrades import UpgradeEventHandler
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
@@ -87,7 +86,6 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
-    upgrade_events: UpgradeEventHandler
     ldap_events: LDAPEventHandler
 
     if TYPE_CHECKING:

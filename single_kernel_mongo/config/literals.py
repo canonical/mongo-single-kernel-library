@@ -50,15 +50,6 @@ class InternalUsernames(str, Enum):
     LOGROTATE = "logrotate"
 
 
-class UnitState(str, Enum):
-    """Unit upgrade state."""
-
-    HEALTHY = "healthy"
-    RESTARTING = "restarting"  # Kubernetes only
-    UPGRADING = "upgrading"  # Machines only
-    OUTDATED = "outdated"  # Machines only
-
-
 SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
 
 VERSIONS_FILE = Path("refresh_versions.toml")

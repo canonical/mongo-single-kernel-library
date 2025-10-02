@@ -233,10 +233,6 @@ class ActionFailedError(Exception):
     """Raised when we failed an action."""
 
 
-class UnhealthyUpgradeError(Exception):
-    """Raised when the upgrade is unhealthy during an post upgrade check."""
-
-
 class WaitingForLdapDataError(DeferrableError):
     """Raised when the charm hasn't received data from ldap yet."""
 
