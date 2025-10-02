@@ -12,7 +12,7 @@ You must have a [bootstrapped](https://juju.is/docs/juju/juju-bootstrap) cloud c
 ```{note}
 If you're new to these concepts and vocabulary, check out the Tutorial.
 ```
-<!--TODO: Tutorial link>
+<!--TODO: Tutorial link -->
 
 ## Deploy a replica set
 
