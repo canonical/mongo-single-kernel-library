@@ -26,7 +26,7 @@ for directory in "${TEST_CHARMS[@]}"; do
     cp "pyproject.toml" "$directory_lib_path"
     cp "README.md" "$directory_lib_path"
 
-    echo "Building charm ${directory}\n"
+    echo "Building charm ${directory}"
 
 
     pushd $directory
@@ -34,12 +34,10 @@ for directory in "${TEST_CHARMS[@]}"; do
     # Backup files
     cp refresh_versions.toml refresh_versions.toml.backup
 
-    python3 -m venv /tmp/refresh-version-venv
-    source /tmp/refresh-version-venv/bin/activate
+    eval $(poetry env activate)
     poetry install --only build-refresh-version
-    /tmp/refresh-version-venv/bin/write-charm-version
+    write-charm-version
     deactivate
-    rm /tmp/refresh-version-venv/ -rf
 
     cp pyproject.toml pyproject.toml.backup
     cp poetry.lock poetry.lock.backup
