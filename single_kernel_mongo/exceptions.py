@@ -134,8 +134,8 @@ class InvalidArgumentForActionError(Exception):
     """Raised when arguments for an action are invalid."""
 
 
-class UnknownCertificateAvailableError(Exception):
-    """Raised when an unknown certificate is available."""
+# class UnknownCertificateAvailableError(Exception):
+#    """Raised when an unknown certificate is available."""
 
 
 class DatabaseRequestedHasNotRunYetError(Exception):

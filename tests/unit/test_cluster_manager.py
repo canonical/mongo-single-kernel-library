@@ -606,7 +606,7 @@ def test_cluster_requirer_tls_status(
     # Create the TLS relation if it should have one
     if mongos_has_tls:
         mongos_harness.add_relation(
-            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+            ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
 
     # Ensure some credentials are present
@@ -679,7 +679,7 @@ def test_cluster_requirer_get_tls_statuses(
     # Create the TLS relation if it should have one
     if mongos_ca_secret:
         mongos_harness.add_relation(
-            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+            ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
         # Local certificate
         manager.state.tls.set_secret(

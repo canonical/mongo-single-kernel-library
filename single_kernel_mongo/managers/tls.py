@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import Substrates, TLSType
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -71,14 +71,15 @@ class TLSManager:
         self.substrate = substrate
         # self.name = "tls"
 
-    def get_certificate_request_attributes(self, tls_type: TLSType) -> CertificateRequestAttributes:
+    def get_certificate_request_attributes(self, internal: bool) -> CertificateRequestAttributes:
         """Generate a certificate signing request attributes."""
-        common_name = f"{self.charm.unit.name.replace('/', '')}-{self.charm.model.uuid}"
-        sans = self.get_new_sans(tls_type)
+        # common_name = f"{self.charm.unit.name.replace('/', '')}-{self.charm.model.uuid}"
+        sans = self.get_new_sans(internal)
         return CertificateRequestAttributes(
-            common_name=common_name,
+            common_name=self._get_subject_name(),
             sans_ip=frozenset(sans["sans_ips"]),
             sans_dns=frozenset(sans["sans_dns"]),
+            organization=self._get_subject_name(),
         )
 
     def set_certificate_requested(self, internal: bool):
@@ -146,7 +147,7 @@ class TLSManager:
     #    self.set_waiting_for_cert_to_update(waiting=True, internal=internal)
     #    return old_csr, new_csr
 
-    def get_new_sans(self, tls_type: TLSType) -> Sans:
+    def get_new_sans(self, internal: bool) -> Sans:
         """Create a list of DNS names and IPs for a MongoDB unit.
 
         Returns:
@@ -164,7 +165,7 @@ class TLSManager:
             sans_ips=[str(self.state.bind_address)],
         )
 
-        if tls_type == TLSType.PEER:
+        if internal:
             return sans
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
             if host := self.state.unit_host:
@@ -268,10 +269,17 @@ class TLSManager:
     def push_tls_files_to_workload(self, internal: bool) -> None:
         """Pushes the TLS files on the workload."""
         ca, pem = self.get_tls_files(internal=internal)
-        if ca is not None:
-            self.workload.write(self.workload.paths.ext_ca_file, ca)
-        if pem is not None:
-            self.workload.write(self.workload.paths.ext_pem_file, pem)
+
+        if internal:
+            if ca is not None:
+                self.workload.write(self.workload.paths.int_ca_file, ca)
+            if pem is not None:
+                self.workload.write(self.workload.paths.int_pem_file, pem)
+        else:
+            if ca is not None:
+                self.workload.write(self.workload.paths.ext_ca_file, ca)
+            if pem is not None:
+                self.workload.write(self.workload.paths.ext_pem_file, pem)
 
     def set_certificates(
         self,
@@ -289,10 +297,7 @@ class TLSManager:
         #        logger.debug("The TLS certificate available.")
         #    else:
         #        raise UnknownCertificateAvailableError
-        print(f"secret chain {secret_chain}")
-        print(f"cert {certificate}")
-        print(f"ca {ca}")
-        print(f"pk {private_key}")
+
         self.state.tls.set_secret(
             internal,
             SECRET_CHAIN_LABEL,
@@ -360,9 +365,8 @@ class TLSManager:
                 continue
             current_sans = self.get_current_sans(internal)
             current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
-            tls_type = TLSType.PEER if internal else TLSType.CLIENT
             expected_sans_ip = (
-                set(self.get_new_sans(tls_type)["sans_ips"]) if current_sans else set()
+                set(self.get_new_sans(internal)["sans_ips"]) if current_sans else set()
             )
             sans_ip_changed = current_sans_ip ^ expected_sans_ip
 
@@ -379,4 +383,5 @@ class TLSManager:
             # self.dependent.tls_events.certs_client.request_certificate_renewal(
             #    old_certificate_signing_request=old_csr,
             #    new_certificate_signing_request=new_csr,
-            # ) trigger certificates refresh event?
+            # )
+            self.dependent.tls_events.request_certificate(internal)
