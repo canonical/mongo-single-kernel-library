@@ -404,7 +404,7 @@ class MongodStatuses(Enum):
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    ACTIVE_IDLE = (StatusObject(status="active", message=""),)
+    ACTIVE_IDLE = StatusObject(status="active", message="")
     HEALTH_CHECK_FAILED = StatusObject(status="maintenance", message="health check failed")
 
 
