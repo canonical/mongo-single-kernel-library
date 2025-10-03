@@ -48,13 +48,11 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         data_interface: DataPeerData,
         component: Application,
         substrate: Substrates,
-        role: MongoDBRoles,
         model: Model,
     ):
         super().__init__(relation, data_interface, component, substrate=substrate)
         self.data_interface = data_interface
         self._model = model
-        self._role = role
 
     @override
     def update(self, items: dict[str, str | None]) -> None:
@@ -76,7 +74,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     def role(self) -> MongoDBRoles:
         """The role.
 
-        Either from the app databag or from the default from config.
+        Either from the app databag or unknown.
         """
         if (
             not (databag_role := self.relation_data.get(AppPeerDataKeys.ROLE.value))
