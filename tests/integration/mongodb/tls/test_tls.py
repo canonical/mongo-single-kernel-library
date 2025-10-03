@@ -22,6 +22,7 @@ from tests.integration.helpers.tls import (
     external_cert_path,
     integrate_apps_with_tls,
     internal_cert_path,
+    remove_tls_integrations,
     time_file_created,
     time_process_started,
 )
@@ -247,9 +248,7 @@ async def test_disable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify each unit has TLS disabled after removing relation to the TLS application."""
     # Remove the relation.
     app_name = await get_app_name(ops_test)
-    await ops_test.model.applications[app_name].remove_relation(
-        f"{app_name}:certificates", f"{TLS_CERTIFICATES_APP_NAME}:certificates"
-    )
+    await remove_tls_integrations(ops_test, applications=[app_name])
 
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", timeout=1000, idle_period=60
