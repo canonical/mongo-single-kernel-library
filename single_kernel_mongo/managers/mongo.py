@@ -428,8 +428,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             "password": password,
             "hosts": self.state.app_hosts,
             "roles": set(roles.split(",")),
-            "tls_external": False,
-            "tls_internal": False,
+            "tls_enabled": False,
             "port": self.state.host_port,
         }
         if not self.state.is_role(MongoDBRoles.MONGOS):

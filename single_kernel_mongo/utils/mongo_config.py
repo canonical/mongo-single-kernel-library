@@ -37,8 +37,8 @@ class MongoConfiguration:
     hosts: set[str]
     roles: set[str]
     tls_enabled: bool
-    tls_external_keyfile: Path
-    tls_external_ca: Path
+    tls_external_keyfile: Path = Path("")
+    tls_external_ca: Path = Path("")
     port: int | None = None
     replset: str | None = None
     standalone: bool = False
@@ -75,8 +75,7 @@ class MongoConfiguration:
             "tlsCaFile": f"{self.tls_external_ca}",
         }
 
-    def _uri(self, tls: bool = True):
-        """URI builder."""
+    def _uri(self, tls: bool):
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
             raise AmbiguousConfigError("Mongos cannot support replica set")
 
@@ -113,10 +112,7 @@ class MongoConfiguration:
 
     @property
     def uri_without_tls(self) -> str:
-        """Return URI concatenated from fields without tls config.
-
-        This is useful to provide client URIs that will chose where to store their TLS files.
-        """
+        """Return URI concatenated from fields without tls params."""
         return self._uri(tls=False)
 
     @property
