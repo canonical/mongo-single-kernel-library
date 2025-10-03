@@ -34,11 +34,11 @@ class MongoDBUpgradesManager(ManagerStatusProtocol):
                 self.state.k8s_manager.get_pod()
             except DeployedWithoutTrustError:
                 self.state.statuses.add(
-                    CharmStatuses.DEPLOYED_WITHOUT_TRUST, scope="unit", component=self.name
+                    CharmStatuses.DEPLOYED_WITHOUT_TRUST.value, scope="unit", component=self.name
                 )
                 if self.charm.unit.is_leader():
                     self.state.statuses.add(
-                        CharmStatuses.DEPLOYED_WITHOUT_TRUST, scope="app", component=self.name
+                        CharmStatuses.DEPLOYED_WITHOUT_TRUST.value, scope="app", component=self.name
                     )
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
@@ -62,7 +62,7 @@ class MongoDBUpgradesManager(ManagerStatusProtocol):
             try:
                 self.state.k8s_manager.get_pod()
             except DeployedWithoutTrustError:
-                return [CharmStatuses.DEPLOYED_WITHOUT_TRUST]
+                return [CharmStatuses.DEPLOYED_WITHOUT_TRUST.value]
 
         if not self.refresh:
             return [UpgradeStatuses.ACTIVE_IDLE.value]

@@ -593,6 +593,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             case PasswordManagementState.NEED_PASSWORD_UPDATE:
                 self.rotate_internal_passwords(context)
                 self.clear_password_management_statuses()
+            case _:
+                pass
 
     def rotate_internal_passwords(self, context: PasswordManagementContext) -> None:
         """Rotate passwords for the internal users defined in the given context.
