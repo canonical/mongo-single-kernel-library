@@ -14,10 +14,7 @@ import logging
 import socket
 from typing import TYPE_CHECKING, TypedDict
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -70,83 +67,23 @@ class TLSManager:
         self.workload = workload
         self.state = state
         self.substrate = substrate
-        # self.name = "tls"
 
     def get_certificate_request_attributes(self, internal: bool) -> CertificateRequestAttributes:
         """Generate a certificate signing request attributes."""
-        # common_name = f"{self.charm.unit.name.replace('/', '')}-{self.charm.model.uuid}"
+        subject_name = self._get_subject_name()
         sans = self.get_new_sans(internal)
         return CertificateRequestAttributes(
-            common_name=self._get_subject_name(),
+            common_name=subject_name,
             sans_ip=frozenset(sans["sans_ips"]),
             sans_dns=frozenset(sans["sans_dns"]),
-            organization=self._get_subject_name(),
+            organization=subject_name,
         )
 
     def set_certificate_requested(self, internal: bool):
         """Set the certs subject and wait-cert-updated peer data."""
-        self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
         label = "int" if internal else "ext"
         self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
         self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
-
-    ### not needed anymore
-    # def generate_certificate_request(
-    # self,param: str | None, internal: bool, common_name: str
-    # ) -> bytes:
-    #    """Generate a TLS Certificate request."""
-    #    key: bytes
-    #    if param is None:
-    #        key = generate_private_key()
-    #    else:
-    #        key = parse_tls_file(param)
-
-    #    tls_type = TLSType.PEER if internal else  TLSType.CLIENT
-    #    sans = self.get_new_sans(tls_type)
-    #    csr = generate_csr(
-    #        private_key=key,
-    #        common_name=common_name,
-    #        sans_dns=sans["sans_dns"],
-    #        sans_ip=sans["sans_ips"],
-    #    )
-    #    self.state.tls.set_secret(internal, SECRET_KEY_LABEL, key.raw)
-    #    self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr.raw)
-    #    self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
-
-    #    label = "int" if internal else "ext"
-
-    #    self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
-    #    return csr
-
-    ### not needed anymore
-    # def generate_new_csr(self, internal: bool) -> tuple[bytes, bytes]:
-    #    """Requests the renewal of a certificate.
-
-    #    Returns:
-    #        old_csr: The old certificate signing request.
-    #        new_csr: the new_certificate signing request.
-    #    """
-    #    key_str = self.state.tls.get_secret(internal, SECRET_KEY_LABEL)
-    #    old_csr_str = self.state.tls.get_secret(internal, SECRET_CSR_LABEL)
-    #    if not key_str or not old_csr_str:
-    #        raise Exception("Trying to renew a non existent certificate. Please fix.")
-
-    #    key = key_str.encode("utf-8")
-    #    old_csr = old_csr_str.encode("utf-8")
-    #    tls_type = TLSType.PEER if internal else  TLSType.CLIENT
-    #    sans = self.get_new_sans(tls_type)
-    #    new_csr = generate_csr(
-    #        private_key=key,
-    #        subject=self._get_subject_name(),
-    #        organization=self._get_subject_name(),
-    #        sans=sans["sans_dns"],
-    #        sans_ip=sans["sans_ips"],
-    #    )
-    #    logger.debug("Requesting a certificate renewal.")
-
-    #    self.state.tls.set_secret(internal, SECRET_CSR_LABEL, new_csr.decode("utf-8"))
-    #    self.set_waiting_for_cert_to_update(waiting=True, internal=internal)
-    #    return old_csr, new_csr
 
     def get_new_sans(self, internal: bool) -> Sans:
         """Create a list of DNS names and IPs for a MongoDB unit.
@@ -174,27 +111,7 @@ class TLSManager:
 
         return sans
 
-    def get_current_sans(self, internal: bool) -> Sans | None:
-        """Gets the current SANs for the unit cert."""
-        # if unit has no certificates do not proceed.
-        if not self.state.tls.is_tls_enabled(internal=internal):
-            return None
-
-        if not (pem_file := self.state.tls.get_secret(internal, SECRET_CERT_LABEL)):
-            logger.info("No PEM file but TLS enabled.")
-            raise Exception("No PEM file but TLS enabled. Please, fix.")
-        try:
-            cert = x509.load_pem_x509_certificate(pem_file.encode(), default_backend())
-            sans = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-            sans_ips = [str(san) for san in sans.get_values_for_type(x509.IPAddress)]
-            sans_dns = [str(san) for san in sans.get_values_for_type(x509.DNSName)]
-        except x509.ExtensionNotFound:
-            sans_ips = []
-            sans_dns = []
-
-        return Sans(sans_ips=sorted(sans_ips), sans_dns=sorted(sans_dns))
-
-    def get_tls_files(self, internal: bool) -> tuple[str | None, str | None]:
+    def get_tls_file_contents(self, internal: bool) -> tuple[str | None, str | None]:
         """Prepare TLS files in special MongoDB way.
 
         MongoDB needs two files:
@@ -258,7 +175,9 @@ class TLSManager:
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""
-        logger.info("Deleting TLS certificates from filesystem")
+        logger.info(
+            f"Deleting {TLSType.PEER if internal else TLSType.CLIENT} TLS certificates from filesystem"
+        )
 
         path = (
             self.workload.paths.tls_peer_files if internal else self.workload.paths.tls_client_files
@@ -269,7 +188,10 @@ class TLSManager:
 
     def push_tls_files_to_workload(self, internal: bool) -> None:
         """Pushes the TLS files on the workload."""
-        ca, pem = self.get_tls_files(internal=internal)
+        logger.info(
+            f"Pushing {TLSType.PEER if internal else TLSType.CLIENT} TLS certificates to filesystem"
+        )
+        ca, pem = self.get_tls_file_contents(internal=internal)
 
         if internal:
             if ca is not None:
@@ -284,7 +206,6 @@ class TLSManager:
 
     def set_certificates(
         self,
-        # certificate_signing_request: str,
         secret_chain: list[str] | None,
         certificate: str | None,
         ca: str | None,
@@ -292,13 +213,6 @@ class TLSManager:
         internal: bool,
     ):
         """Sets the certificates."""
-        # if internal:
-        #    csr = self.state.tls.get_secret(internal=internal, label_name=SECRET_CSR_LABEL)
-        #    if csr and certificate_signing_request.rstrip() == csr.rstrip():
-        #        logger.debug("The TLS certificate available.")
-        #    else:
-        #        raise UnknownCertificateAvailableError
-
         self.state.tls.set_secret(
             internal,
             SECRET_CHAIN_LABEL,
@@ -308,6 +222,7 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
         self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
+        logger.info(f"{TLSType.PEER if internal else TLSType.CLIENT} certificate secrets updated.")
 
     def set_waiting_for_cert_to_update(self, internal: bool, waiting: bool) -> None:
         """Sets the databag."""
@@ -347,44 +262,6 @@ class TLSManager:
             return self.state.config_server_name or self.charm.app.name
 
         return self.charm.app.name
-
-    def update_tls_sans(self) -> None:
-        """Emits a certificate expiring event when sans in current certificates are out of date.
-
-        This can occur for a variety of reasons:
-        1. Node port has been toggled on
-        2. Node port has been toggled off
-        3. The public K8s IP has changed
-
-        Mongos k8s only.
-        """
-        for internal in [True, False]:
-            # if the certificate has already been requested, we do not want to re-request
-            # another one and lead to an infinite chain of certificate events.
-            if self.is_set_waiting_for_cert_to_update(internal):
-                continue
-            current_sans = self.get_current_sans(internal)
-            current_sans_ip = set(current_sans["sans_ips"]) if current_sans else set()
-            expected_sans_ip = (
-                set(self.get_new_sans(internal)["sans_ips"]) if current_sans else set()
-            )
-            sans_ip_changed = current_sans_ip ^ expected_sans_ip
-
-            if not sans_ip_changed:
-                continue
-
-            logger.info(
-                f"Mongos {self.charm.unit.name.split('/')[1]} updating certificate SANs - "
-                f"OLD SANs = {current_sans_ip - expected_sans_ip}, "
-                f"NEW SANs = {expected_sans_ip - current_sans_ip}"
-            )
-
-            # old_csr, new_csr = self.generate_new_csr(internal)
-            # self.dependent.tls_events.certs_client.request_certificate_renewal(
-            #    old_certificate_signing_request=old_csr,
-            #    new_certificate_signing_request=new_csr,
-            # )
-            self.dependent.tls_events.request_certificate(internal)  # this triggers update twice
 
     def get_tls_management_state(self) -> TlsManagementState:
         """Pre-checks on TLS certificates management."""

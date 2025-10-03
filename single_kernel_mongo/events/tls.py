@@ -99,15 +99,13 @@ class TLSEventsHandler(Object):
             )
 
         internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
-        # csr = self.manager.generate_certificate_request(
-        # None,
-        # internal=internal,
-        # common_name=self.common_name
-        # )
-        self.request_certificate(internal)
+        self.manager.set_certificate_requested(internal)
 
     def request_certificate(self, internal: bool) -> None:
         """Request refresh of certificates."""
+        logger.info(
+            f"Requesting refresh {TLSType.PEER if internal else TLSType.CLIENT} certificate."
+        )
         self.refresh_tls_certificates_event.emit()
         self.manager.set_certificate_requested(internal)
 
@@ -154,7 +152,7 @@ class TLSEventsHandler(Object):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
 
-        logger.info("Certificate available")
+        logger.info("Certificate available.")
 
         cert = event.certificate
         client_certificates, client_private_key = (
@@ -171,10 +169,10 @@ class TLSEventsHandler(Object):
             provider_cert = peer_certificates[0]
             private_key = peer_private_key.raw if peer_private_key else None
         else:
-            logger.error(f"Received certificate does not match any assigned certificates: {cert}")
+            logger.error("Received certificate does not match any assigned certificates.")
             return
 
-        logger.debug(f"Received certificate for {cert_type}")
+        logger.debug(f"Received {cert_type} certificate.")
 
         internal = cert_type == TLSType.PEER
 

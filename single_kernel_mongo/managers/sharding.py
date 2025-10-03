@@ -718,23 +718,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
-        if cluster_auth_tls and tls_integrated and self._should_request_new_certs():
+        if cluster_auth_tls and tls_integrated:
             logger.info("Cluster implements internal membership auth via certificates")
-            for internal in (True, False):
-                # common_name = f"{self.charm.unit.name.replace('/', '')}-{self.charm.model.uuid}"
-                # csr = self.dependent.tls_manager.generate_certificate_request(
-                #    param=None, internal=internal, common_name=common_name
-                # )
-                # self.dependent.tls_events.certs_client.request_certificate_creation(
-                #    certificate_signing_request=csr
-                # )
-                # self.dependent.tls_events.refresh_tls_certificates_event.emit()
-                # self.dependent.tls_manager.set_waiting_for_cert_to_update(
-                #    internal=internal, waiting=True
-                # )
-                self.dependent.tls_events.request_certificate(
-                    internal
-                )  # this triggers update twice
+            for internal in (True, False):  # is this already handled by the chance of subject?
+                if self._should_request_new_certs(internal):
+                    self.dependent.tls_events.request_certificate(internal)
         else:
             logger.info("Cluster implements internal membership auth via keyFile")
 
@@ -813,14 +801,16 @@ class ShardManager(Object, ManagerStatusProtocol):
                         raise
         self.state.set_user_password(user, new_password)
 
-    def _should_request_new_certs(self) -> bool:
+    def _should_request_new_certs(self, internal: bool) -> bool:
         """Returns if the shard has already requested the certificates for internal-membership.
 
         Sharded components must have the same subject names in their certs.
         """
-        int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
+        if internal:
+            int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
+            return int_subject != self.state.config_server_name
         ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
-        return {int_subject, ext_subject} != {self.state.config_server_name}
+        return ext_subject != self.state.config_server_name
 
     def shard_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for shard and config-server."""
