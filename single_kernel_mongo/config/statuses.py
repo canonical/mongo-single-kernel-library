@@ -69,27 +69,58 @@ class MongoDBStatuses(Enum):
 class MongosStatuses(Enum):
     """Mongos related statuses."""
 
-    INVALID_EXPOSE_EXTERNAL = StatusObject(
-        status="blocked", message="Config option for expose-external not valid."
-    )
     CONNECTING_TO_CONFIG_SERVER = StatusObject(
-        status="waiting", message="Connecting to config-server..."
+        status="waiting",
+        message="Connecting to config-server...",
+        check="mongos process status check.",
     )
     WAITING_FOR_SECRETS = StatusObject(
-        status="waiting", message="Waiting for secrets from config-server"
+        status="waiting",
+        message="Waiting for config-server secrets...",
+        check="Cluster relation validation.",
     )
-    REQUIRES_TLS = StatusObject(status="blocked", message="mongos requires TLS to be enabled.")
-    REQUIRES_NO_TLS = StatusObject(
-        status="blocked", message="mongos has TLS enabled, but config-server does not."
+    WAITING_FOR_MONGOS_START = StatusObject(
+        status="waiting",
+        message="Waiting for mongos to start...",
+        check="mongos process status check.",
+    )
+    INVALID_EXPOSE_EXTERNAL = StatusObject(
+        status="blocked",
+        message="The expose-external config option is invalid. Valid options are `nodeport` and `none`.",
+        short_message="Invalid expose-external config.",
+        check="Config validation failed.",
+        action="Set the expose-external config to a valid value: `nodeport` or `none`.",
+    )
+    MISSING_TLS_REL = StatusObject(
+        status="blocked",
+        message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        short_message="Missing certificates relation.",
+        check="Relation validation failed.",
+        action="Add the certificates relation (tls-certificates interface) to mongos.",
+    )
+    INVALID_TLS_REL = StatusObject(
+        status="blocked",
+        message="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        short_message="Invalid certificates relation.",
+        check="Relation validation failed.",
+        action="Remove the certificates relation (tls-certificates interface) from this application.",
     )
     CA_MISMATCH = StatusObject(
-        status="blocked", message="mongos CA and Config-Server CA don't match."
+        status="blocked",
+        message="The mongos CA and Config-Server CA don't match.",
+        short_message="CA mismatch.",
+        check="Relation validation failed.",
+        action="Verify the certificates relations. Use the same CA for all cluster components.",
     )
-    MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
 
     # Running statuses:
     MISSING_CONF_SERVER_REL = StatusObject(
-        status="blocked", message="Missing relation to config-server.", running="async"
+        status="blocked",
+        message="The cluster relation with the config-server is missing.",
+        short_message="Missing cluster relation.",
+        check="Relation validation failed.",
+        action="Add the cluster relation (config-server interface) to mongos.",
+        running="async",
     )
     STARTING_MONGOS = StatusObject(
         status="maintenance", message="Starting mongos.", running="blocking"
@@ -100,17 +131,24 @@ class CharmStatuses(Enum):
     """Charm Statuses."""
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
-    FAILED_SERVICES_START = StatusObject(status="blocked", message="Failed to start services.")
-    WAITING_TO_START = StatusObject(status="waiting", message="Starting services.")
-    MONGODB_NOT_INSTALLED = StatusObject(status="blocked", message="MongoDB not installed.")
-    MONGOS_NOT_STARTED = StatusObject(status="waiting", message="Waiting to start mongos...")
+    FAILED_SERVICES_START = StatusObject(
+        status="blocked",
+        message="Failed to start services. Retrying...",
+        action="Check logs for more information.",
+    )
+    MONGODB_NOT_INSTALLED = StatusObject(
+        status="waiting", message="Waiting for MongoDB to be installed..."
+    )
 
     # RUNNING Statuses
     INSTALLING_MONGODB = StatusObject(
-        status="maintenance", message="installing MongoDB", running="blocking"
+        status="maintenance", message="Installing MongoDB...", running="blocking"
     )
     DEPLOYED_WITHOUT_TRUST = StatusObject(
-        status="blocked", message="Charm deployed without `trust`", running="async"
+        status="blocked",
+        message="Charm deployed without `trust` option.",
+        action="Run `juju trust --scope=cluster <application-name>`.",
+        running="async",
     )
 
 
@@ -120,13 +158,13 @@ class TLSStatuses(Enum):
     DISABLING_PEER_TLS = StatusObject(
         status="maintenance",
         message="Disabling peer TLS...",
-        check="Certificates relation (tls-certificates interface) removed.",
+        check="Peer certificates relation (tls-certificates interface) removed.",
         running="blocking",
     )
     DISABLING_CLIENT_TLS = StatusObject(
         status="maintenance",
         message="Disabling client TLS...",
-        check="Certificates relation (tls-certificates interface) removed.",
+        check="Client certificates relation (tls-certificates interface) removed.",
         running="blocking",
     )
     # Enabling TLS takes a while because we wait for multiple certs so it's
@@ -142,37 +180,52 @@ class TLSStatuses(Enum):
 class BackupStatuses(Enum):
     """Backup manager related statuses."""
 
+    ACTIVE_IDLE = StatusObject(status="active", message="")
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
-    WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for pbm to start...")
-    PBM_MISSING_CONFIGS = StatusObject(status="blocked", message="s3 configurations missing.")
-    PBM_INCORRECT_CREDS = StatusObject(
+    WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for PBM to start...")
+    PBM_MISSING_CONF = StatusObject(
         status="blocked",
-        message="s3 credentials are incorrect.",
-        action="Check S3 credentials on s3-integrator",
+        message="Missing configurations in the s3-credentials relation.",
+        short_message="Missing S3 configurations.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
+        check="S3 configuration validation failed.",
     )
     PBM_INCOMPATIBLE_CONF = StatusObject(
         status="blocked",
-        message="s3 config options are incompatible.",
-        action="Check S3 configuration on s3-integrator",
+        message="Incompatible S3 config options.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
+        check="S3 configuration validation failed.",
     )
-    UNKNOWN_PBM_ERROR = StatusObject(
+    PBM_INCORRECT_CREDS = StatusObject(
+        status="blocked",
+        message="Incorrect S3 credentials.",
+        action="Check the configuration in the s3-credentials relation (s3 interface).",
+        check="S3 configuration validation failed.",
+    )
+    PBM_UNKNOWN_ERROR = StatusObject(
         status="blocked",
         message="Unknown PBM error, check logs.",
-        action="Check logs for more information",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
+        check="PBM error found.",
     )
-    CANT_CONFIGURE = StatusObject(status="blocked", message="Couldn't configure s3 backup options.")
-    ACTIVE_IDLE = StatusObject(status="active", message="")
+    CANT_CONFIGURE = StatusObject(
+        status="blocked",
+        message="Failed to configure S3 backup options.",
+        short_message="Invalid S3 configuration.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
+        check="S3 configuration validation failed.",
+    )
     FAILED_TO_CREATE_BUCKET = StatusObject(
         status="blocked",
-        message="Failed to create S3 bucket, check logs.",
-        action="Check S3 configuration on s3-integrator.",
-        check="Failed to create S3 bucket",
+        message="Failed to create S3 bucket.",
+        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
+        check="S3 bucket creation failed.",
     )
 
     # Running status
     PBM_WAITING_TO_SYNC = StatusObject(
-        status="waiting", message="Waiting to sync s3 configurations...", running="async"
+        status="waiting", message="Waiting to sync S3 configurations...", running="async"
     )
 
     @staticmethod
@@ -181,6 +234,7 @@ class BackupStatuses(Enum):
         return StatusObject(
             status="maintenance",
             message=f"Backup started/running, backup id: '{backup_id}'",
+            short_message="Backing up...",
             running="async",
         )
 
@@ -190,6 +244,7 @@ class BackupStatuses(Enum):
         return StatusObject(
             status="maintenance",
             message=f"Restore started/running, backup id: '{backup_id}'",
+            short_message="Restoring...",
             running="async",
         )
 
@@ -354,21 +409,24 @@ class MongodStatuses(Enum):
 class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
-    UNHEALTHY_UPGRADE = StatusObject(
-        status="blocked", message="Unhealthy after refresh.", approved_critical_component=True
-    )
-    INCOMPATIBLE_UPGRADE = StatusObject(
-        status="blocked",
-        message="Refresh incompatible. Rollback to previous revision with `juju refresh`",
-        approved_critical_component=True,
-    )
     ACTIVE_IDLE = StatusObject(status="active", message="")
     WAITING_POST_UPGRADE_STATUS = StatusObject(
         status="waiting", message="Waiting for post upgrade checks..."
     )
+    UNHEALTHY_UPGRADE = StatusObject(
+        status="blocked",
+        message="Unhealthy after refresh. Rollback to previous revision with `juju refresh`.",
+        approved_critical_component=True,
+    )
+    INCOMPATIBLE_UPGRADE = StatusObject(
+        status="blocked",
+        message="Refresh incompatible. Rollback to previous revision with `juju refresh`.",
+        approved_critical_component=True,
+    )
     REFRESH_IN_PROGRESS = StatusObject(
         status="maintenance",
-        message="Refreshing. To rollback, `juju refresh` to the previous revision",
+        message="Refreshing...",
+        action="To rollback, run `juju refresh` to the previous revision.",
         approved_critical_component=True,
     )
 
@@ -385,7 +443,7 @@ class UpgradeStatuses(Enum):
             status="active",
             message=f"MongoDB {unit_workload_version} running; "
             f"Snap revision {unit_workload_container_version}{outdated_str}; "
-            f"Charm revision {current_versions}",
+            f"Charm revision {current_versions}.",
             approved_critical_component=True,
         )
 
@@ -397,7 +455,7 @@ class UpgradeStatuses(Enum):
         outdated_str = " (restart pending)" if outdated else ""
         return StatusObject(
             status="active",
-            message=f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}",
+            message=f"MongoDB {workload_version} running{outdated_str};  Charm revision {charm_version}.",
             approved_critical_component=True,
         )
 
@@ -408,7 +466,7 @@ class UpgradeStatuses(Enum):
         """Returns refreshing status."""
         return StatusObject(
             status="blocked",
-            message=f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision",
+            message=f"Refreshing. {resume_string}To rollback, `juju refresh` to last revision.",
             approved_critical_component=True,
         )
 

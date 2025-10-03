@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 from ..helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     MONGOS_APP_NAME,
+    check_status_detail,
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
@@ -150,8 +151,14 @@ async def test_mongos_bad_configuration(ops_test: OpsTest, substrate: Substrate)
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Config option for expose-external not valid.",
+        status="The expose-external config option is invalid. Valid options are `nodeport` and `none`.",
         timeout=300,
+    )
+    await check_status_detail(
+        ops_test,
+        MONGOS_APP_NAME,
+        status="blocked",
+        message="The expose-external config option is invalid. Valid options are `nodeport` and `none`.",
     )
 
     # verify new-configuration didn't break old configuration

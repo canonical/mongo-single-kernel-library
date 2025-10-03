@@ -330,7 +330,7 @@ class MongosOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
-                MongosStatuses.MONGOS_NOT_STARTED.value,
+                MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
@@ -566,7 +566,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
-            charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
+            charm_statuses.append(MongosStatuses.WAITING_FOR_MONGOS_START.value)
             return charm_statuses
 
         username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)

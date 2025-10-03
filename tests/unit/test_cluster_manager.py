@@ -451,7 +451,7 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     statuses = mongos_harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=mongos_harness.charm.operator.name
     )
-    assert as_status(statuses[0]) == WaitingStatus("Waiting to start mongos...")
+    assert as_status(statuses[0]) == WaitingStatus("Waiting for mongos to start...")
 
 
 def test_cluster_requirer_remove_users_and_cleanup_mongo(
@@ -641,11 +641,11 @@ def test_cluster_requirer_tls_status(
 @pytest.mark.parametrize(
     ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
-        (None, "deadbeef", MongosStatuses.REQUIRES_TLS.value),
+        (None, "deadbeef", MongosStatuses.MISSING_TLS_REL.value),
         (
             "deadbeef",
             None,
-            MongosStatuses.REQUIRES_NO_TLS.value,
+            MongosStatuses.INVALID_TLS_REL.value,
         ),
         (None, None, None),
         ("deadbeef", "deadbeef", None),

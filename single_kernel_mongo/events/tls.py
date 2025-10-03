@@ -95,7 +95,7 @@ class TLSEventsHandler(Object):
         # When we can integrate, clean the mongos requires tls status.
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
             self.manager.state.statuses.delete(
-                MongosStatuses.REQUIRES_TLS.value, scope="unit", component=self.dependent.name
+                MongosStatuses.MISSING_TLS_REL.value, scope="unit", component=self.dependent.name
             )
 
         internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value

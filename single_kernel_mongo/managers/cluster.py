@@ -333,7 +333,7 @@ class ClusterRequirer(Object):
             if not self.dependent.is_mongos_running():
                 logger.info("Mongos has not started yet, deferring")
                 self.state.statuses.set(
-                    MongosStatuses.MONGOS_NOT_STARTED.value,
+                    MongosStatuses.WAITING_FOR_MONGOS_START.value,
                     scope="unit",
                     component=self.dependent.name,
                 )
@@ -471,9 +471,9 @@ class ClusterRequirer(Object):
         mongos_has_tls, config_server_has_tls = self.mongos_and_config_server_tls_status()
         match (mongos_has_tls, config_server_has_tls):
             case False, True:
-                return MongosStatuses.REQUIRES_TLS.value
+                return MongosStatuses.MISSING_TLS_REL.value
             case True, False:
-                return MongosStatuses.REQUIRES_NO_TLS.value
+                return MongosStatuses.INVALID_TLS_REL.value
             case _:
                 pass
         if not self.is_ca_compatible():
