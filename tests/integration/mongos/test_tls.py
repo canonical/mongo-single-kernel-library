@@ -5,30 +5,28 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     TIMEOUT,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
+    MONGOS_CLUSTER_COMPONENTS,
     assert_mongos_tls_disabled,
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
     get_k8s_public_ip,
     get_sans_ips,
-    integrate_cluster_with_tls,
     rotate_and_verify_certs,
     toggle_tls_mongos,
 )
-from ..helpers.sharding import (
-    integrate_with_tls,
-)
-from ..helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
+    integrate_apps_with_tls,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -69,7 +67,7 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can enable TLS."""
-    await integrate_with_tls(ops_test, [MONGOS_APP_NAME])
+    await integrate_apps_with_tls(ops_test, applications=[MONGOS_APP_NAME])
 
     await wait_for_mongodb_units_blocked(
         ops_test,
@@ -80,7 +78,14 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         subordinate=(substrate == "lxd"),
     )
 
-    await integrate_cluster_with_tls(ops_test)
+    await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
+    await ops_test.model.wait_for_idle(
+        apps=MONGOS_CLUSTER_COMPONENTS,
+        idle_period=20,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+        status="active",
+    )
 
     await assert_mongos_tls_enabled(ops_test, substrate)
 

@@ -5,16 +5,16 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT
-from ..helpers.mongos import (
+from tests.integration.helpers.common import MONGOS_APP_NAME, TIMEOUT
+from tests.integration.helpers.mongos import (
+    MONGOS_CLUSTER_COMPONENTS,
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
-    integrate_cluster_with_tls,
 )
-from ..helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME, integrate_with_tls
-from ..helpers.tls import TLS_CERTIFICATES_APP_NAME
-from ..helpers.types import Substrate
+from tests.integration.helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
+from tests.integration.helpers.tls import TLS_CERTIFICATES_APP_NAME, integrate_apps_with_tls
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -46,8 +46,15 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests race condition: mongos charm can integrate with TLS and then the config-server."""
-    await integrate_cluster_with_tls(ops_test)
-    await integrate_with_tls(ops_test, [MONGOS_APP_NAME])
+    await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
+    await ops_test.model.wait_for_idle(
+        apps=MONGOS_CLUSTER_COMPONENTS,
+        idle_period=20,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+        status="active",
+    )
+    await integrate_apps_with_tls(ops_test, applications=[MONGOS_APP_NAME])
 
     # integrate mongos with config-server
     await ops_test.model.integrate(

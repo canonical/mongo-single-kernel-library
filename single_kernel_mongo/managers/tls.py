@@ -34,6 +34,7 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_CHAIN_LABEL,
     SECRET_KEY_LABEL,
     WAIT_CERT_UPDATE,
+    TlsManagementState,
 )
 
 # from single_kernel_mongo.utils.helpers import parse_tls_file
@@ -384,3 +385,13 @@ class TLSManager:
             #    new_certificate_signing_request=new_csr,
             # )
             self.dependent.tls_events.request_certificate(internal)  # this triggers update twice
+
+    def get_tls_management_state(self) -> TlsManagementState:
+        """Pre-checks on TLS certificates management."""
+        if self.state.is_role(MongoDBRoles.MONGOS) and self.state.config_server_name is None:
+            return TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
+        if not self.state.db_initialised:
+            return TlsManagementState.DB_NOT_INTIALIZED
+        if self.state.upgrade_in_progress:
+            return TlsManagementState.UPGRATE_IN_PROGRESS
+        return TlsManagementState.EMPTY

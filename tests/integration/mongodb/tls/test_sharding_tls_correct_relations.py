@@ -5,19 +5,21 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
-from ...helpers.sharding import (
+from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     check_cluster_tls_disabled,
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
-    integrate_with_tls,
-    remove_tls_integrations,
     rotate_and_verify_certs,
 )
-from ...helpers.tls import TLS_CERTIFICATES_APP_NAME
-from ...helpers.types import Substrate
+from tests.integration.helpers.tls import (
+    TLS_CERTIFICATES_APP_NAME,
+    integrate_apps_with_tls,
+    remove_tls_integrations,
+)
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -61,7 +63,7 @@ async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -
         timeout=TIMEOUT,
     )
 
-    await integrate_with_tls(ops_test)
+    await integrate_apps_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
@@ -88,5 +90,5 @@ async def test_rotate_tls(ops_test: OpsTest, substrate: Substrate) -> None:
 @pytest.mark.abort_on_fail
 async def test_disable_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that the cluster can disable TLS."""
-    await remove_tls_integrations(ops_test)
+    await remove_tls_integrations(ops_test, applications=CLUSTER_COMPONENTS)
     await check_cluster_tls_disabled(ops_test, substrate)

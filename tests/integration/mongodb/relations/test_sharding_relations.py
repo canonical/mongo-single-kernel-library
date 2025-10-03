@@ -6,8 +6,8 @@ import pytest
 from juju.errors import JujuAPIError
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.backups import S3_APP_NAME
-from ...helpers.common import (
+from tests.integration.helpers.backups import S3_APP_NAME
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
@@ -17,22 +17,24 @@ from ...helpers.common import (
     deploy_charm,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.relations import (
+from tests.integration.helpers.relations import (
     APPLICATION_APP_NAME,
     FIRST_DATABASE_RELATION_NAME,
     REPLICATION_APP_NAME,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     CONFIG_SERVER_TWO_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
-    integrate_with_tls,
+)
+from tests.integration.helpers.tls import (
+    TLS_CERTIFICATES_APP_NAME,
+    integrate_apps_with_tls,
     remove_tls_integrations,
 )
-from ...helpers.tls import TLS_CERTIFICATES_APP_NAME
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 SHARDING_COMPONENTS = [SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME]
 
@@ -349,7 +351,7 @@ async def test_config_server_tls_replication_relation(
 ) -> None:
     """Verifies that using a replica as a shard fails even when TLS is integrated."""
     # attempt to add a shard to a replication deployment as a config server.
-    await integrate_with_tls(ops_test, [REPLICATION_APP_NAME])
+    await integrate_apps_with_tls(ops_test, applications=[REPLICATION_APP_NAME])
 
     await ops_test.model.integrate(
         f"{REPLICATION_APP_NAME}:{SHARD_REL_NAME}",
@@ -365,7 +367,7 @@ async def test_config_server_tls_replication_relation(
     )
 
     # clean up relations
-    await remove_tls_integrations(ops_test, [REPLICATION_APP_NAME])
+    await remove_tls_integrations(ops_test, applications=[REPLICATION_APP_NAME])
 
     await ops_test.model.applications[REPLICATION_APP_NAME].remove_relation(
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",

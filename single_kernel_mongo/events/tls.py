@@ -25,10 +25,11 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificat
     CertificateAvailableEvent,
     TLSCertificatesRequiresV4,
 )
+from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-
+from single_kernel_mongo.state.tls_state import TlsManagementState
 
 logger = logging.getLogger(__name__)
 
@@ -82,21 +83,14 @@ class TLSEventsHandler(Object):
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handler for relation joined."""
-        if (
-            self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and self.manager.state.config_server_name is None
-        ):
-            logger.info(
-                "mongos is not running (not integrated to config-server) deferring renewal of certificates."
-            )
-            event.defer()
-            return
-        if self.manager.state.upgrade_in_progress:
-            logger.warning(
-                "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            event.defer()
-            return
+        state = self.manager.get_tls_management_state()
+        match state:
+            case (
+                TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
+                | TlsManagementState.UPGRATE_IN_PROGRESS
+            ):
+                defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
 
         # When we can integrate, clean the mongos requires tls status.
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
@@ -123,16 +117,13 @@ class TLSEventsHandler(Object):
         Args:
             event (RelationBrokenEvent): The event object.
         """
-        if not self.manager.state.db_initialised:
-            logger.info(f"Deferring {str(type(event))}. db is not initialised.")
-            event.defer()
-            return
+        state = self.manager.get_tls_management_state()
+        match state:
+            case TlsManagementState.DB_NOT_INTIALIZED | TlsManagementState.UPGRATE_IN_PROGRESS:
+                defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
 
-        if self.manager.state.upgrade_in_progress:
-            logger.warning(
-                "Disabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-        logger.debug("Disabling external and internal TLS for unit: %s", self.charm.unit.name)
+        logger.debug("Disabling TLS for unit: %s", self.charm.unit.name)
 
         cert_type = (
             TLSType.PEER
@@ -153,27 +144,16 @@ class TLSEventsHandler(Object):
 
         This event is emitted by the TLS charm when the some certificates are available.
         """
-        if (
-            self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and self.manager.state.config_server_name is None
-        ):
-            logger.info(
-                "mongos is not running (not integrated to config-server) deferring renewal of certificates."
-            )
-            event.defer()
-            return
-        if not self.manager.state.db_initialised and not self.dependent.state.is_role(
-            MongoDBRoles.MONGOS
-        ):
-            logger.info(f"Deferring {str(type(event))}: db is not initialised")
-            event.defer()
-            return
-        if self.manager.state.upgrade_in_progress:
-            logger.warning(
-                "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            event.defer()
-            return
+        state = self.manager.get_tls_management_state()
+        match state:
+            case (
+                TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
+                | TlsManagementState.DB_NOT_INTIALIZED
+                | TlsManagementState.UPGRATE_IN_PROGRESS
+            ):
+                defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
+
         logger.info("Certificate available")
 
         cert = event.certificate

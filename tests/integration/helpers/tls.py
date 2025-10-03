@@ -10,7 +10,7 @@ from juju.unit import Unit as JujuUnit
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOD_PORT,
     MONGOS_APP_NAME,
     MONGOS_PORT,
@@ -23,7 +23,7 @@ from ..helpers.common import (
     get_secret_id,
     mongosh,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -56,6 +56,38 @@ def internal_cert_path(substrate: Substrate):
     if substrate == "lxd":
         return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
+
+
+async def integrate_apps_with_tls(
+    ops_test: OpsTest,
+    applications: list[str],
+    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+) -> None:
+    """Integrates a list of applications with self-signed certs operator."""
+    for app in applications:
+        await ops_test.model.integrate(
+            f"{cert_provider_app}",
+            f"{app}:{PEER_TLS_RELATION_NAME}",
+        )
+        await ops_test.model.integrate(
+            f"{cert_provider_app}",
+            f"{app}:{CLIENT_TLS_RELATION_NAME}",
+        )
+
+
+async def remove_tls_integrations(
+    ops_test: OpsTest, applications: list[str], cert_provider_app: str = TLS_CERTIFICATES_APP_NAME
+) -> None:
+    """Removes the TLS integration from a list of applications."""
+    for app in applications:
+        await ops_test.model.applications[app].remove_relation(
+            f"{app}:{PEER_TLS_RELATION_NAME}",
+            f"{cert_provider_app}",
+        )
+        await ops_test.model.applications[app].remove_relation(
+            f"{app}:{CLIENT_TLS_RELATION_NAME}",
+            f"{cert_provider_app}",
+        )
 
 
 async def mongo_tls_command(

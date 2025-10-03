@@ -7,24 +7,25 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
     deploy_charm,
     get_app_name,
 )
-from ...helpers.tls import (
+from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
+    integrate_apps_with_tls,
     internal_cert_path,
     time_file_created,
     time_process_started,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -68,9 +69,7 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     # Relate it to the MongoDB to enable TLS.
     app_name = await get_app_name(ops_test)
 
-    await ops_test.model.integrate(
-        f"{app_name}:certificates", f"{TLS_CERTIFICATES_APP_NAME}:certificates"
-    )
+    await integrate_apps_with_tls(ops_test, applications=[app_name])
 
     await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=60)
 

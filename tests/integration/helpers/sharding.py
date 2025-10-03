@@ -10,8 +10,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.backups import insert_unwanted_data
-
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     deploy_charm,
@@ -19,12 +18,9 @@ from ..helpers.common import (
     get_leader_id,
     mongodb_uri,
 )
-from ..helpers.tls import (
-    CLIENT_TLS_RELATION_NAME,
-    PEER_TLS_RELATION_NAME,
+from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
     SNAP_MONGOS_SERVICE,
-    TLS_CERTIFICATES_APP_NAME,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -33,7 +29,7 @@ from ..helpers.tls import (
     time_file_created,
     time_process_started,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -227,40 +223,6 @@ def count_users(mongos_client: MongoClient) -> int:
     admin_db = mongos_client["admin"]
     users_collection = admin_db.system.users
     return users_collection.count_documents({})
-
-
-async def integrate_with_tls(
-    ops_test: OpsTest,
-    applications: list[str] | None = None,
-    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
-) -> None:
-    """Integrates cluster components with self-signed certs operator."""
-    if not applications:
-        applications = CLUSTER_COMPONENTS
-    for app in applications:
-        await ops_test.model.integrate(
-            f"{cert_provider_app}:{PEER_TLS_RELATION_NAME}",
-            f"{app}",
-        )
-        await ops_test.model.integrate(
-            f"{cert_provider_app}:{CLIENT_TLS_RELATION_NAME}",
-            f"{app}",
-        )
-
-
-async def remove_tls_integrations(ops_test: OpsTest, applications: list[str] | None = None) -> None:
-    """Removes the TLS integration from all cluster components."""
-    if not applications:
-        applications = CLUSTER_COMPONENTS
-    for app in applications:
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{PEER_TLS_RELATION_NAME}",
-            f"{TLS_CERTIFICATES_APP_NAME}",
-        )
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{CLIENT_TLS_RELATION_NAME}",
-            f"{TLS_CERTIFICATES_APP_NAME}",
-        )
 
 
 async def check_cluster_tls_enabled(

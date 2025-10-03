@@ -5,8 +5,12 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT, wait_for_mongodb_units_blocked
-from ...helpers.sharding import (
+from tests.integration.helpers.common import (
+    DEPLOYMENT_TIMEOUT,
+    TIMEOUT,
+    wait_for_mongodb_units_blocked,
+)
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -14,14 +18,14 @@ from ...helpers.sharding import (
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
-    integrate_with_tls,
-    remove_tls_integrations,
 )
-from ...helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
+    integrate_apps_with_tls,
+    remove_tls_integrations,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -56,7 +60,7 @@ async def test_tls_then_build_cluster(
         raise_on_blocked=False,
     )
 
-    await integrate_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
+    await integrate_apps_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -91,7 +95,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 1: Config-server has TLS enabled - but shard does not
-    await remove_tls_integrations(ops_test, [SHARD_ONE_APP_NAME])
+    await remove_tls_integrations(ops_test, applications=[SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -109,7 +113,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # Re-integrate to bring cluster back to steady state
-    await integrate_with_tls(ops_test, [SHARD_ONE_APP_NAME])
+    await integrate_apps_with_tls(ops_test, applications=[SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -120,7 +124,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 2: Config-server does not have TLS enabled - but shard does
-    await remove_tls_integrations(ops_test, [CONFIG_SERVER_APP_NAME])
+    await remove_tls_integrations(ops_test, applications=[CONFIG_SERVER_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -139,7 +143,11 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     # CASE 3: Cluster components are using different CA's
 
     # Re-integrate to bring cluster back to steady state
-    await integrate_with_tls(ops_test, [CONFIG_SERVER_APP_NAME], DIFFERENT_CERTIFICATES_APP_NAME)
+    await integrate_apps_with_tls(
+        ops_test,
+        applications=[CONFIG_SERVER_APP_NAME],
+        cert_provider_app=DIFFERENT_CERTIFICATES_APP_NAME,
+    )
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,

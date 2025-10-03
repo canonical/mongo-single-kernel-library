@@ -4,6 +4,8 @@
 
 """The TLS state."""
 
+from enum import Enum
+
 from ops import Relation
 from ops.model import Unit
 
@@ -18,6 +20,15 @@ SECRET_CHAIN_LABEL = "chain-secret"
 WAIT_CERT_UPDATE = "wait-cert-updated"
 INT_CERT_SECRET_KEY = "int-cert-secret"
 EXT_CERT_SECRET_KEY = "ext-cert-secret"
+
+
+class TlsManagementState(Enum):
+    """TLS management state that can be mapped to a status."""
+
+    EMPTY = ""
+    UPGRATE_IN_PROGRESS = "Upgrade in progress."
+    DB_NOT_INTIALIZED = "DB is not initialised."
+    MONGOS_MISSING_CONFIG_SERVER = "mongos is not running (not integrated to config-server)."
 
 
 class TLSState:
