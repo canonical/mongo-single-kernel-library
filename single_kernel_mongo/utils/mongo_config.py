@@ -4,6 +4,7 @@
 
 from dataclasses import dataclass
 from itertools import chain
+from pathlib import Path
 from urllib.parse import quote_plus, urlencode
 
 from single_kernel_mongo.config.literals import MongoPorts
@@ -35,8 +36,9 @@ class MongoConfiguration:
     password: str
     hosts: set[str]
     roles: set[str]
-    tls_external: bool
-    tls_internal: bool
+    tls_enabled: bool
+    tls_external_keyfile: Path
+    tls_external_ca: Path
     port: int | None = None
     replset: str | None = None
     standalone: bool = False
@@ -63,27 +65,39 @@ class MongoConfiguration:
         return {}
 
     @property
-    def uri(self) -> str:
-        """Return URI concatenated from fields."""
+    def tls_config(self) -> dict:
+        """TLS Config."""
+        if not self.tls_enabled:
+            return {}
+        return {
+            "tls": True,
+            "tlsCertificateKeyFile": f"{self.tls_external_keyfile}",
+            "tlsCaFile": f"{self.tls_external_ca}",
+        }
+
+    def _uri(self, tls: bool = True):
+        """URI builder."""
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
             raise AmbiguousConfigError("Mongos cannot support replica set")
 
         if self.standalone and not self.port:
             raise AmbiguousConfigError("Standalone connection needs a port")
 
+        tls_config = self.tls_config if tls else {}
+        auth_source = self.formatted_auth_source
+
         if self.standalone:
             return (
                 f"mongodb://{quote_plus(self.username)}:"
                 f"{quote_plus(self.password)}@"
-                f"localhost:{self.port}/?authSource=admin"
+                f"localhost:{self.port}/?{urlencode(auth_source | tls_config)}"
             )
 
         complete_hosts = ",".join(sorted(self.formatted_hosts))
         replset = self.formatted_replset
-        auth_source = self.formatted_auth_source
 
         # Dict of all parameters.
-        parameters = replset | auth_source
+        parameters = replset | auth_source | tls_config
 
         return (
             f"mongodb://{quote_plus(self.username)}:"
@@ -91,6 +105,19 @@ class MongoConfiguration:
             f"{complete_hosts}/{quote_plus(self.database)}?"
             f"{urlencode(parameters)}"
         )
+
+    @property
+    def uri(self) -> str:
+        """Return URI concatenated from fields."""
+        return self._uri(tls=True)
+
+    @property
+    def uri_without_tls(self) -> str:
+        """Return URI concatenated from fields without tls config.
+
+        This is useful to provide client URIs that will chose where to store their TLS files.
+        """
+        return self._uri(tls=False)
 
     @property
     def supported_roles(self) -> list[DBPrivilege]:
@@ -112,5 +139,6 @@ EMPTY_CONFIGURATION = MongoConfiguration(
     set(),
     set(),
     False,
-    False,
+    Path(""),
+    Path(""),
 )

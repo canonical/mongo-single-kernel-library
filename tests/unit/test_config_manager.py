@@ -286,6 +286,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.get_subject_name = lambda: "mongodb"
     mock_state.tls.internal_enabled = True
     mock_state.tls.external_enabled = True
     workload = VMMongoDBWorkload(VM_MONGOD, None)
@@ -303,9 +304,11 @@ def test_mongodb_config_manager_tls_enabled(mocker):
         },
         "net": {
             "tls": {
-                "allowInvalidCertificates": True,
                 "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
                 "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+                "clusterAuthX509": {
+                    "attributes": "O=mongodb",
+                },
             }
         },
     }
@@ -314,7 +317,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
             "tls": {
                 "CAFile": f"{VM_PATH['mongod']['CONF']}/external-ca.crt",
                 "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
-                "mode": "preferTLS",
+                "mode": "requireTLS",
                 "disabledProtocols": "TLS1_0,TLS1_1",
             }
         },

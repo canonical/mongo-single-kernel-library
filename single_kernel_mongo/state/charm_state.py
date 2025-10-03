@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from ipaddress import IPv4Address, IPv6Address
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
@@ -24,10 +25,12 @@ from pymongo.errors import (
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
     SNAP,
+    TRUST_STORE_PATH,
     CharmKind,
     MongoPorts,
     Scope,
     Substrates,
+    TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.relations import (
@@ -658,6 +661,17 @@ class CharmState(Object, StatusesStateProtocol):
         )
         return None
 
+    def get_subject_name(self) -> str:
+        """Generate the subject name for CSR."""
+        # In sharded MongoDB deployments it is a requirement that all subject names match across
+        # all cluster components. The config-server name is the source of truth across mongos and
+        # shard deployments.
+        if self.is_role(MongoDBRoles.REPLICATION) or self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return self.charm.app.name
+        # until integrated with config-server use current app name as
+        # subject name
+        return self.state.config_server_name or self.charm.app.name
+
     def generate_config_server_db(self) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
@@ -779,10 +793,25 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=self.tls_external_keyfile,
+            tls_external_ca=self.tls_external_ca,
             standalone=standalone,
         )
+
+    @property
+    def tls_external_keyfile(self) -> Path:
+        """Path for the keyfile file (local file on k8s)."""
+        if self.substrate == Substrates.K8S:
+            return TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value
+        return self.paths.ext_pem_file
+
+    @property
+    def tls_external_ca(self) -> Path:
+        """Path for the ca file (local file on k8s)."""
+        if self.substrate == Substrates.K8S:
+            return TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value
+        return self.paths.ext_ca_file
 
     def mongos_config_for_user(
         self,
@@ -808,8 +837,9 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value,
+            tls_external_ca=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value,
         )
 
     @property
@@ -863,8 +893,9 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value,
+            tls_external_ca=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value,
         )
 
     @property

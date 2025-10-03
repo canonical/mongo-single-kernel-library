@@ -124,3 +124,5 @@ class TrustStoreFiles(str, Enum):
 
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
+    EXTERNAL_KEYFILE = "external-cert.pem"
+    EXTERNAL_CA_FILE = "external-ca.crt"
