@@ -87,7 +87,7 @@ class TLSEventsHandler(Object):
         match state:
             case (
                 TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
-                | TlsManagementState.UPGRATE_IN_PROGRESS
+                | TlsManagementState.UPGRADE_IN_PROGRESS
             ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
@@ -118,7 +118,7 @@ class TLSEventsHandler(Object):
             case (
                 TlsManagementState.DB_NOT_INTIALIZED
                 | TlsManagementState.MONGOS_DB_NOT_INITIALIZED
-                | TlsManagementState.UPGRATE_IN_PROGRESS
+                | TlsManagementState.UPGRADE_IN_PROGRESS
             ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
@@ -146,7 +146,7 @@ class TLSEventsHandler(Object):
         """
         state = self.manager.get_tls_management_state()
         match state:
-            case TlsManagementState.DB_NOT_INTIALIZED | TlsManagementState.UPGRATE_IN_PROGRESS:
+            case TlsManagementState.DB_NOT_INTIALIZED | TlsManagementState.UPGRADE_IN_PROGRESS:
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:

@@ -252,5 +252,5 @@ class TLSManager:
                 return TlsManagementState.MONGOS_DB_NOT_INITIALIZED
             return TlsManagementState.DB_NOT_INTIALIZED
         if self.state.upgrade_in_progress:
-            return TlsManagementState.UPGRATE_IN_PROGRESS
+            return TlsManagementState.UPGRADE_IN_PROGRESS
         return TlsManagementState.EMPTY
