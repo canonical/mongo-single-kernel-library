@@ -263,6 +263,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             match self.backup_state():
                 case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
                     self.dependent.charm.status_handler.set_running_status(
+                        BackupStatuses.ACTION_RUNNING.value,
                         scope="unit",
                         component_name=self.name,
                     )
