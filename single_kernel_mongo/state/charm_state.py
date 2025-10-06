@@ -667,10 +667,10 @@ class CharmState(Object, StatusesStateProtocol):
         # all cluster components. The config-server name is the source of truth across mongos and
         # shard deployments.
         if self.is_role(MongoDBRoles.REPLICATION) or self.is_role(MongoDBRoles.CONFIG_SERVER):
-            return self.charm.app.name
+            return self.model.app.name
         # until integrated with config-server use current app name as
         # subject name
-        return self.state.config_server_name or self.charm.app.name
+        return self.config_server_name or self.model.app.name
 
     def generate_config_server_db(self) -> str:
         """Generates the config server DB URI."""
