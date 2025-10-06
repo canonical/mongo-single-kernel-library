@@ -875,9 +875,12 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
 
         # juju messes up the string formatting here.
         unit_statuses = json.loads(result["unit"])
-
-        assert unit_statuses[0]["Status"].lower() == status
-        assert unit_statuses[0]["Message"] == message
+        assert (
+            unit_statuses[0]["Status"].lower() == status
+        ), f"unit {unit.name} status is `{unit_statuses[0]['Status'].lower()}`, expected `{status}`"
+        assert (
+            unit_statuses[0]["Message"] == message
+        ), f"unit {unit.name} status is `{unit_statuses[0]['Message']}`, expected `{message}`"
 
 
 async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
