@@ -13,7 +13,10 @@ from tests.integration.helpers.common import (
 from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
+    CONFIG_SERVER_REL_NAME,
     SHARD_ONE_APP_NAME,
+    SHARD_REL_NAME,
+    SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
     check_cluster_tls_enabled,
     deploy_cluster_components,
@@ -162,4 +165,59 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         SHARD_ONE_APP_NAME,
         status="Shard CA and Config-Server CA don't match.",
         timeout=450,
+    )
+
+
+async def test_invalid_relation_not_yet_established(
+    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
+):
+    """Deploy a shard, integrate it but only the config server has TLS.
+
+    Then remove it and it should remove immediately and keep the relation to
+    config-server status.
+    """
+    # Deploy a new shard
+    await deploy_charm(
+        ops_test,
+        mongodb_charm,
+        substrate,
+        app_name=SHARD_THREE_APP_NAME,
+        mongod_resource=mongod_resource,
+        num_units=1,
+        config={"role": "shard"},
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[SHARD_THREE_APP_NAME],
+        idle_period=20,
+        timeout=DEPLOYMENT_TIMEOUT,
+    )
+
+    # Integrate the shard with the config-server
+    await ops_test.model.integrate(
+        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+        f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
+    )
+
+    # Shard has not TLS but config server has
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        SHARD_THREE_APP_NAME,
+        status="Shard requires TLS to be enabled.",
+        timeout=TIMEOUT,
+    )
+
+    # Remove the not yet added shard
+    await ops_test.model.applications[SHARD_THREE_APP_NAME].remove_relation(
+        f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    )
+
+    # Wait to go back to normal status.
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        SHARD_THREE_APP_NAME,
+        status="Missing relation to config-server.",
+        timeout=TIMEOUT,
     )
