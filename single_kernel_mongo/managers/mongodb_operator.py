@@ -320,7 +320,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handler on start."""
         # Ensure we're allowed to run.
         try:
-            self._prepare_checks()
+            self._run_startup_checks()
         except InvalidConfigRoleError:
             if self.charm.unit.is_leader():
                 self.state.statuses.add(
@@ -334,7 +334,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state.statuses.clear(scope="app", component=self.name)
 
         # Configure the workload. This requires a valid role!
-        # In the _prepare_checks, we ensure that we have a valid role before
+        # In the _run_startup_checks method, we ensure that we have a valid role before
         # allowing that event to run.
         self._configure_workloads()
 
