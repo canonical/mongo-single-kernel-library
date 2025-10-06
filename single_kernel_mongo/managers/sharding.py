@@ -536,11 +536,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         if relation.app is None:
             raise NonDeferrableFailedHookChecksError("Missing app information in event, skipping.")
 
-        # We look in the relation databag because the shard state data
-        # interface returns nothing on relation broken event.
-        mongos_hosts = relation.data[relation.app].get(AppShardingComponentKeys.HOST.value)
-
-        if is_leaving and not mongos_hosts:
+        if is_leaving and not self.state.app_peer_data.mongos_hosts:
             raise NonDeferrableFailedHookChecksError(
                 "Config-server never set up, no need to process broken event."
             )
@@ -699,9 +695,12 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Waits for the shard to be fully drained from the cluster."""
         self.assert_pass_hook_checks(relation, is_leaving=True)
 
-        mongos_hosts = self.state.app_peer_data.mongos_hosts
+        if not (mongos_hosts := self.state.app_peer_data.mongos_hosts):
+            return
 
         self.wait_for_draining(mongos_hosts)
+
+        self.state.app_peer_data.mongos_hosts = []
 
         self.state.statuses.set(
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
