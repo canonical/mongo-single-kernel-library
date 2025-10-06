@@ -80,6 +80,10 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"TLS not enabled for unit {unit.name}."
 
+        assert not await check_tls(
+            ops_test, substrate, unit, enabled=False, app_name=app_name
+        ), f"Client can still connect without TLS on unit {unit.name}"
+
 
 async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify rotating tls private keys restarts mongod with new certificates.
@@ -152,6 +156,9 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"tls is not enabled for {unit.name}."
+        assert not await check_tls(
+            ops_test, substrate, unit, enabled=False, app_name=app_name
+        ), f"Client can still connect without TLS on unit {unit.name}"
 
 
 async def test_set_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
@@ -240,6 +247,9 @@ async def test_set_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"tls is not enabled for {unit.name}."
+        assert not await check_tls(
+            ops_test, substrate, unit, enabled=False, app_name=app_name
+        ), f"Client can still connect without TLS on unit {unit.name}"
 
 
 async def test_disable_tls(ops_test: OpsTest, substrate: Substrate) -> None:

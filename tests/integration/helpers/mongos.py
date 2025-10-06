@@ -332,6 +332,16 @@ async def assert_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate, int
             container="mongos",
             uri=uri,
         ), f"TLS not enabled on {unit.name}"
+        assert await check_tls(
+            ops_test,
+            substrate,
+            unit,
+            app_name=MONGOS_APP_NAME,
+            enabled=False,
+            mongos=True,
+            container="mongos",
+            uri=uri,
+        ), f"Client can still connect without TLS on {unit.name}"
 
 
 async def assert_mongos_tls_disabled(

@@ -262,12 +262,18 @@ async def check_cluster_tls_enabled(
             assert await check_tls(
                 ops_test, substrate, unit, enabled=True, app_name=cluster_component, mongos=False
             ), f"MongoDB TLS not enabled in unit {unit.name}"
+            assert not await check_tls(
+                ops_test, substrate, unit, enabled=False, app_name=cluster_component, mongos=True
+            ), f"Client can still connect without TLS on unit {unit.name}"
 
     # check mongos is running with TLS enabled
     for unit in ops_test.model.applications[config_server].units:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=config_server, mongos=True
         ), f"Mongos TLS not enabled in unit {unit.name}"
+        assert not await check_tls(
+            ops_test, substrate, unit, enabled=False, app_name=config_server, mongos=True
+        ), f"Client can still connect to mongos without TLS on unit {unit.name}"
 
 
 async def check_cluster_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
