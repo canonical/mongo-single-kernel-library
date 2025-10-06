@@ -878,6 +878,7 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
 
 
 async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    """Checks that the application has the correct status and message."""
     app = ops_test.model.applications[app_name]
     await ops_test.model.block_until(*[lambda: app.status == status], timeout=TIMEOUT)
     assert app.status_message == message
