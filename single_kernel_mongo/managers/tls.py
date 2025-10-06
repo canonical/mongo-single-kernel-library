@@ -101,8 +101,6 @@ class TLSManager:
             sans_ips=[str(self.state.bind_address)],
         )
 
-        if internal:
-            return sans
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
             if host := self.state.unit_host:
                 sans["sans_ips"].append(host)
