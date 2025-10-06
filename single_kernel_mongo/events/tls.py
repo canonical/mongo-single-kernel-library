@@ -98,16 +98,14 @@ class TLSEventsHandler(Object):
                 MongosStatuses.MISSING_TLS_REL.value, scope="unit", component=self.dependent.name
             )
 
-        internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
-        self.manager.set_certificate_requested(internal)
+        # internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
+        # self.manager.set_certificate_requested(internal)
 
-    def request_certificate(self, internal: bool) -> None:
+    def request_certificate(self) -> None:
         """Request refresh of certificates."""
-        logger.info(
-            f"Requesting refresh {TLSType.PEER if internal else TLSType.CLIENT} certificate."
-        )
+        logger.info("Requesting refresh certificate.")
         self.refresh_tls_certificates_event.emit()
-        self.manager.set_certificate_requested(internal)
+        # self.manager.set_certificate_requested(internal)
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the `certificates-broken` event.

@@ -453,9 +453,7 @@ class ClusterRequirer(Object):
         # our CA is none until certs have been received. We cannot request certs until integrated
         # to config-server.
         mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
-        if mongos_tls_ca:
-            return False
-        return not self.dependent.tls_manager.is_set_waiting_for_cert_to_update()
+        return not mongos_tls_ca
 
     def mongos_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""

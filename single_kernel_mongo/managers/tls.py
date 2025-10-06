@@ -9,7 +9,6 @@ Handles MongoDB TLS Files.
 
 from __future__ import annotations
 
-import json
 import logging
 import socket
 from typing import TYPE_CHECKING, TypedDict
@@ -30,7 +29,6 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_CERT_LABEL,
     SECRET_CHAIN_LABEL,
     SECRET_KEY_LABEL,
-    WAIT_CERT_UPDATE,
     TlsManagementState,
 )
 
@@ -79,11 +77,11 @@ class TLSManager:
             organization=subject_name,
         )
 
-    def set_certificate_requested(self, internal: bool):
-        """Set the certs subject and wait-cert-updated peer data."""
-        label = "int" if internal else "ext"
-        self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
-        self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
+    # def set_certificate_requested(self, internal: bool):
+    #    """Set the certs subject and wait-cert-updated peer data."""
+    #    label = "int" if internal else "ext"
+    #    self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
+    #    self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
 
     def get_new_sans(self, internal: bool) -> Sans:
         """Create a list of DNS names and IPs for a MongoDB unit.
@@ -221,24 +219,8 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
-        self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
+        # self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
         logger.info(f"{TLSType.PEER if internal else TLSType.CLIENT} certificate secrets updated.")
-
-    def set_waiting_for_cert_to_update(self, internal: bool, waiting: bool) -> None:
-        """Sets the databag."""
-        scope = "int" if internal else "ext"
-        label_name = f"{scope}-{WAIT_CERT_UPDATE}"
-        self.state.unit_peer_data.update({label_name: json.dumps(waiting)})
-
-    def is_set_waiting_for_cert_to_update(
-        self,
-        internal: bool = False,
-    ) -> bool:
-        """Returns True if we are waiting for a cert to update."""
-        scope = "int" if internal else "ext"
-        label_name = f"{scope}-{WAIT_CERT_UPDATE}"
-
-        return json.loads(self.state.unit_peer_data.get(label_name) or "false")
 
     def is_waiting_for_both_certs(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""

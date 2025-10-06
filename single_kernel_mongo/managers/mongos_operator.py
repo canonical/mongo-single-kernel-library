@@ -227,7 +227,7 @@ class MongosOperator(OperatorProtocol, Object):
                 component=self.name,
             )
             self.update_k8s_external_services()
-
+            self.tls_events.request_certificate()
             # self.tls_manager.update_tls_sans()
             self.share_connection_info()
 
@@ -271,6 +271,7 @@ class MongosOperator(OperatorProtocol, Object):
             # our SANS as necessary.
             # The connection info will be updated when we receive the new certificates.
             if self.substrate == Substrates.K8S:
+                self.tls_events.request_certificate()
                 # self.tls_manager.update_tls_sans()
                 self.upgrade_manager._reconcile_upgrade()
 

@@ -719,12 +719,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and tls_integrated:
-            logger.info("Cluster implements internal membership auth via certificates")
-            for internal in (True, False):  # is this already handled by the chance of subject?
-                if self._should_request_new_certs(internal):
-                    self.dependent.tls_events.request_certificate(internal)
+            logger.info("Cluster implements internal membership auth via certificates.")
+            self.dependent.tls_events.request_certificate()
         else:
-            logger.info("Cluster implements internal membership auth via keyFile")
+            logger.info("Cluster implements internal membership auth via keyFile.")
 
         # Copy over keyfile regardless of whether the cluster uses TLS or or KeyFile for internal
         # membership authentication. If TLS is disabled on the cluster this enables the cluster to
@@ -801,16 +799,16 @@ class ShardManager(Object, ManagerStatusProtocol):
                         raise
         self.state.set_user_password(user, new_password)
 
-    def _should_request_new_certs(self, internal: bool) -> bool:
-        """Returns if the shard has already requested the certificates for internal-membership.
+    # def _should_request_new_certs(self, internal: bool) -> bool:
+    #    """Returns if the shard has already requested the certificates for internal-membership.
 
-        Sharded components must have the same subject names in their certs.
-        """
-        if internal:
-            int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
-            return int_subject != self.state.config_server_name
-        ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
-        return ext_subject != self.state.config_server_name
+    #    Sharded components must have the same subject names in their certs.
+    #    """
+    #    if internal:
+    #        int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
+    #        return int_subject != self.state.config_server_name
+    #    ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
+    #    return ext_subject != self.state.config_server_name
 
     def shard_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for shard and config-server."""
