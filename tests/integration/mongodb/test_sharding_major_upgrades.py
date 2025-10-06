@@ -14,7 +14,7 @@ from tests.integration.helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.upgrade import get_password_action, set_fcv, set_password_action
+from tests.integration.helpers.upgrade import get_password_action, set_fcv
 
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
@@ -24,7 +24,6 @@ from ..helpers.common import (
     count_writes,
     deploy_application,
     find_unit,
-    get_unit_id,
     mongodb_uri,
     set_password,
     start_continous_writes,
@@ -202,16 +201,13 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         password = await get_password_action(
             ops_test, username=user.username, app_name=CONFIG_SERVER_SIX
         )
-        leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
-        await set_password_action(
-            ops_test,
-            unit_id=get_unit_id(leader_unit.name),
-            username=user.username,
-            password=password,
-            app_name=CONFIG_SERVER_SEVEN,
+        await set_password(
+            ops_test, username=user.username, password=password, app_name=CONFIG_SERVER_SEVEN
         )
 
-    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
+        await ops_test.model.wait_for_idle(
+            apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
+        )
 
 
 @pytest.mark.abort_on_fail
