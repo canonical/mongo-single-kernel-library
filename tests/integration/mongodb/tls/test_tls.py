@@ -2,7 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -17,6 +16,7 @@ from ...helpers.common import (
 from ...helpers.tls import (
     SNAP_MONGOD_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
+    cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -29,7 +29,7 @@ from ...helpers.types import Substrate
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
 ) -> None:
     """Build and deploy one unit of MongoDB and one unit of TLS."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
@@ -80,8 +80,8 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"TLS not enabled for unit {unit.name}."
 
-        assert not await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=app_name
+        assert await cannot_connect_without_tls(
+            ops_test, substrate, unit, app_name=app_name
         ), f"Client can still connect without TLS on unit {unit.name}"
 
 
@@ -156,8 +156,8 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"tls is not enabled for {unit.name}."
-        assert not await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=app_name
+        assert await cannot_connect_without_tls(
+            ops_test, substrate, unit, app_name=app_name
         ), f"Client can still connect without TLS on unit {unit.name}"
 
 
@@ -247,8 +247,8 @@ async def test_set_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"tls is not enabled for {unit.name}."
-        assert not await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=app_name
+        assert await cannot_connect_without_tls(
+            ops_test, substrate, unit, app_name=app_name
         ), f"Client can still connect without TLS on unit {unit.name}"
 
 

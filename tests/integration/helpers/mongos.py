@@ -31,6 +31,7 @@ from ..helpers.tls import (
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
+    cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -332,12 +333,11 @@ async def assert_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate, int
             container="mongos",
             uri=uri,
         ), f"TLS not enabled on {unit.name}"
-        assert await check_tls(
+        assert await cannot_connect_without_tls(
             ops_test,
             substrate,
             unit,
             app_name=MONGOS_APP_NAME,
-            enabled=False,
             mongos=True,
             container="mongos",
             uri=uri,

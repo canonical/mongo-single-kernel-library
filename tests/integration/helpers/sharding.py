@@ -24,6 +24,7 @@ from ..helpers.tls import (
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
+    cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
     external_cert_path,
@@ -262,8 +263,8 @@ async def check_cluster_tls_enabled(
             assert await check_tls(
                 ops_test, substrate, unit, enabled=True, app_name=cluster_component, mongos=False
             ), f"MongoDB TLS not enabled in unit {unit.name}"
-            assert not await check_tls(
-                ops_test, substrate, unit, enabled=False, app_name=cluster_component, mongos=True
+            assert await cannot_connect_without_tls(
+                ops_test, substrate, unit, app_name=cluster_component, mongos=False
             ), f"Client can still connect without TLS on unit {unit.name}"
 
     # check mongos is running with TLS enabled
@@ -271,8 +272,8 @@ async def check_cluster_tls_enabled(
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=config_server, mongos=True
         ), f"Mongos TLS not enabled in unit {unit.name}"
-        assert not await check_tls(
-            ops_test, substrate, unit, enabled=False, app_name=config_server, mongos=True
+        assert await cannot_connect_without_tls(
+            ops_test, substrate, unit, app_name=config_server
         ), f"Client can still connect to mongos without TLS on unit {unit.name}"
 
 
