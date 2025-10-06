@@ -146,12 +146,11 @@ class TLSEventsHandler(Object):
         """
         state = self.manager.get_tls_management_state()
         match state:
-            case (
-                TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
-                | TlsManagementState.DB_NOT_INTIALIZED
-                | TlsManagementState.UPGRATE_IN_PROGRESS
-            ):
+            case TlsManagementState.DB_NOT_INTIALIZED | TlsManagementState.UPGRATE_IN_PROGRESS:
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
+            case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:
+                logger.info(f"{state.value}. Ignoring certificate.")
                 return
 
         logger.info("Certificate available.")

@@ -136,6 +136,8 @@ class ClusterMongosEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
         self.manager.set_relation_created_status()
+        if self.manager.state.peer_tls_relation or self.manager.state.client_tls_relation:
+            self.dependent.tls_events.request_certificate()
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Database Created event handler.
