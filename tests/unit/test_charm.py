@@ -4,6 +4,7 @@
 import json
 
 import pytest
+from ops import BlockedStatus
 from ops.pebble import PathError, ProtocolError
 from ops.testing import ActionFailed, Harness
 from pymongo.errors import ConfigurationError, ConnectionFailure, OperationFailure
@@ -482,11 +483,27 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
-def test_on_config_changed_invalid_role(harness):
+def test_on_config_changed_inmpossible_to_change_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_invalid_role(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.update_config({"role": "invalidrole"})
+    harness.evaluate_status()
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+
+
+def test_on_config_changed_no_role_yet(harness: Harness[MongoTestCharm], mocker):
+    mocked_defer = mocker.patch("ops.framework.EventBase.defer")
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.UNKNOWN.value
+    harness.update_config({"role": "shard"})
+    mocked_defer.assert_called()
 
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
@@ -599,6 +616,23 @@ def test_on_leader_elected_dont_rotate_if_present(harness):
     operator_password = state.get_user_password(OperatorUser)
     harness.charm.on.leader_elected.emit()
     assert state.get_user_password(OperatorUser) == operator_password
+
+
+def test_leader_elected_invalid_role(harness: Harness[MongoTestCharm]):
+    state = harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config({"role": "invalidrole"})
+
+    assert state.is_role(MongoDBRoles.UNKNOWN)
+
+    harness.set_leader(True)
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+    assert state.app_peer_data.role == MongoDBRoles.UNKNOWN
+
+    harness.update_config({"role": "replication"})
+    harness.set_leader(True)
+
+    assert state.app_peer_data.role == MongoDBRoles.REPLICATION
 
 
 def test_on_secret_changed(
