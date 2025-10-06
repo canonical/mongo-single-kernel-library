@@ -70,7 +70,7 @@ class MongoConfiguration:
         if not self.tls_enabled:
             return {}
         return {
-            "tls": True,
+            "tls": "true",
             "tlsCertificateKeyFile": f"{self.tls_external_keyfile}",
             "tlsCaFile": f"{self.tls_external_ca}",
         }
