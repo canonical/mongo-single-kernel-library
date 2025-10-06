@@ -719,7 +719,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and tls_integrated:
             logger.info("Cluster implements internal membership auth via certificates.")
-            self.dependent.tls_events.request_certificate()
+            self.dependent.tls_events.refresh_certificates()
         else:
             logger.info("Cluster implements internal membership auth via keyFile.")
 
@@ -733,7 +733,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             self.state.set_keyfile(keyfile)
 
         # Prevents restarts if we haven't received certificates
-        if internal_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_both_certs():
+        if internal_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
             raise WaitingForCertificatesError
 
@@ -797,17 +797,6 @@ class ShardManager(Object, ManagerStatusProtocol):
                         logger.error(f"Failed changing the password: {e}")
                         raise
         self.state.set_user_password(user, new_password)
-
-    # def _should_request_new_certs(self, internal: bool) -> bool:
-    #    """Returns if the shard has already requested the certificates for internal-membership.
-
-    #    Sharded components must have the same subject names in their certs.
-    #    """
-    #    if internal:
-    #        int_subject = self.state.unit_peer_data.get("int_certs_subject") or None
-    #        return int_subject != self.state.config_server_name
-    #    ext_subject = self.state.unit_peer_data.get("ext_certs_subject") or None
-    #    return ext_subject != self.state.config_server_name
 
     def shard_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for shard and config-server."""

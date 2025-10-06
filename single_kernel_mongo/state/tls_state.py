@@ -15,9 +15,7 @@ from single_kernel_mongo.core.secrets import SecretCache
 SECRET_KEY_LABEL = "key-secret"
 SECRET_CA_LABEL = "ca-secret"
 SECRET_CERT_LABEL = "cert-secret"
-# SECRET_CSR_LABEL = "csr-secret"
 SECRET_CHAIN_LABEL = "chain-secret"
-# WAIT_CERT_UPDATE = "wait-cert-updated"
 INT_CERT_SECRET_KEY = "int-cert-secret"
 EXT_CERT_SECRET_KEY = "ext-cert-secret"
 

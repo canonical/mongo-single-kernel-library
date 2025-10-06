@@ -292,7 +292,8 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
 
     # set external and internal key using auto-generated key for each unit
     for unit in ops_test.model.applications[app_name].units:
-        action = await unit.run_action(action_name="set-tls-private-key")  ####################
+        # TODO: use new config option
+        action = await unit.run_action(action_name="set-tls-private-key")
         action = await action.wait()
         assert action.status == "completed", "setting external and internal key failed."
 

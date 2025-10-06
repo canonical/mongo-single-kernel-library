@@ -17,10 +17,6 @@ from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import MongosStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-
-# from single_kernel_mongo.exceptions import (
-#    UnknownCertificateAvailableError,
-# )
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
     TLSCertificatesRequiresV4,
@@ -52,7 +48,7 @@ class TLSEventsHandler(Object):
         self.peer_certificate = TLSCertificatesRequiresV4(
             charm=self.charm,
             relationship_name=ExternalRequirerRelations.PEER_TLS.value,
-            certificate_requests=[self.manager.get_certificate_request_attributes(internal=True)],
+            certificate_requests=[self.manager.get_certificate_request_attributes()],
             private_key=None,
             refresh_events=[self.refresh_tls_certificates_event],
         )
@@ -60,7 +56,7 @@ class TLSEventsHandler(Object):
         self.client_certificate = TLSCertificatesRequiresV4(
             charm=self.charm,
             relationship_name=ExternalRequirerRelations.CLIENT_TLS.value,
-            certificate_requests=[self.manager.get_certificate_request_attributes(internal=False)],
+            certificate_requests=[self.manager.get_certificate_request_attributes()],
             private_key=None,
             refresh_events=[self.refresh_tls_certificates_event],
         )
@@ -83,29 +79,15 @@ class TLSEventsHandler(Object):
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handler for relation joined."""
-        state = self.manager.get_tls_management_state()
-        match state:
-            case (
-                TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
-                | TlsManagementState.UPGRADE_IN_PROGRESS
-            ):
-                defer_event_with_info_log(logger, event, str(type(event)), state.value)
-                return
-
-        # When we can integrate, clean the mongos requires tls status.
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_TLS_REL.value, scope="unit", component=self.dependent.name
             )
 
-        # internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
-        # self.manager.set_certificate_requested(internal)
-
-    def request_certificate(self) -> None:
-        """Request refresh of certificates."""
-        logger.info("Requesting refresh certificate.")
+    def refresh_certificates(self) -> None:
+        """Trigger refresh TLS certificates event."""
+        logger.info(f"Requesting refresh certificates for unit: {self.charm.unit.name}.")
         self.refresh_tls_certificates_event.emit()
-        # self.manager.set_certificate_requested(internal)
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle the `certificates-broken` event.
@@ -125,18 +107,13 @@ class TLSEventsHandler(Object):
 
         logger.debug("Disabling TLS for unit: %s", self.charm.unit.name)
 
-        cert_type = (
-            TLSType.PEER
-            if event.relation.name == ExternalRequirerRelations.PEER_TLS.value
-            else TLSType.CLIENT
-        )
+        internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
         status = (
             TLSStatuses.DISABLING_PEER_TLS.value
-            if cert_type == TLSType.PEER
+            if internal
             else TLSStatuses.DISABLING_CLIENT_TLS.value
         )
         self.charm.status_handler.set_running_status(status, scope="unit")
-        internal = cert_type == TLSType.PEER
         self.manager.disable_certificates_for_unit(internal)
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
@@ -150,7 +127,7 @@ class TLSEventsHandler(Object):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:
-                logger.info(f"{state.value}. Ignoring certificate.")
+                logger.info(f"{state.value} Ignoring certificate.")
                 return
 
         logger.info("Certificate available.")
@@ -162,23 +139,20 @@ class TLSEventsHandler(Object):
         peer_certificates, peer_private_key = self.peer_certificate.get_assigned_certificates()
 
         if client_certificates and client_certificates[0].certificate == cert:
-            cert_type = TLSType.CLIENT
+            internal = False
             provider_cert = client_certificates[0]
             private_key = client_private_key.raw if client_private_key else None
         elif peer_certificates and peer_certificates[0].certificate == cert:
-            cert_type = TLSType.PEER
+            internal = True
             provider_cert = peer_certificates[0]
             private_key = peer_private_key.raw if peer_private_key else None
         else:
             logger.error("Received certificate does not match any assigned certificates.")
             return
 
-        logger.debug(f"Received {cert_type} certificate.")
-
-        internal = cert_type == TLSType.PEER
+        logger.debug(f"Received {TLSType.PEER if internal else TLSType.CLIENT} certificate.")
 
         self.manager.set_certificates(
-            # certificate_signing_request=provider_cert.certificate_signing_request,
             secret_chain=[c.raw for c in provider_cert.chain],
             certificate=provider_cert.certificate.raw,
             ca=provider_cert.ca.raw,
@@ -189,6 +163,3 @@ class TLSEventsHandler(Object):
             self.dependent.state.update_internal_ca_secrets(provider_cert.ca.raw)
 
         self.manager.enable_certificates_for_unit(internal)
-        # except UnknownCertificateAvailableError:
-        #    logger.error("An unknown certificate is available -- ignoring.")
-        #    return

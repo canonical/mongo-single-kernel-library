@@ -30,7 +30,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
-from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_CERT_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -265,7 +265,7 @@ class ClusterRequirer(Object):
                 )
             case _:
                 pass
-        if self.is_waiting_for_config_server_rel_to_request_certs():
+        if self.is_waiting_for_config_server_rel_to_request_certs():  ####### to remove and test
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
@@ -446,14 +446,13 @@ class ClusterRequirer(Object):
         return config_server_tls_ca == mongos_tls_ca
 
     def is_waiting_for_config_server_rel_to_request_certs(self) -> bool:
-        """Returns True if mongos has been waiting for config server in order to request certs."""
-        if not self.state.peer_tls_relation:
-            return False
+        """Returns True if mongos has been waiting for config server in order to store certs."""
+        internal_cert = self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL)
+        if self.state.peer_tls_relation is not None and internal_cert is None:
+            return True
 
-        # our CA is none until certs have been received. We cannot request certs until integrated
-        # to config-server.
-        mongos_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
-        return not mongos_tls_ca
+        external_cert = self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL)
+        return self.state.client_tls_relation is not None and external_cert is None
 
     def mongos_and_config_server_tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""

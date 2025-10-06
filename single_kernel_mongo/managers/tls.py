@@ -13,7 +13,7 @@ import logging
 import socket
 from typing import TYPE_CHECKING, TypedDict
 
-from single_kernel_mongo.config.literals import Substrates, TLSType
+from single_kernel_mongo.config.literals import TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -58,18 +58,16 @@ class TLSManager:
         dependent: OperatorProtocol,
         workload: MongoDBWorkload | MongosWorkload,
         state: CharmState,
-        substrate: Substrates,
     ) -> None:
         self.dependent = dependent
         self.charm = dependent.charm
         self.workload = workload
         self.state = state
-        self.substrate = substrate
 
-    def get_certificate_request_attributes(self, internal: bool) -> CertificateRequestAttributes:
+    def get_certificate_request_attributes(self) -> CertificateRequestAttributes:
         """Generate a certificate signing request attributes."""
         subject_name = self._get_subject_name()
-        sans = self.get_new_sans(internal)
+        sans = self.get_new_sans()
         return CertificateRequestAttributes(
             common_name=subject_name,
             sans_ip=frozenset(sans["sans_ips"]),
@@ -77,13 +75,7 @@ class TLSManager:
             organization=subject_name,
         )
 
-    # def set_certificate_requested(self, internal: bool):
-    #    """Set the certs subject and wait-cert-updated peer data."""
-    #    label = "int" if internal else "ext"
-    #    self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
-    #    self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
-
-    def get_new_sans(self, internal: bool) -> Sans:
+    def get_new_sans(self) -> Sans:
         """Create a list of DNS names and IPs for a MongoDB unit.
 
         Returns:
@@ -217,10 +209,9 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
-        # self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
         logger.info(f"{TLSType.PEER if internal else TLSType.CLIENT} certificate secrets updated.")
 
-    def is_waiting_for_both_certs(self) -> bool:
+    def is_waiting_for_a_cert(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
         if not self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL):
             logger.debug("Waiting for internal certificate.")

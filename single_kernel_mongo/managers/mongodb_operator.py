@@ -176,12 +176,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state,
             container,
         )
-        self.tls_manager = TLSManager(
-            self,
-            self.workload,
-            self.state,
-            self.substrate,
-        )
+        self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
             self.workload,

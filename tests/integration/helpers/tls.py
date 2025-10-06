@@ -314,7 +314,7 @@ async def check_certs_correctly_distributed(
     unit_secret_content = await get_secret_content(ops_test, unit_secret_id)
 
     # Get the values for certs from the relation, as provided by TLS Charm
-    certificates_raw_data: str = await get_application_relation_data(  ###############
+    certificates_raw_data: str = await get_application_relation_data(
         ops_test, app_name, PEER_TLS_RELATION_NAME, "certificates"
     )
     certificates_data = json.loads(certificates_raw_data)
