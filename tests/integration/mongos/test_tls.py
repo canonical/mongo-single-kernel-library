@@ -88,7 +88,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
 
     await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
     await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS,
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
         idle_period=20,
         timeout=TIMEOUT,
         raise_on_blocked=False,
@@ -146,14 +146,14 @@ async def test_mongos_rotate_certs(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can disable TLS."""
     await toggle_tls_mongos(ops_test, enable=False)
-    await assert_mongos_tls_disabled(ops_test, substrate)
-
     await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME],
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
         idle_period=60,
         timeout=TIMEOUT,
         raise_on_blocked=False,
     )
+
+    await assert_mongos_tls_disabled(ops_test, substrate)
 
     await wait_for_mongodb_units_blocked(
         ops_test,
