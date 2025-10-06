@@ -19,14 +19,13 @@ from ..helpers.common import (
     deploy_application,
     deploy_charm,
     find_unit,
-    get_unit_id,
     relate_mongodb_and_application,
     set_password,
     start_continous_writes,
     stop_continous_writes,
 )
 from ..helpers.types import Substrate
-from ..helpers.upgrade import get_password_action, set_fcv, set_password_action
+from ..helpers.upgrade import get_password_action, set_fcv
 
 MONGODB_SIX = "mongodb-six"
 MONGODB_SEVEN = "mongodb-seven"
@@ -141,16 +140,11 @@ async def test_deploy_mongodb_7(
 
     for user in InternalUsers:
         password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
-        leader_unit = await find_unit(ops_test, leader=True, app_name=MONGODB_SEVEN)
-        await set_password_action(
-            ops_test,
-            unit_id=get_unit_id(leader_unit.name),
-            username=user.username,
-            password=password,
-            app_name=MONGODB_SEVEN,
+        await set_password(
+            ops_test, username=user.username, password=password, app_name=MONGODB_SEVEN
         )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB_SEVEN], timeout=TIMEOUT, status="active")
+        await ops_test.model.wait_for_idle(apps=[MONGODB_SEVEN], timeout=TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail
@@ -235,10 +229,7 @@ async def test_deploy_mongodb_8(
     for user in InternalUsers:
         password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
         await set_password(
-            ops_test,
-            username=user.username,
-            password=password,
-            app_name=MONGODB_EIGHT,
+            ops_test, username=user.username, password=password, app_name=MONGODB_EIGHT
         )
 
         await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")

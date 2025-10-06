@@ -807,26 +807,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     # END: Handlers.
 
-    def assert_pass_password_checks(self) -> None:
-        """Sanity checks to run before password changes."""
-        if not self.model.unit.is_leader():
-            raise NonDeferrableFailedHookChecksError(
-                "Password rotation must be called on leader unit."
-            )
-        if self.state.upgrade_in_progress:
-            raise DeferrableFailedHookChecksError(
-                "Cannot set passwords while an upgrade is in progress"
-            )
-        if self.state.is_role(MongoDBRoles.SHARD):
-            raise NonDeferrableFailedHookChecksError(
-                "Cannot set password on shard, please set password on config-server."
-            )
-        pbm_status = self.backup_manager.backup_state()
-        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
-            raise DeferrableFailedHookChecksError(
-                "Cannot change a password while a backup/restore is in progress."
-            )
-
     def perform_self_healing(self) -> None:
         """Reconfigures the replica set if necessary.
 
