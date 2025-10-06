@@ -737,6 +737,10 @@ class CharmState(Object, StatusesStateProtocol):
         if not self.config_server_name or not self.app_peer_data.mongos_hosts:
             return False
 
+        # We can't check if we don't have a valid certificate
+        if self.shard_state.internal_ca_secret is not None and not self.tls.external_enabled:
+            return False
+
         try:
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
