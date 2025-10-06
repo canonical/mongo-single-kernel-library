@@ -116,31 +116,14 @@ async def set_fcv(
     assert result.succeeded, f"Failed to set fcv to {fcv}."
 
 
-async def set_password_action(
-    ops_test: OpsTest,
-    unit_id: int,
-    username: str,
-    password: str,
-    app_name: str,
-) -> dict[str, any]:
-    """Use the charm action to retrieve the password from provided unit.
-
-    Returns:
-    String with the password stored on the peer relation databag.
-    """
-    action = await ops_test.model.units.get(f"{app_name}/{unit_id}").run_action(
-        "set-password", **{"username": username, "password": password}
-    )
-    action = await action.wait()
-    return action.results
-
-
 async def get_password_action(
     ops_test: OpsTest,
     username: str,
     app_name: str,
 ) -> str:
     """Use the charm action to retrieve the password from provided unit.
+
+    This action is only used for MongoDB 6.
 
     Returns:
         String with the password stored on the peer relation databag.
