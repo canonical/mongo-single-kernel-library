@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+    deploy_charm,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.sharding import (
