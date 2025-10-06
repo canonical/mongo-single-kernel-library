@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 async def test_build_and_deploy(
     ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
 ):
+    """Deploys the charm with an invalid config.
+
+    Then waits for the status to display, change it to a correct value and
+    checks that the service starts afterwards.
+    """
     await deploy_charm(
         ops_test=ops_test,
         charm=mongodb_charm,

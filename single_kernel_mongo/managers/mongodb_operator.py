@@ -299,7 +299,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-    def _prepare_checks(self):
+    def _run_startup_checks(self):
+        """Runs the startup checks.
+
+        None of those steps should fail otherwise the service is not yet allowed to start.
+        """
         if not self.workload.workload_present:
             logger.debug("mongod installation is not ready yet.")
             raise ContainerNotReadyError("Mongo DB installation not ready yet")
@@ -309,23 +313,25 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise ContainerNotReadyError("Missing storage")
 
         if self.state.is_role(MongoDBRoles.UNKNOWN):
+            raise InvalidConfigRoleError()
+
+    @override
+    def prepare_for_startup(self) -> None:
+        """Handler on start."""
+        # Ensure we're allowed to run.
+        try:
+            self._prepare_checks()
+        except InvalidConfigRoleError:
             if self.charm.unit.is_leader():
                 self.state.statuses.add(
                     MongoDBStatuses.INVALID_ROLE.value,
                     scope="app",
                     component=self.name,
                 )
-
-            raise InvalidConfigRoleError()
+                raise
 
         if self.charm.unit.is_leader():
             self.state.statuses.clear(scope="app", component=self.name)
-
-    @override
-    def prepare_for_startup(self) -> None:
-        """Handler on start."""
-        # Ensure we're allowed to run.
-        self._prepare_checks()
 
         # Configure the workload. This requires a valid role!
         # In the _prepare_checks, we ensure that we have a valid role before
