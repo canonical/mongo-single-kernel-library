@@ -535,6 +535,9 @@ def test_cluster_requirer_is_ca_compatible(
     mongos_harness.add_relation(
         ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
     )
+    mongos_harness.add_relation(
+        ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+    )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -608,6 +611,9 @@ def test_cluster_requirer_tls_status(
         mongos_harness.add_relation(
             ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+        )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("operator", "password")
@@ -680,6 +686,9 @@ def test_cluster_requirer_get_tls_statuses(
     if mongos_ca_secret:
         mongos_harness.add_relation(
             ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+        )
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
         )
         # Local certificate
         manager.state.tls.set_secret(

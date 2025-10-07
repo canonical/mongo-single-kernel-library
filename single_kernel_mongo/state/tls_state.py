@@ -40,7 +40,7 @@ class TLSState:
         self.secrets = secrets
 
     @property
-    def internal_enabled(self) -> bool:
+    def peer_enabled(self) -> bool:
         """Is internal TLS enabled."""
         return (
             self.relation is not None
@@ -48,7 +48,7 @@ class TLSState:
         )
 
     @property
-    def external_enabled(self) -> bool:
+    def client_enabled(self) -> bool:
         """Is external TLS enabled."""
         return (
             self.relation is not None
@@ -59,9 +59,9 @@ class TLSState:
         """Is TLS enabled for ::internal."""
         match internal:
             case True:
-                return self.internal_enabled
+                return self.peer_enabled
             case False:
-                return self.external_enabled
+                return self.client_enabled
 
     def set_secret(self, internal: bool, label_name: str, contents: str | None) -> None:
         """Sets TLS secret, based on whether or not it is related to internal connections."""

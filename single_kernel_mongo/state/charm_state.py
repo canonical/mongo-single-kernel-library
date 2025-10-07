@@ -784,8 +784,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_external=self.tls.client_enabled,
+            tls_internal=self.tls.peer_enabled,
             standalone=standalone,
         )
 
@@ -813,8 +813,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_external=self.tls.client_enabled,
+            tls_internal=self.tls.peer_enabled,
         )
 
     @property
@@ -868,8 +868,8 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_external=self.tls.client_enabled,
+            tls_internal=self.tls.peer_enabled,
         )
 
     @property

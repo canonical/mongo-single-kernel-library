@@ -236,12 +236,12 @@ class TLSManager:
 
     def get_tls_management_state(self) -> TlsManagementState:
         """Pre-checks on TLS certificates management."""
+        if self.state.upgrade_in_progress:
+            return TlsManagementState.UPGRADE_IN_PROGRESS
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.config_server_name is None:
             return TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
         if not self.state.db_initialised:
             if self.state.is_role(MongoDBRoles.MONGOS):
                 return TlsManagementState.MONGOS_DB_NOT_INITIALIZED
             return TlsManagementState.DB_NOT_INTIALIZED
-        if self.state.upgrade_in_progress:
-            return TlsManagementState.UPGRADE_IN_PROGRESS
         return TlsManagementState.EMPTY

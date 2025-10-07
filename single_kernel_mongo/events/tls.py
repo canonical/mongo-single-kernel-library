@@ -14,7 +14,7 @@ from ops.framework import EventBase, EventSource, Object
 
 from single_kernel_mongo.config.literals import TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import MongosStatuses, TLSStatuses
+from single_kernel_mongo.config.statuses import MongosStatuses, ShardStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
@@ -79,10 +79,18 @@ class TLSEventsHandler(Object):
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handler for relation joined."""
-        if self.manager.state.is_role(MongoDBRoles.MONGOS):
-            self.manager.state.statuses.delete(
-                MongosStatuses.MISSING_TLS_REL.value, scope="unit", component=self.dependent.name
-            )
+        if event.relation.name == ExternalRequirerRelations.PEER_TLS.value:
+            if self.manager.state.is_role(MongoDBRoles.MONGOS):
+                self.manager.state.statuses.delete(
+                    MongosStatuses.MISSING_TLS_REL.value,
+                    scope="unit",
+                    component=self.dependent.name,
+                )
+
+            if self.manager.state.is_role(MongoDBRoles.SHARD):
+                self.manager.state.statuses.delete(
+                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.dependent.name
+                )
 
     def refresh_certificates(self) -> None:
         """Trigger refresh TLS certificates event."""

@@ -455,9 +455,8 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         side_effect=WaitingForCertificatesError,
     )
 
-    rel_id = harness.add_relation(
-        ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
-    )
+    harness.add_relation(ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates")
+    harness.add_relation(ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates")
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
     harness.update_relation_data(

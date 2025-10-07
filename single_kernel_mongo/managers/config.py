@@ -270,7 +270,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.binding_ips,
                 self.port_parameter,
                 self.auth_parameter,
-                self.tls_parameters,
+                self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
                 self.ldap_parameters,
@@ -333,7 +333,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     def auth_parameter(self) -> dict[str, Any]:
         """The auth mode."""
         cmd = {"security": {"authorization": "enabled"}} if self.auth else {}
-        if self.state.tls.internal_enabled and self.state.tls.external_enabled:
+        if self.state.tls.peer_enabled and self.state.tls.client_enabled:
             return always_merger.merge(
                 cmd,
                 {
@@ -358,9 +358,9 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
         )
 
     @property
-    def tls_parameters(self) -> dict[str, Any]:
+    def client_tls_parameters(self) -> dict[str, Any]:
         """The TLS external parameters."""
-        if self.state.tls.external_enabled:
+        if self.state.tls.client_enabled:
             return {
                 "net": {
                     "tls": {
