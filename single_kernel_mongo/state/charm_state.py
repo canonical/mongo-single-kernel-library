@@ -842,8 +842,8 @@ class CharmState(Object, StatusesStateProtocol):
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
             tls_enabled=self.tls.external_enabled,
-            tls_external_keyfile=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value,
-            tls_external_ca=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value,
+            tls_external_keyfile=self.tls_external_keyfile,
+            tls_external_ca=self.tls_external_ca,
         )
 
     @property
@@ -898,8 +898,8 @@ class CharmState(Object, StatusesStateProtocol):
             port=port,
             roles={RoleNames.ADMIN},
             tls_enabled=self.tls.external_enabled,
-            tls_external_keyfile=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value,
-            tls_external_ca=TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value,
+            tls_external_keyfile=self.tls_external_keyfile,
+            tls_external_ca=self.tls_external_ca,
         )
 
     @property
