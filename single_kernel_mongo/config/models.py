@@ -63,6 +63,17 @@ LDAP_CONFIG = LdapConfig()
 
 
 @dataclass(frozen=True)
+class THPConfig:
+    """Configuration for transparent huge tables."""
+
+    service_template: Traversable = TEMPLATE_DIRECTORY / "enable-transparent-huge-pages.service.j2"
+    service_file_path: Path = "/etc/systemd/system/enable-transparent-huge-pages.service"
+
+
+THP_CONFIG = THPConfig()
+
+
+@dataclass(frozen=True)
 class AuditLogConfig:
     """Audit log related configuration."""
 

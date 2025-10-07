@@ -21,6 +21,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+import jinja2
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
@@ -28,17 +29,20 @@ from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
+    OS_REQUIREMENTS,
+    SNAP,
     TRUST_STORE_PATH,
     Scope,
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.config.models import THP_CONFIG, CharmSpec, LogRotateConfig
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
 )
+from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -50,6 +54,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
     from single_kernel_mongo.events.upgrades import UpgradeEventHandler
+    from single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl import Config
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
@@ -87,6 +92,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     tls_events: TLSEventsHandler
     upgrade_events: UpgradeEventHandler
     ldap_events: LDAPEventHandler
+    sysctl_config: Config
 
     if TYPE_CHECKING:
 
@@ -305,3 +311,26 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
         self.restart_charm_services(force=True)
+
+    def write_thp_config_file(self):
+        data = THP_CONFIG.service_template.read_text()
+        template = jinja2.Template(data)
+
+        rendered_template = template.render(
+            service_file=f"snap.{SNAP.name}.{self.workload.service}.service"
+        )
+        self.workload.write(path=THP_CONFIG.service_file_path, content=rendered_template)
+
+    def _set_os_config(self) -> None:
+        """Sets sysctl config for mongodb."""
+        try:
+            self.sysctl_config.configure(OS_REQUIREMENTS)
+            self.write_thp_config_file()
+        except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
+            # we allow events to continue in the case that we are not able to correctly configure
+            # sysctl config, since we can  still run the workload with wrong sysctl parameters
+            # even if it is not optimal.
+            logger.error(f"Error setting values on sysctl: {e.message}")
+            # containers share the kernel with the host system, and some sysctl parameters are
+            # set at kernel level.
+            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
