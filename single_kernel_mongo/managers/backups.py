@@ -267,6 +267,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                         scope="unit",
                         component_name=self.name,
                     )
+                    # Wait for 10 seconds before retrying
+                    time.sleep(10)
                 case _:
                     break
 
