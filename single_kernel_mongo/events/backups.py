@@ -13,7 +13,6 @@ from botocore.exceptions import ConnectTimeoutError, SSLError
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
@@ -122,15 +121,6 @@ class BackupEventsHandler(Object):
                 "Set PBM configurations, pbm-agent service not found.",
             )
             return
-
-        match self.manager.backup_state():
-            case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
-                defer_event_with_info_log(
-                    logger, event, action, "Backup/Restore running, not changing credentials."
-                )
-                return
-            case _:
-                pass
 
         if not self.manager.validate_s3_config():
             logger.warning(
