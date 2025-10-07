@@ -368,15 +368,24 @@ def storage_id(ops_test: OpsTest, unit_name: str, storage_name: str) -> str | No
     """Retrieves storage id associated with provided unit."""
     model_name = ops_test.model.info.name
 
-    storage_data = subprocess.check_output(f"juju storage --model={model_name}".split())
-    storage_data = storage_data.decode("utf-8")
-    for line in storage_data.splitlines():
-        # skip the header and irrelevant lines
-        if not line or "Storage" in line or "detached" in line:
+    proc = subprocess.check_output(f"juju storage --model={model_name} --format json".split())
+    data = json.loads(proc.decode("utf-8"))
+
+    if not data.get("storage", None):
+        logger.info(f"Storage {data=}")
+        return None
+
+    for storage_id, storage in data["storage"].items():
+        if storage_id and not storage_id.startswith(f"{storage_name}/"):
             continue
 
-        if line.split()[0] == unit_name and line.split()[1].startswith(storage_name):
-            return line.split()[1]
+        units = storage.get("attachments", {}).get("units", {})
+        if units:
+            unit = one(units)
+        if unit_name == unit:
+            return storage_id
+
+    logger.info(f"No storage match found for unit={unit_name}, {storage_name=}. Data: {data=}")
     return None
 
 
