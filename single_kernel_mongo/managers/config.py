@@ -18,7 +18,6 @@ from typing_extensions import override
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import (
-    LOCALHOST,
     PBM_RESTART_DELAY,
     CharmKind,
     MongoPorts,
@@ -496,7 +495,7 @@ class MongosConfigManager(MongoConfigManager):
             return {"sharding": {"configDB": uri}}
         return {
             "sharding": {
-                "configDB": f"{self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT.value}"
+                "configDB": f"{self.state.app_peer_data.replica_set}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
             }
         }
 
