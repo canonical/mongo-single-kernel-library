@@ -149,6 +149,12 @@ class TLSManager:
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
             if host := self.state.unit_host:
                 sans["sans_ips"].append(host)
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and self.substrate == Substrates.VM
+            and not self.state.app_peer_data.external_connectivity
+        ):
+            sans["sans_dns"].append(f"{self.state.paths.socket_path}")
 
         return sans
 
