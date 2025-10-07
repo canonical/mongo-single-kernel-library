@@ -328,6 +328,7 @@ def test_mongos_default_config_server(mocker):
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.unit_peer_data.internal_address = "127.0.0.1"
     mock_state.cluster = mocker.MagicMock(ClusterState)
     mock_state.cluster.config_server_uri = ""
     mock_state.tls = mocker.MagicMock(TLSState)

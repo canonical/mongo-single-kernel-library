@@ -110,7 +110,7 @@ async def mongo_no_tls_command(
         username = "operator"
         password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
         hosts = ",".join(replica_set_hosts)
-        extra_args = f"?replicaSet={app_name}" if not mongos else ""
+        extra_args = f"?replicaSet={app_name}&connectTimeoutMS=2000" if not mongos else ""
         uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
 
     if app_name == MONGOS_APP_NAME:
