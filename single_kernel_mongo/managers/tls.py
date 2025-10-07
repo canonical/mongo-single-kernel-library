@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import TRUST_STORE_PATH, Substrates, TrustStoreFiles
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -242,12 +242,14 @@ class TLSManager:
             if self.workload.exists(file):
                 self.workload.delete(file)
 
-        if self.substrate == Substrates.K8S:
-            local_keyfile_file = TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value
-            local_ca_file = TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value
-            for file in (local_keyfile_file, local_ca_file):
-                if file.exists() and file.is_file():
-                    file.unlink()
+        if self.substrate == Substrates.VM:
+            return
+
+        local_keyfile_file = self.state.paths.ext_pem_file
+        local_ca_file = self.state.paths.ext_ca_file
+        for file in (local_keyfile_file, local_ca_file):
+            if file.exists() and file.is_file():
+                file.unlink()
 
     def push_tls_files_to_workload(self) -> None:
         """Pushes the TLS files on the workload."""
@@ -267,8 +269,10 @@ class TLSManager:
 
         if external_ca is not None:
             self.state.paths.ext_ca_file.write_text(external_ca)
+            self.state.paths.ext_ca_file.chmod(600)
         if external_pem is not None:
             self.state.paths.ext_pem_file.write_text(external_pem)
+            self.state.paths.ext_ca_file.chmod(600)
 
     def set_certificates(
         self,
