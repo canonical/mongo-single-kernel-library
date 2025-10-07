@@ -43,6 +43,13 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
 )
 from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
+from single_kernel_mongo.lib.charms.operator_libs_linux.v1.systemd import (
+    SystemdError,
+    daemon_reload,
+    service_disable,
+    service_enable,
+    service_start,
+)
 from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -313,6 +320,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         self.restart_charm_services(force=True)
 
     def write_thp_config_file(self):
+        """Writes the unit file to enable Transparent Huge Pages."""
         data = THP_CONFIG.service_template.read_text()
         template = jinja2.Template(data)
 
@@ -320,17 +328,30 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             service_file=f"snap.{SNAP.name}.{self.workload.service}.service"
         )
         self.workload.write(path=THP_CONFIG.service_file_path, content=rendered_template)
+        daemon_reload()
+        service_enable(THP_CONFIG.service_name)
+        service_start(THP_CONFIG.service_name)
 
     def _set_os_config(self) -> None:
         """Sets sysctl config for mongodb."""
         try:
             self.sysctl_config.configure(OS_REQUIREMENTS)
-            self.write_thp_config_file()
         except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
             # we allow events to continue in the case that we are not able to correctly configure
             # sysctl config, since we can  still run the workload with wrong sysctl parameters
             # even if it is not optimal.
-            logger.error(f"Error setting values on sysctl: {e.message}")
+            logger.error(f"Error setting values on sysctl parameters: {e.message}")
             # containers share the kernel with the host system, and some sysctl parameters are
             # set at kernel level.
             logger.warning("sysctl params cannot be set. Is the machine running on a container?")
+        try:
+            self.write_thp_config_file()
+        except SystemdError as e:
+            # we allow events to continue in the case that we are not able to correctly configure
+            # sysctl config, since we can  still run the workload with wrong kernel parameters
+            # even if it is not optimal.
+            logger.error(f"Error setting values on kernel parameters: {e.args}")
+            # containers share the kernel with the host system, and some sysctl parameters are
+            # set at kernel level.
+            logger.warning("kernel params cannot be set. Is the machine running on a container?")
+            service_disable(THP_CONFIG.service_name)

@@ -67,7 +67,8 @@ class THPConfig:
     """Configuration for transparent huge tables."""
 
     service_template: Traversable = TEMPLATE_DIRECTORY / "enable-transparent-huge-pages.service.j2"
-    service_file_path: Path = "/etc/systemd/system/enable-transparent-huge-pages.service"
+    service_file_path: Path = Path("/etc/systemd/system/enable-transparent-huge-pages.service")
+    service_name = "enable-transparent-huge-pages"
 
 
 THP_CONFIG = THPConfig()
