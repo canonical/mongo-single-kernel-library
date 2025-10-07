@@ -331,6 +331,7 @@ def test_client_tls_relation_broken(
         ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
     )
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    harness.add_relation(ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates")
 
     manager.state.secrets.set("ext-chain-secret", "app-chain-old-1", Scope.UNIT)
     manager.state.secrets.set("ext-cert-secret", "app-cert-old-1", Scope.UNIT)
@@ -395,6 +396,7 @@ def test_peer_tls_relation_broken(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
     harness.charm.operator.state.db_initialised = True
+    harness.add_relation(ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates")
     rel_id = harness.add_relation(
         ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
     )

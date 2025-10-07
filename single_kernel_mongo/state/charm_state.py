@@ -400,7 +400,11 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def tls(self) -> TLSState:
         """A view of the TLS status from the local unit databag."""
-        return TLSState(relation=self.peer_relation, secrets=self.secrets)
+        return TLSState(
+            peer_relation=self.peer_tls_relation,
+            client_relation=self.client_tls_relation,
+            secrets=self.secrets,
+        )
 
     @property
     def ldap(self) -> LdapState:

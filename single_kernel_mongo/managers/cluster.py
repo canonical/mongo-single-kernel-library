@@ -265,7 +265,7 @@ class ClusterRequirer(Object):
                 )
             case _:
                 pass
-        if self.is_waiting_for_config_server_rel_to_request_certs():  ####### to remove and test
+        if self.is_waiting_for_config_server_rel_to_request_certs():
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )

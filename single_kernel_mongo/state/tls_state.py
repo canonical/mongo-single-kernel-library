@@ -35,23 +35,26 @@ class TLSState:
 
     component: Unit
 
-    def __init__(self, relation: Relation | None, secrets: SecretCache):
-        self.relation = relation
+    def __init__(
+        self, peer_relation: Relation | None, client_relation: Relation | None, secrets: SecretCache
+    ):
+        self.peer_relation = peer_relation
+        self.client_relation = client_relation
         self.secrets = secrets
 
     @property
     def peer_enabled(self) -> bool:
-        """Is internal TLS enabled."""
+        """Is peer TLS enabled."""
         return (
-            self.relation is not None
+            self.peer_relation is not None
             and self.secrets.get_for_key(Scope.UNIT, INT_CERT_SECRET_KEY) is not None
         )
 
     @property
     def client_enabled(self) -> bool:
-        """Is external TLS enabled."""
+        """Is client TLS enabled."""
         return (
-            self.relation is not None
+            self.client_relation is not None
             and self.secrets.get_for_key(Scope.UNIT, EXT_CERT_SECRET_KEY) is not None
         )
 

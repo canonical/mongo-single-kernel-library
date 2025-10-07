@@ -31,8 +31,6 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_KEY_LABEL,
     TlsManagementState,
 )
-
-# from single_kernel_mongo.utils.helpers import parse_tls_file
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
