@@ -122,10 +122,8 @@ class DatabaseEventsHandler(Object):
     def pass_hook_checks(self, event: RelationEvent) -> bool:
         """Runs the pre-hooks checks for MongoDBProvider, returns True if all pass."""
         # First, ensure that the relation is valid, useless to do anything else otherwise
-        if (
-            not self.dependent.state.is_role(MongoDBRoles.MONGOS)
-            and (status := self.dependent.get_relation_feasible_status(self.relation_name))
-            is not None
+        if not self.dependent.state.is_role(MongoDBRoles.MONGOS) and (
+            status := self.dependent.get_relation_feasible_status(self.relation_name)
         ):
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             return False
