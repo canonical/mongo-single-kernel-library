@@ -9,6 +9,7 @@ LIB_PATH="./single_kernel_mongo"
 CHARMS_PATH="./tests/charms"
 
 VERSION=$(poetry version --short)
+VERSION_TAG=$(python3 scripts/tags/src/compute_tag.py --track 8 --tag $VERSION --testing)
 
 if [ $# -ge 1 ]; then
     declare -a TEST_CHARMS=("$1")
@@ -28,19 +29,15 @@ for directory in "${TEST_CHARMS[@]}"; do
 
     echo "Building charm ${directory}"
 
-
     pushd $directory
 
     # Backup files
     cp refresh_versions.toml refresh_versions.toml.backup
-
-    eval $(poetry env activate)
-    poetry install --only build-refresh-version
-    write-charm-version
-    deactivate
-
     cp pyproject.toml pyproject.toml.backup
     cp poetry.lock poetry.lock.backup
+
+    sed -i "5s@^@charm = \"${VERSION_TAG}\"\n@" refresh_versions.toml
+
 
     # Disable strict mode for build test lib.
     pushd "${LIB_PATH}"

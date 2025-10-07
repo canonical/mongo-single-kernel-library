@@ -8,7 +8,7 @@ import sys
 
 from packaging.version import Version
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 
 
 def main():
@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--track", required=True, type=int)
     parser.add_argument("--tag", required=True)
+    parser.add_argument("--testing", required=False, action="store_true")
 
     args = parser.parse_args()
     track = args.track
@@ -26,10 +27,15 @@ def main():
     if track != version.minor:
         raise ValueError(f"Invalid major MongoDB version: {track=} {version.minor=}")
 
-    refresh_tag = f"v{track}/{version.major}.{version.micro}.0"
+    if args.testing:
+        refresh_tag = f"v{track}/{version.major}.{version.minor}.0.post{version.post}.dev{version.dev}+{version.local}"
+    else:
+        refresh_tag = f"v{track}/{version.major}.{version.micro}.0"
+
     with open(os.environ["GITHUB_OUTPUT"], "a") as file:
         file.write(f"{refresh_tag=}\n")
-        logging.info(f"New refresh tag is {refresh_tag}")
+        logging.info(f"{refresh_tag}")
+        print(f"{refresh_tag}")
 
 
 if __name__ == "__main__":
