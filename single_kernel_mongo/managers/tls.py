@@ -264,10 +264,11 @@ class TLSManager:
 
         if self.substrate == Substrates.VM:
             return
+
         if external_ca is not None:
-            (TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value).write_text(external_ca)
+            self.state.paths.ext_ca_file.write_text(external_ca)
         if external_pem is not None:
-            (TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value).write_text(external_pem)
+            self.state.paths.ext_pem_file.write_text(external_pem)
 
     def set_certificates(
         self,

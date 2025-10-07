@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 from ipaddress import IPv4Address, IPv6Address
-from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 from urllib.parse import quote
 
@@ -25,12 +24,10 @@ from pymongo.errors import (
 from single_kernel_mongo.config.literals import (
     SECRETS_UNIT,
     SNAP,
-    TRUST_STORE_PATH,
     CharmKind,
     MongoPorts,
     Scope,
     Substrates,
-    TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.config.relations import (
@@ -798,24 +795,10 @@ class CharmState(Object, StatusesStateProtocol):
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
             tls_enabled=self.tls.external_enabled,
-            tls_external_keyfile=self.tls_external_keyfile,
-            tls_external_ca=self.tls_external_ca,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
             standalone=standalone,
         )
-
-    @property
-    def tls_external_keyfile(self) -> Path:
-        """Path for the keyfile file (local file on k8s)."""
-        if self.substrate == Substrates.K8S:
-            return TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_KEYFILE.value
-        return self.paths.ext_pem_file
-
-    @property
-    def tls_external_ca(self) -> Path:
-        """Path for the ca file (local file on k8s)."""
-        if self.substrate == Substrates.K8S:
-            return TRUST_STORE_PATH / TrustStoreFiles.EXTERNAL_CA_FILE.value
-        return self.paths.ext_ca_file
 
     def mongos_config_for_user(
         self,
@@ -842,8 +825,8 @@ class CharmState(Object, StatusesStateProtocol):
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
             tls_enabled=self.tls.external_enabled,
-            tls_external_keyfile=self.tls_external_keyfile,
-            tls_external_ca=self.tls_external_ca,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
         )
 
     @property
@@ -898,8 +881,8 @@ class CharmState(Object, StatusesStateProtocol):
             port=port,
             roles={RoleNames.ADMIN},
             tls_enabled=self.tls.external_enabled,
-            tls_external_keyfile=self.tls_external_keyfile,
-            tls_external_ca=self.tls_external_ca,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
         )
 
     @property
