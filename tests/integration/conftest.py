@@ -228,7 +228,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     It works by updating the workload version and the version of the snap to install.
     That way, it will fail the `refresh_incompatible` check.
     """
-    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
+    literals_path = "venv/lib/python3.12/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongodb_fault_charm.charm"
     # Copy the correct charm to a new destination
     shutil.copy(mongodb_charm, fault_charm)
@@ -270,7 +270,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     It works by updating the workload version and the version of the snap to install.
     That way, it will fail the `refresh_incompatible` check.
     """
-    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
+    literals_path = "venv/lib/python3.12/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongos_fault_charm.charm"
     # Copy the correct charm to a new destination
     shutil.copy(mongos_charm, fault_charm)
