@@ -47,7 +47,7 @@ async def test_build_and_deploy(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="6/stable",
+        channel="8-transition/edge",
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
