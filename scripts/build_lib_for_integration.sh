@@ -8,8 +8,12 @@ LIB_PATH="./single_kernel_mongo"
 
 CHARMS_PATH="./tests/charms"
 
+# We need packaging to parse the version correctly
+eval $(poetry env activate)
+poetry install --only build-refresh-version
 VERSION=$(poetry version --short)
 VERSION_TAG=$(python3 scripts/tags/src/compute_tag.py --track 8 --tag $VERSION --testing)
+deactivate
 
 if [ $# -ge 1 ]; then
     declare -a TEST_CHARMS=("$1")
