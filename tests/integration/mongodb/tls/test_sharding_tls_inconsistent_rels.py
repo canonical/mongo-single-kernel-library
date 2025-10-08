@@ -140,7 +140,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard has TLS enabled, but config-server does not.",
+        status="Peer TLS must be disabled in shard, since it is disabled in the related config-server.",
         timeout=450,
     )
 
@@ -204,7 +204,7 @@ async def test_invalid_relation_not_yet_established(
         ops_test,
         substrate,
         SHARD_THREE_APP_NAME,
-        status="Shard requires TLS to be enabled.",
+        status="Shard requires peer TLS to be enabled.",
         timeout=TIMEOUT,
     )
 

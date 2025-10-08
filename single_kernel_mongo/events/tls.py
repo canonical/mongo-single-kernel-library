@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.charm import RelationBrokenEvent, RelationJoinedEvent
+from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import EventBase, EventSource, Object
 
 from single_kernel_mongo.config.literals import TLSType
@@ -71,26 +71,29 @@ class TLSEventsHandler(Object):
             ExternalRequirerRelations.CLIENT_TLS.value,
         ]:
             self.framework.observe(
-                self.charm.on[relation_name].relation_joined, self._on_tls_relation_joined
+                self.charm.on[relation_name].relation_created, self._on_tls_relation_created
             )
             self.framework.observe(
                 self.charm.on[relation_name].relation_broken, self._on_tls_relation_broken
             )
 
-    def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Handler for relation joined."""
-        if event.relation.name == ExternalRequirerRelations.PEER_TLS.value:
-            if self.manager.state.is_role(MongoDBRoles.MONGOS):
-                self.manager.state.statuses.delete(
-                    MongosStatuses.MISSING_TLS_REL.value,
-                    scope="unit",
-                    component=self.dependent.name,
-                )
+    def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
+        """Handler for relation created."""
+        if event.relation.name != ExternalRequirerRelations.PEER_TLS.value:
+            return
+        if self.manager.state.is_role(MongoDBRoles.MONGOS):
+            self.manager.state.statuses.delete(
+                MongosStatuses.MISSING_PEER_TLS_REL.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
 
-            if self.manager.state.is_role(MongoDBRoles.SHARD):
-                self.manager.state.statuses.delete(
-                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.dependent.name
-                )
+        if self.manager.state.is_role(MongoDBRoles.SHARD):
+            self.manager.state.statuses.delete(
+                ShardStatuses.MISSING_PEER_TLS_REL.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
 
     def refresh_certificates(self) -> None:
         """Trigger refresh TLS certificates event."""
@@ -98,11 +101,7 @@ class TLSEventsHandler(Object):
         self.refresh_tls_certificates_event.emit()
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Handle the `certificates-broken` event.
-
-        Args:
-            event (RelationBrokenEvent): The event object.
-        """
+        """Handle the relation broken event."""
         state = self.manager.get_tls_management_state()
         match state:
             case (
@@ -113,9 +112,11 @@ class TLSEventsHandler(Object):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
 
-        logger.debug("Disabling TLS for unit: %s", self.charm.unit.name)
-
         internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
+        logger.debug(
+            f"Disabling {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS for unit: {self.charm.unit.name}"
+        )
+
         status = (
             TLSStatuses.DISABLING_PEER_TLS.value
             if internal
@@ -127,7 +128,7 @@ class TLSEventsHandler(Object):
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
 
-        This event is emitted by the TLS charm when the some certificates are available.
+        This event is emitted by the TLS charm when a certificates is available.
         """
         state = self.manager.get_tls_management_state()
         match state:
@@ -158,7 +159,9 @@ class TLSEventsHandler(Object):
             logger.error("Received certificate does not match any assigned certificates.")
             return
 
-        logger.debug(f"Received {TLSType.PEER if internal else TLSType.CLIENT} certificate.")
+        logger.debug(
+            f"Received {TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate."
+        )
 
         self.manager.set_certificates(
             secret_chain=[c.raw for c in provider_cert.chain],
@@ -168,6 +171,6 @@ class TLSEventsHandler(Object):
             internal=internal,
         )
         if internal:
-            self.dependent.state.update_internal_ca_secrets(provider_cert.ca.raw)
+            self.dependent.state.update_peer_ca_secrets(provider_cert.ca.raw)
 
         self.manager.enable_certificates_for_unit(internal)

@@ -673,8 +673,8 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def update_internal_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the CA secret in the cluster and config-server relations."""
+    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the peer CA secret in the cluster and config-server relations."""
         # Only the leader can update the databag
         if not self.charm.unit.is_leader():
             return

@@ -173,7 +173,7 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
 
-    manager.state.update_internal_ca_secrets("newca")
+    manager.state.update_peer_ca_secrets("newca")
 
     assert manager.data_interface.as_dict(rel_id).get("int-ca-secret") == "newca"
 

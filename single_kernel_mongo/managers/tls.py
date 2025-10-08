@@ -104,11 +104,11 @@ class TLSManager:
         — CA file should have a full chain.
         — PEM file should have private key and certificate without certificate chain.
         """
-        scope = "internal" if internal else "external"
+        scope = TLSType.PEER.value if internal else TLSType.CLIENT.value
         if not self.state.tls.is_tls_enabled(internal):
-            logging.debug(f"TLS disabled for {scope}")
+            logging.debug(f"{scope} TLS disabled.")
             return None, None
-        logging.debug(f"TLS *enabled* for {scope}, fetching data for CA and PEM files ")
+        logging.debug(f"{scope} TLS *enabled*, fetching data for CA and PEM files ")
 
         ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
         chain = self.state.tls.get_secret(internal, SECRET_CHAIN_LABEL)
@@ -130,7 +130,7 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
         if internal:
-            self.state.update_internal_ca_secrets(new_ca=None)
+            self.state.update_peer_ca_secrets(new_ca=None)
 
         self.delete_certificates_from_workload(internal)
         self.dependent.restart_charm_services(force=True)
@@ -162,7 +162,7 @@ class TLSManager:
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""
         logger.info(
-            f"Deleting {TLSType.PEER if internal else TLSType.CLIENT} TLS certificates from filesystem"
+            f"Deleting {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS certificates from filesystem"
         )
 
         path = (
@@ -175,7 +175,7 @@ class TLSManager:
     def push_tls_files_to_workload(self, internal: bool) -> None:
         """Pushes the TLS files on the workload."""
         logger.info(
-            f"Pushing {TLSType.PEER if internal else TLSType.CLIENT} TLS certificates to filesystem"
+            f"Pushing {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS certificates to filesystem"
         )
         ca, pem = self.get_tls_file_contents(internal=internal)
 
@@ -207,15 +207,20 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
-        logger.info(f"{TLSType.PEER if internal else TLSType.CLIENT} certificate secrets updated.")
+        logger.info(
+            f"{TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate secrets updated."
+        )
 
     def is_waiting_for_a_cert(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
-        if not self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL):
-            logger.debug("Waiting for internal certificate.")
+        peer_cert = self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL)
+        if self.state.peer_tls_relation is not None and peer_cert is None:
+            logger.debug("Waiting for peer certificate.")
             return True
-        if not self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL):
-            logger.debug("Waiting for external certificate.")
+
+        client_cert = self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL)
+        if self.state.client_tls_relation is not None and client_cert is None:
+            logger.debug("Waiting for client certificate.")
             return True
 
         return False

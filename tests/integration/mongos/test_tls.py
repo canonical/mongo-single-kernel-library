@@ -74,7 +74,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        status="Peer TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -83,7 +83,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        message="Peer TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
     )
 
     await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
@@ -159,7 +159,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        status="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -167,7 +167,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        message="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
     )
 
 

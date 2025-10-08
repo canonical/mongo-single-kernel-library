@@ -359,7 +359,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
 
     @property
     def client_tls_parameters(self) -> dict[str, Any]:
-        """The TLS external parameters."""
+        """The client TLS parameters."""
         if self.state.tls.client_enabled:
             return {
                 "net": {

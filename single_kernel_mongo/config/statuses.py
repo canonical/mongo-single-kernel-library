@@ -98,19 +98,19 @@ class MongosStatuses(Enum):
         check="Config validation failed.",
         action="Set the expose-external config to a valid value: `nodeport` or `none`.",
     )
-    MISSING_TLS_REL = StatusObject(
+    MISSING_PEER_TLS_REL = StatusObject(
         status="blocked",
-        message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
-        short_message="Missing certificates relation.",
+        message="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        short_message="Missing peer-certificates relation.",
         check="Relation validation failed.",
-        action="Add the certificates relation (tls-certificates interface) to mongos.",
+        action="Add the peer-certificates relation to mongos.",
     )
-    INVALID_TLS_REL = StatusObject(
+    INVALID_PEER_TLS_REL = StatusObject(
         status="blocked",
-        message="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
-        short_message="Invalid certificates relation.",
+        message="Peer TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        short_message="Invalid peer-certificates relation.",
         check="Relation validation failed.",
-        action="Remove the certificates relation (tls-certificates interface) from this application.",
+        action="Remove the peer-certificates relation from this application.",
     )
     CA_MISMATCH = StatusObject(
         status="blocked",
@@ -323,9 +323,15 @@ class ConfigServerStatuses(Enum):
 class ShardStatuses(Enum):
     """Shard statuses."""
 
-    REQUIRES_TLS = StatusObject(status="blocked", message="Shard requires TLS to be enabled.")
-    REQUIRES_NO_TLS = StatusObject(
-        status="blocked", message="Shard has TLS enabled, but config-server does not."
+    MISSING_PEER_TLS_REL = StatusObject(
+        status="blocked", message="Shard requires peer TLS to be enabled."
+    )
+    INVALID_PEER_TLS_REL = StatusObject(
+        status="blocked",
+        message="Peer TLS must be disabled in shard, since it is disabled in the related config-server.",
+        short_message="Invalid peer-certificates relation.",
+        check="Relation validation failed.",
+        action="Align the peer TLS configuration in all the cluster components: remove the peer-certificates relation from the shard.",
     )
     CA_MISMATCH = StatusObject(
         status="blocked", message="Shard CA and Config-Server CA don't match."

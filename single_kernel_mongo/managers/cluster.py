@@ -30,7 +30,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
-from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_CERT_LABEL
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -253,19 +253,19 @@ class ClusterRequirer(Object):
 
     def assert_pass_hook_checks(self) -> None:
         """Runs pre-hook checks, raises if one fails."""
-        mongos_has_tls, config_server_has_tls = self.mongos_and_config_server_tls_status()
-        match (mongos_has_tls, config_server_has_tls):
+        mongos_peer_tls, config_server_peer_tls = self.mongos_and_config_server_peer_tls_status()
+        match (mongos_peer_tls, config_server_peer_tls):
             case False, True:
                 raise DeferrableFailedHookChecksError(
-                    "Config-Server uses TLS but mongos does not. Please synchronise encryption method."
+                    "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method."
                 )
             case True, False:
                 raise DeferrableFailedHookChecksError(
-                    "Mongos uses TLS but config-server does not. Please synchronise encryption method."
+                    "Mongos uses peer TLS but config-server does not. Please synchronise encryption method."
                 )
             case _:
                 pass
-        if self.is_waiting_for_config_server_rel_to_request_certs():
+        if self.dependent.tls_manager.is_waiting_for_a_cert():
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
@@ -431,10 +431,10 @@ class ClusterRequirer(Object):
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.drop_user(mongo.config.username)
 
-    def is_ca_compatible(self) -> bool:
-        """Returns true if both the mongos and the config-server use the same CA.
+    def is_peer_ca_compatible(self) -> bool:
+        """Returns true if both the mongos and the config-server use the same peer CA.
 
-        Using the same CA is a requirement for sharded clusters.
+        Using the same peer CA is a requirement for sharded clusters.
         """
         if not self.state.mongos_cluster_relation:
             return True
@@ -445,17 +445,8 @@ class ClusterRequirer(Object):
 
         return config_server_tls_ca == mongos_tls_ca
 
-    def is_waiting_for_config_server_rel_to_request_certs(self) -> bool:
-        """Returns True if mongos has been waiting for config server in order to store certs."""
-        internal_cert = self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL)
-        if self.state.peer_tls_relation is not None and internal_cert is None:
-            return True
-
-        external_cert = self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL)
-        return self.state.client_tls_relation is not None and external_cert is None
-
-    def mongos_and_config_server_tls_status(self) -> tuple[bool, bool]:
-        """Returns the TLS integration status for mongos and config-server."""
+    def mongos_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
+        """Returns the peer TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
             mongos_has_tls = self.state.peer_tls_relation is not None
             config_server_has_tls = self.state.cluster.internal_ca_secret is not None
@@ -465,15 +456,15 @@ class ClusterRequirer(Object):
 
     def get_tls_statuses(self) -> StatusObject | None:
         """Return statuses relevant to TLS."""
-        mongos_has_tls, config_server_has_tls = self.mongos_and_config_server_tls_status()
-        match (mongos_has_tls, config_server_has_tls):
+        mongos_peer_tls, config_server_peer_tls = self.mongos_and_config_server_peer_tls_status()
+        match (mongos_peer_tls, config_server_peer_tls):
             case False, True:
-                return MongosStatuses.MISSING_TLS_REL.value
+                return MongosStatuses.MISSING_PEER_TLS_REL.value
             case True, False:
-                return MongosStatuses.INVALID_TLS_REL.value
+                return MongosStatuses.INVALID_PEER_TLS_REL.value
             case _:
                 pass
-        if not self.is_ca_compatible():
+        if not self.is_peer_ca_compatible():
             logger.error(
                 "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )

@@ -203,7 +203,7 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     (
         "mongo_has_tls",
         "config_server_has_tls",
-        "is_waiting_for_config_server_rel_to_request_certs",
+        "is_waiting_for_a_cert",
         "upgrade_in_progress",
         "expected_error",
     ),
@@ -213,14 +213,14 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
             True,
             True,
             True,
-            "Config-Server uses TLS but mongos does not. Please synchronise encryption method.",
+            "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method.",
         ),
         (
             True,
             False,
             True,
             True,
-            "Mongos uses TLS but config-server does not. Please synchronise encryption method.",
+            "Mongos uses peer TLS but config-server does not. Please synchronise encryption method.",
         ),
         (
             False,
@@ -242,7 +242,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
     mongo_has_tls,
-    is_waiting_for_config_server_rel_to_request_certs,
+    is_waiting_for_a_cert,
     upgrade_in_progress,
     config_server_has_tls,
     expected_error,
@@ -253,12 +253,12 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_tls_status",
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_peer_tls_status",
         return_value=(mongo_has_tls, config_server_has_tls),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_for_config_server_rel_to_request_certs",
-        return_value=is_waiting_for_config_server_rel_to_request_certs,
+        "single_kernel_mongo.managers.tls.TLSManager.is_waiting_for_a_cert",
+        return_value=is_waiting_for_a_cert,
     )
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
@@ -570,7 +570,7 @@ def test_cluster_requirer_is_ca_compatible(
     )
 
     # Actual check
-    assert manager.is_ca_compatible() == expected_compatibility
+    assert manager.is_peer_ca_compatible() == expected_compatibility
 
 
 @pytest.mark.parametrize(
@@ -641,17 +641,17 @@ def test_cluster_requirer_tls_status(
     )
 
     # Actual check
-    assert manager.mongos_and_config_server_tls_status() == expected_statuses
+    assert manager.mongos_and_config_server_peer_tls_status() == expected_statuses
 
 
 @pytest.mark.parametrize(
     ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
-        (None, "deadbeef", MongosStatuses.MISSING_TLS_REL.value),
+        (None, "deadbeef", MongosStatuses.MISSING_PEER_TLS_REL.value),
         (
             "deadbeef",
             None,
-            MongosStatuses.INVALID_TLS_REL.value,
+            MongosStatuses.INVALID_PEER_TLS_REL.value,
         ),
         (None, None, None),
         ("deadbeef", "deadbeef", None),

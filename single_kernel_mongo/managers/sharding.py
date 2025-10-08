@@ -543,28 +543,28 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        shard_has_tls, config_server_has_tls = self.shard_and_config_server_tls_status()
-        match (shard_has_tls, config_server_has_tls):
+        shard_peer__tls, config_server_peer_tls = self.shard_and_config_server_peer_tls_status()
+        match (shard_peer__tls, config_server_peer_tls):
             case False, True:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_TLS.value, scope="unit", component=self.name
+                    ShardStatuses.MISSING_PEER_TLS_REL.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
-                    "Config-Server uses TLS but shard does not. Please synchronise encryption method."
+                    "Config-Server uses peer TLS but shard does not. Please synchronise encryption method."
                 )
             case True, False:
                 self.state.statuses.add(
-                    ShardStatuses.REQUIRES_NO_TLS.value, scope="unit", component=self.name
+                    ShardStatuses.INVALID_PEER_TLS_REL.value, scope="unit", component=self.name
                 )
                 raise DeferrableFailedHookChecksError(
-                    "Shard uses TLS but config-server does not. Please synchronise encryption method."
+                    "Shard uses peer TLS but config-server does not. Please synchronise encryption method."
                 )
             case _:
                 pass
 
-        if not self.is_ca_compatible():
+        if not self.is_peer_ca_compatible():
             raise DeferrableFailedHookChecksError(
-                "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.",
+                "Shard is integrated to a different peer CA than the config server. Please use the same peer CA for all cluster components.",
             )
 
         if is_leaving:
@@ -708,16 +708,16 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
-    def update_member_auth(self, keyfile: str, internal_tls_ca: str | None) -> None:
+    def update_member_auth(self, keyfile: str, peer_tls_ca: str | None) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
-        cluster_auth_tls = internal_tls_ca is not None
-        tls_integrated = self.state.peer_tls_relation is not None
+        cluster_auth_tls = peer_tls_ca is not None
+        peer_tls_integrated = self.state.peer_tls_relation is not None
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
-        if cluster_auth_tls and tls_integrated:
+        if cluster_auth_tls and peer_tls_integrated:
             logger.info("Cluster implements internal membership auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
         else:
@@ -733,7 +733,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             self.state.set_keyfile(keyfile)
 
         # Prevents restarts if we haven't received certificates
-        if internal_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_a_cert():
+        if peer_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
             raise WaitingForCertificatesError
 
@@ -798,20 +798,18 @@ class ShardManager(Object, ManagerStatusProtocol):
                         raise
         self.state.set_user_password(user, new_password)
 
-    def shard_and_config_server_tls_status(self) -> tuple[bool, bool]:
-        """Returns the TLS integration status for shard and config-server."""
-        shard_relation = self.state.shard_relation
-        if shard_relation:
+    def shard_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
+        """Returns the peer TLS integration status for shard and config-server."""
+        if self.state.shard_relation:
             shard_has_tls = self.state.peer_tls_relation is not None
             config_server_has_tls = self.state.shard_state.internal_ca_secret is not None
             return shard_has_tls, config_server_has_tls
 
         return False, False
 
-    def is_ca_compatible(self) -> bool:
-        """Returns true if both the shard and the config server use the same CA."""
-        shard_relation = self.state.shard_relation
-        if not shard_relation:
+    def is_peer_ca_compatible(self) -> bool:
+        """Returns true if both the shard and the config server use the same peer CA."""
+        if not self.state.shard_relation:
             return True
         config_server_tls_ca = self.state.shard_state.internal_ca_secret
         shard_tls_ca = self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL)
@@ -941,16 +939,16 @@ class ShardManager(Object, ManagerStatusProtocol):
 
     def get_tls_status(self) -> StatusBase | None:
         """Returns the TLS status of the sharded deployment."""
-        shard_has_tls, config_server_has_tls = self.shard_and_config_server_tls_status()
+        shard_has_tls, config_server_has_tls = self.shard_and_config_server_peer_tls_status()
         match (shard_has_tls, config_server_has_tls):
             case False, True:
-                return ShardStatuses.REQUIRES_TLS.value
+                return ShardStatuses.MISSING_PEER_TLS_REL.value
             case True, False:
-                return ShardStatuses.REQUIRES_NO_TLS.value
+                return ShardStatuses.INVALID_PEER_TLS_REL.value
             case _:
                 pass
 
-        if not self.is_ca_compatible():
+        if not self.is_peer_ca_compatible():
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )

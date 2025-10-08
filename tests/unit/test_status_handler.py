@@ -597,7 +597,7 @@ def test_shard_get_status_tls_status(
 
     harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
-    status_one = ShardStatuses.REQUIRES_TLS.value
+    status_one = ShardStatuses.MISSING_PEER_TLS_REL.value
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.cluster_password_synced",
         return_value=True,
@@ -716,7 +716,7 @@ def test_mongos_get_status_tls_status(
         new_callable=mocker.PropertyMock,
         return_value=True,
     )
-    expected_status = MongosStatuses.MISSING_TLS_REL.value
+    expected_status = MongosStatuses.MISSING_PEER_TLS_REL.value
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
         return_value=expected_status,
