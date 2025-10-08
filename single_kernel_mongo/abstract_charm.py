@@ -33,9 +33,9 @@ from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtoc
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
 
-from single_kernel_mongo.config.literals import Substrates
+from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
+from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
@@ -112,11 +112,19 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
             )
             self.workload.install()
 
-    def on_leader_elected(self, _):
+    def on_leader_elected(self, event):
         """First leader elected handler."""
         # Sets the role in the databag: when the charm is first created, its
         # role won't exist in the databag. We save it in the databag because we
         # don't allow role changing yet.
+        if (
+            self.operator.name == CharmKind.MONGOD
+            and self.parsed_config.role == MongoDBRoles.INVALID
+        ):
+            self.status_handler.set_running_status(MongoDBStatuses.INVALID_ROLE.value, scope="app")
+            event.defer()
+            return
+
         if self.operator.state.app_peer_data.role == MongoDBRoles.UNKNOWN:
             self.operator.state.app_peer_data.role = MongoDBRoles(self.parsed_config.role)
 

@@ -64,6 +64,13 @@ class MongoDBStatuses(Enum):
     STARTING_MONGODB = StatusObject(
         status="maintenance", message="Starting MongoDB.", running="blocking"
     )
+    INVALID_ROLE = StatusObject(
+        status="blocked",
+        message="The role config option is invalid.",
+        check="Config validation failed.",
+        action="Set the role config to a valid value: `replication`, `shard` or `config-server`.",
+        running="blocking",
+    )
 
 
 class MongosStatuses(Enum):
