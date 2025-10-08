@@ -107,11 +107,19 @@ class LifecycleEventsHandler(Object):
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_attached"),
+                getattr(self.charm.on, "archive_storage_attached"),
                 self.on_storage_attached,
             )
             self.framework.observe(
-                getattr(self.charm.on, "mongodb_storage_detaching"),
+                getattr(self.charm.on, "data_storage_attached"),
+                self.on_storage_attached,
+            )
+            self.framework.observe(
+                getattr(self.charm.on, "logs_storage_attached"),
+                self.on_storage_attached,
+            )
+            self.framework.observe(
+                getattr(self.charm.on, "data_storage_detaching"),
                 self.on_storage_detaching,
             )
 

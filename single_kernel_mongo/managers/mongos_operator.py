@@ -347,12 +347,14 @@ class MongosOperator(OperatorProtocol, Object):
             raise
 
     @override
-    def is_relation_feasible(self, name: str) -> bool:
+    def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible.
 
         In the mongos case, we only allow the mongos proxy client relation.
         """
-        return name == RelationNames.MONGOS_PROXY
+        if name not in (RelationNames.MONGOS_PROXY, RelationNames.CLUSTER):
+            return MongosStatuses.INVALID_REL.value
+        return None
 
     def share_connection_info(self):
         """Shares the connection information of clients."""
