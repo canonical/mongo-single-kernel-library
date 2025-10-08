@@ -12,6 +12,7 @@ CHARMS_PATH="./tests/charms"
 eval $(poetry env activate)
 poetry install --only build-refresh-version
 VERSION=$(poetry version --short)
+# We compute a version based on the tag of the pip package version.
 VERSION_TAG=$(python3 scripts/tags/src/compute_tag.py --track 8 --tag $VERSION --testing)
 deactivate
 
