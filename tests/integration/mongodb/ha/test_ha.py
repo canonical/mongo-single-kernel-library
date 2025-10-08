@@ -78,7 +78,7 @@ async def test_build_and_deploy(
         return
 
     if substrate == "lxd":
-        storage = {"mongodb": {"pool": "lxd", "size": 2048}}
+        storage = {"data": {"pool": "lxd", "size": 2048}}
     else:
         storage = None
 
@@ -117,9 +117,9 @@ async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_wri
 
     # remove a unit and attach it's storage to a new unit
     unit = ops_test.model.applications[app_name].units[0]
-    unit_storage_id = storage_id(ops_test, unit.name)
+    data_storage_id = storage_id(ops_test, unit.name, "data")
 
-    assert unit_storage_id, "Did not find a storage for unit."
+    assert data_storage_id, "Did not find a data storage for unit."
 
     expected_units = len(ops_test.model.applications[app_name].units) - 1
     removal_time = time.time()
@@ -131,7 +131,7 @@ async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_wri
 
     new_unit = (
         await ops_test.model.applications[app_name].add_unit(
-            count=1, attach_storage=[tag.storage(unit_storage_id)]
+            count=1, attach_storage=[tag.storage(data_storage_id)]
         )
     )[0]
 
