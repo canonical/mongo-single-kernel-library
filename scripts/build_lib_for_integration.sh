@@ -41,7 +41,7 @@ for directory in "${TEST_CHARMS[@]}"; do
     cp pyproject.toml pyproject.toml.backup
     cp poetry.lock poetry.lock.backup
 
-    sed -i "5s@^@charm = \"${VERSION_TAG}\"\n@" refresh_versions.toml
+    sed -i "2s@^@charm = \"${VERSION_TAG}\"\n@" refresh_versions.toml
 
 
     # Disable strict mode for build test lib.
