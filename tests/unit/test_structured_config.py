@@ -8,7 +8,9 @@ from single_kernel_mongo.core.structured_config import (
 
 def test_invalid_mongodb_config():
     model = MongoDBCharmConfig.model_validate({"role": "wrong"})  # type: ignore
-    assert model.role == MongoDBRoles.UNKNOWN
+    assert model.role == MongoDBRoles.INVALID
+    model = MongoDBCharmConfig.model_validate({"role": "wrong", "auto_delete": True})  # type: ignore
+    assert model.role == MongoDBRoles.INVALID
 
 
 def test_invalid_mongos_config():
