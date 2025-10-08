@@ -19,19 +19,35 @@ assumes:
 
 
 storage:
-  mongodb:
+  archive:
+    type: filesystem
+    location: /var/common/mongodb/archive
+    description: storage for local backup files.
+  data:
     type: filesystem
     location: /var/lib/mongodb
-  mongodb-logs:
+    description: storage for MongoDB data.
+  logs:
     type: filesystem
     location: /var/log/mongodb
+    description: storage for logfiles.
+  temp:
+    type: filesystem
+    location: /tmp
+    description: Storage mount used for storing temporary tablespaces.
 
 containers:
   mongod:
     resource: mongodb-image
     mounts:
-      - storage: mongodb
+      - storage: archive
+        location: /var/common/mongodb/archive
+      - storage: data
         location: /var/lib/mongodb
+      - storage: logs
+        location: /var/log/mongodb
+      - storage: temp
+        location: /tmp
 
 provides:
   database:
