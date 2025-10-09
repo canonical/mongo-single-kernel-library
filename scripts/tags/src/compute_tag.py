@@ -29,13 +29,15 @@ def main():
 
     if args.testing:
         refresh_tag = f"v{track}/{version.major}.{version.minor}.0.post{version.post}.dev{version.dev}+{version.local}"
-    else:
-        refresh_tag = f"v{track}/{version.major}.{version.micro}.0"
-
-    with open(os.environ["GITHUB_OUTPUT"], "a") as file:
-        file.write(f"{refresh_tag=}\n")
         logging.info(f"{refresh_tag}")
         print(f"{refresh_tag}")
+        return
+
+    refresh_tag = f"v{track}/{version.major}.{version.micro}.0"
+
+    with open(os.environ["GITHUB_OUTPUT"], "a") as file:
+        logging.info(f"{refresh_tag}")
+        file.write(f"{refresh_tag=}\n")
 
 
 if __name__ == "__main__":

@@ -115,14 +115,14 @@ class MongosOperator(OperatorProtocol, Object):
             upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
                 state=self.state,
-                workload_name="MongoDB",
+                workload_name="Mongos",
                 charm_name=self.charm.name,
             )
         else:
             upgrade_backend = KubernetesMongoDBRefresh(
                 dependent=self,
                 state=self.state,
-                workload_name="MongoDB",
+                workload_name="Mongos",
                 charm_name=self.charm.name,
                 oci_resource_name="mongodb-image",
             )
@@ -166,6 +166,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         Checks if unit is healthy and allow the next unit to update.
         """
+        if not refresh.workload_allowed_to_start:
+            return
+
         logger.info("Restarting workloads")
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
@@ -183,6 +186,8 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.upgrades_manager.is_mongos_able_to_read_write():
             logger.error("mongos is not able to read/write after refresh")
             raise DeferrableError("mongos is not able to read/write after refresh.")
+
+        refresh.next_unit_allowed_to_refresh = True
 
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:

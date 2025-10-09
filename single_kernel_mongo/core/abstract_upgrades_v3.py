@@ -118,7 +118,7 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
 
         if not self.is_cluster_able_to_read_write():
             logger.error("Cluster cannot read/write to replicas")
-            raise charm_refresh.PrecheckFailed("Cluster is not healthy")
+            raise charm_refresh.PrecheckFailed("Cluster is not able to read/write to replicas")
 
         fcv = self.state.app_peer_data.feature_compatibility_version
         if not self.is_feature_compatibility_version(fcv):
@@ -140,13 +140,25 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
 
         backup_state = self.dependent.backup_manager.backup_state()
 
-        if backup_state in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
-            raise charm_refresh.PrecheckFailed("Backup/Restore in progress.")
+        if backup_state == BackupState.BACKUP_RUNNING:
+            raise charm_refresh.PrecheckFailed("Backup in progress.")
+        if backup_state == BackupState.RESTORE_RUNNING:
+            raise charm_refresh.PrecheckFailed("Restore in progress.")
 
         self._mongodb_checks()
 
         if not self.are_pre_upgrade_operations_config_server_successful():
-            raise charm_refresh.PrecheckFailed("Pre-refresh operations on config-server failed.")
+            raise charm_refresh.PrecheckFailed("Failed to disabled balancer.")
+
+    def run_pre_refresh_checks_before_any_units_refreshed(self):
+        """Runs before the upgrade."""
+        if not self.state.db_initialised:
+            return
+        if self.dependent.name == CharmKind.MONGOD:
+            if not self.dependent.mongo_manager.mongod_ready():
+                logger.error("Cannot proceed with refresh. Service mongod is not running.")
+                raise charm_refresh.PrecheckFailed("mongod is not running")
+        self.run_pre_refresh_checks_after_1_unit_refreshed()
 
     def wait_for_cluster_healthy(self) -> None:
         """Waits until the cluster is healthy after upgrading.
@@ -163,10 +175,6 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
 
     def is_cluster_healthy(self) -> bool:
         """Returns True if all nodes in the replica set / cluster are healthy."""
-        if not self.dependent.mongo_manager.mongod_ready():
-            logger.error("Cannot proceed with refresh. Service mongod is not running.")
-            return False
-
         try:
             return self.are_nodes_healthy()
         except (PyMongoError, OperationFailure, ServerSelectionTimeoutError) as e:
@@ -435,11 +443,11 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         Raises FailedToMovePrimaryError
         """
         # no need to move primary in the scenario of one unit
-        if len(self.state.units_upgrade_peer_data) < 2:
+        if len(self.state.peer_units) < 2:
             return
 
         with MongoConnection(self.state.mongo_config) as mongod:
-            unit_with_lowest_id = self.state.units_upgrade_peer_data[-1].unit
+            unit_with_lowest_id = self.state.peer_units[-1].unit
             unit_host = self.state.peer_unit_data(unit_with_lowest_id).internal_address
             if mongod.primary() == unit_host:
                 logger.debug(

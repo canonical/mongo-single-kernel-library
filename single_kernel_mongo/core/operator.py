@@ -219,7 +219,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     def refresh_in_progress(self) -> bool:
         """Check if charm-refresh is currently in progress."""
         # If charm_refresh.UnitTearDown or charm_refresh.PeerRelationNotReady
-        # we consider a refresh to NOT be in progress.
+        # we consider a refresh to be in progress.
         return not self.refresh or self.refresh.in_progress
 
     def handle_licenses(self) -> None:

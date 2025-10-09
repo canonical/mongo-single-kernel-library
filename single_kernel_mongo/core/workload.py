@@ -315,7 +315,7 @@ class WorkloadBase(ABC):  # pragma: nocover
         """
         try:
             versions = self.load_toml_file(VERSIONS_FILE)
-            version = versions["charm"].split("/")[1]
+            version = versions["charm"]
         except:  # noqa: E722
             version = ""
         return version

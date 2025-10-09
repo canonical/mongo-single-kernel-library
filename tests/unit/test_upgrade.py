@@ -62,8 +62,8 @@ def test_is_workload_compatible(old_version, new_version, expected: bool) -> Non
 @pytest.mark.parametrize(
     ("backup_state", "pre_check_result"),
     (
-        (BackupState.BACKUP_RUNNING, "Backup/Restore in progress."),
-        (BackupState.RESTORE_RUNNING, "Backup/Restore in progress."),
+        (BackupState.BACKUP_RUNNING, "Backup in progress."),
+        (BackupState.RESTORE_RUNNING, "Restore in progress."),
     ),
 )
 def test_pre_refresh_check_after_1_unit_refreshed_fails(
@@ -129,14 +129,6 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
     (
         (
             {
-                "mongod_ready": False,
-                "are_nodes_healthy": True,
-                "cluster_able_to_read_write": True,
-            },
-            "Cluster is not healthy",
-        ),
-        (
-            {
                 "mongod_ready": True,
                 "are_nodes_healthy": False,
                 "cluster_able_to_read_write": True,
@@ -149,7 +141,7 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
                 "are_nodes_healthy": True,
                 "cluster_able_to_read_write": False,
             },
-            "Cluster is not healthy",
+            "Cluster is not able to read/write to replicas",
         ),
     ),
 )

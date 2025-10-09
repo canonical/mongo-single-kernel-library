@@ -241,10 +241,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
-            logger.error(
-                f"Application is not trusted, please run `juju trust --scope=cluster {self.app.name}"
-            )
-            self.refresh = None
             # As recommended, let the charm crash so that the user can trust
             # the application and all events will resume afterwards.
             raise
@@ -336,6 +332,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised:
             return
 
+        if not refresh.workload_allowed_to_start:
+            return
         logger.info("Restarting workloads")
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
@@ -347,8 +345,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.dependent.name == CharmKind.MONGOD:
             self.dependent._restart_related_services()  # type: ignore[attr-defined]
 
-        if self.dependent.mongo_manager.is_healthy():
-            refresh.next_unit_allowed_to_refresh = True
+        if self.dependent.mongo_manager.mongod_ready():
+            try:
+                refresh.wait_for_cluster_healthy()
+                refresh.next_unit_allowed_to_refresh = True
+            except RetryError:
+                return
 
     @property
     def config(self):
@@ -532,7 +534,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             if self.charm.unit.name == self.primary_unit_name:
                 logger.debug("Stepping down current primary, before upgrading service...")
-                # self.upgrade_manager.step_down_primary_and_wait_reelection()
+                self.mongo_manager.step_down_primary_and_wait_reelection()
         except FailedToElectNewPrimaryError:
             logger.error("Failed to reelect primary before upgrading unit.")
             return
