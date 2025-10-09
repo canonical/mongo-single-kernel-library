@@ -131,15 +131,6 @@ jobs:
           - tests/charms/mongodb_k8s_test_charm
           - tests/charms/mongos_test_charm
           - tests/charms/mongos_k8s_test_charm
-    name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v35.0.4
-    with:
-      path-to-charm-directory: ${{ matrix.path }}
-
-  build-helpers:
-    strategy:
-      matrix:
-        path:
           - tests/integration/applications/client_relations_charm
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
@@ -147,7 +138,6 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v35.0.4
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: false
 
   integration-test:
     name: Integration test charm
@@ -155,7 +145,6 @@ jobs:
       - tox-lint
       - unit-test
       - build
-      - build-helpers
     uses: ./.github/workflows/integration_test.yaml
     with:
       artifact-prefix: packed-charm
