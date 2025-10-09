@@ -2,6 +2,8 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -9,6 +11,8 @@ from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     deploy_charm,
+    find_unit,
+    get_status_detail,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.sharding import (
@@ -112,7 +116,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard requires TLS to be enabled",
+        status="Shard requires peer TLS to be enabled.",
         timeout=TIMEOUT,
     )
 
@@ -140,7 +144,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Peer TLS must be disabled in shard, since it is disabled in the related config-server.",
+        status="Invalid peer-certificates relation.",
         timeout=450,
     )
 
@@ -164,9 +168,22 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard CA and Config-Server CA don't match.",
+        status="Peer CA mismatch.",
         timeout=450,
     )
+
+    leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_ONE_APP_NAME)
+    statuses = await get_status_detail(leader_unit)
+
+    unit_statuses = json.loads(statuses["unit"])
+    assert any(
+        unit_status["Message"] == "Shard internal CA and Config-Server internal CA don't match."
+        for unit_status in unit_statuses
+    ), "Shard internal CA status not well reported."
+    assert any(
+        unit_status["Message"] == "Shard client CA and Config-Server client CA don't match."
+        for unit_status in unit_statuses
+    ), "Shard client CA status not well reported."
 
 
 async def test_invalid_relation_not_yet_established(

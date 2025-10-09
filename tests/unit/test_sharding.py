@@ -465,6 +465,7 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         {
             "key-file": "feeddead",
             "int-ca-secret": "deadbeef",
+            "ext-ca-secret": "deadbeef",
             "operator-password": "test-operator",
             "backup-password": "test-backup",
             "username": "unused",

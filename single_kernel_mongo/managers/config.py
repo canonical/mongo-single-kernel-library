@@ -333,7 +333,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     def auth_parameter(self) -> dict[str, Any]:
         """The auth mode."""
         cmd = {"security": {"authorization": "enabled"}} if self.auth else {}
-        if self.state.tls.peer_enabled and self.state.tls.client_enabled:
+        if self.state.tls.peer_enabled:
             return always_merger.merge(
                 cmd,
                 {

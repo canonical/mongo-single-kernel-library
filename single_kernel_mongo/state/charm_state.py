@@ -673,8 +673,8 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the peer CA secret in the cluster and config-server relations."""
+    def _update_ca_secrets(self, new_ca: str | None, cluster_key: str, sharding_key: str) -> None:
+        """Updates the CA secret for the right values on the right fields."""
         # Only the leader can update the databag
         if not self.charm.unit.is_leader():
             return
@@ -683,21 +683,35 @@ class CharmState(Object, StatusesStateProtocol):
         for relation in self.cluster_relations:
             if new_ca is None:
                 self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
+                    relation.id, [cluster_key]
                 )
             else:
                 self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
+                    relation.id, {cluster_key: new_ca}
                 )
         for relation in self.config_server_relation:
             if new_ca is None:
-                self.config_server_data_interface.delete_relation_data(
-                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
-                )
+                self.config_server_data_interface.delete_relation_data(relation.id, [sharding_key])
             else:
                 self.config_server_data_interface.update_relation_data(
-                    relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
+                    relation.id, {sharding_key: new_ca}
                 )
+
+    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the peer CA secret in the cluster and config-server relations."""
+        self._update_ca_secrets(
+            new_ca=new_ca,
+            cluster_key=ClusterStateKeys.INT_CA_SECRET.value,
+            sharding_key=AppShardingComponentKeys.INT_CA_SECRET.value,
+        )
+
+    def update_client_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the client CA secret in the cluster and config-server relations."""
+        self._update_ca_secrets(
+            new_ca=new_ca,
+            cluster_key=ClusterStateKeys.EXT_CA_SECRET.value,
+            sharding_key=AppShardingComponentKeys.EXT_CA_SECRET.value,
+        )
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""

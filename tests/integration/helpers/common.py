@@ -883,6 +883,12 @@ async def check_status_detail(ops_test: OpsTest, app_name: str, status: str, mes
         ), f"unit {unit.name} status is `{unit_statuses[0]['Message']}`, expected `{message}`"
 
 
+async def get_status_detail(unit: JujuUnit) -> dict:
+    action = await unit.run_action("status-detail")
+    action = await action.wait()
+    return action.results["json-output"]
+
+
 async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
     """Checks that the application has the correct status and message."""
     app = ops_test.model.applications[app_name]

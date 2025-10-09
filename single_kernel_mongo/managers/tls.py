@@ -131,6 +131,8 @@ class TLSManager:
 
         if internal:
             self.state.update_peer_ca_secrets(new_ca=None)
+        else:
+            self.dependent.state.update_client_ca_secrets(new_ca=None)
 
         self.delete_certificates_from_workload(internal)
         self.dependent.restart_charm_services(force=True)

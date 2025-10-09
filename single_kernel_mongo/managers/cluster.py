@@ -105,6 +105,9 @@ class ClusterProvider(Object):
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
             relation_data[ClusterStateKeys.INT_CA_SECRET.value] = int_tls_ca
 
+        if ext_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=False):
+            relation_data[ClusterStateKeys.EXT_CA_SECRET.value] = ext_tls_ca
+
         if hashed_data := self.dependent.ldap_manager.get_hash():
             relation_data[ClusterStateKeys.LDAP_HASH.value] = hashed_data
 
@@ -445,6 +448,20 @@ class ClusterRequirer(Object):
 
         return config_server_tls_ca == mongos_tls_ca
 
+    def is_client_ca_compatible(self) -> bool:
+        """Returns true if both the mongos and the config-server use the same client CA.
+
+        Using the same client CA is a requirement for sharded clusters.
+        """
+        if not self.state.mongos_cluster_relation:
+            return True
+        config_server_tls_ca = self.state.cluster.external_ca_secret
+        mongos_tls_ca = self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL)
+        if not config_server_tls_ca or not mongos_tls_ca:
+            return True
+
+        return config_server_tls_ca == mongos_tls_ca
+
     def mongos_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
         """Returns the peer TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
@@ -454,19 +471,54 @@ class ClusterRequirer(Object):
 
         return False, False
 
-    def get_tls_statuses(self) -> StatusObject | None:
-        """Return statuses relevant to TLS."""
-        mongos_peer_tls, config_server_peer_tls = self.mongos_and_config_server_peer_tls_status()
-        match (mongos_peer_tls, config_server_peer_tls):
+    def mongos_and_config_server_client_tls_status(self) -> tuple[bool, bool]:
+        """Returns the client TLS integration status for mongos and config-server."""
+        if self.state.mongos_cluster_relation:
+            mongos_has_tls = self.state.client_tls_relation is not None
+            config_server_has_tls = self.state.cluster.external_ca_secret is not None
+            return mongos_has_tls, config_server_has_tls
+
+        return False, False
+
+    def get_tls_status(self, internal: bool):
+        """Computes the TLS status for the scope.
+
+        Args:
+            internal: (bool) if true, represents the internal TLS, otherwise external TLS.
+        """
+        if internal:
+            shard_tls, config_server_tls = self.mongos_and_config_server_peer_tls_status()
+            is_ca_compatible = self.is_peer_ca_compatible()
+        else:
+            shard_tls, config_server_tls = self.mongos_and_config_server_client_tls_status()
+            is_ca_compatible = self.is_client_ca_compatible()
+
+        match (shard_tls, config_server_tls):
             case False, True:
-                return MongosStatuses.MISSING_PEER_TLS_REL.value
+                logger.warning(
+                    "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method."
+                )
+                return MongosStatuses.missing_tls(internal=internal)
             case True, False:
-                return MongosStatuses.INVALID_PEER_TLS_REL.value
+                logger.warning(
+                    "Mongos uses peer TLS but config-server does not. Please synchronise encryption method."
+                )
+                return MongosStatuses.invalid_tls(internal=internal)
             case _:
                 pass
-        if not self.is_peer_ca_compatible():
+
+        if not is_ca_compatible:
             logger.error(
-                "mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
+                "Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return MongosStatuses.CA_MISMATCH.value
+            return MongosStatuses.incompatible_ca(internal=internal)
+
         return None
+
+    def tls_statuses(self) -> list[StatusObject]:
+        """Return statuses relevant to TLS."""
+        statuses = []
+        for internal in True, False:
+            if status := self.get_tls_status(internal=internal):
+                statuses.append(status)
+        return statuses

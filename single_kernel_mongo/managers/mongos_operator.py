@@ -510,8 +510,9 @@ class MongosOperator(OperatorProtocol, Object):
             )
             return False
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+        if statuses := self.cluster_manager.tls_statuses():
+            for status in statuses:
+                logger.info(f"Invalid TLS integration: {status.message}")
             return False
 
         if not self.is_mongos_running():
@@ -549,10 +550,11 @@ class MongosOperator(OperatorProtocol, Object):
             # don't bother checking remaining statuses if no config-server is present
             return charm_statuses
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+        if statuses := self.cluster_manager.tls_statuses():
+            for status in statuses:
+                logger.info(f"Invalid TLS integration: {status.message}")
             # if TLS is misconfigured we will get redherrings on the remaining messages
-            charm_statuses.append(status)
+            charm_statuses += statuses
             return charm_statuses
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:

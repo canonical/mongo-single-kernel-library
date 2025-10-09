@@ -781,19 +781,12 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def update_status(self) -> None:
         """Status update Handler."""
-        # TODO update the usage of this once the spec is approved and we have a consistent way of
-        # handling statuses
         if self.basic_statuses():
             logger.info("Early return invalid statuses.")
             return
 
-        if self.state.is_role(MongoDBRoles.SHARD):
-            shard_has_peer_tls, config_server_has_peer_tls = (
-                self.shard_manager.shard_and_config_server_peer_tls_status()
-            )
-            if config_server_has_peer_tls and not shard_has_peer_tls:
-                logger.info("Shard is missing peer TLS.")
-                return
+        if self.state.is_role(MongoDBRoles.SHARD) and self._should_skip_because_of_tls():
+            return
 
         if not self.mongo_manager.mongod_ready():
             logger.info("Mongod not ready.")
@@ -1234,3 +1227,18 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope="app",
                 component=self.name,
             )
+
+    def _should_skip_because_of_tls(self) -> bool:
+        shard_has_peer_tls, config_server_has_peer_tls = (
+            self.shard_manager.shard_and_config_server_peer_tls_status()
+        )
+        if config_server_has_peer_tls and not shard_has_peer_tls:
+            logger.info("Shard is missing peer TLS.")
+            return True
+        shard_has_client_tls, config_server_has_client_tls = (
+            self.shard_manager.shard_and_config_server_client_tls_status()
+        )
+        if config_server_has_client_tls and not shard_has_client_tls:
+            logger.info("Shard is missing client TLS.")
+            return True
+        return False

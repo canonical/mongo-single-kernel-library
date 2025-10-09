@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import EventBase, EventSource, Object
 
-from single_kernel_mongo.config.literals import TLSType
+from single_kernel_mongo.config.literals import CharmKind, TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import MongosStatuses, ShardStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -21,11 +21,11 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificat
     CertificateAvailableEvent,
     TLSCertificatesRequiresV4,
 )
+from single_kernel_mongo.state.tls_state import TlsManagementState
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
-from single_kernel_mongo.state.tls_state import TlsManagementState
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,8 @@ class TLSEventsHandler(Object):
             ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
+            case _:
+                pass
 
         internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
         logger.debug(
@@ -124,6 +126,9 @@ class TLSEventsHandler(Object):
         )
         self.charm.status_handler.set_running_status(status, scope="unit")
         self.manager.disable_certificates_for_unit(internal)
+        self._recompute_statuses()
+        # Recomputes the statuses for those components as the tls changes are impactful
+        self._recompute_statuses()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -138,6 +143,8 @@ class TLSEventsHandler(Object):
             case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:
                 logger.info(f"{state.value} Ignoring certificate.")
                 return
+            case _:
+                pass
 
         logger.info("Certificate available.")
 
@@ -172,5 +179,19 @@ class TLSEventsHandler(Object):
         )
         if internal:
             self.dependent.state.update_peer_ca_secrets(provider_cert.ca.raw)
+        else:
+            self.dependent.state.update_client_ca_secrets(provider_cert.ca.raw)
 
         self.manager.enable_certificates_for_unit(internal)
+        self._recompute_statuses()
+
+    def _recompute_statuses(self):
+        """Recomputes the statuses for those components as the tls changes are impactful."""
+        if self.dependent.name == CharmKind.MONGOD:
+            self.charm.status_handler._recompute_statuses_for_scope(
+                "unit", self.dependent.shard_manager
+            )
+        else:
+            self.charm.status_handler._recompute_statuses_for_scope("unit", self.dependent)
+            if self.charm.unit.is_leader():
+                self.charm.status_handler._recompute_statuses_for_scope("app", self.dependent)

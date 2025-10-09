@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
-from ops import StatusBase
 from ops.framework import Object
 from ops.model import (
     Relation,
@@ -126,6 +125,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
         if int_tls_ca := self.state.tls.get_secret(internal=True, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.INT_CA_SECRET.value] = int_tls_ca
+        if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
+            relation_data[AppShardingComponentKeys.EXT_CA_SECRET.value] = ext_tls_ca
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -543,29 +544,13 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        shard_peer__tls, config_server_peer_tls = self.shard_and_config_server_peer_tls_status()
-        match (shard_peer__tls, config_server_peer_tls):
-            case False, True:
-                self.state.statuses.add(
-                    ShardStatuses.MISSING_PEER_TLS_REL.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Config-Server uses peer TLS but shard does not. Please synchronise encryption method."
-                )
-            case True, False:
-                self.state.statuses.add(
-                    ShardStatuses.INVALID_PEER_TLS_REL.value, scope="unit", component=self.name
-                )
-                raise DeferrableFailedHookChecksError(
-                    "Shard uses peer TLS but config-server does not. Please synchronise encryption method."
-                )
-            case _:
-                pass
+        if internal_tls_status := self.get_tls_status(internal=True):
+            self.state.statuses.add(internal_tls_status, scope="unit", component=self.name)
+        if external_tls_status := self.get_tls_status(internal=False):
+            self.state.statuses.add(external_tls_status, scope="unit", component=self.name)
 
-        if not self.is_peer_ca_compatible():
-            raise DeferrableFailedHookChecksError(
-                "Shard is integrated to a different peer CA than the config server. Please use the same peer CA for all cluster components.",
-            )
+        if internal_tls_status or external_tls_status:
+            raise DeferrableFailedHookChecksError("Invalid TLS integration, check logs.")
 
         if is_leaving:
             self.dependent.assert_proceed_on_broken_event(relation)
@@ -807,6 +792,26 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         return False, False
 
+    def shard_and_config_server_client_tls_status(self) -> tuple[bool, bool]:
+        """Returns the client TLS integration status for shard and config-server."""
+        if self.state.shard_relation:
+            shard_has_tls = self.state.client_tls_relation is not None
+            config_server_has_tls = self.state.shard_state.external_ca_secret is not None
+            return shard_has_tls, config_server_has_tls
+
+        return False, False
+
+    def is_client_ca_compatible(self) -> bool:
+        """Returns true if both the shard and the config server use the same peer CA."""
+        if not self.state.shard_relation:
+            return True
+        config_server_tls_ca = self.state.shard_state.external_ca_secret
+        shard_tls_ca = self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL)
+        if not config_server_tls_ca or not shard_tls_ca:
+            return True
+
+        return config_server_tls_ca == shard_tls_ca
+
     def is_peer_ca_compatible(self) -> bool:
         """Returns true if both the shard and the config server use the same peer CA."""
         if not self.state.shard_relation:
@@ -937,23 +942,48 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def get_tls_status(self) -> StatusBase | None:
-        """Returns the TLS status of the sharded deployment."""
-        shard_has_tls, config_server_has_tls = self.shard_and_config_server_peer_tls_status()
-        match (shard_has_tls, config_server_has_tls):
+    def get_tls_status(self, internal: bool):
+        """Computes the TLS status for the scope.
+
+        Args:
+            internal: (bool) if true, represents the internal TLS, otherwise external TLS.
+        """
+        if internal:
+            shard_tls, config_server_tls = self.shard_and_config_server_peer_tls_status()
+            is_ca_compatible = self.is_peer_ca_compatible()
+        else:
+            shard_tls, config_server_tls = self.shard_and_config_server_client_tls_status()
+            is_ca_compatible = self.is_client_ca_compatible()
+
+        match (shard_tls, config_server_tls):
             case False, True:
-                return ShardStatuses.MISSING_PEER_TLS_REL.value
+                logger.warning(
+                    "Config-Server uses peer TLS but shard does not. Please synchronise encryption method."
+                )
+                return ShardStatuses.missing_tls(internal=internal)
             case True, False:
-                return ShardStatuses.INVALID_PEER_TLS_REL.value
+                logger.warning(
+                    "Shard uses peer TLS but config-server does not. Please synchronise encryption method."
+                )
+                return ShardStatuses.invalid_tls(internal=internal)
             case _:
                 pass
 
-        if not self.is_peer_ca_compatible():
+        if not is_ca_compatible:
             logger.error(
                 "Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return ShardStatuses.CA_MISMATCH.value
+            return ShardStatuses.incompatible_ca(internal=internal)
+
         return None
+
+    def tls_statuses(self) -> list[StatusObject]:
+        """All TLS statuses, for both scopes."""
+        statuses = []
+        for internal in True, False:
+            if status := self.get_tls_status(internal=internal):
+                statuses.append(status)
+        return statuses
 
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the current status of the shard."""
@@ -980,8 +1010,8 @@ class ShardManager(Object, ManagerStatusProtocol):
             # No need to go further if the revision is invalid
             return charm_statuses
 
-        if tls_status := self.get_tls_status():
-            charm_statuses.append(tls_status)
+        if tls_statuses := self.tls_statuses():
+            charm_statuses += tls_statuses
             # if TLS is misconfigured we will get redherrings on the remaining messages
             return charm_statuses
 

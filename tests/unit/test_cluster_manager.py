@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.utils import as_status
-from ops.model import BlockedStatus, Relation, WaitingStatus
+from ops.model import Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -645,20 +646,34 @@ def test_cluster_requirer_tls_status(
 
 
 @pytest.mark.parametrize(
-    ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
     (
-        (None, "deadbeef", MongosStatuses.MISSING_PEER_TLS_REL.value),
+        "mongos_peer_ca_secret",
+        "cluster_peer_ca_secret",
+        "mongos_client_ca_secret",
+        "cluster_client_ca_secret",
+        "expected_status",
+    ),
+    (
+        (None, "deadbeef", None, None, [MongosStatuses.MISSING_PEER_TLS_REL.value]),
+        ("deadbeef", None, None, None, [MongosStatuses.INVALID_PEER_TLS_REL.value]),
+        (None, None, None, None, []),
+        ("deadbeef", "deadbeef", None, None, []),
+        ("deadbeef", "deadbeef", "deadbeef", "deadbeef", []),
+        ("feeddead", "deadbeef", None, None, [MongosStatuses.PEER_CA_MISMATCH.value]),
+        (None, None, None, "deadbeef", [MongosStatuses.MISSING_CLIENT_TLS_REL.value]),
+        (None, None, "deadbeef", None, [MongosStatuses.INVALID_CLIENT_TLS_REL.value]),
+        ("deadbeef", "deadbeef", "deadbeef", None, [MongosStatuses.INVALID_CLIENT_TLS_REL.value]),
+        (None, None, "deadbeef", "deadbeef", []),
+        (None, None, "feeddead", "deadbeef", [MongosStatuses.CLIENT_CA_MISMATCH.value]),
         (
+            None,
             "deadbeef",
             None,
-            MongosStatuses.INVALID_PEER_TLS_REL.value,
-        ),
-        (None, None, None),
-        ("deadbeef", "deadbeef", None),
-        (
-            "feeddead",
             "deadbeef",
-            MongosStatuses.CA_MISMATCH.value,
+            [
+                MongosStatuses.MISSING_PEER_TLS_REL.value,
+                MongosStatuses.MISSING_CLIENT_TLS_REL.value,
+            ],
         ),
     ),
 )
@@ -666,9 +681,11 @@ def test_cluster_requirer_get_tls_statuses(
     mongos_harness: Harness[MongosTestCharm],
     mock_fs_interactions,
     mocker,
-    mongos_ca_secret: str | None,
-    cluster_ca_secret: str | None,
-    expected_status: BlockedStatus | None,
+    mongos_peer_ca_secret: str | None,
+    cluster_peer_ca_secret: str | None,
+    mongos_client_ca_secret: str | None,
+    cluster_client_ca_secret: str | None,
+    expected_status: list[StatusObject],
 ):
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
@@ -683,16 +700,20 @@ def test_cluster_requirer_get_tls_statuses(
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
     # Create the TLS relation if it should have one
-    if mongos_ca_secret:
+    if mongos_peer_ca_secret:
         mongos_harness.add_relation(
             ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
+        # Local certificate
+        manager.state.tls.set_secret(
+            internal=True, label_name=SECRET_CA_LABEL, contents=mongos_peer_ca_secret
+        )
+    if mongos_client_ca_secret:
         mongos_harness.add_relation(
             ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
         )
-        # Local certificate
         manager.state.tls.set_secret(
-            internal=True, label_name=SECRET_CA_LABEL, contents=mongos_ca_secret
+            internal=False, label_name=SECRET_CA_LABEL, contents=mongos_client_ca_secret
         )
 
     # Ensure some credentials are present
@@ -716,9 +737,10 @@ def test_cluster_requirer_get_tls_statuses(
         {
             "key-file": "deadbeef",
             "config-server-db": "mongodb/2.2.2.2:27017",
-            "int-ca-secret": cluster_ca_secret or "",
+            "int-ca-secret": cluster_peer_ca_secret or "",
+            "ext-ca-secret": cluster_client_ca_secret or "",
         },
     )
 
     # Actual check
-    assert manager.get_tls_statuses() == expected_status
+    assert manager.tls_statuses() == expected_status

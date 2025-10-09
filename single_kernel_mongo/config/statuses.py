@@ -112,10 +112,31 @@ class MongosStatuses(Enum):
         check="Relation validation failed.",
         action="Remove the peer-certificates relation from this application.",
     )
-    CA_MISMATCH = StatusObject(
+    MISSING_CLIENT_TLS_REL = StatusObject(
         status="blocked",
-        message="The mongos CA and Config-Server CA don't match.",
-        short_message="CA mismatch.",
+        message="Client TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        short_message="Missing client-certificates relation.",
+        check="Relation validation failed.",
+        action="Add the client-certificates relation to mongos.",
+    )
+    INVALID_CLIENT_TLS_REL = StatusObject(
+        status="blocked",
+        message="Client TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        short_message="Invalid client-certificates relation.",
+        check="Relation validation failed.",
+        action="Remove the client-certificates relation from this application.",
+    )
+    PEER_CA_MISMATCH = StatusObject(
+        status="blocked",
+        message="The mongos peer CA and Config-Server peer CA don't match.",
+        short_message="Peer CA mismatch.",
+        check="Relation validation failed.",
+        action="Verify the certificates relations. Use the same CA for all cluster components.",
+    )
+    CLIENT_CA_MISMATCH = StatusObject(
+        status="blocked",
+        message="The mongos client CA and Config-Server client CA don't match.",
+        short_message="Client CA mismatch.",
         check="Relation validation failed.",
         action="Verify the certificates relations. Use the same CA for all cluster components.",
     )
@@ -132,6 +153,27 @@ class MongosStatuses(Enum):
     STARTING_MONGOS = StatusObject(
         status="maintenance", message="Starting mongos.", running="blocking"
     )
+
+    @classmethod
+    def missing_tls(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.MISSING_PEER_TLS_REL.value
+        return cls.MISSING_CLIENT_TLS_REL.value
+
+    @classmethod
+    def invalid_tls(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.INVALID_PEER_TLS_REL.value
+        return cls.INVALID_CLIENT_TLS_REL.value
+
+    @classmethod
+    def incompatible_ca(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.PEER_CA_MISMATCH.value
+        return cls.CLIENT_CA_MISMATCH.value
 
 
 class CharmStatuses(Enum):
@@ -333,8 +375,29 @@ class ShardStatuses(Enum):
         check="Relation validation failed.",
         action="Align the peer TLS configuration in all the cluster components: remove the peer-certificates relation from the shard.",
     )
-    CA_MISMATCH = StatusObject(
-        status="blocked", message="Shard CA and Config-Server CA don't match."
+    MISSING_CLIENT_TLS_REL = StatusObject(
+        status="blocked", message="Shard requires client TLS to be enabled."
+    )
+    INVALID_CLIENT_TLS_REL = StatusObject(
+        status="blocked",
+        message="Peer TLS must be disabled in shard, since it is disabled in the related config-server.",
+        short_message="Invalid client-certificates relation.",
+        check="Relation validation failed.",
+        action="Align the peer TLS configuration in all the cluster components: remove the client-certificates relation from the shard.",
+    )
+    PEER_CA_MISMATCH = StatusObject(
+        status="blocked",
+        message="Shard internal CA and Config-Server internal CA don't match.",
+        short_message="Peer CA mismatch.",
+        check="Relation validation failed.",
+        action="Verify the certificates relations. Use the same CA for all cluster components.",
+    )
+    CLIENT_CA_MISMATCH = StatusObject(
+        status="blocked",
+        message="Shard client CA and Config-Server client CA don't match.",
+        short_message="Client CA mismatch.",
+        check="Relation validation failed.",
+        action="Verify the certificates relations. Use the same CA for all cluster components.",
     )
 
     MISSING_CONF_SERVER_REL = StatusObject(
@@ -384,6 +447,27 @@ class ShardStatuses(Enum):
             status="blocked",
             message=f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server.",
         )
+
+    @classmethod
+    def missing_tls(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.MISSING_PEER_TLS_REL.value
+        return cls.MISSING_CLIENT_TLS_REL.value
+
+    @classmethod
+    def invalid_tls(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.INVALID_PEER_TLS_REL.value
+        return cls.INVALID_CLIENT_TLS_REL.value
+
+    @classmethod
+    def incompatible_ca(cls, internal: bool) -> StatusObject:
+        """Correct status."""
+        if internal:
+            return cls.PEER_CA_MISMATCH.value
+        return cls.CLIENT_CA_MISMATCH.value
 
 
 class MongodStatuses(Enum):

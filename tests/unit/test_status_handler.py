@@ -603,8 +603,8 @@ def test_shard_get_status_tls_status(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.sharding.ShardManager.get_tls_status",
-        return_value=status_one,
+        "single_kernel_mongo.managers.sharding.ShardManager.tls_statuses",
+        return_value=[status_one],
     )
 
     statuses = harness.charm.operator.shard_manager.get_statuses(scope=Scope.UNIT, recompute=True)
@@ -718,8 +718,8 @@ def test_mongos_get_status_tls_status(
     )
     expected_status = MongosStatuses.MISSING_PEER_TLS_REL.value
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
-        return_value=expected_status,
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_statuses",
+        return_value=[expected_status],
     )
 
     mongos_harness.add_relation(RelationNames.CLUSTER.value, "config-server")
@@ -737,8 +737,8 @@ def test_mongos_get_status_wait_to_connect(
 
     expected_status = MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
-        return_value=None,
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_statuses",
+        return_value=[],
     )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.workload_present",
@@ -771,8 +771,8 @@ def test_mongos_get_statuses_needs_waiting_to_connect(
     )
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses",
-        return_value=None,
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_statuses",
+        return_value=[],
     )
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.active",

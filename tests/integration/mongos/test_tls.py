@@ -74,7 +74,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Peer TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        status="Invalid peer-certificates relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -159,7 +159,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        status="MIssing peer-certificates relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -218,7 +218,7 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="The mongos CA and Config-Server CA don't match.",
+        status="Peer CA mismatch.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -227,5 +227,5 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="The mongos CA and Config-Server CA don't match.",
+        message="The mongos peer CA and Config-Server peer CA don't match.",
     )

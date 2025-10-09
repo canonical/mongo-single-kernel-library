@@ -62,32 +62,42 @@ async def integrate_apps_with_tls(
     ops_test: OpsTest,
     applications: list[str],
     cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+    peer: bool = True,
+    client: bool = True,
 ) -> None:
     """Integrates a list of applications with self-signed certs operator."""
     for app in applications:
-        await ops_test.model.integrate(
-            f"{cert_provider_app}",
-            f"{app}:{PEER_TLS_RELATION_NAME}",
-        )
-        await ops_test.model.integrate(
-            f"{cert_provider_app}",
-            f"{app}:{CLIENT_TLS_RELATION_NAME}",
-        )
+        if peer:
+            await ops_test.model.integrate(
+                f"{cert_provider_app}",
+                f"{app}:{PEER_TLS_RELATION_NAME}",
+            )
+        if client:
+            await ops_test.model.integrate(
+                f"{cert_provider_app}",
+                f"{app}:{CLIENT_TLS_RELATION_NAME}",
+            )
 
 
 async def remove_tls_integrations(
-    ops_test: OpsTest, applications: list[str], cert_provider_app: str = TLS_CERTIFICATES_APP_NAME
+    ops_test: OpsTest,
+    applications: list[str],
+    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+    peer: bool = True,
+    client: bool = True,
 ) -> None:
     """Removes the TLS integration from a list of applications."""
     for app in applications:
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{PEER_TLS_RELATION_NAME}",
-            f"{cert_provider_app}",
-        )
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{CLIENT_TLS_RELATION_NAME}",
-            f"{cert_provider_app}",
-        )
+        if peer:
+            await ops_test.model.applications[app].remove_relation(
+                f"{app}:{PEER_TLS_RELATION_NAME}",
+                f"{cert_provider_app}",
+            )
+        if client:
+            await ops_test.model.applications[app].remove_relation(
+                f"{app}:{CLIENT_TLS_RELATION_NAME}",
+                f"{cert_provider_app}",
+            )
 
 
 async def mongo_tls_command(
