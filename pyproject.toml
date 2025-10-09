@@ -1,0 +1,155 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[tool.poetry]
+requires-poetry = ">=2.0.0"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+mongo-charms-single-kernel = {path = "common", develop = true}
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
+[tool.poetry.group.charm-libs.dependencies]
+cryptography = "*"  # tls_certificates lib v3
+jsonschema = "^4.24.0"  # tls_certificates lib v3
+ops = "~2.21.1"
+pydantic = "~2.11.0"
+pydantic-settings = "*"
+pymongo = "*"
+cosl = "*"  # loki_push_api
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.0.1"
+ruff = "^0.7.2"
+pydantic = "~2.11.0"
+mypy = "*"
+types-PyYAML = "*"
+types-python-dateutil = "*"
+
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
+ruff = "^0.7.2"
+pydantic = "~2.11.0"
+mypy = "*"
+types-PyYAML = "*"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+ruff = "^0.7.2"
+tomli = "*"
+codespell = "^2.2.6"
+shellcheck-py = "^0.10.0.1"
+pydantic = "~2.11.0"
+mypy = "*"
+types-PyYAML = "*"
+
+[tool.poetry.group.unit.dependencies]
+coverage = {extras = ["toml"], version = "^7.5.0"}
+pytest = "^8.1.1"
+parameterized = "^0.9.0"
+factory_boy = "*"
+mongomock = "^4.2.0.post1"
+pytest-mock = "*"
+
+[tool.poetry.group.integration.dependencies]
+coverage = {extras = ["toml"], version = "^7.5.0"}
+juju = "~3.6.0"
+pytest = "^8.1.1"
+pytest-mock = "*"
+pytest-asyncio = "^0.21.1"
+pytest-operator = "^0.36.0"
+parameterized = "^0.9.0"
+allure-pytest = "^2.13.5"
+allure-pytest-default-results = "^0.1.2"
+ops = "~2.21.1"
+tenacity = "~9.0.0"
+more_itertools = "*"
+httpx = "*"
+boto3 = "^1.37.12"
+mypy-boto3-s3 = "^1.37.0"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [".git", "__pycache__", ".tox", "build", "dist", "*.egg_info", "venv", "single_kernel_mongo/lib", "tests/integration/applications"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "C", "N", "R", "D", "I001", "UP"]
+# Ignore W503, E501 because using black creates errors with this
+# Ignore D107 Missing docstring in __init__
+ignore = ["E501", "D107", "D417"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 99
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-copyright]
+author = "Canonical Ltd."
+notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+# D100, D101, D102, D103: Ignore missing docstrings in tests
+"tests/*" = ["D100","D101","D102","D103","D104"]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "single_kernel_mongo/lib/charms/*",
+    "single_kernel_mongo/state/abstract_state.py",
+    "single_kernel_mongo/core/operator.py",
+    "*__init__*"
+]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+markers = ["unstable"]
+filterwarnings = [
+    "error:RuntimeWarning"
+]
+asyncio_mode = "auto"
+
+[tool.mypy]
+exclude = [
+    "./build/",
+    "./dist/",
+    "./site/",
+    "venv/*",
+    "./venv/",
+    "venv/*",
+    "./__pypackages__/",
+    "^single_kernel_mongo/lib/*",
+    "tests/charms/*",
+    "tests/integration/*",
+    "tests/unit/*"
+]
+# https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-ignore-missing-imports
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[tool.codespell]
+ignore-words=".codespellignore"
+skip="*single_kernel_mongo/lib/*,*single_kernel_mongo/observability_rules/*,*.lock,*tests/integration/applications/**/lib/*"
