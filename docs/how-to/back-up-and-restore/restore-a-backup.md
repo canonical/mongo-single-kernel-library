@@ -16,7 +16,7 @@ This is a guide on how to perform a basic restore of a local backup of your Char
 First, determine the name of the application to pass to Juju when running back up and restore actions:
 
 * For a **replica-set deployment**, it is the name of your Charmed MongoDB application
-* For a **sharded cluster deployment**, it is the name of the Charmed MongoDB application with the `config-server` role. *Never the shard applications!*
+* For a **sharded cluster deployment**, it is the name of the Charmed MongoDB config-server application. *Never the shard applications!*
 
 ---
 
