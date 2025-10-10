@@ -27,7 +27,7 @@ To configure `s3-integrator`, run `juju config` with the [relevant parameters](h
 For example:
 
 ```shell
-juju config s3-integrator path="my/path" region="us-west-2" bucket="pbm-test-bucket-1"
+juju config s3-integrator path="my/path" region="us-west-2" bucket="pbm-test-bucket-1" endpoint="https://s3.amazonaws.com"
 ```
 
 ## Pass S3 configuration to MongoDB
