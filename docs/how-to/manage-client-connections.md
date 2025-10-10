@@ -5,14 +5,10 @@
 
 ## Connect to a bare replica set
 
-To create a client connection to a replica set, integrate your client application with a Charmed MongoDB application running in replication mode.
-
-<!--TODO: Clarify - what is "replication mode"? -->
+To create a client connection to a replica set, integrate your client application with a Charmed MongoDB application running as a replica set.
 
 ```{note}
-If you do not have a client application that implements this interface, you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
-
-<!--TODO: Which interface/endpoint exactly? database? -->
+If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client#developer-documentation), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
 ```
 
 To integrate MongoDB with a client application, run:
