@@ -9,9 +9,9 @@ from collections.abc import Mapping
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
+from platform import machine
 from shutil import copyfile
 
-import charm_refresh
 from ops import Container
 from tenacity import retry, retry_if_exception_type, retry_if_result, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -201,7 +201,8 @@ class VMWorkload(WorkloadBase):
         """
         try:
             if not revision:
-                revision = charm_refresh.Machines().pinned_snap_revision
+                versions = self.load_toml_file(Path("refresh_versions.toml"))
+                revision = versions["snap"]["revisions"][machine()]
 
             self.mongod_snap.ensure(
                 snap.SnapState.Present,
