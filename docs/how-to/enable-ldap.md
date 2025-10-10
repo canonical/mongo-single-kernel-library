@@ -161,13 +161,13 @@ At this stage, you can fine tune some parameters used by MongoDB using two confi
 **For a MongoDB replica set**:
 
 ```shell
-juju config mongodb ldap-query-template="" ldap-user-to-dn-mapping=""
+juju config mongodb ldap-query-template="<your-config>" ldap-user-to-dn-mapping="<your-config>"
 ```
 
 **For a MongoDB sharded cluster**:
 
 ```shell
-juju config <config-server-name> ldap-query-template="" ldap-user-to-dn-mapping=""
+juju config <config-server-name> ldap-query-template="<your-config>" ldap-user-to-dn-mapping="<your-config>"
 ```
 
 `ldap-query-template` 

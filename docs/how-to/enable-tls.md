@@ -22,14 +22,14 @@ To enable TLS encryption, deploy the TLS charm and integrate it with the MongoDB
 :sync: vm
 
     juju deploy self-signed-certificates
-    juju integrate self-signed-certificates mongodb
+    juju integrate self-signed-certificates mongodb:certificates
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
     juju deploy self-signed-certificates
-    juju integrate self-signed-certificates mongodb-k8s
+    juju integrate self-signed-certificates mongodb-k8s:certificates
 ```
 ````
 
