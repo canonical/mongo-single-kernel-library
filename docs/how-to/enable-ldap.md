@@ -101,7 +101,7 @@ juju deploy traefik-k8s --trust
 Integrate the two applications:
 
 ```shell
-juju integrate traefik-k8s glauth-k8s:ingress
+juju integrate traefik-k8s glauth-k8s:ldaps-ingress
 ```
 
 ## Expose cross-model relations
