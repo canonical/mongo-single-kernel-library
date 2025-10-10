@@ -19,9 +19,19 @@ where an `application` can be either a bare replica set, shard, or config-server
 
 To remove replicas, run:
 
-```shell
-juju remove-unit <application_name>/<unit_number> <application_name>/<unit_number>
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+    juju remove-unit <application_name>/<unit_number> <application_name>/<unit_number>
 ```
+
+```{tab-item} K8s
+:sync: k8s
+
+    juju remove-unit <application_name> --num-units <number_of_units_to_remove>
+```
+````
 
 where an `application` can be either a bare replica set, shard, or config-server.
 
@@ -45,7 +55,7 @@ For example, to deploy a new shard named `new-shard`, run:
 ```{tab-item} K8s
 :sync: k8s
 
-    juju deploy mongodb-k8s --config role="shard" new-shard -n <number_of_replicas>
+    juju deploy mongodb-k8s --config role="shard" new-shard -n <number_of_replicas> --trust
 ```
 ````
 
