@@ -10,7 +10,7 @@ This includes modules for both replica set and sharded cluster deployments.
 These modules support integrations for:
 - Backups via [s3-integrator](https://charmhub.io/s3-integrator)
 - Client connections via [data-integrator](https://charmhub.io/data-integrator)
-- Monitoring via [grafana-agent](https://charmhub.io/grafana-agent)
+- Monitoring via [cos-lite](https://charmhub.io/cos-lite)
 - Encryption via [self-signed-certificates](https://charmhub.io/self-signed-certificates)
 - Sharded clusters via the [`mongos` router](https://charmhub.io/mongos)
 
@@ -28,7 +28,7 @@ Get access to the replica set product terraform module code:
 
 ```shell
 git clone https://github.com/canonical/mongodb-operator.git
-cd terraform/modules/replica_set
+cd terraform/product/replica_set
 ```
 ````
 
@@ -37,7 +37,7 @@ cd terraform/modules/replica_set
 
 ```shell
 git clone https://github.com/canonical/mongodb-k8s-operator.git
-cd terraform/modules/replica_set
+cd terraform/product/replica_set
 ```
 ````
 `````
@@ -60,7 +60,7 @@ Get access to the sharded cluster product terraform module code:
 
 ```shell
 git clone https://github.com/canonical/mongodb-operator.git
-cd terraform/modules/sharded_cluster
+cd terraform/product/sharded_cluster
 ```
 ````
 
@@ -69,7 +69,7 @@ cd terraform/modules/sharded_cluster
 
 ```shell
 git clone https://github.com/canonical/mongodb-k8s-operator.git
-cd terraform/modules/sharded_cluster
+cd terraform/product/sharded_cluster
 ```
 ````
 `````
