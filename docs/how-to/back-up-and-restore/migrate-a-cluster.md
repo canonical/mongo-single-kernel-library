@@ -58,17 +58,11 @@ YYYY-MM-DDTHH:MM:SSZ  | logical      | finished
 
 ## Define remap pattern (sharded cluster)
 
-If you are running Charmed MongoDB as a replica set, you can skip this step.
+**If you are running Charmed MongoDB as a sharded cluster and you wish to migrate to a cluster with new names, you must generate a remap pattern.** If you are running Charmed MongoDB as a replica set, you can skip this step.
 
 A remap pattern is a pattern that specifies which old components should be migrated to which new components. They are used when we are migrating to a cluster with new names. 
 
-**If you are running Charmed MongoDB as a sharded cluster and you wish to migrate to a cluster with new names, you must generate a remap pattern.** 
-
-The following example shows how to create a remap pattern for a sample cluster migration:
-
-`````{tab-set}
-````{tab-item} VM
-:sync: vm
+The following example shows how to create a remap pattern for a sample cluster migration.
 
 Example {term}`old cluster`:
 
@@ -109,52 +103,6 @@ self-signed-certificates/0*  active    idle   3        10.130.84.32
 shard-one-new/0*             active    idle   1        10.130.84.78    27017/tcp
 shard-two-new/0*             active    idle   2        10.130.84.68    27017/tcp
 ```
-````
-
-````{tab-item} K8s
-:sync: k8s
-
-Example {term}`old cluster`:
-
-```shell
-Model    Controller  Cloud/Region         Version  SLA          Timestamp
-old-mod  overlord    microk8s/localhost   3.1.6    unsupported  17:27:22Z
-
-App            Version  Status   Scale  Charm         Channel   Rev  Exposed  Message
-application             active       1  application             0    no
-config-server           active       1  mongodb-k8s   6/stable  158  no
-shard-one               active       1  mongodb-k8s   6/stable  158  no
-shard-two               active       1  mongodb-k8s   6/stable  158  no
-
-Unit                         Workload  Agent   Address       Ports      Message
-application/0*               active    idle    10.130.84.77
-config-server/0*             active    idle    10.130.84.120   
-self-signed-certificates/0*  active    idle    10.130.84.32
-shard-one/0*                 active    idle    10.130.84.78    
-shard-two/0*                 active    idle    10.130.84.68    
-```
-
-Example {term}`new cluster`:
-
-```shell
-Model    Controller  Cloud/Region         Version  SLA          Timestamp
-new-mod  overlord    microk8s/localhost   3.1.6    unsupported  17:27:22Z
-
-App            Version  Status   Scale  Charm         Channel   Rev  Exposed  Message
-application             active       1  application             0    no
-config-server           active       1  mongodb-k8s   6/stable  158  no
-shard-one               active       1  mongodb-k8s   6/stable  158  no
-shard-two               active       1  mongodb-k8s   6/stable  158  no
-
-Unit                         Workload  Agent   Address       Ports      Message
-application/0*               active    idle    10.130.84.77
-config-server/0*             active    idle    10.130.84.120   
-self-signed-certificates/0*  active    idle    10.130.84.32
-shard-one/0*                 active    idle    10.130.84.78    
-shard-two/0*                 active    idle    10.130.84.68   
-```
-````
-`````
 
 The following would be a valid remap pattern: 
 
