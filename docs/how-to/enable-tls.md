@@ -59,22 +59,22 @@ However, it requires that:
 
 To enable TLS, deploy the TLS charm and integrate it with all cluster components.
 
-In a cluster with two shards (named `shard-0` and `shard-1`) and a config-server, it would look as follows:
+In a cluster with two shards (named `shard0` and `shard1`) and a config-server, it would look as follows:
 
 ```shell
 juju deploy self-signed-certificates
 
 juju integrate config-server self-signed-certificates
-juju integrate shard-0 self-signed-certificates
-juju integrate shard-1 self-signed-certificates
+juju integrate shard0 self-signed-certificates
+juju integrate shard1 self-signed-certificates
 ```
 
 To disable TLS, simply remove the integrations with the cluster components:
 
 ```shell
 juju remove-relation config-server self-signed-certificates
-juju remove-relation shard-one self-signed-certificates
-juju remove-relation shard-two self-signed-certificates
+juju remove-relation shard0 self-signed-certificates
+juju remove-relation shard1 self-signed-certificates
 ```
 
 ## Rotate private keys

@@ -73,15 +73,15 @@ old-mod  overlord    localhost/localhost  3.1.6    unsupported  17:27:22Z
 App            Version  Status   Scale  Charm       Channel  Rev  Exposed  Message
 application             active       1  application            0  no
 config-server           active       1  mongodb                0  no
-shard-one               active       1  mongodb                1  no
-shard-two               active       1  mongodb                2  no
+shard1               active       1  mongodb                1  no
+shard2               active       1  mongodb                2  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports            Message
 application/0*               active    idle   4        10.130.84.77
 config-server/0*             active    idle   0        10.130.84.120   27017-27018/tcp
 self-signed-certificates/0*  active    idle   3        10.130.84.32
-shard-one/0*                 active    idle   1        10.130.84.78    27017/tcp
-shard-two/0*                 active    idle   2        10.130.84.68    27017/tcp
+shard1/0*                 active    idle   1        10.130.84.78    27017/tcp
+shard2/0*                 active    idle   2        10.130.84.68    27017/tcp
 ```
 
 Example {term}`new cluster`:
@@ -93,21 +93,21 @@ new-mod  overlord    localhost/localhost  3.1.6    unsupported  17:27:22Z
 App               Version  Status   Scale  Charm        Channel  Rev  Exposed  Message
 application                active       1  application             0  no
 config-server-new          active       1  mongodb                 0  no
-shard-one-new              active       1  mongodb                 1  no
-shard-two-new              active       1  mongodb                 2  no
+shard1-new              active       1  mongodb                 1  no
+shard2-new              active       1  mongodb                 2  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports            Message
 application/0*               active    idle   4        10.130.84.77
 config-server-new/0*         active    idle   0        10.130.84.120   27017-27018/tcp
 self-signed-certificates/0*  active    idle   3        10.130.84.32
-shard-one-new/0*             active    idle   1        10.130.84.78    27017/tcp
-shard-two-new/0*             active    idle   2        10.130.84.68    27017/tcp
+shard1-new/0*             active    idle   1        10.130.84.78    27017/tcp
+shard2-new/0*             active    idle   2        10.130.84.68    27017/tcp
 ```
 
 The following would be a valid remap pattern: 
 
 ```shell
-config-server-new=config-server,shard-one-new=shard-one,shard-two-new=shard-two
+config-server-new=config-server,shard1-new=shard1,shard2-new=shard2
 ```
 
 ## Restore the backup

@@ -60,19 +60,19 @@ For example, to deploy a shard and a config-server with 3 replicas each:
 ```{tab-item} VM
 :sync: vm
 
-    juju deploy mongodb --config role="shard" shard-0 -n 3
+    juju deploy mongodb --config role="shard" shard0 -n 3
     juju deploy mongodb --config role="config-server" config-server-0 -n 3
 
-    juju integrate config-server:config-server shard-0:sharding
+    juju integrate config-server:config-server shard0:sharding
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
-    juju deploy mongodb-k8s --config role="shard" shard-0 -n 3 --trust
+    juju deploy mongodb-k8s --config role="shard" shard0 -n 3 --trust
     juju deploy mongodb-k8s --config role="config-server" config-server-0 -n 3 --trust
 
-    juju integrate config-server:config-server shard-0:sharding
+    juju integrate config-server:config-server shard0:sharding
 
 ```
 ````
