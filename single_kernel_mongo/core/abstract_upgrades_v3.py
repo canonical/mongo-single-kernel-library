@@ -443,11 +443,11 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         Raises FailedToMovePrimaryError
         """
         # no need to move primary in the scenario of one unit
-        if len(self.state.peer_units) < 2:
+        if len(self.state.units) < 2:
             return
 
         with MongoConnection(self.state.mongo_config) as mongod:
-            unit_with_lowest_id = self.state.peer_units[-1].unit
+            unit_with_lowest_id = self.state.reverse_order_peer_units[-1]
             unit_host = self.state.peer_unit_data(unit_with_lowest_id).internal_address
             if mongod.primary() == unit_host:
                 logger.debug(

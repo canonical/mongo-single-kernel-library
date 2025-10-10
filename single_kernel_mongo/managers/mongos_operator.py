@@ -112,14 +112,14 @@ class MongosOperator(OperatorProtocol, Object):
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
         if self.substrate == Substrates.VM:
-            upgrade_backend = MachineMongoDBRefresh(
+            self.upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
                 state=self.state,
                 workload_name="Mongos",
                 charm_name=self.charm.name,
             )
         else:
-            upgrade_backend = KubernetesMongoDBRefresh(
+            self.upgrade_backend = KubernetesMongoDBRefresh(
                 dependent=self,
                 state=self.state,
                 workload_name="Mongos",
@@ -130,7 +130,7 @@ class MongosOperator(OperatorProtocol, Object):
             charm_refresh.Machines if self.substrate == Substrates.VM else charm_refresh.Kubernetes
         )
         try:
-            self.refresh = refresh_class(upgrade_backend)
+            self.refresh = refresh_class(self.upgrade_backend)
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
@@ -182,8 +182,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         if not self.is_mongos_running():
             logger.error("Waiting for mongos router to be ready before finalising refresh.")
+            raise DeferrableError("mongos is not running.")
 
-        if not self.upgrades_manager.is_mongos_able_to_read_write():
+        if not self.upgrade_backend.is_mongos_able_to_read_write():
             logger.error("mongos is not able to read/write after refresh")
             raise DeferrableError("mongos is not able to read/write after refresh.")
 

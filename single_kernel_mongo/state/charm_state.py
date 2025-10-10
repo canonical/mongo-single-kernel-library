@@ -173,6 +173,13 @@ class CharmState(Object, StatusesStateProtocol):
         return self.peer_relation.units
 
     @property
+    def reverse_order_peer_units(self) -> list[Unit]:
+        """Units sorted in reverse order."""
+        return sorted(
+            self.peers_units, key=lambda unit: int(unit.name.split("/")[-1]), reverse=True
+        )
+
+    @property
     def client_relations(self) -> set[Relation]:
         """The set of client relations.
 

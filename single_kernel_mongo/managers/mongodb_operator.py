@@ -219,7 +219,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Upgrades
         if self.substrate == Substrates.VM:
-            upgrade_backend = MachineMongoDBRefresh(
+            self.upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
                 state=self.state,
                 workload_name="MongoDB",
@@ -227,7 +227,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             refresh_class = charm_refresh.Machines
         else:
-            upgrade_backend = KubernetesMongoDBRefresh(
+            self.upgrade_backend = KubernetesMongoDBRefresh(
                 dependent=self,
                 state=self.state,
                 workload_name="MongoDB",
@@ -237,7 +237,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             refresh_class = charm_refresh.Kubernetes
 
         try:
-            self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+            self.refresh = refresh_class(self.upgrade_backend)  # type: ignore[argument-type]
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
@@ -299,14 +299,14 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
-            self.refresh._charm_specific.wait_for_cluster_healthy()  # type: ignore[attr-defined]
+            self.upgrade_backend.wait_for_cluster_healthy()  # type: ignore[attr-defined]
         except RetryError:
             logger.error(
                 "Cluster is not healthy after refresh, will retry next juju event.", exc_info=True
             )
             return
 
-        if not self.refresh._charm_specific.is_cluster_able_to_read_write():  # type: ignore[attr-defined]
+        if not self.upgrade_backend.is_cluster_able_to_read_write():  # type: ignore[attr-defined]
             logger.error(
                 "Cluster is not healthy after refresh, writes not propagated throughout cluster. Deferring post refresh check.",
             )
@@ -347,7 +347,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.dependent.mongo_manager.mongod_ready():
             try:
-                refresh.wait_for_cluster_healthy()
+                self.upgrade_backend.wait_for_cluster_healthy()
                 refresh.next_unit_allowed_to_refresh = True
             except RetryError:
                 return
