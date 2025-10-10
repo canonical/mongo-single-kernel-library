@@ -323,11 +323,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
-            self.charm.status_handler.set_running_status(
+            self.charm.state.statuses.add(
                 MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+                component=self.name,
             )
             raise
 
