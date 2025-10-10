@@ -35,7 +35,7 @@ juju config s3-integrator path="my/path" region="us-west-2" bucket="pbm-test-buc
 First, determine the name of the application to pass to Juju when running back up and restore actions:
 
 * For a **replica-set deployment**, it is the name of your Charmed MongoDB application
-* For a **sharded cluster deployment**, it is the name of the Charmed MongoDB application with the `config-server` role. *Never the shard applications!*
+* For a **sharded cluster deployment**, it is the name of the Charmed MongoDB config-server application. *Never the shard applications!*
 
 ---
 
