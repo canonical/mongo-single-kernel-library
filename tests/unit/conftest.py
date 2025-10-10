@@ -1,6 +1,9 @@
+import pathlib
 from pathlib import Path
+from platform import platform
 
 import pytest
+import tomllib
 import yaml
 from ops.testing import Harness
 
@@ -19,23 +22,48 @@ MONGOS_METADATA = str(
 )
 
 
+class _MockRefreshVM:
+    in_progress = False
+    next_unit_allowed_to_refresh = True
+    workload_allowed_to_start = True
+    app_status_higher_priority = None
+    unit_status_higher_priority = None
+
+    def __init__(self, _, /):
+        pass
+
+    def update_snap_revision(self):
+        pass
+
+    @property
+    def pinned_snap_revision(self):
+        with pathlib.Path("tests/charms/mongodb_test_charm/refresh_versions.toml").open(
+            "rb"
+        ) as file:
+            return tomllib.load(file)["snap"]["revisions"][platform.machine()]
+
+    def unit_status_lower_priority(self, *, workload_is_running=True):
+        return None
+
+
 @pytest.fixture(autouse=True)
 def mock_refresh(mocker):
-    refresh_mock = mocker.Mock()
-    refresh_mock.in_progress = False
-    refresh_mock.next_unit_allowed_to_refresh = True
-    refresh_mock.workload_allowed_to_start = True
-    refresh_mock.app_status_higher_priority = False
-    refresh_mock.unit_status_higher_priority = False
-    refresh_mock.unit_status_lower_priority.return_value = False
-    mocker.patch("charm_refresh.Machines", return_value=refresh_mock)
-    mocker.patch("charm_refresh.Kubernetes", return_value=refresh_mock)
+    mocker.patch("charm_refresh.Machines", new=_MockRefreshVM)
+    mocker.patch("charm_refresh.Kubernetes", new=_MockRefreshVM)
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MachineMongoDBRefresh",
         return_value=None,
     )
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.KubernetesMongoDBRefresh",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.MachineMongoDBRefresh",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.KubernetesMongoDBRefresh",
         return_value=None,
     )
     yield
