@@ -124,8 +124,8 @@ juju switch <lxd_controller>:<my-model>
 Consume the LDAP offers:
 
 ```shell
-juju consume <k8s_controller>:admin/glauth.ldap
-juju consume <k8s_controller>:admin/glauth.send-ca-cert
+juju consume <k8s_controller>:admin/<k8s-model-name>.ldap
+juju consume <k8s_controller>:admin/<k8s-model-name>.send-ca-cert
 ```
 ````
 
