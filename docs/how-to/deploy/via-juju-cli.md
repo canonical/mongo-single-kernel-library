@@ -7,7 +7,7 @@ This guide goes over how to deploy Charmed MongoDB replica sets and sharded clus
 
 The basic requirements for deploying any charm are the [**`juju` client**](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/) and a [**cloud**](https://juju.is/docs/juju/cloud). 
 
-You must have a [bootstrapped](https://juju.is/docs/juju/juju-bootstrap) cloud controller and a [Juju model](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/model/) on which MongoDB will be deployed.
+You must have a [bootstrapped](https://juju.is/docs/juju/juju-bootstrap) cloud controller and a [Juju model](https://documentation.ubuntu.com/juju/latest/reference/model/) on which MongoDB will be deployed.
 
 ```{note}
 If you're new to these concepts and vocabulary, check out the Tutorial.
