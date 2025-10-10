@@ -163,7 +163,9 @@ class TLSEventsHandler(Object):
             logger.info(f"Deferring {str(type(event))}: db is not initialised")
             event.defer()
             return
-        if self.dependent.refresh_in_progress:
+        # Check if refresh is in progress and this is the initial integration, delay.
+        # Otherwise it's a rotation and we're safe to continue.
+        if self.dependent.refresh_in_progress and self.manager.initial_integration():
             logger.warning(
                 "Enabling TLS is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )

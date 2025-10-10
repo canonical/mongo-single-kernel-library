@@ -97,7 +97,7 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     harness.add_relation(RelationNames.CLUSTER.value, "mongos")
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
-        manager.assert_pass_hook_checks()
+        manager.assert_pass_hook_checks(initial_event=True)
 
     assert "during an upgrade" in err.value.args[0]
 
@@ -201,13 +201,11 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
         "mongo_has_tls",
         "config_server_has_tls",
         "is_waiting_to_request_certs",
-        "upgrade_in_progress",
         "expected_error",
     ),
     (
         (
             False,
-            True,
             True,
             True,
             "Config-Server uses TLS but mongos does not. Please synchronise encryption method.",
@@ -216,22 +214,13 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
             True,
             False,
             True,
-            True,
             "Mongos uses TLS but config-server does not. Please synchronise encryption method.",
         ),
         (
             False,
             False,
             True,
-            True,
             "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
-        ),
-        (
-            False,
-            False,
-            False,
-            True,
-            "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state.",
         ),
     ),
 )
@@ -240,7 +229,6 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mocker,
     mongo_has_tls,
     is_waiting_to_request_certs,
-    upgrade_in_progress,
     config_server_has_tls,
     expected_error,
 ):
@@ -257,7 +245,6 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
         return_value=is_waiting_to_request_certs,
     )
-    mongos_harness.charm.operator.refresh.in_progress = upgrade_in_progress
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
         manager.assert_pass_hook_checks()

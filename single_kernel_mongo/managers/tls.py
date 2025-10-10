@@ -252,6 +252,18 @@ class TLSManager:
         if internal_pem is not None:
             self.workload.write(self.workload.paths.int_pem_file, internal_pem)
 
+    def is_internal(self, certificate_signing_request: str) -> bool:
+        """Checks if the CSR is internal or external."""
+        int_csr = self.state.tls.get_secret(internal=True, label_name=SECRET_CSR_LABEL)
+        ext_csr = self.state.tls.get_secret(internal=False, label_name=SECRET_CSR_LABEL)
+        if ext_csr and certificate_signing_request.rstrip() == ext_csr.rstrip():
+            logger.debug("The external TLS certificate available.")
+            return False
+        if int_csr and certificate_signing_request.rstrip() == int_csr.rstrip():
+            logger.debug("The internal TLS certificate available.")
+            return True
+        raise UnknownCertificateAvailableError
+
     def set_certificates(
         self,
         certificate_signing_request: str,
@@ -260,16 +272,7 @@ class TLSManager:
         ca: str | None,
     ):
         """Sets the certificates."""
-        int_csr = self.state.tls.get_secret(internal=True, label_name=SECRET_CSR_LABEL)
-        ext_csr = self.state.tls.get_secret(internal=False, label_name=SECRET_CSR_LABEL)
-        if ext_csr and certificate_signing_request.rstrip() == ext_csr.rstrip():
-            logger.debug("The external TLS certificate available.")
-            internal = False
-        elif int_csr and certificate_signing_request.rstrip() == int_csr.rstrip():
-            logger.debug("The internal TLS certificate available.")
-            internal = True
-        else:
-            raise UnknownCertificateAvailableError
+        internal = self.is_internal(certificate_signing_request)
 
         self.state.tls.set_secret(
             internal,
@@ -367,3 +370,11 @@ class TLSManager:
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,
             )
+
+    def initial_integration(self) -> bool:
+        """Checks if the certificate available event runs for the first time or not."""
+        if not self.workload.exists(self.workload.paths.ext_pem_file):
+            return True
+        if not self.workload.exists(self.workload.paths.int_pem_file):
+            return True
+        return False
