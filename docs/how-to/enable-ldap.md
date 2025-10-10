@@ -56,7 +56,7 @@ With MongoDB for Kubernetes, you can simply deploy GLAuth alongside MongoDB with
 Deploy `glauth-k8s`, `self-signed-certificates`, and `postgresql-k8s`:
 
 ```shell
-juju deploy glauth-k8s --channel edge --trust
+juju deploy glauth-k8s --channel edge --trust --config ldaps_enabled=true
 juju deploy self-signed-certificates
 juju deploy postgresql-k8s --channel 14/stable --trust
 ```
