@@ -20,7 +20,7 @@ Ensure you have [Terraform 1.8+](https://snapcraft.io/terraform) or [OpenTofu](h
 
 ## Deploy a replica set
 
-Get access to the replica set product terraform module code:
+Get access to the replica set product Terraform module code:
 
 `````{tab-set}
 ````{tab-item} VM
@@ -42,8 +42,7 @@ cd terraform/product/replica_set
 ````
 `````
 
-Then deploy Charmed MongoDB using the stand Terraform commands:
-
+Then deploy Charmed MongoDB using Terraform:
 
 ```shell
 cd ./terraform/charm/replica_set/
@@ -54,7 +53,7 @@ terraform apply "<filename>"
 
 ## Deploy a sharded cluster
 
-Get access to the sharded cluster product terraform module code:
+Get access to the sharded cluster product Terraform module code:
 
 `````{tab-set}
 ````{tab-item} VM
@@ -76,10 +75,10 @@ cd terraform/product/sharded_cluster
 ````
 `````
 
-Then deploy Charmed MongoDB using the standard Terraform commands:
+Then deploy Charmed MongoDB using Terraform:
 
 ```shell
-cd ./terraform/charm/replica_set/
+cd ./terraform/charm/sharded_cluster/
 terraform init
 terraform plan -out <filename> -var='model=<model-name>'
 terraform apply "<filename>"
