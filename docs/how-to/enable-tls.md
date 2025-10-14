@@ -64,9 +64,9 @@ In a cluster with two shards (named `shard0` and `shard1`) and a config-server, 
 ```shell
 juju deploy self-signed-certificates
 
-juju integrate config-server self-signed-certificates
-juju integrate shard0 self-signed-certificates
-juju integrate shard1 self-signed-certificates
+juju integrate config-server:certificates self-signed-certificates
+juju integrate shard0:certificates self-signed-certificates
+juju integrate shard1:certificates self-signed-certificates
 ```
 
 To disable TLS, simply remove the integrations with the cluster components:
