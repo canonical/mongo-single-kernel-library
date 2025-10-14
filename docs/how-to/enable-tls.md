@@ -89,7 +89,7 @@ openssl genrsa -out internal-key.pem 3072
 openssl genrsa -out external-key.pem 3072
 ```
 
-Then, apply the new external key to the leader of your replica set or config-server. 
+Then, apply the new external key to all MongoDB units in your replica set or sharded cluster.
 
 ```{admonition} Caution
 :class: warning

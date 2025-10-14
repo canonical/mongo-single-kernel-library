@@ -69,20 +69,20 @@ This process will generate a new user and password for the application.
 
 To create a client connection to a sharded cluster, you must use the `mongos` router.
 
-<!--TODO: clarify role of data-integrator here - is it necessary for connecting with mongos? -->
-
-To deploy `mongos` and [`data-integrator`](https://charmhub.io/data-integrator), run:
+```{note}
+If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client#developer-documentation), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
+```
 
 ````{tab-set}
 ```{tab-item} VM
 :sync: vm
 
     juju deploy mongos
-    juju deploy data-integrator <options>
+    juju deploy <application>
 
-Wait for `mongos`'s status to be `idle`, then integrate it with `data-integrator`.
+Wait for `mongos`'s status to be `idle`, then integrate it with `<application>`.
 
-    juju integrate mongos data-integrator
+    juju integrate mongos <application>
 
 Integrate the `mongos` charm to a Charmed MongoDB application running as a config-server:
 
@@ -97,11 +97,11 @@ To disable the client connection and the user associated with it, remove the int
 :sync: k8s
 
     juju deploy mongos-k8s
-    juju deploy data-integrator <options>
+    juju deploy <application>
 
-Wait for `mongos-k8s`'s status to be `idle`, then integrate it with `data-integrator`.
+Wait for `mongos-k8s`'s status to be `idle`, then integrate it with `<application>`.
 
-    juju integrate mongos-k8s data-integrator
+    juju integrate mongos-k8s <application>
 
 Integrate the `mongos` charm to a Charmed MongoDB application running as a config-server:
 
@@ -112,10 +112,6 @@ To disable the client connection and the user associated with it, remove the int
     juju remove-relation config-server mongos-k8s
 ```
 ````
-
-```{seealso}
-[`data-integrator` configuration options](https://charmhub.io/data-integrator/configurations)
-```
 
 ### Rotate the `mongos` client password
 

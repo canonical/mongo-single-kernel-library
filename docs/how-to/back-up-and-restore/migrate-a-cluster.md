@@ -34,11 +34,13 @@ old cluster
 
 The migration process will restore the password from the {term}`new cluster` to your {term}`old cluster`.
 
-Set the password of your old cluster to the new cluster’s password:
+For all four internal users, set the password of your old cluster to the new cluster’s password:
 
 ```shell
-juju run <replica-set name | config-server name>/leader set-password password=<new cluster password>
+juju run <app>/leader set-password username=<username> password=<new password>
 ```
+
+Where  `<username>` is `operator`, `backup`, `monitor`, and `logrotate`. 
 
 ## List all backups
 

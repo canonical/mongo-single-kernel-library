@@ -44,9 +44,11 @@ cd terraform/product/replica_set
 
 Then deploy Charmed MongoDB using the stand Terraform commands:
 
+
 ```shell
+cd ./terraform/charm/replica_set/
 terraform init
-terraform plan -out <filename>
+terraform plan -out <filename> -var='model=<model-name>'
 terraform apply "<filename>"
 ```
 
@@ -77,7 +79,8 @@ cd terraform/product/sharded_cluster
 Then deploy Charmed MongoDB using the standard Terraform commands:
 
 ```shell
+cd ./terraform/charm/replica_set/
 terraform init
-terraform plan -out <filename>
+terraform plan -out <filename> -var='model=<model-name>'
 terraform apply "<filename>"
 ```
