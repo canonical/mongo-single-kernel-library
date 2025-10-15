@@ -9,9 +9,18 @@ Handles MongoDB TLS Files.
 
 from __future__ import annotations
 
+import base64
 import logging
+import re
 import socket
 from typing import TYPE_CHECKING, TypedDict
+
+from data_platform_helpers.advanced_statuses.protocol import (
+    ManagerStatusProtocol,
+    Scope,
+    StatusObject,
+)
+from ops.model import ModelError, SecretNotFoundError
 
 from single_kernel_mongo.config.literals import TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
@@ -22,6 +31,7 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateRequestAttributes,
+    PrivateKey,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.tls_state import (
@@ -48,7 +58,7 @@ class Sans(TypedDict):
 logger = logging.getLogger(__name__)
 
 
-class TLSManager:
+class TLSManager(ManagerStatusProtocol):
     """Manager for building necessary files for mongodb."""
 
     def __init__(
@@ -60,7 +70,8 @@ class TLSManager:
         self.dependent = dependent
         self.charm = dependent.charm
         self.workload = workload
-        self.state = state
+        self.state: CharmState = state
+        self.name = "tls"
 
     def get_certificate_request_attributes(self) -> CertificateRequestAttributes:
         """Generate a certificate signing request attributes."""
@@ -250,3 +261,112 @@ class TLSManager:
                 return TlsManagementState.MONGOS_DB_NOT_INITIALIZED
             return TlsManagementState.DB_NOT_INTIALIZED
         return TlsManagementState.EMPTY
+
+    def update_private_keys(self):
+        """Updates the private keys."""
+        peer_private_key = None
+        client_private_key = None
+
+        self.state.statuses.delete(
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value, scope="unit", component=self.dependent.name
+        )
+        self.state.statuses.delete(
+            TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+
+        initial_peer_private_key = self.state.tls.peer_private_key
+        initial_client_private_key = self.state.tls.peer_private_key
+
+        if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
+            if peer_private_key := self.update_private_key(tls_peer_private_key_id, internal=True):
+                self.dependent.tls_events.peer_certificate._private_key = peer_private_key
+
+        if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
+            if client_private_key := self.update_private_key(
+                tls_client_private_key_id, internal=False
+            ):
+                self.dependent.tls_events.client_certificate._private_key = client_private_key
+
+        if tls_peer_private_key_id and not peer_private_key:
+            self.state.statuses.add(
+                TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+
+        if tls_client_private_key_id and not client_private_key:
+            self.state.statuses.add(
+                TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+
+        peer_private_key_updated = peer_private_key is not None and (
+            initial_peer_private_key != peer_private_key
+        )
+        client_private_key_updated = client_private_key is not None and (
+            initial_client_private_key != client_private_key
+        )
+
+        # refresh certificates only if the value was updated.
+        if peer_private_key_updated or client_private_key_updated:
+            self.dependent.tls_events.refresh_certificates()
+
+    def update_private_key(self, private_key_secret_id: str, internal: bool) -> PrivateKey | None:
+        """Stores the new private key in the relation."""
+        if private_key := self.read_and_validate_private_key(private_key_secret_id):
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
+            return private_key
+
+        logger.error(
+            f"Invalid {'peer' if internal else 'client'} private key provided, cannot update TLS certificates."
+        )
+        return None
+
+    def read_and_validate_private_key(self, private_key_secret_id: str) -> PrivateKey | None:
+        """Reads the private key from the secret and validates it."""
+        try:
+            secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
+                "private-key"
+            )
+        except (ModelError, SecretNotFoundError) as e:
+            logger.error(e)
+            return None
+
+        if secret_content is None:
+            logger.error(f"Secret {private_key_secret_id} does not contain a private key.")
+            return None
+
+        _private_key = (
+            secret_content
+            if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
+            else base64.b64decode(secret_content).decode("utf-8").strip()
+        )
+        private_key = PrivateKey(raw=_private_key)
+        if not private_key.is_valid():
+            logger.error("Invalid private key format.")
+            return None
+
+        return private_key
+
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+        """Returns the current status of the tls-manager."""
+        charm_statuses = []
+
+        if not recompute:
+            return self.state.statuses.get(scope=scope, component=self.name).root
+
+        if scope == "app":
+            return []
+
+        if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
+            if not self.update_private_key(tls_peer_private_key_id, internal=True):
+                charm_statuses.append(TLSStatuses.INVALID_PEER_PRIVATE_KEY.value)
+
+        if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
+            if not self.update_private_key(tls_client_private_key_id, internal=False):
+                charm_statuses.append(TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value)
+
+        return charm_statuses

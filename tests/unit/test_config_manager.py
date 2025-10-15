@@ -303,9 +303,13 @@ def test_mongodb_config_manager_tls_enabled(mocker):
         },
         "net": {
             "tls": {
+                "mode": "preferTLS",
                 "allowInvalidCertificates": True,
-                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
+                "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+                "CAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
                 "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
+                "disabledProtocols": "TLS1_0,TLS1_1",
             }
         },
     }

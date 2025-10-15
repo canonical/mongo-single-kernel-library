@@ -50,7 +50,7 @@ def unit_number(unit: UnitUpgradePeerData) -> int:
     return int(unit.component.name.split("/")[-1])
 
 
-def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
+def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str | None) -> bool:
     """Validates the mapping, returning a boolean."""
     if not ldap_user_to_dn_mapping:
         return True
@@ -62,7 +62,9 @@ def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
         return False
 
 
-def is_valid_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
+def is_valid_ldap_options(
+    ldap_user_to_dn_mapping: str | None, ldap_query_template: str | None
+) -> bool:
     """Validates the combination of the two LDAP options.
 
     Rules are the following:

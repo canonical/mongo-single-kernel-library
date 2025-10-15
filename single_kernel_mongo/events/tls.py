@@ -9,14 +9,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from ops import ConfigChangedEvent
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import EventBase, EventSource, Object
 
 from single_kernel_mongo.config.literals import CharmKind, TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import MongosStatuses, ShardStatuses, TLSStatuses
-from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
     TLSCertificatesRequiresV4,
@@ -26,6 +27,7 @@ from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.core.operator import OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ class TLSEventsHandler(Object):
             charm=self.charm,
             relationship_name=ExternalRequirerRelations.PEER_TLS.value,
             certificate_requests=[self.manager.get_certificate_request_attributes()],
-            private_key=None,
+            private_key=self.manager.state.tls.peer_private_key,
             refresh_events=[self.refresh_tls_certificates_event],
         )
 
@@ -57,7 +59,7 @@ class TLSEventsHandler(Object):
             charm=self.charm,
             relationship_name=ExternalRequirerRelations.CLIENT_TLS.value,
             certificate_requests=[self.manager.get_certificate_request_attributes()],
-            private_key=None,
+            private_key=self.manager.state.tls.client_private_key,
             refresh_events=[self.refresh_tls_certificates_event],
         )
 
@@ -76,6 +78,9 @@ class TLSEventsHandler(Object):
             self.framework.observe(
                 self.charm.on[relation_name].relation_broken, self._on_tls_relation_broken
             )
+
+        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handler for relation created."""
@@ -184,6 +189,20 @@ class TLSEventsHandler(Object):
 
         self.manager.enable_certificates_for_unit(internal)
         self._recompute_statuses()
+
+    def _on_config_changed(self, event: ConfigChangedEvent):
+        try:
+            self.manager.update_private_keys()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
+            return
+
+    def _on_secret_changed(self, event: ConfigChangedEvent):
+        try:
+            self.manager.update_private_keys()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
+            return
 
     def _recompute_statuses(self):
         """Recomputes the statuses for those components as the tls changes are impactful."""

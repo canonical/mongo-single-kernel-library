@@ -79,7 +79,6 @@ async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -
     )
 
 
-@pytest.mark.skip()
 @pytest.mark.abort_on_fail
 async def test_rotate_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that each cluster component can rotate TLS certs."""

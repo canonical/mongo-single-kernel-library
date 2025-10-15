@@ -100,6 +100,8 @@ class MongoConfigModel(BaseConfigModel):
     role: SerializeLiteralAsStr[MongoDBRoles]
     ldap_user_to_dn_mapping: str | None = Field(default=None, alias="ldap-user-to-dn-mapping")
     ldap_query_template: str | None = Field(default=None, alias="ldap-query-template")
+    tls_peer_private_key_id: str | None = Field(default=None, alias="tls-peer-private-key")
+    tls_client_private_key_id: str | None = Field(default=None, alias="tls-client-private-key")
 
     @field_validator("expose_external", mode="before")
     @classmethod

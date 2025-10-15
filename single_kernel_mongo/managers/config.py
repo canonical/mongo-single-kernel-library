@@ -340,9 +340,14 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                     "security": {"clusterAuthMode": "x509"},
                     "net": {
                         "tls": {
+                            "mode": "preferTLS",
                             "allowInvalidCertificates": True,
-                            "clusterCAFile": f"{self.workload.paths.int_ca_file}",
+                            "certificateKeyFile": f"{self.workload.paths.int_pem_file}",
+                            "CAFile": f"{self.workload.paths.int_ca_file}",
+                            "disabledProtocols": "TLS1_0,TLS1_1",
+                            ### TEST
                             "clusterFile": f"{self.workload.paths.int_pem_file}",
+                            "clusterCAFile": f"{self.workload.paths.int_ca_file}",
                         }
                     },
                 },
@@ -360,18 +365,20 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
     @property
     def client_tls_parameters(self) -> dict[str, Any]:
         """The client TLS parameters."""
+        params = {}
         if self.state.tls.client_enabled:
-            return {
+            params = {
                 "net": {
                     "tls": {
+                        "mode": "preferTLS",
                         "CAFile": f"{self.workload.paths.ext_ca_file}",
                         "certificateKeyFile": f"{self.workload.paths.ext_pem_file}",
-                        "mode": "preferTLS",
                         "disabledProtocols": "TLS1_0,TLS1_1",
                     }
                 },
             }
-        return {}
+
+        return params
 
     @property
     @abstractmethod

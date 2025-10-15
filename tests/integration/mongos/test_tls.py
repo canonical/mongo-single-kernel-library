@@ -136,7 +136,6 @@ async def test_mongos_tls_nodeport(ops_test: OpsTest, substrate: Substrate):
         assert get_k8s_public_ip() not in await get_sans_ips(ops_test, unit, internal=False)
 
 
-@pytest.mark.skip()
 @pytest.mark.abort_on_fail
 async def test_mongos_rotate_certs(ops_test: OpsTest, substrate: Substrate) -> None:
     await rotate_and_verify_certs(ops_test, substrate, MONGOS_APP_NAME)

@@ -34,6 +34,7 @@ from single_kernel_mongo.config.literals import (
     TrustStoreFiles,
 )
 from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -91,6 +92,12 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     if TYPE_CHECKING:
 
         def __init__(self, dependent: AbstractMongoCharm): ...
+
+    @property
+    @abstractmethod
+    def config(self) -> MongoConfigModel:
+        """The pydantic model of the config."""
+        ...
 
     @property
     @abstractmethod

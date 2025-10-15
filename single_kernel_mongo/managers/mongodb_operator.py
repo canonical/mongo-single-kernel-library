@@ -50,7 +50,7 @@ from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
 from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoDBCharmConfig, MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import (
     BackupEventsHandler,
@@ -231,7 +231,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.ldap_events = LDAPEventHandler(self)
 
     @property
-    def config(self):
+    @override
+    def config(self) -> MongoDBCharmConfig:
         """Returns the actual config."""
         return self.charm.parsed_config
 
@@ -279,6 +280,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         return (
             self,
             self.mongo_manager,
+            self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,

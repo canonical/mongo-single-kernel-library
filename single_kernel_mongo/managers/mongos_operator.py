@@ -133,9 +133,10 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self, self.ldap_manager, self.upgrade_manager)
+        return (self, self.tls_manager, self.ldap_manager, self.upgrade_manager)
 
     @property
+    @override
     def config(self) -> MongosCharmConfig:
         """Returns the actual config."""
         return self.charm.parsed_config
