@@ -27,12 +27,14 @@ Get access to the replica set product Terraform module code:
 :sync: vm
 
     git clone https://github.com/canonical/mongodb-operator.git
+    cd ./mongodb-operator
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
     git clone https://github.com/canonical/mongodb-k8s-operator.git
+    cd ./mongodb-k8s-operator
 ```
 ````
 
@@ -54,12 +56,14 @@ Get access to the sharded cluster product Terraform module code:
 :sync: vm
 
     git clone https://github.com/canonical/mongodb-operator.git
+    ./cd mongodb-operator
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
     git clone https://github.com/canonical/mongodb-k8s-operator.git
+    cd ./mongodb-k8s-operator
 ```
 ````
 
