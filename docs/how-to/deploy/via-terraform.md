@@ -80,6 +80,6 @@ Then deploy Charmed MongoDB using Terraform:
 ```shell
 cd ./terraform/charm/sharded_cluster/
 terraform init
-terraform plan -out <filename> -var='model=<model-name>'
+terraform plan -out <filename> -var='config_server={"model": "<model-name>", "app_name":"<config-server-name>"' -var='shards=[{"app_name": "<first-shard-name>", "model": "<model-name>"},{"app_name": "<second-shard-name>", "model": "<model-name>"}]'
 terraform apply "<filename>"
 ```
