@@ -49,7 +49,8 @@ terraform apply "<filename>"
 
 Get access to the sharded cluster product Terraform module code:
 
-````{tab-item} VM
+````{tab-set}
+```{tab-item} VM
 :sync: vm
 
     git clone https://github.com/canonical/mongodb-operator.git
