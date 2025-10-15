@@ -22,25 +22,19 @@ Ensure you have [Terraform 1.8+](https://snapcraft.io/terraform) or [OpenTofu](h
 
 Get access to the replica set product Terraform module code:
 
-`````{tab-set}
-````{tab-item} VM
+````{tab-set}
+```{tab-item} VM
 :sync: vm
 
-```shell
-git clone https://github.com/canonical/mongodb-operator.git
-cd terraform/product/replica_set
+    git clone https://github.com/canonical/mongodb-operator.git
 ```
-````
 
-````{tab-item} K8s
+```{tab-item} K8s
 :sync: k8s
 
-```shell
-git clone https://github.com/canonical/mongodb-k8s-operator.git
-cd terraform/product/replica_set
+    git clone https://github.com/canonical/mongodb-k8s-operator.git
 ```
 ````
-`````
 
 Then deploy Charmed MongoDB using Terraform:
 
@@ -55,25 +49,18 @@ terraform apply "<filename>"
 
 Get access to the sharded cluster product Terraform module code:
 
-`````{tab-set}
 ````{tab-item} VM
 :sync: vm
 
-```shell
-git clone https://github.com/canonical/mongodb-operator.git
-cd terraform/product/sharded_cluster
+    git clone https://github.com/canonical/mongodb-operator.git
 ```
-````
 
-````{tab-item} K8s
+```{tab-item} K8s
 :sync: k8s
 
-```shell
-git clone https://github.com/canonical/mongodb-k8s-operator.git
-cd terraform/product/sharded_cluster
+    git clone https://github.com/canonical/mongodb-k8s-operator.git
 ```
 ````
-`````
 
 Then deploy Charmed MongoDB using Terraform:
 
