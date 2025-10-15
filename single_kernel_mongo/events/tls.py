@@ -82,6 +82,15 @@ class TLSEventsHandler(Object):
         self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
+    @property
+    def tls_mapping(self) -> dict[bool, TLSCertificatesRequiresV4]:
+        """Mapping of boolean to a TLS requirer instance.
+
+        The boolean value is True if the requirer is for internal certificates,
+        and False for the client certificates.
+        """
+        return {True: self.peer_certificate, False: self.client_certificate}
+
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handler for relation created."""
         if event.relation.name != ExternalRequirerRelations.PEER_TLS.value:

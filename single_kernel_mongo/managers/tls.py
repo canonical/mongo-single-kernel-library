@@ -224,15 +224,22 @@ class TLSManager(ManagerStatusProtocol):
             f"{TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate secrets updated."
         )
 
+    def _is_certificate_available(self, internal: bool) -> bool:
+        csr = self.get_certificate_request_attributes()
+        cert, key = self.dependent.tls_events.tls_mapping[internal].get_assigned_certificate(csr)
+        return bool(cert and key)
+
     def is_waiting_for_a_cert(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
-        peer_cert = self.state.tls.get_secret(internal=True, label_name=SECRET_CERT_LABEL)
-        if self.state.peer_tls_relation is not None and peer_cert is None:
+        if self.state.peer_tls_relation is not None and not self._is_certificate_available(
+            internal=True
+        ):
             logger.debug("Waiting for peer certificate.")
             return True
 
-        client_cert = self.state.tls.get_secret(internal=False, label_name=SECRET_CERT_LABEL)
-        if self.state.client_tls_relation is not None and client_cert is None:
+        if self.state.client_tls_relation is not None and not self._is_certificate_available(
+            internal=False
+        ):
             logger.debug("Waiting for client certificate.")
             return True
 
