@@ -37,6 +37,7 @@ from tests.integration.helpers.tls import (
     integrate_apps_with_tls,
     internal_cert_path,
     remove_tls_integrations,
+    set_private_keys,
     time_file_created,
     time_process_started,
 )
@@ -373,12 +374,7 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
             ops_test, substrate, app_name=app_name, unit=unit, container="mongos"
         )
 
-    # set external and internal key using auto-generated key for each unit
-    for unit in ops_test.model.applications[app_name].units:
-        # TODO: use new config option
-        action = await unit.run_action(action_name="set-tls-private-key")
-        action = await action.wait()
-        assert action.status == "completed", "setting external and internal key failed."
+    await set_private_keys(ops_test, app_name)
 
     # wait for certificate to be available and processed. Can get receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute
