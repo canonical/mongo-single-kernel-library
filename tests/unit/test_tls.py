@@ -17,12 +17,15 @@ from single_kernel_mongo.state.tls_state import SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
-def get_certificate_mock(cert: str, chain: str, ca: str) -> MagicMock:
+def get_certificate_mock(cert: str, chain: str, ca: str, csr: str) -> MagicMock:
     provider_certificate_mock = MagicMock()
 
     cert_mock = MagicMock()
     cert_mock.raw = cert
+    csr_mock = MagicMock()
+    csr_mock.raw = csr
     provider_certificate_mock.certificate = cert_mock
+    provider_certificate_mock.certificate_signing_request = csr_mock
 
     chain_mock = MagicMock()
     chain_mock.raw = chain
@@ -57,7 +60,10 @@ def test_client_certificate_available(
     new_private_key = MagicMock()
     new_private_key.raw = "my_new_private_key"
     new_cert = get_certificate_mock(
-        cert="new_certificate_external_value", chain="new_chain", ca="new_test_ca_server"
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
     )
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
@@ -114,7 +120,10 @@ def test_internal_certificate_available(
     new_private_key = MagicMock()
     new_private_key.raw = "my_new_private_key"
     new_cert = get_certificate_mock(
-        cert="new_certificate_external_value", chain="new_chain", ca="new_test_ca_server"
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
     )
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
@@ -165,7 +174,10 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
     new_private_key = MagicMock()
     new_private_key.raw = "my_new_private_key"
     new_cert = get_certificate_mock(
-        cert="new_certificate_external_value", chain="new_chain", ca="new_test_ca_server"
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
     )
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
@@ -241,6 +253,7 @@ def test_certificate_available_mongos_without_config_server_certificate_is_ignor
         cert="new_certificate_external_value",
         chain="new_chain",
         ca="new_test_ca_server",
+        csr="new_csr",
     )
     get_assigned_certificates_mock = mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
@@ -282,7 +295,10 @@ def test_certificate_available_upgrade_in_progress_defer(
     new_private_key = MagicMock()
     new_private_key.raw = "my_new_private_key"
     new_cert = get_certificate_mock(
-        cert="new_certificate_external_value", chain="new_chain", ca="new_test_ca_server"
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
     )
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
