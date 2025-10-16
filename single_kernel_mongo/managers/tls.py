@@ -273,10 +273,10 @@ class TLSManager:
         if self.substrate == Substrates.VM:
             return
 
-        if external_ca is not None:
+        if external_ca:
             self.state.paths.ext_ca_file.write_text(external_ca)
             self.state.paths.ext_ca_file.chmod(600)
-        if external_pem is not None:
+        if external_pem:
             self.state.paths.ext_pem_file.write_text(external_pem)
             self.state.paths.ext_ca_file.chmod(600)
 

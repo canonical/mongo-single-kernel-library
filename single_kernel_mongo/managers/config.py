@@ -339,6 +339,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                     "security": {"clusterAuthMode": "x509"},
                     "net": {
                         "tls": {
+                            "allowInvalidCertificates": True,
                             "clusterCAFile": f"{self.workload.paths.int_ca_file}",
                             "clusterFile": f"{self.workload.paths.int_pem_file}",
                             "clusterAuthX509": {
