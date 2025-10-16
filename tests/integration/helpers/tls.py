@@ -327,15 +327,20 @@ async def check_certs_correctly_distributed(
     unit_secret_content = await get_secret_content(ops_test, unit_secret_id)
 
     # Get the values for certs from the relation, as provided by TLS Charm
-    certificates_raw_data: str = await get_application_relation_data(
+    peer_certificates_raw_data: str = await get_application_relation_data(
         ops_test, app_name, PEER_TLS_RELATION_NAME, "certificates"
     )
-    certificates_data = json.loads(certificates_raw_data)
+    peer_certificates_data = json.loads(peer_certificates_raw_data)
+
+    client_certificates_raw_data: str = await get_application_relation_data(
+        ops_test, app_name, CLIENT_TLS_RELATION_NAME, "certificates"
+    )
+    client_certificates_data = json.loads(client_certificates_raw_data)
 
     # compare the TLS resources stored on the disk of the unit with the ones from the TLS relation
-    for cert_type, cert_path in [
-        ("int", internal_cert_path(substrate)),
-        ("ext", external_cert_path(substrate)),
+    for cert_type, cert_path, certificates_data in [
+        ("int", internal_cert_path(substrate), peer_certificates_data),
+        ("ext", external_cert_path(substrate), client_certificates_data),
     ]:
         unit_csr = unit_secret_content[f"{cert_type}-csr-secret"]
         tls_item = [
@@ -428,6 +433,7 @@ async def set_invalid_private_key(
 async def set_private_keys(ops_test: OpsTest, app_name: str) -> None:
     """Sets both private keys."""
     secrets = {}
+
     for scope in ("peer", "client"):
         secret_name = f"tls-{scope}-private-key"
         data = Path(f"tests/integration/data/{scope}-key.pem").read_text()
@@ -437,8 +443,8 @@ async def set_private_keys(ops_test: OpsTest, app_name: str) -> None:
                 name=secret_name, data_args=[f"private-key={data}"]
             )
         except Exception:
-            secrets = await ops_test.model.list_secrets({"label": secret_name})
-            secret_id = secrets[0].uri
+            _secrets = await ops_test.model.list_secrets({"label": secret_name})
+            secret_id = _secrets[0].uri
             await ops_test.model.update_secret(
                 name=secret_name, data_args=[f"private-key={data}"], new_name=secret_name
             )
