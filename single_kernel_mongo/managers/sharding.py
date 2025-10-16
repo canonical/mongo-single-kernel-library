@@ -579,6 +579,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         operator_password = self.state.shard_state.operator_password
         backup_password = self.state.shard_state.backup_password
+
         if not operator_password or not backup_password:
             logger.info("Missing secrets, returning.")
             return
@@ -593,6 +594,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.update_member_auth(keyfile, tls_ca)
 
         if not self.dependent.mongo_manager.mongod_ready():
+            logger.info("MongoDB is not ready")
             raise NotReadyError
 
         # By setting the status we ensure that the former statuses of this component are removed.
@@ -618,13 +620,6 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         if not self.charm.unit.is_leader():
             return
-
-        # Fix the former charms state if needed.
-        if not self.data_requirer.fetch_my_relation_field(relation.id, "database"):
-            logger.info("Repairing missing database field in DB")
-            self.data_requirer.update_relation_data(
-                relation.id, {"database": self.data_requirer.database}
-            )
 
         self.sync_cluster_passwords(operator_password, backup_password)
 
@@ -775,6 +770,8 @@ class ShardManager(Object, ManagerStatusProtocol):
                 with MongoConnection(self.state.mongo_config) as mongo:
                     try:
                         mongo.set_user_password(user.username, new_password)
+                        self.state.set_user_password(user, new_password)
+                        logger.info(f"Updated {user.username} password")
                     except NotReadyError:
                         logger.error(
                             "Failed changing the password: Not all members healthy or finished initial sync."
@@ -783,7 +780,6 @@ class ShardManager(Object, ManagerStatusProtocol):
                     except PyMongoError as e:
                         logger.error(f"Failed changing the password: {e}")
                         raise
-        self.state.set_user_password(user, new_password)
 
     def shard_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
         """Returns the peer TLS integration status for shard and config-server."""
