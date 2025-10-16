@@ -186,7 +186,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def is_relation_feasible(self, name: str) -> bool:
+    def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible in this context."""
         ...
 

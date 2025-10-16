@@ -364,7 +364,7 @@ def storage_type(ops_test: OpsTest, app: str) -> str | None:
     return None
 
 
-def storage_id(ops_test: OpsTest, unit_name: str) -> str | None:
+def storage_id(ops_test: OpsTest, unit_name: str, storage_name: str) -> str | None:
     """Retrieves storage id associated with provided unit."""
     model_name = ops_test.model.info.name
 
@@ -375,16 +375,17 @@ def storage_id(ops_test: OpsTest, unit_name: str) -> str | None:
         logger.info(f"Storage {data=}")
         return None
 
-    storage = data["storage"]
+    for storage_id, storage in data["storage"].items():
+        if storage_id and not storage_id.startswith(f"{storage_name}/"):
+            continue
 
-    for storage_id, storage in storage.items():
-        units = storage.get("attachments", {}).get("units", None)
+        units = storage.get("attachments", {}).get("units", {})
         if units:
             unit = one(units)
         if unit_name == unit:
             return storage_id
 
-    logger.info(f"Storage {data=}")
+    logger.info(f"No storage match found for unit={unit_name}, {storage_name=}. Data: {data=}")
     return None
 
 
