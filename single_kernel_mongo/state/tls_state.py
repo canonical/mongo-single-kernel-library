@@ -15,6 +15,7 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificat
 
 SECRET_KEY_LABEL = "key-secret"
 SECRET_CA_LABEL = "ca-secret"
+SECRET_CSR_LABEL = "csr-secret"
 SECRET_CERT_LABEL = "cert-secret"
 SECRET_CHAIN_LABEL = "chain-secret"
 INT_CERT_SECRET_KEY = "int-cert-secret"

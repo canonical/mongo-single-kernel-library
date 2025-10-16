@@ -408,7 +408,7 @@ async def set_invalid_private_key(
 
     try:
         secret_id = await ops_test.model.add_secret(
-            name=secret_name, data_args=[f"private-key={base64.b64encode(b'invalid-key')}"]
+            name=secret_name, data_args=[f"private-key={base64.b64encode(b'invalid-key').decode()}"]
         )
     except Exception:
         secrets = await ops_test.model.list_secrets({"label": secret_name})

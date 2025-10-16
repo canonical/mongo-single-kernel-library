@@ -187,6 +187,7 @@ class TLSEventsHandler(Object):
         self.manager.set_certificates(
             secret_chain=[c.raw for c in provider_cert.chain],
             certificate=provider_cert.certificate.raw,
+            csr=provider_cert.certificate_signing_request.raw,
             ca=provider_cert.ca.raw,
             private_key=private_key,
             internal=internal,

@@ -38,6 +38,7 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
     SECRET_CERT_LABEL,
     SECRET_CHAIN_LABEL,
+    SECRET_CSR_LABEL,
     SECRET_KEY_LABEL,
     TlsManagementState,
 )
@@ -137,6 +138,7 @@ class TLSManager(ManagerStatusProtocol):
         """Disables the certificates on relation broken."""
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
+        self.state.tls.set_secret(internal, SECRET_CSR_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
@@ -207,6 +209,7 @@ class TLSManager(ManagerStatusProtocol):
         self,
         secret_chain: list[str] | None,
         certificate: str | None,
+        csr: str | None,
         ca: str | None,
         private_key: str | None,
         internal: bool,
@@ -218,6 +221,7 @@ class TLSManager(ManagerStatusProtocol):
             "\n".join(secret_chain) if secret_chain is not None else None,
         )
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
+        self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
         logger.info(
@@ -346,11 +350,15 @@ class TLSManager(ManagerStatusProtocol):
             logger.error(f"Secret {private_key_secret_id} does not contain a private key.")
             return None
 
-        _private_key = (
-            secret_content
-            if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
-            else base64.b64decode(secret_content).decode("utf-8").strip()
-        )
+        try:
+            _private_key = (
+                secret_content
+                if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
+                else base64.b64decode(secret_content).decode("utf-8").strip()
+            )
+        except UnicodeDecodeError:
+            logger.error("base64 decoding error, invalid key.")
+            return None
         private_key = PrivateKey(raw=_private_key)
         if not private_key.is_valid():
             logger.error("Invalid private key format.")
