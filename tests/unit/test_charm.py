@@ -4,6 +4,7 @@
 import json
 
 import pytest
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops import BlockedStatus
 from ops.model import ModelError
 from ops.pebble import PathError, ProtocolError
@@ -16,6 +17,7 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
+from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     LdapStatuses,
     MongoDBStatuses,
@@ -1795,3 +1797,57 @@ def test_password_management_context_password_did_not_change(harness, mongodb_na
         PasswordManagementState.EMPTY, system_users=VALID_SYSTEM_USERS
     )
     assert expected_context == context
+
+
+@pytest.mark.parametrize(
+    ("role", "rel_name", "status"),
+    (
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.SHARDING,
+            MongoDBStatuses.INVALID_SHARDING_REL.value,
+        ),
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.CONFIG_SERVER,
+            MongoDBStatuses.INVALID_SHARDING_REL.value,
+        ),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.DATABASE, MongoDBStatuses.INVALID_DB_REL.value),
+        (MongoDBRoles.SHARD, RelationNames.DATABASE, MongoDBStatuses.INVALID_DB_REL.value),
+        (
+            MongoDBRoles.SHARD,
+            RelationNames.CONFIG_SERVER,
+            MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value,
+        ),
+        (
+            MongoDBRoles.CONFIG_SERVER,
+            RelationNames.SHARDING,
+            MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value,
+        ),
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.CLUSTER,
+            MongoDBStatuses.INVALID_MONGOS_REL.value,
+        ),
+        (
+            MongoDBRoles.SHARD,
+            RelationNames.CLUSTER,
+            MongoDBStatuses.INVALID_MONGOS_REL.value,
+        ),
+        (MongoDBRoles.REPLICATION, RelationNames.DATABASE, None),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.CONFIG_SERVER, None),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.CLUSTER, None),
+        (MongoDBRoles.SHARD, RelationNames.SHARDING, None),
+    ),
+)
+def test_get_relation_feasible_status(
+    harness: Harness[MongoTestCharm],
+    role: MongoDBRoles,
+    rel_name: RelationNames,
+    status: StatusObject | None,
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+
+    computed_status = harness.charm.operator.get_relation_feasible_status(rel_name.value)
+    assert computed_status == status
