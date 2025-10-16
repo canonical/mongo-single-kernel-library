@@ -404,7 +404,7 @@ def test_shard_manager_synchronise_cluster_secrets_success(
 
     manager.synchronise_cluster_secrets(relation)
 
-    mocked_update_member_auth.assert_called_with("deadbeef", None)
+    mocked_update_member_auth.assert_called_with("deadbeef", None, None)
     mocked_sync.assert_called_with("test-operator", "test-backup")
 
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "true"
