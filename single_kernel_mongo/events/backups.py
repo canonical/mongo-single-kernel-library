@@ -137,6 +137,12 @@ class BackupEventsHandler(Object):
         credentials = self.s3_client.get_s3_connection_info()
 
         try:
+            # We can clear all statuses as they will get rewritten right after if needed.
+            # The only ones we don't want to lose were checked earlier and returned early.
+            self.manager.state.statuses.clear(
+                scope="unit",
+                component=self.manager.name,
+            )
             # First create the bucket if it does not exist.
             self.manager.create_bucket(credentials=credentials)
             # Then set the config options on PBM.
@@ -207,6 +213,7 @@ class BackupEventsHandler(Object):
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
         self.manager.cleanup_certs_and_restart(event.relation)
+        self.manager.state.statuses.clear(scope="unit", component=self.manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"
