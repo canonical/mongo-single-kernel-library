@@ -101,6 +101,7 @@ from single_kernel_mongo.managers.observability import ObservabilityManager
 from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
+from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import (
     is_valid_ldap_options,
@@ -218,18 +219,21 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
 
         # Upgrades
+        self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
-            self.upgrade_backend = MachineMongoDBRefresh(
+            upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
                 state=self.state,
+                upgrades_manager=self.upgrades_manager,
                 workload_name="MongoDB",
                 charm_name=self.charm.name,
             )
             refresh_class = charm_refresh.Machines
         else:
-            self.upgrade_backend = KubernetesMongoDBRefresh(
+            upgrade_backend = KubernetesMongoDBRefresh(
                 dependent=self,
                 state=self.state,
+                upgrades_manager=self.upgrades_manager,
                 workload_name="MongoDB",
                 charm_name=self.charm.name,
                 oci_resource_name="mongodb-image",
@@ -237,7 +241,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             refresh_class = charm_refresh.Kubernetes
 
         try:
-            self.refresh = refresh_class(self.upgrade_backend)  # type: ignore[argument-type]
+            self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
@@ -245,7 +249,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             # the application and all events will resume afterwards.
             raise
 
-        self.upgrades_manager = MongoDBUpgradesManager(
+        self.upgrades_status_manager = MongoDBUpgradesStatusManager(
             state=self.state, workload=self.workload, refresh=self.refresh
         )
 
@@ -299,14 +303,14 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
-            self.upgrade_backend.wait_for_cluster_healthy()  # type: ignore[attr-defined]
+            self.upgrades_manager.wait_for_cluster_healthy()  # type: ignore[attr-defined]
         except RetryError:
             logger.error(
                 "Cluster is not healthy after refresh, will retry next juju event.", exc_info=True
             )
             return
 
-        if not self.upgrade_backend.is_cluster_able_to_read_write():  # type: ignore[attr-defined]
+        if not self.upgrades_manager.is_cluster_able_to_read_write():  # type: ignore[attr-defined]
             logger.error(
                 "Cluster is not healthy after refresh, writes not propagated throughout cluster. Deferring post refresh check.",
             )
@@ -347,9 +351,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if self.dependent.mongo_manager.mongod_ready():
             try:
-                self.upgrade_backend.wait_for_cluster_healthy()
+                self.upgrades_manager.wait_for_cluster_healthy()
                 refresh.next_unit_allowed_to_refresh = True
-            except RetryError:
+            except RetryError as err:
+                logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
     @property
@@ -405,7 +410,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.config_server_manager,
             self.backup_manager,
             self.ldap_manager,
-            self.upgrades_manager,
+            self.upgrades_status_manager,
         )
 
     # BEGIN: Handlers.
@@ -565,8 +570,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
-        if self.refresh is None:
-            logger.warning("Warning update_config_and_restart: Refresh could be in progress.")
         if self.refresh_in_progress:
             logger.warning(
                 "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."

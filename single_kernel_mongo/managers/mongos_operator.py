@@ -53,6 +53,7 @@ from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
+from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload import (
@@ -111,17 +112,20 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
+        self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
-            self.upgrade_backend = MachineMongoDBRefresh(
+            upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
                 state=self.state,
+                upgrades_manager=self.upgrades_manager,
                 workload_name="Mongos",
                 charm_name=self.charm.name,
             )
         else:
-            self.upgrade_backend = KubernetesMongoDBRefresh(
+            upgrade_backend = KubernetesMongoDBRefresh(
                 dependent=self,
                 state=self.state,
+                upgrades_manager=self.upgrades_manager,
                 workload_name="Mongos",
                 charm_name=self.charm.name,
                 oci_resource_name="mongodb-image",
@@ -130,13 +134,15 @@ class MongosOperator(OperatorProtocol, Object):
             charm_refresh.Machines if self.substrate == Substrates.VM else charm_refresh.Kubernetes
         )
         try:
-            self.refresh = refresh_class(self.upgrade_backend)
+            self.refresh = refresh_class(upgrade_backend)
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
             sys.exit()
 
-        self.upgrades_manager = MongoDBUpgradesManager(self.state, self.workload, self.refresh)
+        self.upgrades_status_manager = MongoDBUpgradesStatusManager(
+            self.state, self.workload, self.refresh
+        )
 
         # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
         self.ldap_manager = LDAPManager(
@@ -184,7 +190,7 @@ class MongosOperator(OperatorProtocol, Object):
             logger.error("Waiting for mongos router to be ready before finalising refresh.")
             raise DeferrableError("mongos is not running.")
 
-        if not self.upgrade_backend.is_mongos_able_to_read_write():
+        if not self.upgrades_manager.is_mongos_able_to_read_write():
             logger.error("mongos is not able to read/write after refresh")
             raise DeferrableError("mongos is not able to read/write after refresh.")
 
@@ -193,7 +199,7 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self, self.ldap_manager, self.upgrades_manager)
+        return (self, self.ldap_manager, self.upgrades_status_manager)
 
     @property
     def config(self) -> MongosCharmConfig:

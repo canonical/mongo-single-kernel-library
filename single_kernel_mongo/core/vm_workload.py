@@ -209,13 +209,12 @@ class VMWorkload(WorkloadBase):
                 revision=revision,
             )
             self.mongod_snap.hold()
+            return True
         except snap.SnapError as err:
             logger.error(f"Failed to install {SNAP_NAME}. Reason: {err}.")
             if retry_and_raise:
                 raise WorkloadNotReadyError("Failed to install mongodb")
             return False
-        else:
-            return True
 
     @override
     def snap_revision(self) -> str:

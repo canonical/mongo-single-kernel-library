@@ -83,6 +83,7 @@ def test_pre_refresh_check_after_1_unit_refreshed_fails(
     refresh.charm = harness.charm
     refresh.dependent = harness.charm.operator
     refresh.state = harness.charm.state
+    refresh.upgrades_manager = harness.charm.operator.upgrades_manager
 
     with pytest.raises(PrecheckFailed) as e:
         refresh.run_pre_refresh_checks_after_1_unit_refreshed()
@@ -102,24 +103,25 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
         return_value=BackupState.ACTIVE,
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.wait_for_cluster_healthy"
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.wait_for_cluster_healthy"
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.move_primary_to_last_upgrade_unit"
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.move_primary_to_last_upgrade_unit"
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.is_cluster_able_to_read_write"
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.is_cluster_able_to_read_write"
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.is_feature_compatibility_version"
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.is_feature_compatibility_version"
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.are_pre_upgrade_operations_config_server_successful"
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.are_pre_upgrade_operations_config_server_successful"
     )
     refresh = MongoDBRefresh.__new__(MongoDBRefresh)
     refresh.charm = harness.charm
     refresh.dependent = harness.charm.operator
     refresh.state = harness.charm.state
+    refresh.upgrades_manager = harness.charm.operator.upgrades_manager
 
     refresh.run_pre_refresh_checks_after_1_unit_refreshed()
 
@@ -161,15 +163,15 @@ def test_pre_refresh_check_before_any_unit_refreshed_boolean_fail(
         return_value=checks["mongod_ready"],
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.are_nodes_healthy",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.are_nodes_healthy",
         return_value=checks["are_nodes_healthy"],
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.is_cluster_able_to_read_write",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.is_cluster_able_to_read_write",
         return_value=checks["cluster_able_to_read_write"],
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.move_primary_to_last_upgrade_unit",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.move_primary_to_last_upgrade_unit",
         return_value=None,
     )
     harness.set_leader(True)
@@ -178,6 +180,7 @@ def test_pre_refresh_check_before_any_unit_refreshed_boolean_fail(
     refresh.charm = harness.charm
     refresh.dependent = harness.charm.operator
     refresh.state = harness.charm.state
+    refresh.upgrades_manager = harness.charm.operator.upgrades_manager
 
     with pytest.raises(PrecheckFailed) as e:
         refresh.run_pre_refresh_checks_after_1_unit_refreshed()
@@ -231,15 +234,15 @@ def test_pre_refresh_check_before_any_unit_refreshed_raises(
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.is_cluster_able_to_read_write",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.is_cluster_able_to_read_write",
         return_value=True,
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.are_nodes_healthy",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.are_nodes_healthy",
         side_effect=checks["are_nodes_healthy"],
     )
     mocker.patch(
-        "single_kernel_mongo.core.abstract_upgrades_v3.MongoDBRefresh.move_primary_to_last_upgrade_unit",
+        "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.move_primary_to_last_upgrade_unit",
         side_effect=checks["move_primary_to_last_upgrade_unit"],
     )
     harness.set_leader(True)
@@ -248,6 +251,7 @@ def test_pre_refresh_check_before_any_unit_refreshed_raises(
     refresh.charm = harness.charm
     refresh.dependent = harness.charm.operator
     refresh.state = harness.charm.state
+    refresh.upgrades_manager = harness.charm.operator.upgrades_manager
 
     with pytest.raises(PrecheckFailed) as e:
         refresh.run_pre_refresh_checks_after_1_unit_refreshed()
