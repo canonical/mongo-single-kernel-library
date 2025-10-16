@@ -586,12 +586,13 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         keyfile = self.state.shard_state.keyfile
         tls_ca = self.state.shard_state.internal_ca_secret
+        external_tls_ca = self.state.shard_state.external_ca_secret
 
         if keyfile is None:
             logger.info("Waiting for secrets from config-server")
             raise WaitingForSecretsError("Missing keyfile")
 
-        self.update_member_auth(keyfile, tls_ca)
+        self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
         if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
@@ -690,10 +691,14 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
-    def update_member_auth(self, keyfile: str, peer_tls_ca: str | None) -> None:
+    def update_member_auth(
+        self, keyfile: str, peer_tls_ca: str | None, external_tls_ca: str | None
+    ) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = peer_tls_ca is not None
+        external_auth_tls = external_tls_ca is not None
         peer_tls_integrated = self.state.peer_tls_relation is not None
+        client_tls_integrated = self.state.client_tls_relation is not None
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
@@ -701,6 +706,9 @@ class ShardManager(Object, ManagerStatusProtocol):
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and peer_tls_integrated:
             logger.info("Cluster implements internal membership auth via certificates.")
+            self.dependent.tls_events.refresh_certificates()
+        elif external_auth_tls and client_tls_integrated:
+            logger.info("Cluster implements external auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
         else:
             logger.info("Cluster implements internal membership auth via keyFile.")
@@ -715,7 +723,9 @@ class ShardManager(Object, ManagerStatusProtocol):
             self.state.set_keyfile(keyfile)
 
         # Prevents restarts if we haven't received certificates
-        if peer_tls_ca is not None and self.dependent.tls_manager.is_waiting_for_a_cert():
+        if (
+            cluster_auth_tls or external_auth_tls
+        ) and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
             raise WaitingForCertificatesError
 
