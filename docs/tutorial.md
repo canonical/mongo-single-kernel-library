@@ -813,9 +813,3 @@ sudo snap remove juju --purge
 ```
 
 You've successfully completed our Charmed MongoDB tutorial!
-
-<!-- ## Next steps
-
-Explain documentation structure - all instructions are for K8s and VM and for replica sets and sharded cluster. 
-Mention we are working on a more advanced tutorial for a production deployment of a sharded cluster?
--->
