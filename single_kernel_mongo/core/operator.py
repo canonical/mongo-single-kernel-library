@@ -261,6 +261,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         for path in (
             self.workload.paths.data_path,
             self.workload.paths.logs_path,
+            self.workload.paths.common_path,
             LogRotateConfig.log_status_dir,
         ):
             self.workload.exec(
@@ -271,6 +272,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
                     f"{path}",
                 ]
             )
+
         for path in (
             self.workload.paths.config_file,
             self.workload.paths.mongos_config_file,
