@@ -1,6 +1,7 @@
+(how-to-deploy)=
 # How to deploy
 
-<!--(future) TODO:
+<!--TODO:
 Short summary of Juju CLI vs. Terraform
 
 Overview of available clouds on machines and K8s

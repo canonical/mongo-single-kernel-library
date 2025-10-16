@@ -8,7 +8,7 @@
 To create a client connection to a replica set, integrate your client application with a Charmed MongoDB application running as a replica set.
 
 ```{note}
-If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client#developer-documentation), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
+If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
 ```
 
 To integrate MongoDB with a client application, run:
@@ -70,7 +70,7 @@ This process will generate a new user and password for the application.
 To create a client connection to a sharded cluster, you must use the `mongos` router.
 
 ```{note}
-If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client#developer-documentation), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
+If you do not have a client application that implements the [`database` endpoint](https://charmhub.io/integrations/mongodb_client), you can use the [`data-integrator` charm](https://github.com/canonical/data-integrator).
 ```
 
 ````{tab-set}
