@@ -261,7 +261,6 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         for path in (
             self.workload.paths.data_path,
             self.workload.paths.logs_path,
-            self.workload.paths.common_path,
             LogRotateConfig.log_status_dir,
         ):
             self.workload.exec(
@@ -270,6 +269,16 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
                     "-R",
                     f"{self.workload.users.user}:{self.workload.users.group}",
                     f"{path}",
+                ]
+            )
+
+        if self.substrate == Substrates.VM:
+            self.workload.exec(
+                [
+                    "chown",
+                    "-R",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{self.workload.paths.common_path}",
                 ]
             )
 
