@@ -69,13 +69,13 @@ class MongoDBUpgradesManager:
 
         mongos_config = self.get_cluster_mongos()
         if not self.are_shards_healthy(mongos_config):
-            logger.debug(
+            logger.info(
                 "One or more individual shards are not healthy - do not proceed with refresh."
             )
             return False
 
         if not self.are_replicas_in_sharded_cluster_healthy(mongos_config):
-            logger.debug("One or more nodes are not healthy - do not proceed with refresh.")
+            logger.info("One or more nodes are not healthy - do not proceed with refresh.")
             return False
 
         return True
@@ -101,11 +101,11 @@ class MongoDBUpgradesManager:
         """Returns True if all shards in the cluster are healthy."""
         with MongoConnection(mongos_config) as mongos:
             if mongos.is_any_shard_draining():
-                logger.debug("Cluster is draining a shard, do not proceed with refresh.")
+                logger.info("Cluster is draining a shard, do not proceed with refresh.")
                 return False
 
             if not mongos.are_all_shards_aware():
-                logger.debug("Not all shards are shard aware, do not proceed with refresh.")
+                logger.info("Not all shards are shard aware, do not proceed with refresh.")
                 return False
 
             # Config-Server has access to all the related shard applications.
@@ -115,7 +115,7 @@ class MongoDBUpgradesManager:
                 }
                 cluster_shards = mongos.get_shard_members()
                 if len(relation_shards - cluster_shards):
-                    logger.debug(
+                    logger.info(
                         "Not all shards have been added/drained, do not proceed with refresh."
                     )
                     return False
@@ -127,7 +127,7 @@ class MongoDBUpgradesManager:
         # dictionary of all replica sets in the sharded cluster
         for mongodb_config in self.get_all_replica_set_configs_in_cluster(mongos_config):
             if not self.are_replica_set_nodes_healthy(mongodb_config):
-                logger.debug(f"Replica set: {mongodb_config.replset} contains unhealthy nodes.")
+                logger.info(f"Replica set: {mongodb_config.replset} contains unhealthy nodes.")
                 return False
 
         return True
@@ -248,7 +248,7 @@ class MongoDBUpgradesManager:
                 test_collection = db[collection_name]
                 query = test_collection.find({}, {WRITE_KEY: 1})
                 if query[0][WRITE_KEY] != expected_write_value:
-                    logger.debug("Secondary with IP %s, does not contain the expected write.")
+                    logger.info("Secondary with IP %s, does not contain the expected write.")
                     return False
 
         return True
@@ -289,7 +289,7 @@ class MongoDBUpgradesManager:
         self.clear_tmp_collection(config, collection_name)
 
         if not write_replicated:
-            logger.debug("Test read/write to cluster failed.")
+            logger.info("Test read/write to cluster failed.")
             return False
 
         return True
@@ -307,12 +307,12 @@ class MongoDBUpgradesManager:
             unit_with_lowest_id = self.state.reverse_order_peer_units[-1]
             unit_host = self.state.peer_unit_data(unit_with_lowest_id).internal_address
             if mongod.primary() == unit_host:
-                logger.debug(
+                logger.info(
                     "Not moving Primary before refresh, primary is already on the last unit to refresh."
                 )
                 return
 
-            logger.debug("Moving primary to unit: %s", unit_with_lowest_id)
+            logger.info("Moving primary to unit: %s", unit_with_lowest_id)
             mongod.move_primary(new_primary_ip=unit_host)
 
     def is_sharded_cluster_able_to_read_write(self) -> bool:
@@ -346,7 +346,7 @@ class MongoDBUpgradesManager:
 
                 self.clear_db_collection(mongos_config, db_name)
                 if not (write_replicated and has_correct_primary):
-                    logger.debug(f"Test read/write to shard {shard_name} failed.")
+                    logger.info(f"Test read/write to shard {shard_name} failed.")
                     return False
 
         return True
