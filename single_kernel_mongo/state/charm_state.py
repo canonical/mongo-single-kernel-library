@@ -536,6 +536,17 @@ class CharmState(Object, StatusesStateProtocol):
         )
         return None
 
+    def get_subject_name(self) -> str:
+        """Generate the subject name for CSR."""
+        # In sharded MongoDB deployments it is a requirement that all subject names match across
+        # all cluster components. The config-server name is the source of truth across mongos and
+        # shard deployments.
+        if self.is_role(MongoDBRoles.REPLICATION) or self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return self.model.app.name
+        # until integrated with config-server use current app name as
+        # subject name
+        return self.config_server_name or self.model.app.name
+
     def generate_config_server_db(self) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
@@ -594,6 +605,10 @@ class CharmState(Object, StatusesStateProtocol):
         if not self.config_server_name or not self.app_peer_data.mongos_hosts:
             return False
 
+        # We can't check if we don't have a valid certificate
+        if self.shard_state.internal_ca_secret is not None and not self.tls.external_enabled:
+            return False
+
         try:
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
@@ -650,8 +665,9 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
             standalone=standalone,
         )
 
@@ -679,8 +695,9 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
         )
 
     @property
@@ -734,8 +751,9 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_external=self.tls.external_enabled,
-            tls_internal=self.tls.internal_enabled,
+            tls_enabled=self.tls.external_enabled,
+            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_external_ca=self.paths.ext_ca_file,
         )
 
     @property

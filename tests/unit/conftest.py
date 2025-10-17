@@ -235,6 +235,7 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("pathlib.Path.mkdir")
     mocker.patch("pathlib.Path.write_text")
+    mocker.patch("pathlib.Path.chmod")
     mocker.patch("builtins.open")
 
 

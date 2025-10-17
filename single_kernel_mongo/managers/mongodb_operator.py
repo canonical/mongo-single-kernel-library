@@ -1153,6 +1153,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Instantiate the keyfile
         self.instantiate_keyfile()
 
+        # Instantiate the local directory for k8s
+        self.build_local_tls_directory()
+
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
         self.ldap_manager.save_certificates(self.state.ldap.chain)
