@@ -707,14 +707,14 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (
             cluster_auth_tls
             and peer_tls_integrated
-            and not self.dependent.manager.is_certificate_available(internal=True)
+            and not self.dependent.tls_manager.is_certificate_available(internal=True)
         ):
             logger.info("Cluster implements internal membership auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
         elif (
             external_auth_tls
             and client_tls_integrated
-            and not self.dependent.manager.is_certificate_available(internal=False)
+            and not self.dependent.tls_manager.is_certificate_available(internal=False)
         ):
             logger.info("Cluster implements external auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
