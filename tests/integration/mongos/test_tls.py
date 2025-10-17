@@ -158,7 +158,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="MIssing peer-certificates relation.",
+        status="Missing peer-certificates relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )

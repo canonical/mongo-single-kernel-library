@@ -547,11 +547,6 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
-        if not self.state.shard_state.has_received_credentials():
-            # Nothing to do until we receive credentials
-            logger.info("Still waiting for credentials.")
-            raise NonDeferrableFailedHookChecksError("Missing user credentials.")
-
         if internal_tls_status := self.get_tls_status(internal=True):
             self.state.statuses.add(internal_tls_status, scope="unit", component=self.name)
         if external_tls_status := self.get_tls_status(internal=False):
@@ -562,6 +557,11 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         if is_leaving:
             self.dependent.assert_proceed_on_broken_event(relation)
+        else:
+            if not self.state.shard_state.has_received_credentials():
+                # Nothing to do until we receive credentials
+                logger.info("Still waiting for credentials.")
+                raise NonDeferrableFailedHookChecksError("Missing user credentials.")
 
     def prepare_to_add_shard(self) -> None:
         """Sets status and flags in relation data relevant to sharding."""
