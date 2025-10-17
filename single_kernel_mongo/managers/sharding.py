@@ -577,6 +577,11 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
 
+        if not self.state.shard_state.has_received_credentials():
+            # Nothing to do until we receive credentials
+            logger.info("Still waiting for credentials.")
+            return
+
         operator_password = self.state.shard_state.operator_password
         backup_password = self.state.shard_state.backup_password
 
@@ -704,18 +709,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
-        if (
-            cluster_auth_tls
-            and peer_tls_integrated
-            and not self.dependent.tls_manager.is_certificate_available(internal=True)
-        ):
+        if cluster_auth_tls and peer_tls_integrated:
             logger.info("Cluster implements internal membership auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
-        elif (
-            external_auth_tls
-            and client_tls_integrated
-            and not self.dependent.tls_manager.is_certificate_available(internal=False)
-        ):
+        elif external_auth_tls and client_tls_integrated:
             logger.info("Cluster implements external auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
         else:
@@ -730,14 +727,18 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.charm.unit.is_leader():
             self.state.set_keyfile(keyfile)
 
-        # Prevents restarts if we haven't received certificates
+        # It's using keyfile so restart and return.
+        if not cluster_auth_tls:
+            self.dependent.restart_charm_services(force=True)
+            return
+
+        # We're still waiting for certificates so we defer, when we have all
+        # certificates, we have already restarted.
         if (
             cluster_auth_tls or external_auth_tls
         ) and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
             raise WaitingForCertificatesError
-
-        self.dependent.restart_charm_services(force=True)
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
