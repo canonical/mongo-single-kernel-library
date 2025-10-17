@@ -1,3 +1,4 @@
+(how-to-deploy)=
 # How to deploy
 
 <!--(future) TODO:
