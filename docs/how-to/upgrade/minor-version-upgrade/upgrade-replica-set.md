@@ -3,6 +3,7 @@
 
 This guide goes over the steps to perform a minor in-place upgrade via `juju refresh` for a replica set. Going forward, we will use the word "refresh" instead of "upgrade".
 
+<!--start-include-->
 ```{seealso}
 To upgrade from MongoDB 6 to 8, see {ref}`major-version-upgrade`.
 ```
@@ -25,6 +26,7 @@ juju status | grep <app-name> | head -1 | awk '{print $5}'
 ```
 
 Save this number in case you need to roll back your application.
+<!--end-include-->
 
 (run-a-pre-refresh-check)=
 ## Run a pre-refresh check
@@ -41,7 +43,7 @@ juju <app-name>/leader pre-refresh-check
 Do not proceed if this action is unsuccessful.
 ```
 
-## Begin refresh
+## Begin the refresh
 
 To begin the refresh process, run
 
