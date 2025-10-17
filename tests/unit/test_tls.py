@@ -70,7 +70,7 @@ def test_client_certificate_available(
         return_value=([new_cert], new_private_key),
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.tlscertificatesrequiresv4.get_assigned_certificate",
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         return_value=(new_cert, new_private_key),
     )
     harness.set_leader(True)
