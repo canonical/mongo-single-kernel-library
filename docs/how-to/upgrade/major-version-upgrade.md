@@ -1,15 +1,23 @@
 (major-version-upgrade)=
 # How to perform a major version upgrade
 
-This document explains how to upgrade from a MongoDB 6 deployment to a MongoDB 8 deployment. 
+This guide explains how to upgrade from MongoDB 6 to MongoDB 8. This major upgrade requires stepping through an intermediary MongoDB 7 charm, so there are two upgrades involved: from 6 to 7, and finally from 7 to 8.
 
-This upgrade requires an intermediary upgrade to MongoDB 7. The steps are roughly as follows:
+To summarize:
 
 * Deploy a MongoDB 7 cluster from a dedicated Charmhub channel, and integrate it with `s3-integrator`.
 * Replicate all credentials to the new cluster (so that you do not lock yourself out after the backup restore!)
 * Create a backup on your MongoDB 6 cluster
 * Restore the backup on the MongoDB 7 cluster
-* Repeat all steps from MongoDB 7 to 8
+* Repeat the same steps to go from MongoDB 7 to 8
+
+```{note}
+In this guide, we refer to your orchestrator application as `<app>`. This is equivalent to:
+
+* `mongodb` if you have replica set on VM
+* `mongodb-k8s` if you have replica set on K8s
+* `config-server` if you have sharded deployment
+```
 
 ## Prerequisites
 
@@ -19,7 +27,7 @@ If you are not relying on Amazon S3, you can use microceph and rados-gateway (or
 
 ## Deploy MongoDB 7 cluster
 
-This first step is to upgrade from MongoDB 6 to a transition cluster on MongoDB 7.
+This first step towards migrating to MongoDB 8 is to upgrade to a transition cluster on MongoDB 7.
 
 ```{admonition} Safety precaution
     :class: warning
@@ -28,18 +36,7 @@ Until you have fully deployed MongoDB 8, ensured it is stable and verified there
 
 {ref}`Deploy <how-to-deploy>` a MongoDB 7 cluster from the Charmhub channel `8-transition/edge` with the same topology as your initial cluster. For example, if your cluster has 1 config-server and three shards, your `8-transition` cluster should also have 1 config-server and three shards.
 
-Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as `juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
-
-(replicate-credentials-to-7)=
-## Replicate credentials
-
-```{note}
-In this guide, we refer to your orchestrator application as `<app>`. This is equivalent to:
-
-* `mongodb` if you have replica set on VM
-* `mongodb-k8s` if you have replica set on K8s
-* `config-server` if you have sharded deployment
-```
+Then, integrate the new cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
 Replicate all the passwords from your initial application to the new one:
 
@@ -97,10 +94,7 @@ These steps are pretty similar to the previous ones, but we will go through it a
 
 {ref}`Deploy <how-to-deploy>` a MongoDB 8 cluster from the Charmhub channel `8/stable` with the same topology as your initial cluster. For example, if your cluster has 1 config-server and three shards, your `8` cluster should also have 1 config-server and three shards.
 
-Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as `juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
-
-(replicate-credentials-to-8)=
-## Replicate credentials
+Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
 Replicate all the passwords from your initial application to the new one:
 
