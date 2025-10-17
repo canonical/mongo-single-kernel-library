@@ -286,9 +286,9 @@ You should now see something similar to:
 
 ```text
 Current Mongosh Log ID: 6389e2adec352d5447551ae0
-Connecting to:    mongodb://<credentials>@10.23.62.156/admin?replicaSet=mongodb&appName=mongosh+1.6.1
-Using MongoDB:    5.0.14
-Using Mongosh:    1.6.1
+Connecting to:    mongodb://<credentials>@10.23.62.156/admin?replicaSet=mongodb&appName=mongosh+2.5.5
+Using MongoDB:    6.0.24
+Using Mongosh:    2.5.5
 
 For mongosh info see: https://docs.mongodb.com/mongodb-shell/
 
@@ -404,12 +404,12 @@ Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.6.9   unsupported   14:42:04Z
 
 App      Version  Status  Scale  Charm    Channel   Rev  Exposed  Message
-mongodb           active      3  mongodb  6/stable  229  no       Replica set primary
+mongodb           active      3  mongodb  6/stable  229  no       
 
 Unit        Workload  Agent  Machine  Public address  Ports      Message
-mongodb/0*  active    idle   0        10.23.62.156    27017/tcp  Replica set primary
-mongodb/1   active    idle   1        10.23.62.55     27017/tcp  Replica set secondary
-mongodb/2   active    idle   2        10.23.62.243    27017/tcp  Replica set secondary
+mongodb/0*  active    idle   0        10.23.62.156    27017/tcp  Primary.
+mongodb/1   active    idle   1        10.23.62.55     27017/tcp  
+mongodb/2   active    idle   2        10.23.62.243    27017/tcp  
 
 Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.23.62.156  juju-d35d30-0  jammy       Running
@@ -418,7 +418,7 @@ Machine  State    Address       Inst id        Series  AZ  Message
 ```
 
 #### Verify replica set
-If you want to verify the replica set configuration, you could connect to MongoDB via `charmed-mongodb.mongo`. Since your replica set has 2 additional hosts, you will need to update the hosts in your URI. You can retrieve these host IPs with:
+If you want to verify the replica set configuration, you could connect to MongoDB via `charmed-mongodb.mongosh`. Since your replica set has 2 additional hosts, you will need to update the hosts in your URI. You can retrieve these host IPs with:
 
 ```shell
 export HOST_IP_1=$(juju show-unit mongodb/1 | awk '/public-address:/{print $NF;exit}')
@@ -499,11 +499,11 @@ Model     Controller  Cloud/Region         Version  SLA          Timestamp
 tutorial  overlord    localhost/localhost  3.6.9   unsupported  14:44:25Z
 
 App      Version  Status  Scale  Charm    Channel   Rev  Exposed  Message
-mongodb           active      2  mongodb  6/stable  229  no       Replica set primary
+mongodb           active      2  mongodb  6/stable  229  no       
 
 Unit        Workload  Agent  Machine  Public address  Ports      Message
-mongodb/0*  active    idle   0        10.23.62.156    27017/tcp  Replica set primary
-mongodb/1   active    idle   1        10.23.62.55     27017/tcp  Replica set secondary
+mongodb/0*  active    idle   0        10.23.62.156    27017/tcp  Primary.
+mongodb/1   active    idle   1        10.23.62.55     27017/tcp  
 
 Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.23.62.156  juju-d35d30-0  jammy       Running
@@ -557,9 +557,9 @@ data-integrator               active      1  data-integrator      stable    181 
 mongodb                       active      2  mongodb              6/stable  229  no
 
 Unit                    Workload  Agent  Machine  Public address  Ports      Message
-data-integrator/0*      active    idle   5        10.23.62.216               received mongodb credentials
+data-integrator/0*      active    idle   5        10.23.62.216               
 mongodb/0*              active    idle   0        10.23.62.156    27017/tcp
-mongodb/1               active    idle   1        10.23.62.55     27017/tcp  Replica set primary
+mongodb/1               active    idle   1        10.23.62.55     27017/tcp  Primary.
 
 Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.23.62.156  juju-d35d30-0  jammy       Running
@@ -585,7 +585,7 @@ mongodb:
   endpoints: 10.63.102.106,10.63.102.223
   password: kXOOyTbccn2cXs3kokOqPJz3Mu9g3a5g
   replset: mongodb
-  uris: mongodb://relation-2:kXOOyTbccn2cXs3kokOqPJz3Mu9g3a5g@10.63.102.106,10.63.102.223/test-database?replicaSet=mongodb&authSource=admin
+  uris: mongodb://relation-5:kXOOyTbccn2cXs3kokOqPJz3Mu9g3a5g@10.63.102.106:27017,10.63.102.223:27017/test-database?replicaSet=mongodb&authSource=admin
   username: relation-2
 ok: "True"
 ```
@@ -663,7 +663,7 @@ Make sure you wrap the URI in quotation marks ( `""` ) with no trailing whitespa
 This will output an error message:
 ```text
 Current Mongosh Log ID: 638f5ffbdbd9ec94c2e58456
-Connecting to:    mongodb://<credentials>@10.23.62.38,10.23.62.219/mongodb?replicaSet=mongodb&authSource=admin&appName=mongosh+1.6.1
+Connecting to:    mongodb://<credentials>@10.23.62.38,10.23.62.219/mongodb?replicaSet=mongodb&authSource=admin&appName=mongosh+2.5.5
 MongoServerError: Authentication failed.
 ```
 
@@ -723,7 +723,7 @@ juju integrate self-signed-certificates mongodb
 Like before, generate and save the URI that is used to connect to MongoDB:
 
 ```shell
-export URI=mongodb://$DB_USERNAME:$DB_PASSWORD@$HOST_IP/$DB_NAME?replicaSet=$REPL_SET_NAME
+export URI=mongodb://$DB_USERNAME:$DB_PASSWORD@$HOST_IP,$HOST_IP_1/$DB_NAME?replicaSet=$REPL_SET_NAME
 echo $URI
 ```
 
