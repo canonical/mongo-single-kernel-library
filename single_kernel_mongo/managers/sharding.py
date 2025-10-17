@@ -49,6 +49,7 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
     RemoveLastShardError,
+    SetPasswordError,
     ShardAuthError,
     ShardNotInClusterError,
     ShardNotPlannedForRemovalError,
@@ -189,7 +190,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if not self.charm.unit.is_leader():
-            raise NonDeferrableFailedHookChecksError
+            raise NonDeferrableFailedHookChecksError("Not leader")
 
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
@@ -546,6 +547,11 @@ class ShardManager(Object, ManagerStatusProtocol):
                 "Config-server never set up, no need to process broken event."
             )
 
+        if not self.state.shard_state.has_received_credentials():
+            # Nothing to do until we receive credentials
+            logger.info("Still waiting for credentials.")
+            raise NonDeferrableFailedHookChecksError("Missing user credentials.")
+
         if internal_tls_status := self.get_tls_status(internal=True):
             self.state.statuses.add(internal_tls_status, scope="unit", component=self.name)
         if external_tls_status := self.get_tls_status(internal=False):
@@ -577,11 +583,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Skipping relation changed event: hook checks did not pass.")
             raise
 
-        if not self.state.shard_state.has_received_credentials():
-            # Nothing to do until we receive credentials
-            logger.info("Still waiting for credentials.")
-            return
-
         operator_password = self.state.shard_state.operator_password
         backup_password = self.state.shard_state.backup_password
 
@@ -597,14 +598,10 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Waiting for secrets from config-server")
             raise WaitingForSecretsError("Missing keyfile")
 
+        # Let's start by updating the passwords, before any restart so they are in sync already.
+        self.sync_cluster_passwords(operator_password, backup_password)
+
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
-
-        if not self.dependent.mongo_manager.mongod_ready():
-            logger.info("MongoDB is not ready")
-            raise NotReadyError
-
-        # By setting the status we ensure that the former statuses of this component are removed.
-        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
         # Add the certificate if it is present
         if (
@@ -624,10 +621,15 @@ class ShardManager(Object, ManagerStatusProtocol):
             # We updated the configuration, so we restart PBM.
             self.dependent.backup_manager.configure_and_restart(force=True)
 
+        if not self.dependent.mongo_manager.mongod_ready():
+            logger.info("MongoDB is not ready")
+            raise NotReadyError
+
+        # By setting the status we ensure that the former statuses of this component are removed.
+        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+
         if not self.charm.unit.is_leader():
             return
-
-        self.sync_cluster_passwords(operator_password, backup_password)
 
         # We have updated our auth, config-server can add the shard.
         self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
@@ -651,6 +653,8 @@ class ShardManager(Object, ManagerStatusProtocol):
                 f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
             )
             return
+
+        self.assert_pass_hook_checks(relation, is_leaving=False)
 
         if self.charm.unit.is_leader():
             if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
@@ -704,40 +708,40 @@ class ShardManager(Object, ManagerStatusProtocol):
         external_auth_tls = external_tls_ca is not None
         peer_tls_integrated = self.state.peer_tls_relation is not None
         client_tls_integrated = self.state.client_tls_relation is not None
+        keyfile_changed = self.state.get_keyfile() != keyfile
+
+        # Copy over keyfile regardless of whether the cluster uses TLS or or KeyFile for internal
+        # membership authentication. If TLS is disabled on the cluster this enables the cluster to
+        # have the correct cluster KeyFile readily available.
+        if keyfile_changed:
+            self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
+
+            # Sets the keyfile anyway
+            if self.charm.unit.is_leader():
+                self.state.set_keyfile(keyfile)
+
+        if not cluster_auth_tls:
+            logger.info("Cluster implements internal auth via keyfile.")
+            if (
+                external_auth_tls
+                and client_tls_integrated
+                and not self.dependent.tls_manager.is_certificate_available(internal=False)
+            ):
+                logger.info("Cluster implements external auth via certificates.")
+                self.dependent.tls_events.refresh_certificates()
+                raise WaitingForCertificatesError()
+            if keyfile_changed:
+                self.dependent.restart_charm_services(force=True)
+            return
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
-        if cluster_auth_tls and peer_tls_integrated:
+        if peer_tls_integrated and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Cluster implements internal membership auth via certificates.")
-            self.dependent.tls_events.refresh_certificates()
-        elif external_auth_tls and client_tls_integrated:
-            logger.info("Cluster implements external auth via certificates.")
-            self.dependent.tls_events.refresh_certificates()
-        else:
-            logger.info("Cluster implements internal membership auth via keyFile.")
-
-        # Copy over keyfile regardless of whether the cluster uses TLS or or KeyFile for internal
-        # membership authentication. If TLS is disabled on the cluster this enables the cluster to
-        # have the correct cluster KeyFile readily available.
-        self.workload.write(path=self.workload.paths.keyfile, content=keyfile)
-
-        # Sets the keyfile anyway
-        if self.charm.unit.is_leader():
-            self.state.set_keyfile(keyfile)
-
-        # It's using keyfile so restart and return.
-        if not cluster_auth_tls:
-            self.dependent.restart_charm_services(force=True)
-            return
-
-        # We're still waiting for certificates so we defer, when we have all
-        # certificates, we have already restarted.
-        if (
-            cluster_auth_tls or external_auth_tls
-        ) and self.dependent.tls_manager.is_waiting_for_a_cert():
             logger.info("Waiting for requested certs before restarting and adding to cluster.")
+            self.dependent.tls_events.refresh_certificates()
             raise WaitingForCertificatesError
 
     def update_mongos_hosts(self):
@@ -747,6 +751,10 @@ class ShardManager(Object, ManagerStatusProtocol):
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""
+        if not self.should_synchronise_cluster_passwords():
+            logger.debug("No need to update passwords, already correct")
+            return
+
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
                 if self.dependent.primary_unit_name is None:
@@ -755,16 +763,19 @@ class ShardManager(Object, ManagerStatusProtocol):
                     )
                     raise NotReadyError
 
-        try:
-            self.update_password(user=OperatorUser, new_password=operator_password)
-            self.update_password(user=BackupUser, new_password=backup_password)
-        except (NotReadyError, PyMongoError, ServerSelectionTimeoutError):
-            # RelationChangedEvents will only update passwords when the relation is first joined,
-            # otherwise all other password changes result in a Secret Changed Event.
-            logger.error(
-                "Failed to sync cluster passwords from config-server to shard. Deferring event and retrying."
-            )
-            raise FailedToUpdateCredentialsError
+        for user, password in ((OperatorUser, operator_password), (BackupUser, backup_password)):
+            try:
+                self.update_password(user=user, new_password=password)
+            except SetPasswordError:
+                # RelationChangedEvents will only update passwords when the
+                # relation is first joined, otherwise all other password
+                # changes result in a Secret Changed Event.
+                logger.error(
+                    "Failed to sync cluster passwords from config-server to shard. Deferring event and retrying."
+                )
+                raise FailedToUpdateCredentialsError(
+                    f"Failed to update credentials of {user.username}"
+                )
         try:
             # after updating the password of the backup user, restart pbm with correct password
             self.dependent.backup_manager.configure_and_restart()
@@ -776,29 +787,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         if not new_password or not self.charm.unit.is_leader():
             return
 
-        current_password = self.state.get_user_password(user)
-
-        if new_password == current_password:
-            logger.info("Not updating password: password not changed.")
-            return
-
         # updating operator password, usually comes after keyfile was updated, hence, the mongodb
         # service was restarted. Sometimes this requires units getting insync again.
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
-                with MongoConnection(self.state.mongo_config) as mongo:
-                    try:
-                        mongo.set_user_password(user.username, new_password)
-                        self.state.set_user_password(user, new_password)
-                        logger.info(f"Updated {user.username} password")
-                    except NotReadyError:
-                        logger.error(
-                            "Failed changing the password: Not all members healthy or finished initial sync."
-                        )
-                        raise
-                    except PyMongoError as e:
-                        logger.error(f"Failed changing the password: {e}")
-                        raise
+                self.dependent.mongo_manager.set_user_password(user, new_password)
 
     def shard_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
         """Returns the peer TLS integration status for shard and config-server."""
@@ -930,6 +923,14 @@ class ShardManager(Object, ManagerStatusProtocol):
             return False
 
         return True
+
+    def should_synchronise_cluster_passwords(self) -> bool:
+        """Decides if we should synchronise cluster passwords or not."""
+        if self.state.shard_state.operator_password != self.state.get_user_password(OperatorUser):
+            return True
+        if self.state.shard_state.backup_password != self.state.get_user_password(BackupUser):
+            return True
+        return False
 
     def _is_shard_aware(self) -> bool:
         """Returns True if provided shard is shard aware."""

@@ -140,7 +140,6 @@ class TLSEventsHandler(Object):
         )
         self.charm.status_handler.set_running_status(status, scope="unit")
         self.manager.disable_certificates_for_unit(internal)
-        self._recompute_statuses()
         # Recomputes the statuses for those components as the tls changes are impactful
         self._recompute_statuses()
 
