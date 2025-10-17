@@ -586,7 +586,7 @@ mongodb:
   password: kXOOyTbccn2cXs3kokOqPJz3Mu9g3a5g
   replset: mongodb
   uris: mongodb://relation-5:kXOOyTbccn2cXs3kokOqPJz3Mu9g3a5g@10.63.102.106:27017,10.63.102.223:27017/test-database?replicaSet=mongodb&authSource=admin
-  username: relation-2
+  username: relation-5
 ok: "True"
 ```
 Save the value listed under `uris:` Note that your hostnames, usernames, and passwords will likely be different.
