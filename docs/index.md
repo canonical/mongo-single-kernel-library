@@ -10,7 +10,7 @@ This charm is for anyone looking for a complete database management interface. T
 
 |  |  |
 |--|--|
-| **Tutorial** </br> A hands-on introduction to using the Charmed MongoDB operator for new users </br> |  [**How-to guides**](how-to-guides) </br> Step-by-step guides covering key operations and common tasks |
+| {ref}`Tutorial <tutorial>` </br> A hands-on introduction to using the Charmed MongoDB operator for new users </br> |  {ref}`How-to guides <how-to-guides>` </br> Step-by-step guides covering key operations and common tasks |
 | **Reference** </br> Technical information - requirements, release notes | **Explanation** </br> Clarification of key topics  |
 
 ## Project and community
@@ -19,7 +19,7 @@ Charmed MongoDB is an open source project that warmly welcomes community contrib
 
 * Check our [Code of Conduct](https://ubuntu.com/community/ethos/code-of-conduct)
 * Raise software issues or feature requests in [GitHub](https://github.com/canonical/mongo-single-kernel-library/issues)
-* Report security issues through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). 
+<!-- * Report security issues through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File).  -->
 * Meet the community and chat with us on [Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
 * [Contribute](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/CONTRIBUTING.md)
 
@@ -35,6 +35,6 @@ MongoDB is a trademark or registered trademark of MongoDB, Inc. Other trademarks
 :hidden:
 
 Home <self>
+Tutorial <tutorial>
 How-to guides <how-to/index>
-
 ```
