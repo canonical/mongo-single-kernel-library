@@ -69,6 +69,10 @@ def test_client_certificate_available(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         return_value=([new_cert], new_private_key),
     )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.tlscertificatesrequiresv4.get_assigned_certificate",
+        return_value=(new_cert, new_private_key),
+    )
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = role
@@ -128,6 +132,13 @@ def test_internal_certificate_available(
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([], None), ([new_cert], new_private_key)],
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        side_effect=[
+            (new_cert, new_private_key),
+            (None, None),
+        ],
     )
 
     harness.set_leader(True)
