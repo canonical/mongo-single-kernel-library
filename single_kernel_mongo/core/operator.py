@@ -312,3 +312,15 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
         self.restart_charm_services(force=True)
+
+    def build_local_tls_directory(self) -> None:
+        """On Kubernetes, we need the local configuration directory.
+
+        This will store the certificates locally, which allows to construct the
+        same URIS to connect locally and on the sidecar container running
+        mongodb.
+        """
+        if self.substrate == Substrates.VM:
+            return
+
+        Path(self.state.paths.conf_path).mkdir(exist_ok=True)

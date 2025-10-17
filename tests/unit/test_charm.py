@@ -85,6 +85,7 @@ def test_mongod_pebble_ready(harness, mocker):
     mocker.patch(
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.build_local_tls_directory")
     defer = mocker.patch("ops.framework.EventBase.defer")
     expected_plan = {
         "services": {
@@ -472,10 +473,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
     )
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set")
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users")
-    mocker.patch(
-        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
-        side_effect=WorkloadServiceError,
-    )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.build_local_tls_directory")
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
 
@@ -1096,6 +1094,7 @@ def test_connect_mongodb_exporter_success(
     mocker.patch("single_kernel_mongo.core.k8s_workload.KubernetesWorkload.exec")
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.managers.config.LogRotateConfigManager.configure_and_restart")
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.build_local_tls_directory")
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
 
     harness.set_leader(True)

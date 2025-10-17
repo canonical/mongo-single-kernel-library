@@ -286,6 +286,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.get_subject_name = lambda: "mongodb"
     mock_state.tls.peer_enabled = True
     mock_state.tls.client_enabled = True
     workload = VMMongoDBWorkload(VM_MONGOD, None)
@@ -310,6 +311,9 @@ def test_mongodb_config_manager_tls_enabled(mocker):
                 "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
                 "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
                 "disabledProtocols": "TLS1_0,TLS1_1",
+                "clusterAuthX509": {
+                    "attributes": "O=mongodb",
+                },
             }
         },
     }
@@ -318,7 +322,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
             "tls": {
                 "CAFile": f"{VM_PATH['mongod']['CONF']}/external-ca.crt",
                 "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
-                "mode": "preferTLS",
+                "mode": "requireTLS",
                 "disabledProtocols": "TLS1_0,TLS1_1",
             }
         },
@@ -329,6 +333,7 @@ def test_mongos_default_config_server(mocker):
     mock_state = mocker.MagicMock(CharmState)
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.unit_peer_data.internal_address = "127.0.0.1"
     mock_state.cluster = mocker.MagicMock(ClusterState)
     mock_state.cluster.config_server_uri = ""
     mock_state.tls = mocker.MagicMock(TLSState)

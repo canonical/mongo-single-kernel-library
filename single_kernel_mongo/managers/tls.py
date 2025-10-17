@@ -22,7 +22,7 @@ from data_platform_helpers.advanced_statuses.protocol import (
 )
 from ops.model import ModelError, SecretNotFoundError
 
-from single_kernel_mongo.config.literals import TLSType
+from single_kernel_mongo.config.literals import Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -72,11 +72,12 @@ class TLSManager(ManagerStatusProtocol):
         self.charm = dependent.charm
         self.workload = workload
         self.state: CharmState = state
+        self.substrate = self.dependent.substrate
         self.name = "tls"
 
     def get_certificate_request_attributes(self) -> CertificateRequestAttributes:
         """Generate a certificate signing request attributes."""
-        subject_name = self._get_subject_name()
+        subject_name = self.state.get_subject_name()
         sans = self.get_new_sans()
         return CertificateRequestAttributes(
             common_name=subject_name,
@@ -106,6 +107,13 @@ class TLSManager(ManagerStatusProtocol):
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
             if host := self.state.unit_host:
                 sans["sans_ips"].append(host)
+
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and self.substrate == Substrates.VM
+            and not self.state.app_peer_data.external_connectivity
+        ):
+            sans["sans_dns"].append(f"{self.state.paths.socket_path}")
 
         return sans
 
@@ -192,6 +200,16 @@ class TLSManager(ManagerStatusProtocol):
             if self.workload.exists(file):
                 self.workload.delete(file)
 
+        if self.substrate == Substrates.VM:
+            return
+
+        if not internal:
+            local_keyfile_file = self.state.paths.ext_pem_file
+            local_ca_file = self.state.paths.ext_ca_file
+            for file in (local_keyfile_file, local_ca_file):
+                if file.exists() and file.is_file():
+                    file.unlink()
+
     def push_tls_files_to_workload(self, internal: bool) -> None:
         """Pushes the TLS files on the workload."""
         logger.info(
@@ -209,6 +227,16 @@ class TLSManager(ManagerStatusProtocol):
                 self.workload.write(self.workload.paths.ext_ca_file, ca)
             if pem is not None:
                 self.workload.write(self.workload.paths.ext_pem_file, pem)
+
+        if self.substrate == Substrates.VM:
+            return
+
+        if not internal and ca:
+            self.state.paths.ext_ca_file.write_text(ca)
+            self.state.paths.ext_ca_file.chmod(600)
+        if not internal and pem:
+            self.state.paths.ext_pem_file.write_text(pem)
+            self.state.paths.ext_ca_file.chmod(600)
 
     def set_certificates(
         self,
@@ -254,18 +282,6 @@ class TLSManager(ManagerStatusProtocol):
             return True
 
         return False
-
-    def _get_subject_name(self) -> str:
-        """Generate the subject name for CSR."""
-        # In sharded MongoDB deployments it is a requirement that all subject names match across
-        # all cluster components. The config-server name is the source of truth across mongos and
-        # shard deployments.
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            # until integrated with config-server use current app name as
-            # subject name
-            return self.state.config_server_name or self.charm.app.name
-
-        return self.charm.app.name
 
     def get_tls_management_state(self) -> TlsManagementState:
         """Pre-checks on TLS certificates management."""

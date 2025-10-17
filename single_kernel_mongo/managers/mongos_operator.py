@@ -153,10 +153,19 @@ class MongosOperator(OperatorProtocol, Object):
         self.charm.unit.set_workload_version(self.workload.get_version())
 
     def _configure_workloads(self) -> None:
+        # Instantiate the local directory for k8s
+        self.build_local_tls_directory()
+
         for internal in [True, False]:
             self.tls_manager.push_tls_files_to_workload(internal)
+
+        # Save LDAP certificates
         self.ldap_manager.save_certificates(self.state.ldap.chain)
+
+        # Update licenses
         self.handle_licenses()
+
+        # Sets directory permissions
         self.set_permissions()
 
         self.mongos_config_manager.set_environment()
