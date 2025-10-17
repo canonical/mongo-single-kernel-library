@@ -167,6 +167,11 @@ class TLSManager(ManagerStatusProtocol):
             statuses_state=self.state.statuses,
             component_name=self.charm.name,
         )
+
+        if self.is_waiting_for_a_cert():
+            logger.info("Still waiting for a certificate, delaying restart.")
+            return
+
         try:
             self.dependent.restart_charm_services(force=True)
         except WorkloadServiceError as e:
@@ -228,20 +233,21 @@ class TLSManager(ManagerStatusProtocol):
             f"{TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate secrets updated."
         )
 
-    def _is_certificate_available(self, internal: bool) -> bool:
+    def is_certificate_available(self, internal: bool) -> bool:
+        """Checks if we've received the expected certificate."""
         csr = self.get_certificate_request_attributes()
         cert, key = self.dependent.tls_events.tls_mapping[internal].get_assigned_certificate(csr)
         return bool(cert and key)
 
     def is_waiting_for_a_cert(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
-        if self.state.peer_tls_relation is not None and not self._is_certificate_available(
+        if self.state.peer_tls_relation is not None and not self.is_certificate_available(
             internal=True
         ):
             logger.debug("Waiting for peer certificate.")
             return True
 
-        if self.state.client_tls_relation is not None and not self._is_certificate_available(
+        if self.state.client_tls_relation is not None and not self.is_certificate_available(
             internal=False
         ):
             logger.debug("Waiting for client certificate.")

@@ -704,10 +704,18 @@ class ShardManager(Object, ManagerStatusProtocol):
         # sharded MongoDB clusters it is necessary that the common name and organisation name are
         # the same in their CSRs. Re-requesting a cert after integrated with the config-server
         # regenerates the cert with the appropriate configurations needed for sharding.
-        if cluster_auth_tls and peer_tls_integrated:
+        if (
+            cluster_auth_tls
+            and peer_tls_integrated
+            and not self.dependent.manager.is_certificate_available(internal=True)
+        ):
             logger.info("Cluster implements internal membership auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
-        elif external_auth_tls and client_tls_integrated:
+        elif (
+            external_auth_tls
+            and client_tls_integrated
+            and not self.dependent.manager.is_certificate_available(internal=False)
+        ):
             logger.info("Cluster implements external auth via certificates.")
             self.dependent.tls_events.refresh_certificates()
         else:
