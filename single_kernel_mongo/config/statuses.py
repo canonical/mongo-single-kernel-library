@@ -437,7 +437,18 @@ class UpgradeStatuses(Enum):
     """Upgrade statuses."""
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
-    HEALTH_CHECK_FAILED = StatusObject(status="maintenance", message="health check failed")
+    HEALTH_CHECK_FAILED = StatusObject(
+        status="maintenance",
+        message="MongoDB is not running after upgrade",
+        action="check logs for extra information.",
+        approved_critical_component=True,
+    )
+    CLUSTER_CHECK_FAILED = StatusObject(
+        status="maintenance",
+        message="Cluster is not healthy after upgrade",
+        action="check logs for extra information.",
+        approved_critical_component=True,
+    )
 
 
 class LdapStatuses(Enum):

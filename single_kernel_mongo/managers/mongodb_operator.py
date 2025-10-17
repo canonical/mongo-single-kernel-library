@@ -346,7 +346,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.state.unit_peer_data.current_revision = self.cross_app_version_checker.version
 
         if self.dependent.name == CharmKind.MONGOD:
-            self.dependent._restart_related_services()  # type: ignore[attr-defined]
+            self.dependent._restart_related_services()
 
         if self.dependent.mongo_manager.mongod_ready():
             try:
