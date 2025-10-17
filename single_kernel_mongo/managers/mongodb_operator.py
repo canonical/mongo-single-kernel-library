@@ -339,8 +339,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not refresh.workload_allowed_to_start:
             return
         logger.info("Restarting workloads")
-        # always apply the current charm revision's config -> no need to "migrate" configuration
-        # this charm revision's config is the one supported by the targeted workload version
+        # always apply the current charm revision's config
         self.dependent._configure_workloads()
         self.dependent.start_charm_services()
 
