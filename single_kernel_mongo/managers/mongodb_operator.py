@@ -897,6 +897,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.info("Early return invalid statuses.")
             return
 
+        if self.cluster_version_checker.get_cluster_mismatched_revision_status():
+            logger.info("Early return, cluster mismatch version.")
+            return
+
         if self.state.is_role(MongoDBRoles.SHARD):
             shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
             if config_server_has_tls and not shard_has_tls:
@@ -1230,17 +1234,30 @@ class MongoDBOperator(OperatorProtocol, Object):
             # don't bother checking revision mismatch on sharding interface if replica
             return statuses
 
-        if rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
-            statuses.append(rev_status)
-
         return statuses
+
+    def _cluster_mismatch_status(self, scope: DPHScope) -> list[StatusObject]:
+        """Returns a list with at most a single status.
+
+        This status is recomputed on every hook:
+        It's cheap, easy to recompute and we don't want to store it.
+        We compute it on every hook EXCEPT if we should recompute.
+        This way it does not get stored in the databag and stays as a purely dynamic status.
+        """
+        if scope == "unit":
+            return []
+        if rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
+            return [rev_status]
+        return []
 
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 
         if not recompute:
-            return self.state.statuses.get(scope=scope, component=self.name).root
+            return self.state.statuses.get(
+                scope=scope, component=self.name
+            ).root + self._cluster_mismatch_status(scope)
 
         if scope == "unit" and not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
