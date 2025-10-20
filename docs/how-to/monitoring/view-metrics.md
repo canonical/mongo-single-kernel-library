@@ -1,3 +1,4 @@
+(view-metrics)=
 # How to view metrics
 
 You can view Charmed MongoDB metrics in two ways:
