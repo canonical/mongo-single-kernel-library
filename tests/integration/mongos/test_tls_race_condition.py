@@ -41,6 +41,12 @@ async def test_build_and_deploy(
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
     )
+    await ops_test.model.wait_for_idle(
+        apps=[TLS_CERTIFICATES_APP_NAME],
+        idle_period=20,
+        status="active",
+        timeout=TIMEOUT,
+    )
 
 
 @pytest.mark.abort_on_fail
