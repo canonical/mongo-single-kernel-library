@@ -146,7 +146,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
     """Tests that mongos charm can disable TLS."""
     await toggle_tls_mongos(ops_test, enable=False)
     await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME, TLS_CERTIFICATES_APP_NAME],
         idle_period=60,
         timeout=TIMEOUT,
         raise_on_blocked=False,
