@@ -197,7 +197,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             rev_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
+            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
@@ -528,7 +528,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             rev_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
+            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:
