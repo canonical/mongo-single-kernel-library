@@ -10,8 +10,8 @@ This charm is for anyone looking for a complete database management interface. T
 
 |  |  |
 |--|--|
-| {ref}`Tutorial <tutorial>` </br> A hands-on introduction to using the Charmed MongoDB operator for new users </br> |  {ref}`How-to guides <how-to-guides>` </br> Step-by-step guides covering key operations and common tasks |
-| **Reference** </br> Technical information - requirements, release notes | **Explanation** </br> Clarification of key topics  |
+| {ref}`tutorial` </br> A hands-on introduction to using the Charmed MongoDB operator for new users </br> |  {ref}`how-to-guides` </br> Step-by-step guides covering key operations and common tasks |
+| {ref}`reference` </br> Technical information - requirements, release notes | {ref}`explanation` </br> Clarification of key topics  |
 
 ## Project and community
 
@@ -37,4 +37,6 @@ MongoDB is a trademark or registered trademark of MongoDB, Inc. Other trademarks
 Home <self>
 Tutorial <tutorial>
 How-to guides <how-to/index>
+Reference <reference/index>
+Explanation <explanation/index>
 ```
