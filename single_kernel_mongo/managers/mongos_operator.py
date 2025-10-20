@@ -157,9 +157,19 @@ class MongosOperator(OperatorProtocol, Object):
         self.charm.unit.set_workload_version(self.workload.get_version())
 
     def _configure_workloads(self) -> None:
+        # Instantiate the local directory for k8s
+        self.build_local_tls_directory()
+
+        # Push certificates
         self.tls_manager.push_tls_files_to_workload()
+
+        # Save LDAP certificates
         self.ldap_manager.save_certificates(self.state.ldap.chain)
+
+        # Update licenses
         self.handle_licenses()
+
+        # Sets directory permissions
         self.set_permissions()
 
         self.mongos_config_manager.set_environment()
@@ -337,12 +347,14 @@ class MongosOperator(OperatorProtocol, Object):
             raise
 
     @override
-    def is_relation_feasible(self, name: str) -> bool:
+    def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible.
 
         In the mongos case, we only allow the mongos proxy client relation.
         """
-        return name == RelationNames.MONGOS_PROXY
+        if name not in (RelationNames.MONGOS_PROXY, RelationNames.CLUSTER):
+            return MongosStatuses.INVALID_REL.value
+        return None
 
     def share_connection_info(self):
         """Shares the connection information of clients."""

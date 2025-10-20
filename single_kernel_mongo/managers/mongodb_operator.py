@@ -995,8 +995,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.logrotate_config_manager.configure_and_restart()
 
     @override
-    def is_relation_feasible(self, rel_name: str) -> bool:
+    def get_relation_feasible_status(self, rel_name: str) -> StatusObject | None:
         """Checks if the relation is feasible in the current context.
+
+        Invalid relations are such:
+         * any sharding component on the database endpoint.
+         * shard on the config-server endpoints.
+         * config-server on the shard endpoint.
+         * database on sharding endpoints.
 
         TODO: in the future expand this to a handle other non-feasible
         relations (i.e. mongos-shard, shard-s3)
@@ -1008,11 +1014,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-
-            self.state.statuses.add(
-                MongoDBStatuses.INVALID_DB_REL.value, scope="unit", component=self.name
-            )
-            return False
+            return MongoDBStatuses.INVALID_DB_REL.value
         if not self.state.is_sharding_component and rel_name in {
             RelationNames.SHARDING,
             RelationNames.CONFIG_SERVER,
@@ -1022,11 +1024,17 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.state.statuses.add(
-                MongoDBStatuses.INVALID_SHARDING_REL.value, scope="unit", component=self.name
-            )
-            return False
-        return True
+            return MongoDBStatuses.INVALID_SHARDING_REL.value
+        if self.state.is_role(MongoDBRoles.SHARD) and rel_name == RelationNames.CONFIG_SERVER:
+            logger.error("Charm is in sharding mode. Does not support %s interface.", rel_name)
+            return MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.SHARDING:
+            logger.error("Charm is in config-server mode. Does not support %s interface.", rel_name)
+            return MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.CLUSTER:
+            logger.error("Charm is not a config-server, cannot integrate mongos")
+            return MongoDBStatuses.INVALID_MONGOS_REL.value
+        return None
 
     def _configure_workloads(self) -> None:
         """Handle filesystem interactions for charm configuration."""
@@ -1036,6 +1044,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Instantiate the keyfile
         self.instantiate_keyfile()
+
+        # Instantiate the local directory for k8s
+        self.build_local_tls_directory()
 
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
@@ -1092,19 +1103,26 @@ class MongoDBOperator(OperatorProtocol, Object):
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""
         statuses = []
-        if not self.cluster_manager.is_valid_mongos_integration():
-            statuses.append(MongoDBStatuses.INVALID_MONGOS_REL.value)
-
         if not self.backup_manager.is_valid_s3_integration():
             statuses.append(MongoDBStatuses.INVALID_S3_REL.value)
-
-        if self.state.client_relations and self.state.is_sharding_component:
-            statuses.append(MongoDBStatuses.INVALID_DB_REL.value)
+        # Add valid statuses for all invalid integrated relations
+        for relation_name in [
+            RelationNames.DATABASE,
+            RelationNames.SHARDING,
+            RelationNames.CONFIG_SERVER,
+            RelationNames.CLUSTER,
+        ]:
+            if (
+                self.model.relations[relation_name.value]
+                and (status := self.get_relation_feasible_status(relation_name)) is not None
+            ):
+                statuses.append(status)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            statuses.append(MongoDBStatuses.INVALID_SHARDING_REL.value)
-        elif rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
             # don't bother checking revision mismatch on sharding interface if replica
+            return statuses
+
+        if rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
             statuses.append(rev_status)
 
         return statuses

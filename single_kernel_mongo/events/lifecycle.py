@@ -222,7 +222,7 @@ class LifecycleEventsHandler(Object):
                 secret_id=event.secret.id or "",
             )
         except (WorkloadServiceError, ChangeError) as err:
-            logger.info("Failed to restart services", err, exc_info=True)
+            logger.info("Failed to restart services: %s", err, exc_info=True)
             self.dependent.state.statuses.add(
                 CharmStatuses.FAILED_SERVICES_START.value,
                 scope="unit",

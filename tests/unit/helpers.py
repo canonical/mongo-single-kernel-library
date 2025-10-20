@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import factory
 
 from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts
@@ -13,8 +15,9 @@ class MongoConfigurationFactory(factory.Factory):
     username = "operator"
     password = "deadbeef"
     roles: set[str] = set()
-    tls_external = False
-    tls_internal = False
+    tls_enabled = False
+    tls_external_keyfile = Path("")
+    tls_external_ca = Path("")
     port = MongoPorts.MONGODB_PORT
     replset = "cafebabe"
     standalone = False
