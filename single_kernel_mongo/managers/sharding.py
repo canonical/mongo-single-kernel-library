@@ -599,7 +599,8 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise WaitingForSecretsError("Missing keyfile")
 
         # Let's start by updating the passwords, before any restart so they are in sync already.
-        self.sync_cluster_passwords(operator_password, backup_password)
+        if self.charm.unit.is_leader():
+            self.sync_cluster_passwords(operator_password, backup_password)
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
