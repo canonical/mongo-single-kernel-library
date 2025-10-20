@@ -11,4 +11,5 @@ Manage client connections <manage-client-connections>
 Enable LDAP <enable-ldap>
 Monitoring <monitoring/index>
 Back up and restore <back-up-and-restore/index>
+Upgrade <upgrade/index>
 ```

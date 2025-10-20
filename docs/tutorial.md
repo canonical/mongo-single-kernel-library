@@ -139,6 +139,7 @@ Machine  State    Address       Inst id        Series  AZ  Message
 0        started  10.23.62.156  juju-d35d30-0  jammy       Running
 ```
 
+(access-a-replica-set)=
 ## Access a replica set
 
 MongoDB databases can be accessed via the `mongosh`, the [MongoDB shell](https://www.mongodb.com/docs/mongodb-shell/). This shell comes pre-installed in the units hosting the Charmed MongoDB application as `charmed-mongodb.mongosh`.
