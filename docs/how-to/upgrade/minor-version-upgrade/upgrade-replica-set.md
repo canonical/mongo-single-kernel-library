@@ -90,7 +90,7 @@ If the new revision has a new underlying snap, the charm only refreshes the firs
 Your model will show that the first unit has successfully upgraded and you will see the following message in {command}`juju status`: 
 
 ```text
-Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision
+Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision.
 ```
 
 Running {command}`juju status | grep mongo | awk 'END{print $2 " " $3}'` outputs `active idle`.
@@ -100,7 +100,7 @@ If this is the case, proceed to section {ref}`continue-the-refresh`.
 (case-3)=
 ### Case 3: Failure to refresh
 
-If your upgrade failed, then ` juju status` will show that the unit is blocked with the message `Unhealthy after refresh`. 
+If your upgrade failed, then ` juju status` will show that the unit is blocked with the message `Unhealthy after refresh. Rollback to previous revision with \`juju refresh`\.`. 
 
 If the upgrade of the first unit failed, you can:
 
@@ -129,7 +129,7 @@ juju <app-name>/leader resume-refresh
 
 Wait until `juju status --watch 1s` shows all units in the `active` status. If all nodes in your Charm MongoDB deployment are `active`, your upgrade was successful. 
 
-If your upgrade failed, you should see the charm go into the `blocked` state with the message `Unhealthy after refresh`. 
+If your upgrade failed, you should see the charm go into the `blocked` state with the message `Unhealthy after refresh. Rollback to previous revision with \`juju refresh\`.`. 
 
 * Wait for 5-10 minutes to see if the cluster can heal itself 
 * Roll back. To roll back, repeat the refresh steps starting from {ref}`run-a-pre-refresh-check` using the original revision number.

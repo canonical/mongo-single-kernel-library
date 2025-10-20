@@ -95,7 +95,7 @@ These steps are pretty similar to the previous ones, but we will go through it a
 
 {ref}`Deploy <how-to-deploy>` a MongoDB 8 cluster from the Charmhub channel `8/stable` with the same topology as your initial cluster. For example, if your cluster has 1 config-server and three shards, your `8` cluster should also have 1 config-server and three shards.
 
-Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
+Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-eight s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
 Replicate all the passwords from your initial application to the new one:
 
@@ -114,7 +114,7 @@ Now, create a backup of the MongoDB 7 cluster, and note the `<backup-id>`. Wait 
 juju run <app>-seven/leader create-backup
 ```
 
-{ref}`Log into your cluster <access-a-replica-set>` and set the feature compatibility version to `6.0`. This will allow a safe restore to the new cluster.
+{ref}`Log into your cluster <access-a-replica-set>` and set the feature compatibility version to `7.0`. This will allow a safe restore to the new cluster.
 
 ```javascript
 db.adminCommand(
