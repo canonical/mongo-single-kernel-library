@@ -55,8 +55,7 @@ Now, create a backup of the initial cluster, and note the `<backup-id>`. Wait fo
 juju run <app>/leader create-backup
 ```
 
-<!--TODO: Clarify which cluster we are logging into here - the old 6 or new 7?-->
-{ref}`Log into your cluster <access-a-replica-set>` and set the feature compatibility version to `6.0`. This will allow a safe restore to the new cluster.
+{ref}`Log into your MongoDB 7 cluster <access-a-replica-set>` and set the feature compatibility version to `6.0`. This will allow a safe restore to the new cluster.
 
 ```javascript
 db.adminCommand(
@@ -74,6 +73,8 @@ Restore the MongoDB 6 backup on the MongoDB 7 cluster:
 ```shell
 juju run <app>-seven/leader restore backup-id=<backup-id>
 ```
+
+For sharded clusters, see {ref}`how to define a remap pattern <define-remap-pattern-sharded-cluster>`.
 
 This is the time to ensure stability of your deployment. When you are sure you want to continue, run:
 
@@ -129,6 +130,8 @@ db.adminCommand(
 ```shell
 juju run <app>-eight/leader restore backup-id=<backup-id>
 ```
+
+For sharded clusters, see {ref}`how to define a remap pattern <define-remap-pattern-sharded-cluster>`.
 
 This is the time to ensure stability of your deployment. When you are sure you want to continue, run:
 

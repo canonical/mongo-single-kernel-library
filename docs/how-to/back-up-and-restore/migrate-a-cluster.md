@@ -58,6 +58,7 @@ backup-id             | backup-type  | backup-status
 YYYY-MM-DDTHH:MM:SSZ  | logical      | finished 
 ```
 
+(define-remap-pattern-sharded-cluster)=
 ## Define remap pattern (sharded cluster)
 
 **If you are running Charmed MongoDB as a sharded cluster and you wish to migrate to a cluster with new names, you must generate a remap pattern.** If you are running Charmed MongoDB as a replica set, you can skip this step.
