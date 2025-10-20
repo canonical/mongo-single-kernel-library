@@ -26,9 +26,7 @@ from single_kernel_mongo.config.literals import Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import (
-    WorkloadServiceError,
-)
+from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateRequestAttributes,
     PrivateKey,
@@ -301,7 +299,9 @@ class TLSManager(ManagerStatusProtocol):
         client_private_key = None
 
         self.state.statuses.delete(
-            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value, scope="unit", component=self.dependent.name
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
+            scope="unit",
+            component=self.dependent.name,
         )
         self.state.statuses.delete(
             TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
@@ -310,7 +310,7 @@ class TLSManager(ManagerStatusProtocol):
         )
 
         initial_peer_private_key = self.state.tls.peer_private_key
-        initial_client_private_key = self.state.tls.peer_private_key
+        initial_client_private_key = self.state.tls.client_private_key
 
         if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
             if peer_private_key := self.update_private_key(tls_peer_private_key_id, internal=True):

@@ -15,7 +15,11 @@ from ops.framework import EventBase, EventSource, Object
 
 from single_kernel_mongo.config.literals import CharmKind, TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import MongosStatuses, ShardStatuses, TLSStatuses
+from single_kernel_mongo.config.statuses import (
+    MongosStatuses,
+    ShardStatuses,
+    TLSStatuses,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
@@ -73,10 +77,12 @@ class TLSEventsHandler(Object):
             ExternalRequirerRelations.CLIENT_TLS.value,
         ]:
             self.framework.observe(
-                self.charm.on[relation_name].relation_created, self._on_tls_relation_created
+                self.charm.on[relation_name].relation_created,
+                self._on_tls_relation_created,
             )
             self.framework.observe(
-                self.charm.on[relation_name].relation_broken, self._on_tls_relation_broken
+                self.charm.on[relation_name].relation_broken,
+                self._on_tls_relation_broken,
             )
 
         self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
@@ -199,14 +205,16 @@ class TLSEventsHandler(Object):
         self.manager.enable_certificates_for_unit(internal)
         self._recompute_statuses()
 
-    def _on_config_changed(self, event: ConfigChangedEvent):
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        """On Config Changed, validate private keys and refresh certs if needed."""
         try:
             self.manager.update_private_keys()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return
 
-    def _on_secret_changed(self, event: ConfigChangedEvent):
+    def _on_secret_changed(self, event: ConfigChangedEvent) -> None:
+        """On Secret Changed, validate private keys and refresh certs if needed."""
         try:
             self.manager.update_private_keys()
         except DeferrableFailedHookChecksError as e:
