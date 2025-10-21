@@ -72,7 +72,7 @@ class ClusterConfigServerEventHandler(Object):
         Calls the manager to share the secrets with mongos charm.
         """
         try:
-            self.manager.share_secret_to_mongos(event.relation)
+            self.manager.share_secret_to_mongos(event.relation, initial_event=True)
         except DeferrableFailedHookChecksError as e:
             logger.info("Skipping database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))

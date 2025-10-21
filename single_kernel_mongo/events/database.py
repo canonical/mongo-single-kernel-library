@@ -138,7 +138,7 @@ class DatabaseEventsHandler(Object):
         if not self.charm.unit.is_leader():
             return False
 
-        if self.dependent.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )

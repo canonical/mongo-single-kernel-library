@@ -79,7 +79,7 @@ class BackupEventsHandler(Object):
 
     def _on_s3_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Checks for valid integration for s3-integrations."""
-        if self.dependent.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding s3-relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -97,7 +97,7 @@ class BackupEventsHandler(Object):
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
         action = "configure-pbm"
-        if self.dependent.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Changing s3-credentials is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -285,7 +285,7 @@ class BackupEventsHandler(Object):
             )
             return
 
-        if self.dependent.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             fail_action_with_error_log(
                 logger,
                 event,

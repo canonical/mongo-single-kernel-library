@@ -1,5 +1,6 @@
 import getpass
 from pathlib import Path
+from platform import machine
 
 import pytest
 from ops.pebble import Layer
@@ -171,6 +172,11 @@ def test_snap_install_failure(monkeypatch):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
     monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap_ensure)
+    monkeypatch.setattr(
+        workload,
+        "load_toml_file",
+        lambda *args, **kwargs: {"snap": {"revisions": {machine(): "133"}}},
+    )
 
     with pytest.raises(WorkloadNotReadyError):
         workload.install()
@@ -184,8 +190,13 @@ def test_install_success(monkeypatch):
 
     monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap)
     monkeypatch.setattr(workload.mongod_snap, "hold", mock_snap)
+    monkeypatch.setattr(
+        workload,
+        "load_toml_file",
+        lambda *args, **kwargs: {"snap": {"revisions": {machine(): "133"}}},
+    )
 
-    assert workload.install() is None
+    assert workload.install()
 
 
 def test_read_file_fail():

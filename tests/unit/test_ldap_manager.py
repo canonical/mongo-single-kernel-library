@@ -72,10 +72,7 @@ def test_ldap_hook_checks_fail(
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
     harness.charm.operator.state.app_peer_data.db_initialised = db_initialised
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=upgrade_in_progress),
-    )
+    harness.charm.operator.refresh.in_progress = upgrade_in_progress
     harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
 
     with pytest.raises(expected_error.__class__) as err:

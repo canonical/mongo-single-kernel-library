@@ -18,7 +18,11 @@ from tests.integration.helpers.types import Substrate
 
 
 def test_start(
-    mongos_harness: Harness[MongosTestCharm], mocker, mock_fs_interactions, substrate: Substrate
+    mongos_harness: Harness[MongosTestCharm],
+    mocker,
+    mock_refresh,
+    mock_fs_interactions,
+    substrate: Substrate,
 ):
     if substrate == "lxd":
         mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
@@ -28,6 +32,7 @@ def test_start(
         )
 
     mongos_harness.charm.on.start.emit()
+    mongos_harness.evaluate_status()
     assert mongos_harness.charm.unit.status == as_status(
         MongosStatuses.MISSING_CONF_SERVER_REL.value
     )

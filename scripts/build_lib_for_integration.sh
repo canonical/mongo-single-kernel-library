@@ -4,11 +4,12 @@
 
 set -e
 
-git_hash=$(git describe --always --dirty)
-
 LIB_PATH="./single_kernel_mongo"
 
 CHARMS_PATH="./tests/charms"
+
+# We compute a version based on the tag of the pip package version.
+VERSION_TAG="test/0.0.0+dirty"
 
 if [ $# -ge 1 ]; then
     declare -a TEST_CHARMS=("$1")
@@ -26,14 +27,17 @@ for directory in "${TEST_CHARMS[@]}"; do
     cp "pyproject.toml" "$directory_lib_path"
     cp "README.md" "$directory_lib_path"
 
-    echo "Building charm ${directory}\n"
-
+    echo "Building charm ${directory}"
 
     pushd $directory
 
     # Backup files
+    cp refresh_versions.toml refresh_versions.toml.backup
     cp pyproject.toml pyproject.toml.backup
     cp poetry.lock poetry.lock.backup
+
+    sed -i "2s@^@charm = \"${VERSION_TAG}\"\n@" refresh_versions.toml
+
 
     # Disable strict mode for build test lib.
     pushd "${LIB_PATH}"
@@ -44,21 +48,21 @@ for directory in "${TEST_CHARMS[@]}"; do
     poetry add "${LIB_PATH}/"
     poetry lock
 
-    python3 -c 'import pathlib; import shutil; import subprocess; git_hash=subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, check=True, encoding="utf-8").stdout; file = pathlib.Path("charm_version"); shutil.copy(file, pathlib.Path("charm_version.backup")); version = file.read_text().strip(); file.write_text(f"{version}+{git_hash}")'
+
 
     # Pack the charm
     if $CI_CACHE; then
         ccc pack -v
     else
-        charmcraft pack -v
+        charmcraft pack -v --debug
     fi
 
     # Cleanup
     echo "removing copied files from single kernel charm."
     rm ${LIB_PATH} -rf
-    mv charm_version.backup charm_version
     mv pyproject.toml.backup pyproject.toml
     mv poetry.lock.backup poetry.lock
+    mv refresh_versions.toml.backup refresh_versions.toml
 
     # Go back to root directory
     popd
