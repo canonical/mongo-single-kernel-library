@@ -25,7 +25,6 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION,
-    OS_REQUIREMENTS,
     CharmKind,
     MongoPorts,
     Scope,
@@ -1012,19 +1011,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise
-
-    def _set_os_config(self) -> None:
-        """Sets sysctl config for mongodb."""
-        try:
-            self.sysctl_config.configure(OS_REQUIREMENTS)
-        except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
-            # we allow events to continue in the case that we are not able to correctly configure
-            # sysctl config, since we can  still run the workload with wrong sysctl parameters
-            # even if it is not optimal.
-            logger.error(f"Error setting values on sysctl: {e.message}")
-            # containers share the kernel with the host system, and some sysctl parameters are
-            # set at kernel level.
-            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
 
     @property
     def primary_unit_name(self) -> str | None:

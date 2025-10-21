@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
 import charm_refresh
+import jinja2
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
@@ -29,16 +30,25 @@ from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
+    OS_REQUIREMENTS,
     TRUST_STORE_PATH,
     Scope,
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.config.models import SNAP_NAME, THP_CONFIG, CharmSpec, LogRotateConfig
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+)
+from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
+from single_kernel_mongo.lib.charms.operator_libs_linux.v1.systemd import (
+    SystemdError,
+    daemon_reload,
+    service_disable,
+    service_enable,
+    service_start,
 )
 from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
@@ -50,6 +60,7 @@ if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
+    from single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl import Config
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
@@ -89,6 +100,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
     ldap_events: LDAPEventHandler
+    sysctl_config: Config
 
     if TYPE_CHECKING:
 
@@ -314,6 +326,43 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
         self.restart_charm_services(force=True)
+
+    def write_thp_config_file(self):
+        """Writes the unit file to enable Transparent Huge Pages."""
+        data = THP_CONFIG.service_template.read_text()
+        template = jinja2.Template(data)
+
+        rendered_template = template.render(
+            service_file=f"snap.{SNAP_NAME}.{self.workload.service}.service"
+        )
+        self.workload.write(path=THP_CONFIG.service_file_path, content=rendered_template)
+        daemon_reload()
+        service_enable(THP_CONFIG.service_name)
+        service_start(THP_CONFIG.service_name)
+
+    def _set_os_config(self) -> None:
+        """Sets sysctl config for mongodb."""
+        try:
+            self.sysctl_config.configure(OS_REQUIREMENTS)
+        except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
+            # we allow events to continue in the case that we are not able to correctly configure
+            # sysctl config, since we can  still run the workload with wrong sysctl parameters
+            # even if it is not optimal.
+            logger.error(f"Error setting values on sysctl parameters: {e.message}")
+            # containers share the kernel with the host system, and some sysctl parameters are
+            # set at kernel level.
+            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
+        try:
+            self.write_thp_config_file()
+        except SystemdError as e:
+            # we allow events to continue in the case that we are not able to correctly configure
+            # sysctl config, since we can  still run the workload with wrong kernel parameters
+            # even if it is not optimal.
+            logger.error(f"Error setting values on kernel parameters: {e.args}")
+            # containers share the kernel with the host system, and some sysctl parameters are
+            # set at kernel level.
+            logger.warning("kernel params cannot be set. Is the machine running on a container?")
+            service_disable(THP_CONFIG.service_name)
 
     def build_local_tls_directory(self) -> None:
         """On Kubernetes, we need the local configuration directory.
