@@ -233,7 +233,7 @@ class TLSStatuses(Enum):
     INVALID_CLIENT_PRIVATE_KEY = StatusObject(
         status="blocked",
         message="Invalid client private key",
-        check="CLient private key format validation failed",
+        check="Client private key format validation failed.",
         action="Update the client privatekey secret.",
     )
     DISABLING_PEER_TLS = StatusObject(
@@ -427,14 +427,14 @@ class ShardStatuses(Enum):
         message="Shard internal CA and Config-Server internal CA don't match.",
         short_message="Peer CA mismatch.",
         check="Relation validation failed.",
-        action="Verify the certificates relations. Use the same CA for all cluster components.",
+        action="Verify the peer-certificates relations. Use the same CA for all cluster components.",
     )
     CLIENT_CA_MISMATCH = StatusObject(
         status="blocked",
         message="Shard client CA and Config-Server client CA don't match.",
         short_message="Client CA mismatch.",
         check="Relation validation failed.",
-        action="Verify the certificates relations. Use the same CA for all cluster components.",
+        action="Verify the client-certificates relations. Use the same CA for all cluster components.",
     )
 
     MISSING_CONF_SERVER_REL = StatusObject(

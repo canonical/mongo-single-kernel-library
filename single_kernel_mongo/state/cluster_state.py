@@ -77,7 +77,7 @@ class ClusterState(AbstractRelationState[Data]):
 
     @property
     def external_ca_secret(self) -> str | None:
-        """Returns the internal CA secret."""
+        """Returns the external CA secret."""
         if not self.relation:
             return None
         return self.relation_data.get(ClusterStateKeys.EXT_CA_SECRET.value, None)
