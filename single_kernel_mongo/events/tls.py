@@ -99,11 +99,14 @@ class TLSEventsHandler(Object):
 
     def _on_tls_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handler for relation created."""
-        if event.relation.name != ExternalRequirerRelations.PEER_TLS.value:
-            return
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_PEER_TLS_REL.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+            self.manager.state.statuses.delete(
+                MongosStatuses.MISSING_CLIENT_TLS_REL.value,
                 scope="unit",
                 component=self.dependent.name,
             )
@@ -111,6 +114,11 @@ class TLSEventsHandler(Object):
         if self.manager.state.is_role(MongoDBRoles.SHARD):
             self.manager.state.statuses.delete(
                 ShardStatuses.MISSING_PEER_TLS_REL.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+            self.manager.state.statuses.delete(
+                ShardStatuses.MISSING_CLIENT_TLS_REL.value,
                 scope="unit",
                 component=self.dependent.name,
             )
@@ -127,9 +135,11 @@ class TLSEventsHandler(Object):
             case (
                 TlsManagementState.DB_NOT_INTIALIZED
                 | TlsManagementState.MONGOS_DB_NOT_INITIALIZED
-                | TlsManagementState.UPGRADE_IN_PROGRESS
             ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
+            case TlsManagementState.UPGRADE_IN_PROGRESS:
+                logger.info("DB never initialised, removing the TLS relation.")
                 return
             case _:
                 pass

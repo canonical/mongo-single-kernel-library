@@ -216,14 +216,14 @@ class TLSManager(ManagerStatusProtocol):
         ca, pem = self.get_tls_file_contents(internal=internal)
 
         if internal:
-            if ca is not None:
+            if ca:
                 self.workload.write(self.workload.paths.int_ca_file, ca)
-            if pem is not None:
+            if pem:
                 self.workload.write(self.workload.paths.int_pem_file, pem)
         else:
-            if ca is not None:
+            if ca:
                 self.workload.write(self.workload.paths.ext_ca_file, ca)
-            if pem is not None:
+            if pem:
                 self.workload.write(self.workload.paths.ext_pem_file, pem)
 
         if self.substrate == Substrates.VM:
@@ -249,7 +249,7 @@ class TLSManager(ManagerStatusProtocol):
         self.state.tls.set_secret(
             internal,
             SECRET_CHAIN_LABEL,
-            "\n".join(secret_chain) if secret_chain is not None else None,
+            "\n".join(secret_chain) if secret_chain else None,
         )
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
         self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr)
@@ -267,15 +267,11 @@ class TLSManager(ManagerStatusProtocol):
 
     def is_waiting_for_a_cert(self) -> bool:
         """Returns a boolean indicating whether additional certs are needed."""
-        if self.state.peer_tls_relation is not None and not self.is_certificate_available(
-            internal=True
-        ):
+        if self.state.peer_tls_relation and not self.is_certificate_available(internal=True):
             logger.debug("Waiting for peer certificate.")
             return True
 
-        if self.state.client_tls_relation is not None and not self.is_certificate_available(
-            internal=False
-        ):
+        if self.state.client_tls_relation and not self.is_certificate_available(internal=False):
             logger.debug("Waiting for client certificate.")
             return True
 

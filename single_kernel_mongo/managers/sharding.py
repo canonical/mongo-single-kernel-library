@@ -961,7 +961,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         return False
 
-    def get_tls_status(self, internal: bool):
+    def get_tls_status(self, internal: bool) -> StatusObject | None:
         """Computes the TLS status for the scope.
 
         Args:

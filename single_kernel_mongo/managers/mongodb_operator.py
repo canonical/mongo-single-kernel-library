@@ -36,7 +36,10 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -52,9 +55,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBCharmConfig, MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
-from single_kernel_mongo.events.backups import (
-    BackupEventsHandler,
-)
+from single_kernel_mongo.events.backups import BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
@@ -373,7 +374,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError, WorkloadExecError) as e:
             logger.error(f"Deferring on start: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_REPL_SET_INIT.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_REPL_SET_INIT.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -960,7 +963,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value, scope="unit", component=self.name
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -980,7 +985,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
             self.state.statuses.add(
-                BackupStatuses.WAITING_FOR_PBM_START.value, scope="unit", component=self.name
+                BackupStatuses.WAITING_FOR_PBM_START.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -1021,7 +1028,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Charm is in sharding mode. Does not support %s interface.", rel_name)
             return MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.SHARDING:
-            logger.error("Charm is in config-server mode. Does not support %s interface.", rel_name)
+            logger.error(
+                "Charm is in config-server mode. Does not support %s interface.",
+                rel_name,
+            )
             return MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.CLUSTER:
             logger.error("Charm is not a config-server, cannot integrate mongos")
@@ -1249,7 +1259,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 component=self.name,
             )
 
-    def _should_skip_because_of_tls(self) -> bool:
+    def _should_skip_because_of_incomplete_tls(self) -> bool:
+        """Checks if the update status hook needs skipping due to an incomplete TLS integration."""
         shard_has_peer_tls, config_server_has_peer_tls = (
             self.shard_manager.shard_and_config_server_peer_tls_status()
         )
