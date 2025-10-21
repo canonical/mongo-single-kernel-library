@@ -629,7 +629,7 @@ class CharmState(Object, StatusesStateProtocol):
             return False
 
         # We can't check if we don't have a valid certificate
-        if self.shard_state.internal_ca_secret is not None and not self.tls.client_enabled:
+        if self.shard_state.external_ca_secret is not None and not self.tls.client_enabled:
             return False
 
         try:
