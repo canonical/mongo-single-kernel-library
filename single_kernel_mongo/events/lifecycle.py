@@ -130,9 +130,10 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError):
-            logger.info("Not ready to start.")
-            event.defer()
+        except (ContainerNotReadyError, WorkloadServiceError) as e:
+            defer_event_with_info_log(
+                logger, event, "start", f"Not ready to start: {e.__class__.__name__}({e})"
+            )
             return
         except InvalidConfigRoleError:
             logger.info("Missing a valid role.")
@@ -222,7 +223,7 @@ class LifecycleEventsHandler(Object):
                 secret_id=event.secret.id or "",
             )
         except (WorkloadServiceError, ChangeError) as err:
-            logger.info("Failed to restart services", err, exc_info=True)
+            logger.info("Failed to restart services: %s", err, exc_info=True)
             self.dependent.state.statuses.add(
                 CharmStatuses.FAILED_SERVICES_START.value,
                 scope="unit",

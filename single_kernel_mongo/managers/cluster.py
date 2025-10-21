@@ -59,7 +59,7 @@ class ClusterProvider(Object):
         self.relation_name = relation_name
         self.data_interface = self.state.cluster_provider_data_interface
 
-    def assert_pass_hook_checks(self) -> None:
+    def assert_pass_hook_checks(self, initial_event: bool = False) -> None:
         """Runs the pre hook checks, raises if it fails."""
         if not self.state.db_initialised:
             raise DeferrableFailedHookChecksError("DB is not initialised")
@@ -77,7 +77,7 @@ class ClusterProvider(Object):
         if not self.charm.unit.is_leader():
             raise NonDeferrableFailedHookChecksError("Not leader")
 
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress and initial_event:
             raise DeferrableFailedHookChecksError(
                 "Processing mongos applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -88,12 +88,12 @@ class ClusterProvider(Object):
         # we don't have any cluster relation.
         return self.state.is_role(MongoDBRoles.CONFIG_SERVER) or not self.state.cluster_relations
 
-    def share_secret_to_mongos(self, relation: Relation) -> None:
+    def share_secret_to_mongos(self, relation: Relation, initial_event: bool = False) -> None:
         """Handles the database requested event.
 
         The first time secrets are written to relations should be on this event.
         """
-        self.assert_pass_hook_checks()
+        self.assert_pass_hook_checks(initial_event=initial_event)
 
         config_server_db = self.state.generate_config_server_db()
         self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
@@ -133,7 +133,7 @@ class ClusterProvider(Object):
         If it has departed, we run some checks and if we are a VM charm, we
         proceed to reconcile the users and DB and cleanup mongoDB.
         """
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Removing integration to mongos is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
@@ -269,8 +269,8 @@ class ClusterRequirer(Object):
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
-        if self.state.upgrade_in_progress:
-            raise DeferrableFailedHookChecksError(
+        if self.dependent.refresh_in_progress:
+            logger.warning(
                 "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
 
@@ -290,7 +290,7 @@ class ClusterRequirer(Object):
         """
         if not username or not password:
             raise WaitingForSecretsError
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
