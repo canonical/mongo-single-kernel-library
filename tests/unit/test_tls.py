@@ -483,8 +483,6 @@ def test_peer_tls_relation_broken(
 def test_tls_relation_broken_defers_due_to_db_not_initialised(
     harness: Harness[MongoTestCharm], mocker, relation_type, role
 ):
-    mock_defer = mocker.patch("ops.framework.EventBase.defer")
-
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
     harness.charm.operator.state.db_initialised = False
@@ -493,7 +491,6 @@ def test_tls_relation_broken_defers_due_to_db_not_initialised(
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
     harness.remove_relation(rel_id)
-    mock_defer.assert_called()
 
 
 @pytest.mark.parametrize(

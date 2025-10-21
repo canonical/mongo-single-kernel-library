@@ -132,13 +132,13 @@ class TLSEventsHandler(Object):
         """Handle the relation broken event."""
         state = self.manager.get_tls_management_state()
         match state:
+            case TlsManagementState.UPGRADE_IN_PROGRESS:
+                defer_event_with_info_log(logger, event, str(type(event)), state.value)
+                return
             case (
                 TlsManagementState.DB_NOT_INTIALIZED
                 | TlsManagementState.MONGOS_DB_NOT_INITIALIZED
             ):
-                defer_event_with_info_log(logger, event, str(type(event)), state.value)
-                return
-            case TlsManagementState.UPGRADE_IN_PROGRESS:
                 logger.info("DB never initialised, removing the TLS relation.")
                 return
             case _:
