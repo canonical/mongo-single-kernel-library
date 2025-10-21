@@ -77,4 +77,4 @@ Clients can authenticate to MongoDB using:
 When using SCRAM, usernames and passwords are stored in Charmed MongoDB and Charmed Mongos to be used by the mongod and mongos processes, in peer-relation data and in external relation to be shared with client applications via Juju secrets. 
 
 When using mTLS, client certificates are loaded into a `tls-certificates` operator and provided to the Charmed MongoDB via a plain-text unencrypted 
-relation. Certificates are stored in a file with minimal permissions. Note MongoDB disables support for TLS 1.0 encryption on systems where TLS 1.1+ is available.
+relation. Certificates are stored in a file with minimal permissions. Note MongoDB disables support for TLS 1.0 and TLS 1.1 encryption.
