@@ -12,7 +12,6 @@ from pydantic import ValidationError
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.core.structured_config import LdapUserToDnMapping
 from single_kernel_mongo.exceptions import InvalidCharmKindError
-from single_kernel_mongo.state.upgrade_state import UnitUpgradePeerData
 
 logger = getLogger(__name__)
 
@@ -43,11 +42,6 @@ def hostname_from_hostport(host: str) -> str:
 def hostname_from_shardname(host: str) -> str:
     """Takes hostname/ip:port and returns hostname."""
     return host.split("/")[0]
-
-
-def unit_number(unit: UnitUpgradePeerData) -> int:
-    """Gets the unit number from a unit upgrade peer data."""
-    return int(unit.component.name.split("/")[-1])
 
 
 def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str | None) -> bool:

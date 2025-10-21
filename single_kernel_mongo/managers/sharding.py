@@ -199,7 +199,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             rev_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
+            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
@@ -217,7 +217,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 "Cannot add/remove shards while a backup/restore is in progress."
             )
 
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
             )
@@ -516,7 +516,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
             )
@@ -530,7 +530,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             rev_status
             := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
         ):
-            self.state.statuses.add(rev_status, scope="unit", component=self.dependent.name)
+            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:

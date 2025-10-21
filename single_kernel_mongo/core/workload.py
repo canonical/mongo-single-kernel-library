@@ -9,12 +9,13 @@ import string
 from abc import ABC, abstractmethod
 from itertools import chain
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
+import tomllib
 from ops import Container
 from ops.pebble import Layer
 
-from single_kernel_mongo.config.literals import WorkloadUser
+from single_kernel_mongo.config.literals import VERSIONS_FILE, WorkloadUser
 from single_kernel_mongo.config.models import CharmSpec
 
 
@@ -155,7 +156,7 @@ class WorkloadBase(ABC):  # pragma: nocover
         self.role = role
 
     @abstractmethod
-    def install(self) -> None:
+    def install(self, revision: str | None = None, retry_and_raise: bool = True) -> bool:
         """Installs the workload snap or raises an error.
 
         VM-only: on k8s, just returns None.
@@ -289,6 +290,17 @@ class WorkloadBase(ABC):  # pragma: nocover
         """
         ...
 
+    def snap_revision(self) -> str:
+        """The currently installed snap_revision."""
+        return ""
+
+    def load_toml_file(self, file: Path) -> dict[str, Any]:
+        """Loads a TOML file to a dictionary."""
+        if not file.exists():
+            return {}
+
+        return tomllib.loads(file.read_text())
+
     def get_version(self) -> str:
         """Get the workload version.
 
@@ -301,21 +313,6 @@ class WorkloadBase(ABC):  # pragma: nocover
             version = ""
         return version
 
-    def get_internal_revision(self) -> str:
-        """Get the internal revision.
-
-        Note: This should be removed soon because we're moving away from `charm
-        version` + `internal revision` to `charm_version+git hash`.
-
-        Returns:
-            String of charm internal revision
-        """
-        try:
-            version = Path("charm_version").read_text().strip()
-        except:  # noqa: E722
-            version = ""
-        return version
-
     def get_charm_revision(self) -> str:
         """Get the charm revision.
 
@@ -323,7 +320,8 @@ class WorkloadBase(ABC):  # pragma: nocover
             String of charm revision
         """
         try:
-            version = Path("charm_version").read_text().strip()
+            versions = self.load_toml_file(VERSIONS_FILE)
+            version = versions["charm"]
         except:  # noqa: E722
             version = ""
         return version

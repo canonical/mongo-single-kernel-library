@@ -23,7 +23,6 @@ class RelationNames(str, Enum):
     CONFIG_SERVER = "config-server"
     CLUSTER = "cluster"
     MONGOS_PROXY = "mongos_proxy"
-    UPGRADE_VERSION = "upgrade-version-a"
 
 
 class Scopes(str, Enum):

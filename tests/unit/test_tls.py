@@ -192,7 +192,7 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
     )
     mocker.patch(
         "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
-        return_value=[([new_cert], new_private_key), ([new_cert], new_private_key)],
+        side_effect=[([new_cert], new_private_key), ([new_cert], new_private_key)],
     )
 
     harness.set_leader(True)
@@ -298,11 +298,7 @@ def test_certificate_available_mongos_without_config_server_certificate_is_ignor
 def test_certificate_available_upgrade_in_progress_defer(
     harness: Harness[MongoTestCharm], mocker, relation_type, role
 ):
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     new_private_key = MagicMock()
     new_private_key.raw = "my_new_private_key"
     new_cert = get_certificate_mock(
@@ -510,11 +506,7 @@ def test_tls_relation_broken_log_upgrade_in_progress(
     harness: Harness[MongoTestCharm], mocker, caplog, relation_type, role
 ):
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
         return_value=None,

@@ -21,6 +21,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+import charm_refresh
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from ops.charm import RelationDepartedEvent
@@ -50,10 +51,10 @@ if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
-    from single_kernel_mongo.events.upgrades import UpgradeEventHandler
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
-    from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
+    from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
+    from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 
 logger = getLogger(__name__)
 
@@ -80,13 +81,14 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     config_manager: FileBasedConfigManager
     tls_manager: TLSManager
     state: CharmState
+    refresh: charm_refresh.Common | None
     mongo_manager: MongoManager
-    upgrade_manager: MongoUpgradeManager
+    upgrades_manager: MongoDBUpgradesManager
+    upgrades_status_manager: MongoDBUpgradesStatusManager
     ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
-    upgrade_events: UpgradeEventHandler
     ldap_events: LDAPEventHandler
 
     if TYPE_CHECKING:
@@ -221,6 +223,13 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             logger.info(
                 "Scaling down the application, no need to process removed relation in broken hook."
             )
+
+    @property
+    def refresh_in_progress(self) -> bool:
+        """Check if charm-refresh is currently in progress."""
+        # If charm_refresh.UnitTearDown or charm_refresh.PeerRelationNotReady
+        # we consider a refresh to be in progress.
+        return not self.refresh or self.refresh.in_progress
 
     def handle_licenses(self) -> None:
         """Pull / Push licenses.

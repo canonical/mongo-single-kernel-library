@@ -279,7 +279,7 @@ class TLSManager(ManagerStatusProtocol):
 
     def get_tls_management_state(self) -> TlsManagementState:
         """Pre-checks on TLS certificates management."""
-        if self.state.upgrade_in_progress:
+        if self.dependent.refresh_in_progress and self.initial_integration():
             return TlsManagementState.UPGRADE_IN_PROGRESS
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.config_server_name is None:
             return TlsManagementState.MONGOS_MISSING_CONFIG_SERVER
@@ -403,3 +403,11 @@ class TLSManager(ManagerStatusProtocol):
                 charm_statuses.append(TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value)
 
         return charm_statuses
+
+    def initial_integration(self) -> bool:
+        """Checks if the certificate available event runs for the first time or not."""
+        if not self.workload.exists(self.workload.paths.ext_pem_file):
+            return True
+        if not self.workload.exists(self.workload.paths.int_pem_file):
+            return True
+        return False

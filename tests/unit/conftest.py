@@ -1,10 +1,12 @@
+import pathlib
 from pathlib import Path
+from platform import platform
 
 import pytest
+import tomllib
 import yaml
 from ops.testing import Harness
 
-from single_kernel_mongo.config.literals import SNAP
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
 from tests.integration.helpers.types import Substrate
 
@@ -20,8 +22,55 @@ MONGOS_METADATA = str(
 )
 
 
+class _MockRefreshVM:
+    in_progress = False
+    next_unit_allowed_to_refresh = True
+    workload_allowed_to_start = True
+    app_status_higher_priority = None
+    unit_status_higher_priority = None
+
+    def __init__(self, _, /):
+        pass
+
+    def update_snap_revision(self):
+        pass
+
+    @property
+    def pinned_snap_revision(self):
+        with pathlib.Path("tests/charms/mongodb_test_charm/refresh_versions.toml").open(
+            "rb"
+        ) as file:
+            return tomllib.load(file)["snap"]["revisions"][platform.machine()]
+
+    def unit_status_lower_priority(self, *, workload_is_running=True):
+        return None
+
+
+@pytest.fixture(autouse=True)
+def mock_refresh(mocker):
+    mocker.patch("charm_refresh.Machines", new=_MockRefreshVM)
+    mocker.patch("charm_refresh.Kubernetes", new=_MockRefreshVM)
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MachineMongoDBRefresh",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.KubernetesMongoDBRefresh",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.MachineMongoDBRefresh",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.KubernetesMongoDBRefresh",
+        return_value=None,
+    )
+    yield
+
+
 @pytest.fixture
-def harness(substrate: Substrate, mongod_base_path: Path) -> Harness:
+def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harness:
     if substrate == "lxd":
         from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm as TestCharm
     else:
@@ -42,7 +91,6 @@ def harness(substrate: Substrate, mongod_base_path: Path) -> Harness:
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
-    harness.add_relation("upgrade-version-a", "upgrade-version-a")
     harness.begin()
 
     if substrate == "microk8s":
@@ -59,7 +107,7 @@ def harness(substrate: Substrate, mongod_base_path: Path) -> Harness:
 
 
 @pytest.fixture
-def mongos_harness(substrate: Substrate, mongos_base_path: Path) -> Harness:
+def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -> Harness:
     if substrate == "lxd":
         from tests.charms.mongos_test_charm.src.charm import MongosTestCharm as TestCharm
     else:
@@ -75,6 +123,7 @@ def mongos_harness(substrate: Substrate, mongos_base_path: Path) -> Harness:
     metadata = str(yaml.safe_load((mongos_base_path / "metadata.yaml").read_text()))
 
     harness = Harness(TestCharm, meta=metadata, actions=actions, config=config)
+
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
     harness.add_relation("router-peers", "router-peers")
@@ -108,9 +157,6 @@ def tenacity_wait(mocker):
 @pytest.fixture(autouse=True)
 def get_charm_internal_revision(mocker, substrate: Substrate):
     mocker.patch(
-        "single_kernel_mongo.core.workload.WorkloadBase.get_internal_revision", return_value="1"
-    )
-    mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.get_charm_revision", return_value="1"
     )
     mocker.patch(
@@ -121,10 +167,6 @@ def get_charm_internal_revision(mocker, substrate: Substrate):
         return_value=None,
     )
     if substrate == "microk8s":
-        mocker.patch(
-            "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-            new_callable=mocker.PropertyMock(return_value=False),
-        )
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.get_partition", return_value=0)
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.set_partition", return_value=0)
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.get_pod", return_value=0)
@@ -144,8 +186,8 @@ def mock_snap_cache(mocker):
         return_value=Snap(
             "charmed-mongodb",
             state=SnapState.Available,
-            channel=SNAP.channel,
-            revision=SNAP.revision,
+            channel="8/edge",
+            revision="133",
             confinement="classic",
             apps=None,
         ),

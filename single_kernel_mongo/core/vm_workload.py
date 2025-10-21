@@ -9,18 +9,18 @@ from collections.abc import Mapping
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
+from platform import machine
 from shutil import copyfile
 
 from ops import Container
-from tenacity import retry, retry_if_result, stop_after_attempt, wait_fixed
+from tenacity import retry, retry_if_exception_type, retry_if_result, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     CRON_FILE,
-    SNAP,
     VmUser,
 )
-from single_kernel_mongo.config.models import CharmSpec
+from single_kernel_mongo.config.models import SNAP_NAME, CharmSpec
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import (
     WorkloadExecError,
@@ -41,8 +41,7 @@ class VMWorkload(WorkloadBase):
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        self.snap = SNAP
-        self.mongod_snap = snap.SnapCache()[self.snap.name]
+        self.mongod_snap = snap.SnapCache()[SNAP_NAME]
 
     @property
     @override
@@ -186,23 +185,41 @@ class VMWorkload(WorkloadBase):
         stop=stop_after_attempt(20),
         wait=wait_fixed(1),
         reraise=True,
+        retry=retry_if_exception_type(WorkloadServiceError),
     )
-    def install(self) -> None:
-        """Loads the MongoDB snap from LP.
+    def install(self, revision: str | None = None, retry_and_raise: bool = True) -> bool:
+        """Install the charmed-mongodb snap from the snap store.
+
+        Args:
+            revision (str | None): the snap revision to install. Will be loaded from the
+                `refresh_versions.toml` file if None.
+            retry_and_raise (bool): whether to retry in case of errors. Will raise if the error
+                persists.
 
         Returns:
-            True if successfully installed. False otherwise.
+            True if successfully installed, False if errors occur and `retry_and_raise` is False.
         """
         try:
+            if not revision:
+                versions = self.load_toml_file(Path("refresh_versions.toml"))
+                revision = versions["snap"]["revisions"][machine()]
+
             self.mongod_snap.ensure(
-                snap.SnapState.Latest,
-                channel=self.snap.channel,
-                revision=self.snap.revision,
+                snap.SnapState.Present,
+                revision=revision,
             )
             self.mongod_snap.hold()
+            return True
         except snap.SnapError as err:
-            logger.error(f"Failed to install {self.snap.name}. Reason: {err}.")
-            raise WorkloadNotReadyError("Failed to install mongodb")
+            logger.error(f"Failed to install {SNAP_NAME}. Reason: {err}.")
+            if retry_and_raise:
+                raise WorkloadNotReadyError("Failed to install mongodb")
+            return False
+
+    @override
+    def snap_revision(self) -> str:
+        """The currently installed snap_revision."""
+        return self.mongod_snap.revision
 
     @override
     def setup_cron(self, lines: list[str]) -> None:  # pragma: nocover

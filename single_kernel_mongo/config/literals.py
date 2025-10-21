@@ -57,28 +57,9 @@ class InternalUsernames(str, Enum):
     LOGROTATE = "logrotate"
 
 
-class UnitState(str, Enum):
-    """Unit upgrade state."""
-
-    HEALTHY = "healthy"
-    RESTARTING = "restarting"  # Kubernetes only
-    UPGRADING = "upgrading"  # Machines only
-    OUTDATED = "outdated"  # Machines only
-
-
 SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
 
-
-@dataclass(frozen=True)
-class Snap:
-    """The Snap related information."""
-
-    name: str = "charmed-mongodb"
-    channel: str = "8/edge"
-    revision: str = "133"
-
-
-SNAP = Snap(channel="8/edge", revision="133")
+VERSIONS_FILE = Path("refresh_versions.toml")
 
 T = TypeVar("T", bound=str | int)
 

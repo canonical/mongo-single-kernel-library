@@ -66,7 +66,6 @@ class TLSEventsHandler(Object):
             private_key=self.manager.state.tls.client_private_key,
             refresh_events=[self.refresh_tls_certificates_event],
         )
-
         for cert_requires in [self.peer_certificate, self.client_certificate]:
             self.framework.observe(
                 cert_requires.on.certificate_available, self._on_certificate_available

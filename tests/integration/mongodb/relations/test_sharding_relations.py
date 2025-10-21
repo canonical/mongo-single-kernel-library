@@ -277,8 +277,9 @@ async def test_replication_mongos_relation(ops_test: OpsTest, substrate: Substra
         f"{MONGOS_APP_NAME}:cluster",
     )
 
+    # Ensure all gets cleaned up completely
     await ops_test.model.wait_for_idle(
-        apps=[SHARD_ONE_APP_NAME, SHARD_ONE_APP_NAME],
+        apps=[MONGOS_APP_NAME, SHARD_ONE_APP_NAME, REPLICATION_APP_NAME],
         idle_period=20,
         raise_on_blocked=False,
         timeout=TIMEOUT,
