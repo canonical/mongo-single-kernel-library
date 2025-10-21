@@ -15,7 +15,7 @@ Below are the minimum software and hardware requirements for running Charmed Mon
 * At least **60GB of available storage per host** for production deployments
 
 ## Architecture
-<!--TODO: verify if applicable to both VM and K8s -->
+<!--TODO: verify if this section is applicable to both VM and K8s -->
 
 This charm must run on architectures that support AVX.
 

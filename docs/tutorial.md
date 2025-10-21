@@ -10,7 +10,7 @@ This tutorial is meant as a very guided learning experience for someone new to c
 While this tutorial intends to guide you as you deploy Charmed MongoDB for the first time, it will be most  beneficial if:
 * You have some experience using a Linux-based CLI
 * You are familiar with MongoDB concepts, such as replica sets
-* Your computer fulfils the minimum system requirements <!--TODO: link to system requirements reference page -->
+* Your computer fulfils the {ref}`minimum system requirements <system-requirements>`
 
 ---
 
@@ -54,7 +54,6 @@ As with LXD, Juju is installed from a snap package:
 ```shell
 sudo snap install juju
 ```
-<!--TODO: I removed `--channel 3.1/stable`. Need confirmation if this is ok or if we want to install a version other than the latest stable -->
 
 Juju already has a built-in knowledge of LXD and how it works, so there is no additional setup or configuration needed. However, because Juju 3 is a a [strictly confined snap](https://snapcraft.io/docs/classic-confinement), and is not allowed to create a `~/.local/share` directory, we need to create it manually:
 
