@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
 from dacite import from_dict
 from data_platform_helpers.advanced_statuses.models import StatusObject
@@ -27,6 +28,7 @@ from pymongo.errors import (
     PyMongoError,
     ServerSelectionTimeoutError,
 )
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
@@ -34,6 +36,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
+    FailedToElectNewPrimaryError,
     MissingCredentialsError,
     SetPasswordError,
 )
@@ -97,9 +100,15 @@ class MongoManager(Object, ManagerStatusProtocol):
         Pass direct=True, when checking if a *single replica* is ready.
         Pass direct=False, when checking if the entire replica set is ready
         """
-        if not uri and self.state.is_role(MongoDBRoles.MONGOS):
-            uri = f"localhost:{MongoPorts.MONGOS_PORT.value}"
-        actual_uri = uri or "localhost"
+        port = (
+            MongoPorts.MONGOS_PORT.value
+            if self.state.is_role(MongoDBRoles.MONGOS)
+            else MongoPorts.MONGODB_PORT.value
+        )
+        params = self.state.operator_config.tls_config
+
+        actual_uri = uri or f"mongodb://localhost:{port}"
+        actual_uri = f"{actual_uri}/?{urlencode(params)}"
         with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
             return direct_mongo.is_ready
 
@@ -265,7 +274,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 return
 
             data_interface.set_endpoints(relation.id, ",".join(sorted(config.hosts)))
-            data_interface.set_uris(relation.id, config.uri)
+            data_interface.set_uris(relation.id, config.uri_without_tls)
 
             if not self.state.is_role(MongoDBRoles.MONGOS):
                 data_interface.set_replset(
@@ -390,10 +399,10 @@ class MongoManager(Object, ManagerStatusProtocol):
                 relation.id,
                 ",".join(sorted(config.hosts)),
             )
-        if config.uri != uris:
+        if config.uri_without_tls != uris:
             data_interface.set_uris(
                 relation.id,
-                config.uri,
+                config.uri_without_tls,
             )
         if config.database != database:
             data_interface.set_database(
@@ -421,8 +430,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             "password": password,
             "hosts": self.state.app_hosts,
             "roles": set(roles.split(",")),
-            "tls_external": False,
-            "tls_internal": False,
+            "tls_enabled": False,
             "port": self.state.host_port,
         }
         if not self.state.is_role(MongoDBRoles.MONGOS):
@@ -466,7 +474,7 @@ class MongoManager(Object, ManagerStatusProtocol):
 
             for member in config_hosts - replset_members:
                 logger.debug("Adding %s to replica set", member)
-                if not self.mongod_ready(uri=member):
+                if not self.mongod_ready(uri=f"mongodb://{member}"):
                     logger.debug("not reconfiguring: %s is not ready yet.", member)
                     raise NotReadyError
                 mongo.add_replset_member(member)
@@ -555,3 +563,34 @@ class MongoManager(Object, ManagerStatusProtocol):
             return [MongodStatuses.WAITING_RECONFIG.value]
 
         return charm_statuses
+
+    def set_feature_compatibility_version(self, feature_version: str) -> None:
+        """Sets the mongos feature compatibility version."""
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            config = self.state.mongo_config
+        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            config = self.state.mongos_config
+        else:
+            return
+        with MongoConnection(config) as mongos:
+            mongos.client.admin.command(
+                "setFeatureCompatibilityVersion", value=feature_version, confirm=True
+            )
+
+    def step_down_primary_and_wait_reelection(self):
+        """Steps down the current primary and waits for a new one to be elected."""
+        if len(self.state.internal_hosts) < 2:
+            logger.warning(
+                "No secondaries to become primary - upgrading primary without electing a new one, expect downtime."
+            )
+            return
+
+        old_primary = self.dependent.primary_unit_name  # type: ignore
+        with MongoConnection(self.state.mongo_config) as mongod:
+            mongod.step_down_primary()
+
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(1), reraise=True):
+            with attempt:
+                new_primary = self.dependent.primary_unit_name  # type: ignore
+                if new_primary == old_primary:
+                    raise FailedToElectNewPrimaryError()

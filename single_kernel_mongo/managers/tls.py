@@ -82,10 +82,11 @@ class TLSManager:
             key = parse_tls_file(param)
 
         sans = self.get_new_sans()
+        subject_name = self.state.get_subject_name()
         csr = generate_csr(
             private_key=key,
-            subject=self._get_subject_name(),
-            organization=self._get_subject_name(),
+            subject=subject_name,
+            organization=subject_name,
             sans=sans["sans_dns"],
             sans_ip=sans["sans_ips"],
         )
@@ -95,7 +96,7 @@ class TLSManager:
 
         label = "int" if internal else "ext"
 
-        self.state.unit_peer_data.update({f"{label}_certs_subject": self._get_subject_name()})
+        self.state.unit_peer_data.update({f"{label}_certs_subject": subject_name})
         return csr
 
     def generate_new_csr(self, internal: bool) -> tuple[bytes, bytes]:
@@ -113,10 +114,11 @@ class TLSManager:
         key = key_str.encode("utf-8")
         old_csr = old_csr_str.encode("utf-8")
         sans = self.get_new_sans()
+        subject_name = self.state.get_subject_name()
         new_csr = generate_csr(
             private_key=key,
-            subject=self._get_subject_name(),
-            organization=self._get_subject_name(),
+            subject=subject_name,
+            organization=subject_name,
             sans=sans["sans_dns"],
             sans_ip=sans["sans_ips"],
         )
@@ -147,6 +149,12 @@ class TLSManager:
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
             if host := self.state.unit_host:
                 sans["sans_ips"].append(host)
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and self.substrate == Substrates.VM
+            and not self.state.app_peer_data.external_connectivity
+        ):
+            sans["sans_dns"].append(f"{self.state.paths.socket_path}")
 
         return sans
 
@@ -210,6 +218,7 @@ class TLSManager:
     def enable_certificates_for_unit(self):
         """Enables the new certificates for this unit."""
         self.delete_certificates_from_workload()
+
         self.push_tls_files_to_workload()
 
         if not self.state.db_initialised and self.state.is_role(MongoDBRoles.MONGOS):
@@ -239,6 +248,15 @@ class TLSManager:
             if self.workload.exists(file):
                 self.workload.delete(file)
 
+        if self.substrate == Substrates.VM:
+            return
+
+        local_keyfile_file = self.state.paths.ext_pem_file
+        local_ca_file = self.state.paths.ext_ca_file
+        for file in (local_keyfile_file, local_ca_file):
+            if file.exists() and file.is_file():
+                file.unlink()
+
     def push_tls_files_to_workload(self) -> None:
         """Pushes the TLS files on the workload."""
         external_ca, external_pem = self.get_tls_files(internal=False)
@@ -252,6 +270,28 @@ class TLSManager:
         if internal_pem is not None:
             self.workload.write(self.workload.paths.int_pem_file, internal_pem)
 
+        if self.substrate == Substrates.VM:
+            return
+
+        if external_ca:
+            self.state.paths.ext_ca_file.write_text(external_ca)
+            self.state.paths.ext_ca_file.chmod(600)
+        if external_pem:
+            self.state.paths.ext_pem_file.write_text(external_pem)
+            self.state.paths.ext_ca_file.chmod(600)
+
+    def is_internal(self, certificate_signing_request: str) -> bool:
+        """Checks if the CSR is internal or external."""
+        int_csr = self.state.tls.get_secret(internal=True, label_name=SECRET_CSR_LABEL)
+        ext_csr = self.state.tls.get_secret(internal=False, label_name=SECRET_CSR_LABEL)
+        if ext_csr and certificate_signing_request.rstrip() == ext_csr.rstrip():
+            logger.debug("The external TLS certificate available.")
+            return False
+        if int_csr and certificate_signing_request.rstrip() == int_csr.rstrip():
+            logger.debug("The internal TLS certificate available.")
+            return True
+        raise UnknownCertificateAvailableError
+
     def set_certificates(
         self,
         certificate_signing_request: str,
@@ -260,16 +300,7 @@ class TLSManager:
         ca: str | None,
     ):
         """Sets the certificates."""
-        int_csr = self.state.tls.get_secret(internal=True, label_name=SECRET_CSR_LABEL)
-        ext_csr = self.state.tls.get_secret(internal=False, label_name=SECRET_CSR_LABEL)
-        if ext_csr and certificate_signing_request.rstrip() == ext_csr.rstrip():
-            logger.debug("The external TLS certificate available.")
-            internal = False
-        elif int_csr and certificate_signing_request.rstrip() == int_csr.rstrip():
-            logger.debug("The internal TLS certificate available.")
-            internal = True
-        else:
-            raise UnknownCertificateAvailableError
+        internal = self.is_internal(certificate_signing_request)
 
         self.state.tls.set_secret(
             internal,
@@ -321,18 +352,6 @@ class TLSManager:
 
         return False
 
-    def _get_subject_name(self) -> str:
-        """Generate the subject name for CSR."""
-        # In sharded MongoDB deployments it is a requirement that all subject names match across
-        # all cluster components. The config-server name is the source of truth across mongos and
-        # shard deployments.
-        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            # until integrated with config-server use current app name as
-            # subject name
-            return self.state.config_server_name or self.charm.app.name
-
-        return self.charm.app.name
-
     def update_tls_sans(self) -> None:
         """Emits a certificate expiring event when sans in current certificates are out of date.
 
@@ -367,3 +386,11 @@ class TLSManager:
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,
             )
+
+    def initial_integration(self) -> bool:
+        """Checks if the certificate available event runs for the first time or not."""
+        if not self.workload.exists(self.workload.paths.ext_pem_file):
+            return True
+        if not self.workload.exists(self.workload.paths.int_pem_file):
+            return True
+        return False

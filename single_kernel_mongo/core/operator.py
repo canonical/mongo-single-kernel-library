@@ -21,6 +21,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, TypeAlias
 
+import charm_refresh
 import jinja2
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
@@ -30,13 +31,12 @@ from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
     OS_REQUIREMENTS,
-    SNAP,
     TRUST_STORE_PATH,
     Scope,
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import THP_CONFIG, CharmSpec, LogRotateConfig
+from single_kernel_mongo.config.models import SNAP_NAME, THP_CONFIG, CharmSpec, LogRotateConfig
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -60,11 +60,11 @@ if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
-    from single_kernel_mongo.events.upgrades import UpgradeEventHandler
     from single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl import Config
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
-    from single_kernel_mongo.managers.upgrade import MongoUpgradeManager
+    from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
+    from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 
 logger = getLogger(__name__)
 
@@ -91,13 +91,14 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     config_manager: FileBasedConfigManager
     tls_manager: TLSManager
     state: CharmState
+    refresh: charm_refresh.Common | None
     mongo_manager: MongoManager
-    upgrade_manager: MongoUpgradeManager
+    upgrades_manager: MongoDBUpgradesManager
+    upgrades_status_manager: MongoDBUpgradesStatusManager
     ldap_manager: LDAPManager
     workload: MainWorkloadType
     client_events: DatabaseEventsHandler
     tls_events: TLSEventsHandler
-    upgrade_events: UpgradeEventHandler
     ldap_events: LDAPEventHandler
     sysctl_config: Config
 
@@ -228,6 +229,13 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
                 "Scaling down the application, no need to process removed relation in broken hook."
             )
 
+    @property
+    def refresh_in_progress(self) -> bool:
+        """Check if charm-refresh is currently in progress."""
+        # If charm_refresh.UnitTearDown or charm_refresh.PeerRelationNotReady
+        # we consider a refresh to be in progress.
+        return not self.refresh or self.refresh.in_progress
+
     def handle_licenses(self) -> None:
         """Pull / Push licenses.
 
@@ -325,7 +333,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         template = jinja2.Template(data)
 
         rendered_template = template.render(
-            service_file=f"snap.{SNAP.name}.{self.workload.service}.service"
+            service_file=f"snap.{SNAP_NAME}.{self.workload.service}.service"
         )
         self.workload.write(path=THP_CONFIG.service_file_path, content=rendered_template)
         daemon_reload()
@@ -355,3 +363,15 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             # set at kernel level.
             logger.warning("kernel params cannot be set. Is the machine running on a container?")
             service_disable(THP_CONFIG.service_name)
+
+    def build_local_tls_directory(self) -> None:
+        """On Kubernetes, we need the local configuration directory.
+
+        This will store the certificates locally, which allows to construct the
+        same URIS to connect locally and on the sidecar container running
+        mongodb.
+        """
+        if self.substrate == Substrates.VM:
+            return
+
+        Path(self.state.paths.conf_path).mkdir(exist_ok=True)
