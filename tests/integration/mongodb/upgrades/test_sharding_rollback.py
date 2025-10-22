@@ -46,7 +46,7 @@ async def test_build_and_deploy(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="6/stable",
+        channel="8/edge",
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -92,7 +92,7 @@ async def test_rollback_on_config_server(
     # await ops_test.model.applications[CONFIG_SERVER_APP_NAME].refresh(
     #     channel="6/edge", switch="ch:mongodb"
     # )
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/edge")
+    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/stable")
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],

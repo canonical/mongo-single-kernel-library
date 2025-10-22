@@ -12,6 +12,7 @@ from ...helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+    check_app_status,
     stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
@@ -29,10 +30,7 @@ from ...helpers.sharding import (
     integrate_sharding_components,
 )
 from ...helpers.types import Substrate
-from ...helpers.upgrade import (
-    assert_successful_run_upgrade_sequence,
-    refresh_with_juju,
-)
+from ...helpers.upgrade import assert_successful_run_upgrade_sequence, refresh_with_juju
 
 
 @pytest.mark.abort_on_fail
@@ -52,7 +50,7 @@ async def test_build_and_deploy(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="6/stable",
+        channel="8/edge",
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -114,15 +112,15 @@ async def test_rollback_on_shard_and_config_server(
     asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="blocked",
+            message=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
         ),
     )
 
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, channel="6/edge")
+    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, channel="8/edge")
 
     # verify no writes were skipped during upgrade process
     shard_one_expected_writes = await stop_continous_writes(

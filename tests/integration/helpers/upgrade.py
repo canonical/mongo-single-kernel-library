@@ -4,11 +4,13 @@
 
 import logging
 
+import tomllib
 from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
     MONGOD_PORT,
     OPERATOR_USERNAME,
+    check_app_status,
     execute_on_mongod,
     find_unit,
     get_address_of_unit,
@@ -27,11 +29,12 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
         unit_name,
         "sudo",
         "cat",
-        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
+        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/refresh_versions.toml",
     )
 
     assert return_code == 0
-    return output.strip()
+    data = tomllib.loads(output.strip())
+    return data["workload"]
 
 
 async def refresh_charm(
@@ -53,6 +56,13 @@ async def assert_successful_run_upgrade_sequence(
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     leader_id = get_unit_id(leader_unit.name)
 
+    mongodb_application = ops_test.model.applications[app_name]
+    refresh_order = sorted(
+        mongodb_application.units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
+
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
     assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
@@ -63,6 +73,20 @@ async def assert_successful_run_upgrade_sequence(
     # TODO future work, resolve flickering status of app
     async with ops_test.fast_forward(fast_interval="120s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
+
+    if "incompatible" in ops_test.model.applications[app_name].status_message:
+        logger.info("Upgrade is blocked due to incompatibility")
+
+        logger.info(f"Continue refresh on unit {refresh_order[0].name}")
+        logger.info("Running `force-refresh-start` action with check-compatibility=false")
+        force_refresh_action = await refresh_order[0].run_action(
+            "force-refresh-start",
+            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+        )
+        force_refresh_response = await force_refresh_action.wait()
+        assert force_refresh_response.results.get("return-code") == 0, "action failed"
+
+    await check_app_status(ops_test, app_name, status="blocked")
 
     # resume upgrade only needs to be ran when:
     # 1. there are more than one units in the application

@@ -6,18 +6,20 @@ import dataclasses
 import json
 import logging
 import os
-import re
 import shutil
 import subprocess
 import time
 import zipfile
 from logging import getLogger
 from pathlib import Path
+from platform import machine
 from typing import Any
 
 import boto3
 import botocore.exceptions
 import pytest
+import tomli
+import tomli_w
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
@@ -236,37 +238,25 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     It works by updating the workload version and the version of the snap to install.
     That way, it will fail the `refresh_incompatible` check.
     """
-    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongodb_fault_charm.charm"
     # Copy the correct charm to a new destination
     shutil.copy(mongodb_charm, fault_charm)
 
     # What is the current workload version in the charm
-    initial_version_path = mongod_base_path / Path("workload_version")
-    workload_version = initial_version_path.read_text().strip()
+    initial_version_path = mongod_base_path / Path("refresh_versions.toml")
+    initial_version_data = tomli.loads(initial_version_path.read_text().strip())
+    workload_version = initial_version_data["workload"]
+    snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-
-    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
-        with charm_zip.open(literals_path) as literals_file:
-            file_data = literals_file.read().decode().split("\n")
-
-    # What is the revision N of the snap that we're supposed to install if we're a VM charm
-    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
-
-    # Update the read content of the file with a computed value for the snap revision (N - 1)
-    for index, line in enumerate(file_data):
-        if entry := regex.findall(line):
-            current_rev = entry[0]
-            new_rev = int(current_rev) - 1
-            new_line = line.replace(current_rev, str(new_rev))
-            file_data[index] = new_line
-            break
+    initial_version_data["workload"] = f"{major -1}.{minor}.{patch}+testrollback"
+    new_snap_revision = int(snap_revision) - 1 if snap_revision else None
+    if new_snap_revision:
+        initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
     # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
-        charm_zip.writestr(literals_path, "\n".join(file_data))
-        charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
+        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(initial_version_data))
 
     yield fault_charm
 
@@ -278,38 +268,26 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     It works by updating the workload version and the version of the snap to install.
     That way, it will fail the `refresh_incompatible` check.
     """
-    literals_path = "venv/lib/python3.10/site-packages/single_kernel_mongo/config/literals.py"
     fault_charm = f"{tmp_path}/mongos_fault_charm.charm"
+
     # Copy the correct charm to a new destination
     shutil.copy(mongos_charm, fault_charm)
 
     # What is the current workload version in the charm
-    initial_version_path = mongos_base_path / Path("workload_version")
-    workload_version = initial_version_path.read_text().strip()
+    initial_version_path = mongos_base_path / Path("refresh_versions.toml")
+    initial_version_data = tomli.loads(initial_version_path.read_text().strip())
+    workload_version = initial_version_data["workload"]
+    snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-
-    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
-        with charm_zip.open(literals_path) as literals_file:
-            file_data = literals_file.read().decode().split("\n")
-
-    # What is the revision N of the snap that we're supposed to install if we're a VM charm
-    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
-
-    # Update the read content of the file with a computed value for the snap revision (N - 1)
-    for index, line in enumerate(file_data):
-        if entry := regex.findall(line):
-            current_rev = entry[0]
-            new_rev = int(current_rev) - 1
-            new_line = line.replace(current_rev, str(new_rev))
-            file_data[index] = new_line
-            break
+    initial_version_data["workload"] = f"{major -1}.{minor}.{patch}+testrollback"
+    new_snap_revision = int(snap_revision) - 1 if snap_revision else None
+    if new_snap_revision:
+        initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
     # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
-        charm_zip.writestr(literals_path, "\n".join(file_data))
-        charm_zip.writestr("workload_version", f"{int(major) - 1}.{minor}.{patch}+testrollback")
-
+        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(initial_version_data))
     yield fault_charm
 
 

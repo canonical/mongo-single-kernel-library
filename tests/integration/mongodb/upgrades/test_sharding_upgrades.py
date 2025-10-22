@@ -47,7 +47,7 @@ async def test_build_and_deploy(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
-        channel="6/stable",
+        channel="8/edge",
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -175,6 +175,7 @@ async def test_pre_upgrade_check_failure(
         hostname = await unit_hostname(ops_test, non_leader_unit.name)
     else:
         hostname = non_leader_unit.name
+
     cut_network_from_unit(ops_test, substrate, hostname)
 
     for sharding_component in CLUSTER_COMPONENTS:

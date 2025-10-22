@@ -7,17 +7,13 @@ import time
 from pathlib import Path
 
 import pytest
+import tomllib
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    find_unit,
-    get_app_name,
-    get_juju_status,
-)
+from ...helpers.common import DEPLOYMENT_TIMEOUT, get_app_name, get_juju_status
 from ...helpers.types import Substrate
-from ...helpers.upgrade import get_workload_version
+from ...helpers.upgrade import get_workload_version, refresh_with_juju
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +30,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 
     await ops_test.model.deploy(
         mongodb_charm_name,
-        channel="6/stable",
+        channel="8/edge",
         num_units=3,
         application_name=base_app_name,
         trust=(substrate == "microk8s"),
@@ -55,13 +51,19 @@ async def test_rollback(
     faulty_mongodb_upgrade_charm: Path,
 ) -> None:
     app_name = await get_app_name(ops_test)
+    mongodb_application = ops_test.model.applications[app_name]
 
     resources = mongod_resource if substrate == "microk8s" else None
 
-    mongodb_application = ops_test.model.applications[app_name]
+    refresh_order = sorted(
+        mongodb_application.units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
 
-    initial_version_path = mongod_base_path / Path("workload_version")
-    initial_version = initial_version_path.read_text().strip()
+    initial_version_path = mongod_base_path / "refresh_versions.toml"
+    data = tomllib.loads(initial_version_path.read_text())
+    initial_version = data["workload"]
 
     await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm, resources=resources)
     logger.info("Wait for refresh to fail")
@@ -72,25 +74,23 @@ async def test_rollback(
         wait=wait_fixed(10),
     ):
         with attempt:
-            assert "Refresh incompatible" in get_juju_status(
+            assert "incompatible" in get_juju_status(
                 ops_test.model.name, app_name
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
-    await mongodb_application.refresh(path=mongodb_charm)
+    await refresh_with_juju(ops_test, app_name, "8/edge")
+
     # sleep to ensure that active status from before re-refresh does not affect below check
-
     time.sleep(15)
-    await ops_test.model.block_until(
-        lambda: all(unit.workload_status == "active" for unit in mongodb_application.units)
-        and all(unit.agent_status == "idle" for unit in mongodb_application.units),
-        wait_period=15,
-    )
+    await ops_test.model.wait_for_idle(apps=[app_name], idle_period=30)
+    if "incompatible" in mongodb_application.status_message:
+        # will be marked "incompatible" if rollback is not to the same revision as initially
+        # deployed
+        logger.info("Rollback is blocked due to incompatibility")
 
-    logger.info("Running resume-refresh on the leader unit")
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    action = await leader_unit.run_action("resume-refresh")
-    await action.wait()
+        logger.info("Running `force-refresh-start` action with check-compatibility=false")
+        await refresh_order[0].run_action("force-refresh-start", **{"check-compatibility": False})
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(
