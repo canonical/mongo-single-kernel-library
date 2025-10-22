@@ -46,6 +46,11 @@ def add_relation_with_no_version(harness: Harness[MongoTestCharm]):
 def test_get_invalid_relation(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.cross_app_version_checker.version = CHARM_VERSION
 
+    mocker.patch(
+        "single_kernel_mongo.state.config_server_state.AppShardingComponentState.has_received_credentials",
+        return_value=True,
+    )
+
     add_invalid_relation(harness, deployment=LOCAL_DEPLOYMENT)
     add_valid_relation(harness, deployment=LOCAL_DEPLOYMENT)
     invalid_version = harness.charm.operator.cross_app_version_checker.get_invalid_versions()

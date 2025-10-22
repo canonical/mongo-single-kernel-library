@@ -25,4 +25,5 @@ def test_mongo_paths(role: CharmSpec):
     assert paths.socket_path.parent == Path(role.paths["VAR"])
     assert paths.common_path == Path(role.paths["VAR"]).parent
 
-    assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_files)
+    assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_peer_files)
+    assert all(path.parent == Path(role.paths["CONF"]) for path in paths.tls_client_files)

@@ -34,6 +34,13 @@ class Scope(str, Enum):
     UNIT = "unit"
 
 
+class TLSType(str, Enum):
+    """TLS types."""
+
+    PEER = "peer"
+    CLIENT = "client"
+
+
 class MongoPorts(IntEnum):
     """The default Mongo ports."""
 

@@ -162,8 +162,10 @@ class ShardEventHandler(Object):
         """SecretChanged event handler, which is used to propagate the updated passwords."""
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (NotReadyError, FailedToUpdateCredentialsError):
+        except (NotReadyError, FailedToUpdateCredentialsError, DeferrableFailedHookChecksError):
             event.defer()
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except WaitingForSecretsError:
             logger.info("Missing secrets, ignoring")
 

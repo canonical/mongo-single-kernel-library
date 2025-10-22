@@ -136,6 +136,11 @@ class ClusterMongosEventHandler(Object):
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
         self.manager.set_relation_created_status()
+        # Edge condition: mongos was integrated with the certificates provider
+        # before being integrated with the config-server. We trigger the refresh
+        # of the certificates to use the config-server as CSR subject.
+        if self.manager.state.peer_tls_relation or self.manager.state.client_tls_relation:
+            self.dependent.tls_events.refresh_certificates()
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Database Created event handler.

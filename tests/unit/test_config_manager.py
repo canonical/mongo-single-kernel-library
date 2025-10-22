@@ -44,8 +44,8 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = role
-    mock_state.tls.internal_enabled = False
-    mock_state.tls.external_enabled = False
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -62,7 +62,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     log_options = manager.log_options
     audit_options = manager.audit_options
     auth_parameter = manager.auth_parameter
-    tls_parameters = manager.tls_parameters
+    client_tls_parameters = manager.client_tls_parameters
 
     all_params = manager.build_config()
 
@@ -101,7 +101,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
         }
     }
-    assert tls_parameters == {}
+    assert client_tls_parameters == {}
 
     assert (
         all_params
@@ -162,8 +162,8 @@ def test_mongodb_ldap_config(mocker):
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.is_role = lambda x: False
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
-    mock_state.tls.internal_enabled = False
-    mock_state.tls.external_enabled = False
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -191,8 +191,8 @@ def test_mongos_config_manager(mocker):
     mock_state.cluster.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
-    mock_state.tls.internal_enabled = False
-    mock_state.tls.external_enabled = False
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
     mock_state.ldap.is_ready = lambda: False
     workload = VMMongosWorkload(VM_MONGOS, None)
     config = MongosCharmConfig()
@@ -207,7 +207,7 @@ def test_mongos_config_manager(mocker):
     log_options = manager.log_options
     audit_options = manager.audit_options
     auth_parameter = manager.auth_parameter
-    tls_parameters = manager.tls_parameters
+    client_tls_parameters = manager.client_tls_parameters
     config_server_db_parameter = manager.config_server_db_parameter
 
     all_params = manager.build_config()
@@ -244,7 +244,7 @@ def test_mongos_config_manager(mocker):
             "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
         }
     }
-    assert tls_parameters == {}
+    assert client_tls_parameters == {}
     assert config_server_db_parameter == {"sharding": {"configDB": "mongodb://config-server-url"}}
 
     assert all_params == {
@@ -287,8 +287,8 @@ def test_mongodb_config_manager_tls_enabled(mocker):
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
     mock_state.get_subject_name = lambda: "mongodb"
-    mock_state.tls.internal_enabled = True
-    mock_state.tls.external_enabled = True
+    mock_state.tls.peer_enabled = True
+    mock_state.tls.client_enabled = True
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -304,16 +304,20 @@ def test_mongodb_config_manager_tls_enabled(mocker):
         },
         "net": {
             "tls": {
+                "mode": "preferTLS",
                 "allowInvalidCertificates": True,
-                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
+                "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+                "CAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
                 "clusterFile": f"{VM_PATH['mongod']['CONF']}/internal-cert.pem",
+                "clusterCAFile": f"{VM_PATH['mongod']['CONF']}/internal-ca.crt",
+                "disabledProtocols": "TLS1_0,TLS1_1",
                 "clusterAuthX509": {
                     "attributes": "O=mongodb",
                 },
             }
         },
     }
-    assert manager.tls_parameters == {
+    assert manager.client_tls_parameters == {
         "net": {
             "tls": {
                 "CAFile": f"{VM_PATH['mongod']['CONF']}/external-ca.crt",
@@ -334,7 +338,7 @@ def test_mongos_default_config_server(mocker):
     mock_state.cluster.config_server_uri = ""
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
-    mock_state.tls.internal_enabled = False
+    mock_state.tls.peer_enabled = False
     mock_state.tls.externalenabled = False
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongosCharmConfig()

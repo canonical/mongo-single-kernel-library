@@ -5,29 +5,29 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     TIMEOUT,
     check_status_detail,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
+    MONGOS_CLUSTER_COMPONENTS,
     assert_mongos_tls_disabled,
     assert_mongos_tls_enabled,
     build_cluster,
     deploy_cluster_components,
     get_k8s_public_ip,
     get_sans_ips,
-    integrate_cluster_with_tls,
     rotate_and_verify_certs,
     toggle_tls_mongos,
 )
-from ..helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
+    integrate_apps_with_tls,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -68,16 +68,13 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can enable TLS."""
-    await ops_test.model.integrate(
-        f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_apps_with_tls(ops_test, applications=[MONGOS_APP_NAME])
 
     await wait_for_mongodb_units_blocked(
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        status="Invalid peer-certificates relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -86,10 +83,17 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
+        message="Peer TLS must be disabled in mongos, since it is disabled on the config-server in the cluster relation.",
     )
 
-    await integrate_cluster_with_tls(ops_test)
+    await integrate_apps_with_tls(ops_test, applications=MONGOS_CLUSTER_COMPONENTS)
+    await ops_test.model.wait_for_idle(
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
+        idle_period=20,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+        status="active",
+    )
 
     await assert_mongos_tls_enabled(ops_test, substrate)
 
@@ -141,20 +145,20 @@ async def test_mongos_rotate_certs(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos charm can disable TLS."""
     await toggle_tls_mongos(ops_test, enable=False)
-    await assert_mongos_tls_disabled(ops_test, substrate)
-
     await ops_test.model.wait_for_idle(
-        apps=[MONGOS_APP_NAME],
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME, TLS_CERTIFICATES_APP_NAME],
         idle_period=60,
         timeout=TIMEOUT,
         raise_on_blocked=False,
     )
 
+    await assert_mongos_tls_disabled(ops_test, substrate)
+
     await wait_for_mongodb_units_blocked(
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        status="Missing peer-certificates relation.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -162,7 +166,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
+        message="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
     )
 
 
@@ -213,7 +217,7 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         substrate,
         MONGOS_APP_NAME,
-        status="The mongos CA and Config-Server CA don't match.",
+        status="Peer CA mismatch.",
         timeout=TIMEOUT,
         subordinate=(substrate == "lxd"),
     )
@@ -222,5 +226,5 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         MONGOS_APP_NAME,
         status="blocked",
-        message="The mongos CA and Config-Server CA don't match.",
+        message="The mongos peer CA and Config-Server peer CA don't match.",
     )
