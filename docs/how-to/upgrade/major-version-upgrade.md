@@ -57,7 +57,7 @@ Now, create a backup of the initial cluster, and note the `<backup-id>`. Wait fo
 juju run <app>/leader create-backup
 ```
 
-{ref}`Log into your MongoDB 7 cluster <access-a-replica-set>` and set the feature compatibility version to `6.0`. This will allow a safe restore to the new cluster.
+Log into your MongoDB 7 cluster and set the feature compatibility version to `6.0`. This will allow a safe restore to the new cluster.
 
 ```javascript
 db.adminCommand(
@@ -118,7 +118,7 @@ Now, create a backup of the MongoDB 7 cluster, and note the `<backup-id>`. Wait 
 juju run <app>-seven/leader create-backup
 ```
 
-{ref}`Log into your cluster <access-a-replica-set>` and set the feature compatibility version to `7.0`. This will allow a safe restore to the new cluster.
+Log into your cluster and set the feature compatibility version to `7.0`. This will allow a safe restore to the new cluster.
 
 ```javascript
 db.adminCommand(
