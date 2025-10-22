@@ -10,7 +10,6 @@ from pytest_operator.plugin import OpsTest
 from ..helpers.common import (
     MONGOD_PORT,
     OPERATOR_USERNAME,
-    check_app_status,
     execute_on_mongod,
     find_unit,
     get_address_of_unit,
@@ -86,7 +85,7 @@ async def assert_successful_run_upgrade_sequence(
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
-    await check_app_status(ops_test, app_name, status="blocked")
+    await ops_test.model.wait_for_idle(apps=[app_name], raise_on_blocked=False)
 
     # resume upgrade only needs to be ran when:
     # 1. there are more than one units in the application
