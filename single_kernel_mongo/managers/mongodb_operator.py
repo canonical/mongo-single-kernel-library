@@ -13,10 +13,7 @@ import charm_refresh
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
-from data_platform_helpers.version_check import (
-    CrossAppVersionChecker,
-    get_charm_revision,
-)
+from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
@@ -25,7 +22,6 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     FEATURE_VERSION,
-    OS_REQUIREMENTS,
     CharmKind,
     MongoPorts,
     Scope,
@@ -53,17 +49,12 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
-from single_kernel_mongo.events.backups import (
-    BackupEventsHandler,
-)
+from single_kernel_mongo.events.backups import BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
-from single_kernel_mongo.events.sharding import (
-    ConfigServerEventHandler,
-    ShardEventHandler,
-)
+from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
@@ -103,10 +94,7 @@ from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import (
-    is_valid_ldap_options,
-    is_valid_ldapusertodnmapping,
-)
+from single_kernel_mongo.utils.helpers import is_valid_ldap_options, is_valid_ldapusertodnmapping
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     BackupUser,
@@ -340,15 +328,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
-        self.dependent._configure_workloads()
-        self.dependent.start_charm_services()
+        self._configure_workloads()
+        self.start_charm_services()
 
         self.state.unit_peer_data.current_revision = self.cross_app_version_checker.version
 
-        if self.dependent.name == CharmKind.MONGOD:
-            self.dependent._restart_related_services()
+        if self.name == CharmKind.MONGOD:
+            self._restart_related_services()
 
-        if self.dependent.mongo_manager.mongod_ready():
+        if self.mongo_manager.mongod_ready():
             try:
                 self.upgrades_manager.wait_for_cluster_healthy()
                 refresh.next_unit_allowed_to_refresh = True
@@ -1012,19 +1000,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadExecError as e:
             logger.exception(f"Failed to open port: {e}")
             raise
-
-    def _set_os_config(self) -> None:
-        """Sets sysctl config for mongodb."""
-        try:
-            self.sysctl_config.configure(OS_REQUIREMENTS)
-        except (sysctl.ApplyError, sysctl.ValidationError, sysctl.CommandError) as e:
-            # we allow events to continue in the case that we are not able to correctly configure
-            # sysctl config, since we can  still run the workload with wrong sysctl parameters
-            # even if it is not optimal.
-            logger.error(f"Error setting values on sysctl: {e.message}")
-            # containers share the kernel with the host system, and some sysctl parameters are
-            # set at kernel level.
-            logger.warning("sysctl params cannot be set. Is the machine running on a container?")
 
     @property
     def primary_unit_name(self) -> str | None:

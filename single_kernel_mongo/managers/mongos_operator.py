@@ -46,6 +46,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
+from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
@@ -152,6 +153,7 @@ class MongosOperator(OperatorProtocol, Object):
             ExternalRequirerRelations.LDAP,
             ExternalRequirerRelations.LDAP_CERT,
         )
+        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)

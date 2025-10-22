@@ -93,9 +93,7 @@ PBM_RESTART_DELAY = 5
 FEATURE_VERSION = "8.0"
 
 
-OS_REQUIREMENTS = {
-    "vm.max_map_count": "262144",
-}
+OS_REQUIREMENTS = {"vm.max_map_count": "262144", "vm.overcommit_memory": "1"}
 
 TRUST_STORE_PATH = Path("/usr/local/share/ca-certificates")
 
