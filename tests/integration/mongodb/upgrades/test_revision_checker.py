@@ -7,12 +7,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.sharding import CONFIG_SERVER_REL_NAME, SHARD_REL_NAME
 
-from ...helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    deploy_charm,
-    wait_for_mongodb_units_blocked,
-)
+from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT, deploy_charm
 from ...helpers.types import Substrate
 
 LOCAL_SHARD_APP_NAME = "local-shard"
@@ -92,11 +87,10 @@ async def test_local_config_server_reports_remote_shard(ops_test: OpsTest) -> No
         wait_for_at_least_units=1,  # Otherwise wait_for_idle fail because of app status
     )
 
-    config_server_unit = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME].units[0]
+    config_server_app = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME]
 
     assert (
-        "Waiting for shards to upgrade/downgrade to revision"
-        in config_server_unit.workload_status_message
+        "Waiting for shards to upgrade/downgrade to revision" in config_server_app.status_message
     ), "Config server does not correctly report mismatch in revision"
 
 
@@ -110,10 +104,8 @@ async def test_local_shard_reports_remote_config_server(
         f"{REMOTE_CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        LOCAL_SHARD_APP_NAME,
-        timeout=TIMEOUT,
-        status="is not up-to date with config-server",
-    )
+    local_shard_app = ops_test.model.applications[LOCAL_SHARD_APP_NAME]
+
+    assert (
+        "is not up-to data with config-server" in local_shard_app.status_message
+    ), "Shard does not correctly report mismatch in revision"
