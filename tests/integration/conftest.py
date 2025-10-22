@@ -249,7 +249,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-    initial_version_data["workload"] = f"{major -1}.{minor}.{patch}+testrollback"
+    initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
     if new_snap_revision:
         initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"
@@ -280,7 +280,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-    initial_version_data["workload"] = f"{major -1}.{minor}.{patch}+testrollback"
+    initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
     if new_snap_revision:
         initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"

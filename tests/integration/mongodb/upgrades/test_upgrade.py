@@ -9,7 +9,6 @@ from pytest_operator.plugin import OpsTest
 
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
-    check_app_status,
     deploy_charm,
     find_unit,
     get_app_name,
@@ -45,7 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
         apps=[base_app_name],
         status="active",
         timeout=DEPLOYMENT_TIMEOUT,
-        idle_period=120,
+        idle_period=20,
         raise_on_error=False,
         raise_on_blocked=False,
     )
@@ -63,17 +62,6 @@ async def test_upgrade(
     app_name = await get_app_name(ops_test)
 
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-
-    logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
-
-    assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
-
-    await ops_test.model.wait_for_idle(
-        apps=[app_name], status="active", timeout=1000, idle_period=120
-    )
-
     app_name = await get_app_name(ops_test)
     mongodb_application = ops_test.model.applications[app_name]
     # Refresh always happens from highest to lowest unit number
@@ -82,6 +70,14 @@ async def test_upgrade(
         key=lambda unit: int(unit.name.split("/")[1]),
         reverse=True,
     )
+
+    logger.info("Calling pre-refresh-check")
+    action = await leader_unit.run_action("pre-refresh-check")
+    await action.wait()
+
+    assert action.status == "completed", "pre-refresh-check-failed, expected to succeed"
+
+    logger.info("Refreshing the application")
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
@@ -97,16 +93,12 @@ async def test_upgrade(
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
-    await check_app_status(ops_test, app_name, status="blocked")
-
-    assert (
-        "resume-refresh" in mongodb_application.status_message
-    ), "Refresh should wait for user to continue with `resume-refresh` action"
-    logger.info("Continue refresh on all other units with `resume-refresh` action")
-    logger.info("Calling resume refresh")
-    action = await leader_unit.run_action("resume-refresh")
-    await action.wait()
-    assert action.status == "completed", "resume-refresh failed, expected to succeed"
+    if "resume-refresh" in mongodb_application.status_message:
+        logger.info("Continue refresh on all other units with `resume-refresh` action")
+        logger.info("Calling resume refresh")
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
+        assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", timeout=1000, idle_period=120

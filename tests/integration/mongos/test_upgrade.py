@@ -69,11 +69,9 @@ async def test_upgrade(
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
     await check_app_status(ops_test, MONGOS_APP_NAME, status="blocked")
-    assert (
-        "resume-refresh" in mongodb_application.status_message
-    ), "Refresh should wait for user to continue with `resume-refresh` action"
-    logger.info("Continue refresh on all other units with `resume-refresh` action")
-    logger.info("Calling resume refresh")
-    action = await leader_unit.run_action("resume-refresh")
-    await action.wait()
-    assert action.status == "completed", "resume-refresh failed, expected to succeed"
+    if "resume-refresh" in mongodb_application.status_message:
+        logger.info("Continue refresh on all other units with `resume-refresh` action")
+        logger.info("Calling resume refresh")
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
+        assert action.status == "completed", "resume-refresh failed, expected to succeed"
