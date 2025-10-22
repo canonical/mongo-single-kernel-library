@@ -328,15 +328,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
-        self.dependent._configure_workloads()
-        self.dependent.start_charm_services()
+        self._configure_workloads()
+        self.start_charm_services()
 
         self.state.unit_peer_data.current_revision = self.cross_app_version_checker.version
 
-        if self.dependent.name == CharmKind.MONGOD:
-            self.dependent._restart_related_services()
+        if self.name == CharmKind.MONGOD:
+            self._restart_related_services()
 
-        if self.dependent.mongo_manager.mongod_ready():
+        if self.mongo_manager.mongod_ready():
             try:
                 self.upgrades_manager.wait_for_cluster_healthy()
                 refresh.next_unit_allowed_to_refresh = True
