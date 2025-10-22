@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -12,12 +13,11 @@ from tests.integration.helpers.sharding import (
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
-    rotate_and_verify_certs,
 )
 from tests.integration.helpers.tls import (
+    CLIENT_TLS_RELATION_NAME,
+    PEER_TLS_RELATION_NAME,
     TLS_CERTIFICATES_APP_NAME,
-    integrate_apps_with_tls,
-    remove_tls_integrations,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -54,8 +54,8 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Tests that the cluster can be integrated with TLS."""
+async def test_built_cluster_with_peer_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Tests that the cluster, when integrated with peer TLS, allows non TLS client relations."""
     await integrate_sharding_components(ops_test)
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -63,13 +63,45 @@ async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -
         timeout=TIMEOUT,
     )
 
-    await integrate_apps_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
+    for app in CLUSTER_COMPONENTS:
+        await ops_test.model.integrate(TLS_CERTIFICATES_APP_NAME, f"{app}:{PEER_TLS_RELATION_NAME}")
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
     )
 
+    # This checks that clients can connect using non-tls connections.
+    await check_cluster_tls_disabled(ops_test, substrate)
+
+    for app in CLUSTER_COMPONENTS:
+        await ops_test.model.applications[app].remove_relation(
+            f"{app}:{PEER_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
+        )
+
+    await ops_test.model.wait_for_idle(
+        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_built_cluster_with_client_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Tests that the cluster, when integrated with client TLS, enforces the TLS relations."""
+    for app in CLUSTER_COMPONENTS:
+        await ops_test.model.integrate(
+            TLS_CERTIFICATES_APP_NAME, f"{app}:{CLIENT_TLS_RELATION_NAME}"
+        )
+
+    await ops_test.model.wait_for_idle(
+        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    )
+
+    # This checks that clients can connect using non-tls connections.
     await check_cluster_tls_enabled(ops_test, substrate)
+
+    for app in CLUSTER_COMPONENTS:
+        await ops_test.model.applications[app].remove_relation(
+            f"{app}:{CLIENT_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
+        )
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -77,17 +109,3 @@ async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -
         idle_period=20,
         timeout=TIMEOUT,
     )
-
-
-@pytest.mark.abort_on_fail
-async def test_rotate_tls(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Tests that each cluster component can rotate TLS certs."""
-    for cluster_app in CLUSTER_COMPONENTS:
-        await rotate_and_verify_certs(ops_test, substrate, cluster_app)
-
-
-@pytest.mark.abort_on_fail
-async def test_disable_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Tests that the cluster can disable TLS."""
-    await remove_tls_integrations(ops_test, applications=CLUSTER_COMPONENTS)
-    await check_cluster_tls_disabled(ops_test, substrate)

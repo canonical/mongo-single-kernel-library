@@ -4,8 +4,6 @@
 
 """Some helpers functions that doesn't belong anywhere else."""
 
-import base64
-import re
 from functools import partial
 from logging import getLogger
 
@@ -16,21 +14,6 @@ from single_kernel_mongo.core.structured_config import LdapUserToDnMapping
 from single_kernel_mongo.exceptions import InvalidCharmKindError
 
 logger = getLogger(__name__)
-
-
-def parse_tls_file(raw_content: str) -> bytes:
-    """Parse TLS files from both plain text or base64 format."""
-    if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
-        return (
-            re.sub(
-                r"(-+(BEGIN|END) [A-Z ]+-+)",
-                "\\1",
-                raw_content,
-            )
-            .rstrip()
-            .encode("utf-8")
-        )
-    return base64.b64decode(raw_content)
 
 
 def generate_relation_departed_key(rel_id: int) -> str:  # noqa
@@ -61,7 +44,7 @@ def hostname_from_shardname(host: str) -> str:
     return host.split("/")[0]
 
 
-def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
+def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str | None) -> bool:
     """Validates the mapping, returning a boolean."""
     if not ldap_user_to_dn_mapping:
         return True
@@ -73,7 +56,9 @@ def is_valid_ldapusertodnmapping(ldap_user_to_dn_mapping: str) -> bool:
         return False
 
 
-def is_valid_ldap_options(ldap_user_to_dn_mapping: str, ldap_query_template: str) -> bool:
+def is_valid_ldap_options(
+    ldap_user_to_dn_mapping: str | None, ldap_query_template: str | None
+) -> bool:
     """Validates the combination of the two LDAP options.
 
     Rules are the following:

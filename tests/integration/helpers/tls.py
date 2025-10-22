@@ -1,16 +1,19 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import base64
 import json
 import os
 from datetime import datetime
 from logging import getLogger
+from pathlib import Path
+from typing import Literal
 
 from juju.unit import Unit as JujuUnit
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOD_PORT,
     MONGOS_APP_NAME,
     MONGOS_PORT,
@@ -23,12 +26,13 @@ from ..helpers.common import (
     get_secret_id,
     mongosh,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-TLS_RELATION_NAME = "certificates"
+PEER_TLS_RELATION_NAME = "peer-certificates"
+CLIENT_TLS_RELATION_NAME = "client-certificates"
 
 DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
@@ -55,6 +59,48 @@ def internal_cert_path(substrate: Substrate):
     if substrate == "lxd":
         return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
+
+
+async def integrate_apps_with_tls(
+    ops_test: OpsTest,
+    applications: list[str],
+    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+    peer: bool = True,
+    client: bool = True,
+) -> None:
+    """Integrates a list of applications with self-signed certs operator."""
+    for app in applications:
+        if peer:
+            await ops_test.model.integrate(
+                f"{cert_provider_app}",
+                f"{app}:{PEER_TLS_RELATION_NAME}",
+            )
+        if client:
+            await ops_test.model.integrate(
+                f"{cert_provider_app}",
+                f"{app}:{CLIENT_TLS_RELATION_NAME}",
+            )
+
+
+async def remove_tls_integrations(
+    ops_test: OpsTest,
+    applications: list[str],
+    cert_provider_app: str = TLS_CERTIFICATES_APP_NAME,
+    peer: bool = True,
+    client: bool = True,
+) -> None:
+    """Removes the TLS integration from a list of applications."""
+    for app in applications:
+        if peer:
+            await ops_test.model.applications[app].remove_relation(
+                f"{app}:{PEER_TLS_RELATION_NAME}",
+                f"{cert_provider_app}",
+            )
+        if client:
+            await ops_test.model.applications[app].remove_relation(
+                f"{app}:{CLIENT_TLS_RELATION_NAME}",
+                f"{cert_provider_app}",
+            )
 
 
 async def mongo_tls_command(
@@ -352,15 +398,20 @@ async def check_certs_correctly_distributed(
     unit_secret_content = await get_secret_content(ops_test, unit_secret_id)
 
     # Get the values for certs from the relation, as provided by TLS Charm
-    certificates_raw_data: str = await get_application_relation_data(
-        ops_test, app_name, TLS_RELATION_NAME, "certificates"
+    peer_certificates_raw_data: str = await get_application_relation_data(
+        ops_test, app_name, PEER_TLS_RELATION_NAME, "certificates"
     )
-    certificates_data = json.loads(certificates_raw_data)
+    peer_certificates_data = json.loads(peer_certificates_raw_data)
+
+    client_certificates_raw_data: str = await get_application_relation_data(
+        ops_test, app_name, CLIENT_TLS_RELATION_NAME, "certificates"
+    )
+    client_certificates_data = json.loads(client_certificates_raw_data)
 
     # compare the TLS resources stored on the disk of the unit with the ones from the TLS relation
-    for cert_type, cert_path in [
-        ("int", internal_cert_path(substrate)),
-        ("ext", external_cert_path(substrate)),
+    for cert_type, cert_path, certificates_data in [
+        ("int", internal_cert_path(substrate), peer_certificates_data),
+        ("ext", external_cert_path(substrate), client_certificates_data),
     ]:
         unit_csr = unit_secret_content[f"{cert_type}-csr-secret"]
         tls_item = [
@@ -401,3 +452,78 @@ async def get_file_content(
     os.remove(cert_file_copy_path)
 
     return cert_file_content
+
+
+async def set_private_key(ops_test: OpsTest, app_name: str, scope: Literal["peer", "client"]):
+    """Sets the private key for one scope."""
+    secret_name = f"tls-{scope}-private-key"
+
+    data = Path(f"tests/integration/data/{scope}-key.pem").read_text()
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"private-key={data}"]
+        )
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"label": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name, data_args=[f"private-key={data}"], new_name=secret_name
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+    await ops_test.model.applications[app_name].set_config({f"tls-{scope}-private-key": secret_id})
+
+
+async def set_invalid_private_key(
+    ops_test: OpsTest, app_name: str, scope: Literal["peer", "client"]
+):
+    """Sets the private key for one scope."""
+    secret_name = f"tls-{scope}-private-key"
+
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"private-key={base64.b64encode(b'invalid-key').decode()}"]
+        )
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"label": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name,
+            data_args=[f"private-key={base64.b64encode(b'invalid-key')}"],
+            new_name=secret_name,
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+    await ops_test.model.applications[app_name].set_config({f"tls-{scope}-private-key": secret_id})
+
+
+async def set_private_keys(ops_test: OpsTest, app_name: str) -> None:
+    """Sets both private keys."""
+    secrets = {}
+
+    for scope in ("peer", "client"):
+        secret_name = f"tls-{scope}-private-key"
+        data = Path(f"tests/integration/data/{scope}-key.pem").read_text()
+
+        try:
+            secret_id = await ops_test.model.add_secret(
+                name=secret_name, data_args=[f"private-key={data}"]
+            )
+        except Exception:
+            _secrets = await ops_test.model.list_secrets({"label": secret_name})
+            secret_id = _secrets[0].uri
+            await ops_test.model.update_secret(
+                name=secret_name, data_args=[f"private-key={data}"], new_name=secret_name
+            )
+
+        secrets[scope] = secret_id
+        await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+        logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+
+    await ops_test.model.applications[app_name].set_config(
+        {f"tls-{scope}-private-key": secrets[scope] for scope in ("peer", "client")}
+    )

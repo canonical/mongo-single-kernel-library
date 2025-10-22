@@ -60,7 +60,7 @@ def test_status_shows_mongos_waiting(
         return_value=False,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_statuses", return_value=None
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_statuses", return_value=[]
     )
     # A running config server is a requirement to start for mongos
     mongos_harness.charm.on.update_status.emit()

@@ -23,6 +23,7 @@ class AppShardingComponentKeys(str, Enum):
     HOST = "host"
     KEY_FILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
+    EXT_CA_SECRET = "ext-ca-secret"
     BACKUP_CA_SECRET = "backup-ca-secret"
 
     # We don't use those except to check if we've received credentials
@@ -35,6 +36,7 @@ SECRETS_FIELDS = [
     "backup-password",
     "key-file",
     "int-ca-secret",
+    "ext-ca-secret",
     "backup-ca-secret",
 ]
 
@@ -74,6 +76,13 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         if not self.relation:
             return None
         return self.relation_data.get(AppShardingComponentKeys.INT_CA_SECRET.value, None)
+
+    @property
+    def external_ca_secret(self) -> str | None:
+        """Returns the external CA secret."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(AppShardingComponentKeys.EXT_CA_SECRET.value, None)
 
     @property
     def keyfile(self) -> str | None:

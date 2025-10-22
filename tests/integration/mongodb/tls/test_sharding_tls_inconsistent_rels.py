@@ -2,16 +2,20 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     deploy_charm,
+    find_unit,
+    get_status_detail,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
@@ -22,14 +26,14 @@ from ...helpers.sharding import (
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
-    integrate_with_tls,
 )
-from ...helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
-    TLS_RELATION_NAME,
+    integrate_apps_with_tls,
+    remove_tls_integrations,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -64,7 +68,7 @@ async def test_tls_then_build_cluster(
         raise_on_blocked=False,
     )
 
-    await integrate_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
+    await integrate_apps_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -99,10 +103,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 1: Config-server has TLS enabled - but shard does not
-    await ops_test.model.applications[SHARD_ONE_APP_NAME].remove_relation(
-        f"{SHARD_ONE_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await remove_tls_integrations(ops_test, applications=[SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -115,15 +116,12 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard requires TLS to be enabled",
+        status="Shard requires peer TLS to be enabled.",
         timeout=TIMEOUT,
     )
 
     # Re-integrate to bring cluster back to steady state
-    await ops_test.model.integrate(
-        f"{SHARD_ONE_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await integrate_apps_with_tls(ops_test, applications=[SHARD_ONE_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -134,10 +132,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     )
 
     # CASE 2: Config-server does not have TLS enabled - but shard does
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{CONFIG_SERVER_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
-    )
+    await remove_tls_integrations(ops_test, applications=[CONFIG_SERVER_APP_NAME])
 
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -149,16 +144,17 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard has TLS enabled, but config-server does not.",
+        status="Invalid peer-certificates relation.",
         timeout=450,
     )
 
     # CASE 3: Cluster components are using different CA's
 
     # Re-integrate to bring cluster back to steady state
-    await ops_test.model.integrate(
-        f"{CONFIG_SERVER_APP_NAME}:{TLS_RELATION_NAME}",
-        f"{DIFFERENT_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
+    await integrate_apps_with_tls(
+        ops_test,
+        applications=[CONFIG_SERVER_APP_NAME],
+        cert_provider_app=DIFFERENT_CERTIFICATES_APP_NAME,
     )
 
     await ops_test.model.wait_for_idle(
@@ -172,9 +168,22 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard CA and Config-Server CA don't match.",
+        status="Peer CA mismatch.",
         timeout=450,
     )
+
+    leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_ONE_APP_NAME)
+    statuses = await get_status_detail(leader_unit)
+
+    unit_statuses = json.loads(statuses["unit"])
+    assert any(
+        unit_status["Message"] == "Shard internal CA and Config-Server internal CA don't match."
+        for unit_status in unit_statuses
+    ), "Shard internal CA status not well reported."
+    assert any(
+        unit_status["Message"] == "Shard client CA and Config-Server client CA don't match."
+        for unit_status in unit_statuses
+    ), "Shard client CA status not well reported."
 
 
 async def test_invalid_relation_not_yet_established(
@@ -212,7 +221,7 @@ async def test_invalid_relation_not_yet_established(
         ops_test,
         substrate,
         SHARD_THREE_APP_NAME,
-        status="Shard requires TLS to be enabled.",
+        status="Shard requires peer TLS to be enabled.",
         timeout=TIMEOUT,
     )
 
