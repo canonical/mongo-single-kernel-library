@@ -304,16 +304,16 @@ def test_cluster_requirer_share_credentials_to_clients(
 
     # Upgrade in progress
     with pytest.raises(DeferrableFailedHookChecksError):
-        manager.share_credentials_to_clients("operator", "password")
+        manager.share_credentials_to_clients("charmed-operator", "password")
 
     mocker.patch(
         "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
         new_callable=mocker.PropertyMock(return_value=False),
     )
 
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
-    assert manager.state.secrets.get_for_key(Scope.APP, "username") == "operator"
+    assert manager.state.secrets.get_for_key(Scope.APP, "username") == "charmed-operator"
     assert manager.state.secrets.get_for_key(Scope.APP, "password") == "password"
 
 
@@ -332,7 +332,7 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     mongos_harness.update_relation_data(rel_id_proxy, "test-application", {"database": "test-db"})
 
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
@@ -362,7 +362,7 @@ def test_cluster_requirer_update_mongos_and_restart(
     for relation in operator.state.client_relations:
         data = relation.data[mongos_harness.charm.app]
         if substrate == "lxd":
-            assert data["username"] == "operator"
+            assert data["username"] == "charmed-operator"
             assert data["password"] == "password"
             assert (
                 data["endpoints"]
@@ -370,7 +370,7 @@ def test_cluster_requirer_update_mongos_and_restart(
             )
             assert (
                 data["uris"]
-                == "mongodb://operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
+                == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
             )
         else:
             # on k8s, the router generates the password and user ids.
@@ -471,7 +471,7 @@ def test_cluster_requirer_remove_users_and_cleanup_mongo(
     )  # type: ignore[assignment]
     mongos_harness.add_relation_unit(rel_id_cluster, "mongodb/0")
 
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
@@ -535,7 +535,7 @@ def test_cluster_requirer_is_ca_compatible(
     mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     # Ensure some credentials are present
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
@@ -606,7 +606,7 @@ def test_cluster_requirer_tls_status(
         mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
     # Ensure some credentials are present
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
@@ -681,7 +681,7 @@ def test_cluster_requirer_get_tls_statuses(
         )
 
     # Ensure some credentials are present
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 

@@ -9,10 +9,11 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import InternalUsers
-
 from ..helpers.backups import S3_APP_NAME, count_logical_backups
 from ..helpers.common import (
+    CHARMED_BACKUP_USERNAME,
+    CHARMED_OPERATOR_USERNAME,
+    CHARMED_STATS_USERNAME,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     count_writes,
@@ -32,6 +33,13 @@ MONGODB_SEVEN = "mongodb-seven"
 MONGODB_EIGHT = "mongodb-eight"
 
 logger = getLogger(__name__)
+
+username_mapping = {
+    "operator": CHARMED_OPERATOR_USERNAME,
+    "monitor": CHARMED_STATS_USERNAME,
+    "backup": CHARMED_BACKUP_USERNAME,
+    "logrotate": "charmed-logrotate",
+}
 
 
 @pytest.mark.abort_on_fail
@@ -138,10 +146,12 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in InternalUsers:
-        password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
+    for rel6_username, _ in username_mapping.items():
+        password = await get_password_action(
+            ops_test, username=rel6_username.username, app_name=MONGODB_SIX
+        )
         await set_password(
-            ops_test, username=user.username, password=password, app_name=MONGODB_SEVEN
+            ops_test, username=rel6_username.username, password=password, app_name=MONGODB_SEVEN
         )
 
         await ops_test.model.wait_for_idle(apps=[MONGODB_SEVEN], timeout=TIMEOUT, status="active")
@@ -160,7 +170,7 @@ async def test_restore_backup_6_to_7(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, MONGODB_SEVEN, "6.0")
+    await set_fcv(ops_test, substrate, MONGODB_SEVEN, "6.0", "operator")
 
     leader_unit_seven = await find_unit(ops_test, leader=True, app_name=MONGODB_SEVEN)
     action = await leader_unit_seven.run_action(action_name="restore", **{"backup-id": backup_id})
@@ -171,7 +181,7 @@ async def test_restore_backup_6_to_7(
 
     await ops_test.model.wait_for_idle(apps=[MONGODB_SEVEN], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, MONGODB_SEVEN, "7.0")
+    await set_fcv(ops_test, substrate, MONGODB_SEVEN, "7.0", "operator")
 
 
 @pytest.mark.abort_on_fail
@@ -226,10 +236,12 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in InternalUsers:
-        password = await get_password_action(ops_test, username=user.username, app_name=MONGODB_SIX)
+    for rel6_username, rel8_username in username_mapping.items():
+        password = await get_password_action(
+            ops_test, username=rel6_username.username, app_name=MONGODB_SIX
+        )
         await set_password(
-            ops_test, username=user.username, password=password, app_name=MONGODB_EIGHT
+            ops_test, username=rel8_username.username, password=password, app_name=MONGODB_EIGHT
         )
 
         await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
@@ -249,7 +261,7 @@ async def test_restore_backup_7_to_8(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, MONGODB_EIGHT, "7.0")
+    await set_fcv(ops_test, substrate, MONGODB_EIGHT, "7.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=MONGODB_EIGHT)
     action = await leader_unit_eight.run_action(action_name="restore", **{"backup-id": backup_id})
@@ -260,12 +272,14 @@ async def test_restore_backup_7_to_8(
 
     await ops_test.model.wait_for_idle(apps=[MONGODB_EIGHT], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, MONGODB_EIGHT, "8.0")
+    await set_fcv(ops_test, substrate, MONGODB_EIGHT, "8.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_six = await find_unit(ops_test, leader=True, app_name=MONGODB_SIX)
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=MONGODB_EIGHT)
     # count total writes
-    n_writes_six = await count_writes(ops_test, substrate, MONGODB_SIX, leader_unit_six)
+    n_writes_six = await count_writes(
+        ops_test, substrate, MONGODB_SIX, leader_unit_six, username="operator"
+    )
     n_writes_eight = await count_writes(ops_test, substrate, MONGODB_EIGHT, leader_unit_eight)
 
     assert n_writes_six == n_writes_eight

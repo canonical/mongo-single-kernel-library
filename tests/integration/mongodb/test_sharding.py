@@ -8,9 +8,9 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     OPERATOR_PASSWORD,
-    OPERATOR_USERNAME,
     TIMEOUT,
     deploy_charm,
     find_unit,
@@ -151,10 +151,10 @@ async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_set_operator_password(ops_test: OpsTest):
-    """Tests that the cluster can safely set the operator password."""
+    """Tests that the cluster can safely set the charemd_operator password."""
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
             operator_password != OPERATOR_PASSWORD
@@ -163,7 +163,7 @@ async def test_set_operator_password(ops_test: OpsTest):
     # rotate password and verify that no unit goes into error as a result of password rotation
     await set_password(
         ops_test,
-        username=OPERATOR_USERNAME,
+        username=CHARMED_OPERATOR_USERNAME,
         password=OPERATOR_PASSWORD,
         app_name=CONFIG_SERVER_APP_NAME,
     )
@@ -175,7 +175,7 @@ async def test_set_operator_password(ops_test: OpsTest):
 
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
             operator_password == OPERATOR_PASSWORD

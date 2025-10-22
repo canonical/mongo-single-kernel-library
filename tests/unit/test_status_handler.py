@@ -440,7 +440,7 @@ def test_get_statuses_system_users_invalid_secret_uri(harness: Harness[MongoTest
 def test_get_statuses_valid_system_users(harness: Harness[MongoTestCharm], mongodb_name, role):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = role
-    system_users = {"operator": "123"}
+    system_users = {"charmed-operator": "123"}
     secret_id = harness.add_model_secret(mongodb_name, system_users)
     with harness.hooks_disabled():
         harness.update_config(

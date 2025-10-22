@@ -17,13 +17,13 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
 from ..helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
+    CHARMED_STATS_USERNAME,
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
-    MONITOR_USERNAME,
-    OPERATOR_USERNAME,
     TEST_DOCUMENTS,
     UNIT_IDS,
     audit_log_line_sanity_check,
@@ -53,7 +53,7 @@ from ..helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 
-MONITOR_PASSWORD = "my-new-secret-password"
+STATS_PASSWORD = "my-new-secret-password"
 OPERATOR_PASSWORD = "SOMETHING"
 
 
@@ -86,7 +86,7 @@ async def test_consistency_between_workload_and_metadata(
 ):
     app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
     ip_address = await get_address_of_unit(
         ops_test, substrate, int(leader_unit.name.split("/")[1]), app_name
     )
@@ -136,7 +136,7 @@ async def test_exactly_one_primary(ops_test: OpsTest, substrate: Substrate) -> N
     """Tests that there is exactly one primary in the deployed units."""
     app_name = await get_app_name(ops_test)
     try:
-        password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+        password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
         number_of_primaries = await count_primaries(
             ops_test, substrate, password, app_name=app_name
         )
@@ -158,7 +158,7 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
         unit_id = int(unit.name.split("/")[1])
         ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
         # connect to mongod
-        password = await get_password(ops_test, OPERATOR_USERNAME, app_name)
+        password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name)
         client = MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
 
         # check primary status
@@ -185,10 +185,10 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
     app_name = await get_app_name(ops_test)
-    await set_password(ops_test, OPERATOR_USERNAME, OPERATOR_PASSWORD, app_name)
+    await set_password(ops_test, CHARMED_OPERATOR_USERNAME, OPERATOR_PASSWORD, app_name)
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
-    new_password_reported = await get_password(ops_test, OPERATOR_USERNAME, app_name)
+    new_password_reported = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name)
 
     assert OPERATOR_PASSWORD == new_password_reported
 
@@ -215,7 +215,7 @@ async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None
     new_password = "NEW-PASSWORD"
     secret_name = "test-secret"
     secret_id = await ops_test.model.add_secret(
-        name=secret_name, data_args=[f"{OPERATOR_USERNAME}={new_password}"]
+        name=secret_name, data_args=[f"{CHARMED_OPERATOR_USERNAME}={new_password}"]
     )
     app_name = await get_app_name(ops_test)
     await ops_test.model.applications[app_name].set_config(
@@ -224,68 +224,74 @@ async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None
     expected_message = "Secret in system-users not granted."
     await check_app_status(ops_test, app_name, "blocked", expected_message)
 
-    reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    reported_password = await get_password(
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name
+    )
     # The password remained unchanged
     assert OPERATOR_PASSWORD == reported_password
 
     await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
-    reported_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    reported_password = await get_password(
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name
+    )
     assert new_password == reported_password
 
 
 @pytest.mark.abort_on_fail
-async def test_update_password_for_monitor_user(ops_test: OpsTest) -> None:
-    """Test password is updated for the monitor user."""
+async def test_update_password_for_charmed_stats_user(ops_test: OpsTest) -> None:
+    """Test password is updated for the charmed-stats user."""
     app_name = await get_app_name(ops_test)
-    new_password = MONITOR_PASSWORD
+    new_password = STATS_PASSWORD
     await set_password(
-        ops_test, username=MONITOR_USERNAME, password=new_password, app_name=app_name
+        ops_test, username=CHARMED_STATS_USERNAME, password=new_password, app_name=app_name
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
-    password = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
     assert password == new_password
 
 
 @pytest.mark.abort_on_fail
-async def test_monitor_user(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Test verifies that the monitor user can perform operations such as 'rs.conf()'."""
+async def test_charmed_stats_user(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Test verifies that the charmed stats user can perform operations such as 'rs.conf()'."""
     app_name = await get_app_name(ops_test)
-    password = MONITOR_PASSWORD
+    password = STATS_PASSWORD
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
     ]
 
     hosts = ",".join(replica_set_hosts)
-    replica_set_uri = f"mongodb://{MONITOR_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
+    replica_set_uri = (
+        f"mongodb://{CHARMED_STATS_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
+    )
 
     admin_mongod_cmd = "rs.conf()"
 
     result = await execute_on_mongod(
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd
     )
-    assert result.succeeded, f"Failed to get conf with {MONITOR_USERNAME} user."
+    assert result.succeeded, f"Failed to get conf with {CHARMED_STATS_USERNAME} user."
 
 
 @pytest.mark.abort_on_fail
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     app_name = await get_app_name(ops_test)
-    password1 = MONITOR_PASSWORD
-    await set_password(ops_test, username=MONITOR_USERNAME, password=" ", app_name=app_name)
+    password1 = STATS_PASSWORD
+    await set_password(ops_test, username=CHARMED_STATS_USERNAME, password=" ", app_name=app_name)
 
     expected_message = "Invalid secret in system-users config."
     await check_app_status(ops_test, app_name, "blocked", expected_message)
 
-    password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password2 = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
     # The password remained unchanged
     assert password1 == password2
 
     # Restore valid password
     await set_password(
-        ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
+        ops_test, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD, app_name=app_name
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
@@ -294,26 +300,26 @@ async def test_empty_password(ops_test: OpsTest) -> None:
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
     app_name = await get_app_name(ops_test)
-    password1 = MONITOR_PASSWORD
+    password1 = STATS_PASSWORD
 
     # The password has to be maximum 4096-character long
     await set_password(
         ops_test,
-        username=MONITOR_USERNAME,
+        username=CHARMED_STATS_USERNAME,
         password="c" * 4097,
         app_name=app_name,
     )
     expected_message = "Invalid secret in system-users config."
     await check_app_status(ops_test, app_name, "blocked", expected_message)
 
-    password2 = await get_password(ops_test, username=MONITOR_USERNAME, app_name=app_name)
+    password2 = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
 
     # The password didn't change
     assert password1 == password2
 
     # Restore valid password
     await set_password(
-        ops_test, username=MONITOR_USERNAME, password=MONITOR_PASSWORD, app_name=app_name
+        ops_test, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD, app_name=app_name
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 

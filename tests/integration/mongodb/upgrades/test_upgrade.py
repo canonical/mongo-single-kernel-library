@@ -8,6 +8,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from ...helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     deploy_charm,
     find_unit,
@@ -145,19 +146,19 @@ async def test_upgrade_password_change_fail(
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     leader_id = leader_unit.name.split("/")[1]
     current_password = await get_password(
-        ops_test, username="operator", app_name=app_name, unit=leader_unit
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name, unit=leader_unit
     )
 
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
     action = await ops_test.model.units.get(f"{app_name}/{leader_id}").run_action(
-        "set-password", **{"username": "operator", "password": "new-password"}
+        "set-password", **{"username": CHARMED_OPERATOR_USERNAME, "password": "new-password"}
     )
     action = await action.wait()
 
     assert "Cannot set passwords while an upgrade is in progress" == action.message
     after_action_password = await get_password(
-        ops_test, username="operator", app_name=app_name, unit=leader_unit
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name, unit=leader_unit
     )
     assert current_password == after_action_password

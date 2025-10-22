@@ -28,7 +28,11 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDB
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.mongodb_users import BackupUser, LogRotateUser, MonitorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    CharmedBackupUser,
+    CharmedLogRotateUser,
+    CharmedStatsUser,
+)
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
@@ -135,7 +139,7 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("Not starting PBM yet. Shard not added to config-server")
             return
 
-        if not self.state.get_user_password(BackupUser):
+        if not self.state.get_user_password(CharmedBackupUser):
             logger.info("No password found.")
             return
 
@@ -184,7 +188,7 @@ class LogRotateConfigManager(CommonConfigManager):
             logger.info("DB is not initialised.")
             return
 
-        if not self.state.get_user_password(LogRotateUser):
+        if not self.state.get_user_password(CharmedLogRotateUser):
             logger.info("No password found.")
             return
 
@@ -224,17 +228,17 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
     @override
     def build_parameters(self) -> list[list[str]]:
-        return [[self.state.monitor_config.uri]]
+        return [[self.state.stats_config.uri]]
 
     def configure_and_restart(self):
         """Exposes the endpoint to mongodb_exporter."""
         if not self.state.db_initialised:
             return
 
-        if not self.state.get_user_password(MonitorUser):
+        if not self.state.get_user_password(CharmedStatsUser):
             return
 
-        if not self.workload.active() or self.get_environment() != self.state.monitor_config.uri:
+        if not self.workload.active() or self.get_environment() != self.state.stats_config.uri:
             try:
                 # Always enable the service
                 self.workload.stop()

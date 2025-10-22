@@ -41,9 +41,10 @@ UNIT_IDS = [0, 1, 2]
 SERIES = "noble"
 TIMEOUT = 15 * 60
 DEPLOYMENT_TIMEOUT = 2000
-OPERATOR_USERNAME = "operator"
-OPERATOR_PASSWORD = "operator-password"
-MONITOR_USERNAME = "monitor"
+CHARMED_BACKUP_USERNAME = "charmed-backup"
+CHARMED_OPERATOR_USERNAME = "charmed-operator"
+CHARMED_OPERATOR_PASSWORD = "operator-password"
+CHARMED_STATS_USERNAME = "charmed-stats"
 INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
 
@@ -207,7 +208,7 @@ async def generate_mongodb_client(
     app_name: str,
     mongos: bool,
     hosts: list[str] | None = None,
-    username: str = OPERATOR_USERNAME,
+    username: str = CHARMED_OPERATOR_USERNAME,
     password: str | None = None,
 ):
     """Returns a MongoDB client for mongos/mongod."""
@@ -216,8 +217,7 @@ async def generate_mongodb_client(
         for unit in ops_test.model.applications[app_name].units
     ]
 
-    password = password or await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
-    username = username
+    password = password or await get_password(ops_test, username, app_name=app_name)
     port = MONGOS_PORT if mongos else MONGOD_PORT
     hosts = [f"{host}:{port}" for host in hosts]
     hosts = ",".join(hosts)
@@ -241,7 +241,7 @@ async def mongodb_uri(
     app_name: str,
     unit_ids: list[int] | None = None,
     port: int = MONGOD_PORT,
-    username: str = "operator",
+    username: str = CHARMED_OPERATOR_USERNAME,
     password: str | None = None,
     hostnames: bool = False,
 ) -> str:
@@ -329,7 +329,11 @@ async def destroy_cluster(
 
 
 def unit_uri(
-    ip_address: str, password: str, app: str, username: str = "operator", mongos: bool = False
+    ip_address: str,
+    password: str,
+    app: str,
+    username: str = CHARMED_OPERATOR_USERNAME,
+    mongos: bool = False,
 ) -> str:
     """Generates URI that is used by MongoDB to connect to a single replica.
 
@@ -345,7 +349,7 @@ def unit_uri(
 
 async def get_password(
     ops_test: OpsTest,
-    username=OPERATOR_USERNAME,
+    username=CHARMED_OPERATOR_USERNAME,
     app_name: str | None = None,
 ) -> str:
     """Retrieve the password for a given user from the application's Juju secret."""
@@ -424,8 +428,8 @@ async def get_direct_mongo_client(
     ip_address = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
     match username, password:
         case None, None:
-            username = OPERATOR_USERNAME
-            password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+            username = CHARMED_OPERATOR_USERNAME
+            password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
         case _, None:
             raise Exception("Please provide username and password")
         case None, _:
@@ -1011,7 +1015,12 @@ async def clear_continous_writes(
 
 
 async def count_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit, mongos: bool = False
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    unit: JujuUnit,
+    mongos: bool = False,
+    username: str = CHARMED_OPERATOR_USERNAME,
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
@@ -1021,6 +1030,7 @@ async def count_writes(
         app_name,
         mongos=mongos,
         hosts=[host],
+        username=username,
     )
 
     client = MongoClient(uri, directConnection=True)
@@ -1180,7 +1190,7 @@ def mongodb_log_path(substrate: Substrate) -> str:
 async def mongod_ready(ops_test: OpsTest, unit_ip: str, app_name: str) -> bool:
     """Verifies replica is running and available."""
     app_name = app_name or await get_app_name(ops_test)
-    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(unit_ip, password, app_name), directConnection=True)
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):

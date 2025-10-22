@@ -10,14 +10,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.utils.mongodb_users import InternalUsers
-from tests.integration.helpers.sharding import (
-    deploy_cluster_components,
-    integrate_sharding_components,
-)
-from tests.integration.helpers.upgrade import get_password_action, set_fcv
-
-from ..helpers.backups import S3_APP_NAME, count_logical_backups
-from ..helpers.common import (
+from tests.integration.helpers.backups import S3_APP_NAME, count_logical_backups
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     TIMEOUT,
@@ -29,7 +23,12 @@ from ..helpers.common import (
     start_continous_writes,
     stop_continous_writes,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.sharding import (
+    deploy_cluster_components,
+    integrate_sharding_components,
+)
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import get_password_action, set_fcv
 
 CONFIG_SERVER_SIX = "config-server-six"
 SHARD_ONE_SIX = "shard-one-six"
@@ -366,7 +365,7 @@ async def test_restore_backup_7_to_8(
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
     # count total writes
     n_writes_six = await count_writes(
-        ops_test, substrate, CONFIG_SERVER_SIX, leader_unit_six, mongos=True
+        ops_test, substrate, CONFIG_SERVER_SIX, leader_unit_six, mongos=True, username="operator"
     )
     n_writes_eight = await count_writes(
         ops_test, substrate, CONFIG_SERVER_EIGHT, leader_unit_eight, mongos=True
