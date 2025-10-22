@@ -6,7 +6,6 @@ This section contains technical specifications, APIs, release notes, and other r
 ```{toctree}
 :titlesonly:
 
-Release notes <release-notes/index>
 System requirements <system-requirements>
 Charm testing <charm-testing>
 ```
