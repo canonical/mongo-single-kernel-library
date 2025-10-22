@@ -10,6 +10,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatuses
+from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import DeployedWithoutTrustError
 from single_kernel_mongo.state.charm_state import CharmState
@@ -23,8 +24,13 @@ class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
     name: str = "upgrades"
 
     def __init__(
-        self, state: CharmState, workload: WorkloadBase, refresh: charm_refresh.Common | None
+        self,
+        dependent: OperatorProtocol,
+        state: CharmState,
+        workload: WorkloadBase,
+        refresh: charm_refresh.Common | None,
     ) -> None:
+        self.dependent = dependent
         self.state = state
         self.workload = workload
         self.refresh = refresh

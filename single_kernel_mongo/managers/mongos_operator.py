@@ -20,12 +20,7 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import (
-    CharmKind,
-    MongoPorts,
-    Scope,
-    Substrates,
-)
+from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Scope, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
@@ -57,9 +52,7 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.workload import (
-    get_mongos_workload_for_substrate,
-)
+from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
@@ -137,7 +130,7 @@ class MongosOperator(OperatorProtocol, Object):
             sys.exit()
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
-            self.state, self.workload, self.refresh
+            self, self.state, self.workload, self.refresh
         )
 
         # LDAP Manager, which covers both send-ca-cert interface and ldap interface.

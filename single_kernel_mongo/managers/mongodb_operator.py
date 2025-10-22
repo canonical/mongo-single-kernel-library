@@ -33,10 +33,7 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
-from single_kernel_mongo.config.relations import (
-    ExternalRequirerRelations,
-    RelationNames,
-)
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -236,7 +233,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
-            state=self.state, workload=self.workload, refresh=self.refresh
+            self, state=self.state, workload=self.workload, refresh=self.refresh
         )
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
