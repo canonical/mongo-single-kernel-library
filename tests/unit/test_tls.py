@@ -57,12 +57,8 @@ def test_tls_relation_joined_fails_upgrade_in_progress(harness: Harness[MongoTes
     harness.set_leader(True)
 
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
 
+    harness.charm.operator.refresh.in_progress = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -113,11 +109,7 @@ def test_tls_set_private_key_fail_conditions(harness: Harness[MongoTestCharm]):
 
 def test_tls_set_private_key_fails_upgrade_in_progress(harness: Harness[MongoTestCharm], mocker):
     harness.set_leader(True)
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
 
@@ -290,11 +282,7 @@ def test_certificate_available_upgrade_in_progress_defer(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
 ):
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
@@ -363,11 +351,7 @@ def test_tls_relation_broken_fails_db_not_initialised(
 def test_tls_relation_broken_log_upgrade_in_progress(
     harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, caplog
 ):
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
+    harness.charm.operator.refresh.in_progress = True
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
         return_value=None,

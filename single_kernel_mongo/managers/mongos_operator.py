@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from typing import TYPE_CHECKING, final
 
+import charm_refresh
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from lightkube.core.exceptions import ApiError
@@ -23,20 +25,18 @@ from single_kernel_mongo.config.literals import (
     MongoPorts,
     Scope,
     Substrates,
-    UnitState,
 )
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
-from single_kernel_mongo.core.kubernetes_upgrades import KubernetesUpgrade
-from single_kernel_mongo.core.machine_upgrades import MachineUpgrade
+from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
+from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import ExposeExternal, MongosCharmConfig
 from single_kernel_mongo.events.cluster import ClusterMongosEventHandler
 from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
-from single_kernel_mongo.events.upgrades import UpgradeEventHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
@@ -46,16 +46,17 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
+from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.managers.tls import TLSManager
-from single_kernel_mongo.managers.upgrade import MongosUpgradeManager
+from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
+from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.utils.helpers import unit_number
 from single_kernel_mongo.workload import (
     get_mongos_workload_for_substrate,
 )
@@ -112,9 +113,36 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
-        upgrade_backend = MachineUpgrade if self.substrate == Substrates.VM else KubernetesUpgrade
-        self.upgrade_manager = MongosUpgradeManager(
-            self, upgrade_backend, key=RelationNames.UPGRADE_VERSION.value
+        self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
+        if self.substrate == Substrates.VM:
+            upgrade_backend = MachineMongoDBRefresh(
+                dependent=self,
+                state=self.state,
+                upgrades_manager=self.upgrades_manager,
+                workload_name="Mongos",
+                charm_name=self.charm.name,
+            )
+        else:
+            upgrade_backend = KubernetesMongoDBRefresh(
+                dependent=self,
+                state=self.state,
+                upgrades_manager=self.upgrades_manager,
+                workload_name="Mongos",
+                charm_name=self.charm.name,
+                oci_resource_name="mongodb-image",
+            )
+        refresh_class = (
+            charm_refresh.Machines if self.substrate == Substrates.VM else charm_refresh.Kubernetes
+        )
+        try:
+            self.refresh = refresh_class(upgrade_backend)
+        except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
+            self.refresh = None
+        except charm_refresh.KubernetesJujuAppNotTrusted:
+            sys.exit()
+
+        self.upgrades_status_manager = MongoDBUpgradesStatusManager(
+            self.state, self.workload, self.refresh
         )
 
         # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
@@ -125,6 +153,7 @@ class MongosOperator(OperatorProtocol, Object):
             ExternalRequirerRelations.LDAP,
             ExternalRequirerRelations.LDAP_CERT,
         )
+        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
@@ -132,13 +161,47 @@ class MongosOperator(OperatorProtocol, Object):
         self.tls_events = TLSEventsHandler(self)
         self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
         self.cluster_event_handlers = ClusterMongosEventHandler(self)
-        self.upgrade_events = UpgradeEventHandler(self)
         self.ldap_events = LDAPEventHandler(self)
+
+        if self.refresh is not None and not self.refresh.next_unit_allowed_to_refresh:
+            if self.refresh.in_progress:
+                self._post_refresh(self.refresh)
+            else:
+                self.refresh.next_unit_allowed_to_refresh = True
+
+    def _post_refresh(self, refresh: charm_refresh.Common):
+        """Post refresh checks and actions.
+
+        Checks if unit is healthy and allow the next unit to update.
+        """
+        if not refresh.workload_allowed_to_start:
+            return
+
+        logger.info("Restarting workloads")
+        # always apply the current charm revision's config -> no need to "migrate" configuration
+        # this charm revision's config is the one supported by the targeted workload version
+        self._configure_workloads()
+        self.start_charm_services()
+
+        logger.debug("Running post refresh checks to verify monogs is not broken after refresh")
+        if not self.state.db_initialised:
+            refresh.next_unit_allowed_to_refresh = True
+            return
+
+        if not self.is_mongos_running():
+            logger.error("Waiting for mongos router to be ready before finalising refresh.")
+            raise DeferrableError("mongos is not running.")
+
+        if not self.upgrades_manager.is_mongos_able_to_read_write():
+            logger.error("mongos is not able to read/write after refresh")
+            raise DeferrableError("mongos is not able to read/write after refresh.")
+
+        refresh.next_unit_allowed_to_refresh = True
 
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self, self.ldap_manager, self.upgrade_manager)
+        return (self, self.ldap_manager, self.upgrades_status_manager)
 
     @property
     def config(self) -> MongosCharmConfig:
@@ -154,7 +217,6 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             raise ContainerNotReadyError
-        self.charm.unit.set_workload_version(self.workload.get_version())
 
     def _configure_workloads(self) -> None:
         # Instantiate the local directory for k8s
@@ -185,20 +247,23 @@ class MongosOperator(OperatorProtocol, Object):
             logger.debug("mongos installation is not ready yet.")
             raise ContainerNotReadyError
 
-        self._configure_workloads()
+        if not self.refresh:
+            raise ContainerNotReadyError("Workload not allowed to start yet.")
 
-        if self.substrate == Substrates.K8S:
-            self.upgrade_manager._reconcile_upgrade()
+        if self.refresh.in_progress:
+            # Bypass the regular start if refresh is in progress
+            return
+
+        self._configure_workloads()
 
         # start hooks are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
         if not self.state.mongos_cluster_relation:
-            self.charm.status_handler.set_running_status(
+            self.state.statuses.add(
                 MongosStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+                component=self.name,
             )
 
     @override
@@ -281,7 +346,6 @@ class MongosOperator(OperatorProtocol, Object):
             # The connection info will be updated when we receive the new certificates.
             if self.substrate == Substrates.K8S:
                 self.tls_manager.update_tls_sans()
-                self.upgrade_manager._reconcile_upgrade()
 
     @override
     def new_peer(self) -> None:
@@ -300,26 +364,14 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def prepare_for_shutdown(self) -> None:
-        if self.substrate == Substrates.VM:
-            return
-
-        # Raise partition to prevent other units from restarting if an upgrade is in progress.
-        # If an upgrade is not in progress, the leader unit will reset the partition to 0.
-        current_unit_number = unit_number(self.state.unit_upgrade_peer_data)
-        if self.state.k8s_manager.get_partition() < current_unit_number:
-            self.state.k8s_manager.set_partition(value=current_unit_number)
-            logger.debug(f"Partition set to {current_unit_number} during stop event")
-
-        if not self.upgrade_manager._upgrade:
-            logger.debug("Upgrade Peer relation missing during stop event")
-            return
-
-        # We update the state to set up the unit as restarting
-        self.upgrade_manager._upgrade.unit_state = UnitState.RESTARTING
+        return
 
     @override
     def start_charm_services(self) -> None:
         """Start the charm services."""
+        if not self.refresh or not self.refresh.workload_allowed_to_start:
+            raise WorkloadServiceError("Workload not allowed to start")
+
         self.mongos_config_manager.set_environment()
         self.workload.start()
 

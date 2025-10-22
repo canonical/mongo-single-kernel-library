@@ -92,15 +92,12 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=True),
-    )
+    harness.charm.operator.refresh.in_progress = True
 
     harness.add_relation(RelationNames.CLUSTER.value, "mongos")
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
-        manager.assert_pass_hook_checks()
+        manager.assert_pass_hook_checks(initial_event=True)
 
     assert "during an upgrade" in err.value.args[0]
 
@@ -204,13 +201,11 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
         "mongo_has_tls",
         "config_server_has_tls",
         "is_waiting_to_request_certs",
-        "upgrade_in_progress",
         "expected_error",
     ),
     (
         (
             False,
-            True,
             True,
             True,
             "Config-Server uses TLS but mongos does not. Please synchronise encryption method.",
@@ -219,22 +214,13 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
             True,
             False,
             True,
-            True,
             "Mongos uses TLS but config-server does not. Please synchronise encryption method.",
         ),
         (
             False,
             False,
             True,
-            True,
             "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
-        ),
-        (
-            False,
-            False,
-            False,
-            True,
-            "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state.",
         ),
     ),
 )
@@ -243,7 +229,6 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mocker,
     mongo_has_tls,
     is_waiting_to_request_certs,
-    upgrade_in_progress,
     config_server_has_tls,
     expected_error,
 ):
@@ -259,10 +244,6 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mocker.patch(
         "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
         return_value=is_waiting_to_request_certs,
-    )
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=upgrade_in_progress),
     )
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
@@ -293,10 +274,7 @@ def test_cluster_requirer_share_credentials_to_clients(
     manager = mongos_harness.charm.operator.cluster_manager
     mongos_harness.set_leader(True)
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=True),
-    )
+    mongos_harness.charm.operator.refresh.in_progress = True
 
     # No credentials
     with pytest.raises(WaitingForSecretsError):
@@ -306,10 +284,7 @@ def test_cluster_requirer_share_credentials_to_clients(
     with pytest.raises(DeferrableFailedHookChecksError):
         manager.share_credentials_to_clients("charmed-operator", "password")
 
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock(return_value=False),
-    )
+    mongos_harness.charm.operator.refresh.in_progress = False
 
     manager.share_credentials_to_clients("charmed-operator", "password")
 

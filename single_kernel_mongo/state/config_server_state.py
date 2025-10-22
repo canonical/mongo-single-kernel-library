@@ -39,12 +39,6 @@ SECRETS_FIELDS = [
 ]
 
 
-class UnitShardingComponentKeys(str, Enum):
-    """Config Server State Model for the unit."""
-
-    STATUS_READY_FOR_UPGRADE = "status-shows-ready-for-upgrade"
-
-
 class AppShardingComponentState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
 
@@ -120,30 +114,3 @@ class UnitShardingComponentState(AbstractRelationState[Data]):
     def __init__(self, relation: Relation | None, data_interface: Data, component: Unit):
         super().__init__(relation, data_interface=data_interface, component=component)
         self.data_interface = data_interface
-
-    @property
-    def status_ready_for_upgrade(self) -> bool:
-        """Returns true if the shard is ready for upgrade.
-
-        Legacy: for old upgrades that require status from shards.
-        """
-        if not self.relation:
-            return True
-        # We get directly the data in the unit because it's hidden otherwise
-        return json.loads(
-            self.relation.data[self.component].get(
-                UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value, "false"
-            )
-        )
-
-    @status_ready_for_upgrade.setter
-    def status_ready_for_upgrade(self, value: bool):
-        """Sets old status.
-
-        Legacy: for old upgrades that require status from shards.
-        """
-        if not self.relation:
-            raise Exception("No databag to write in")
-        self.relation.data[self.component][
-            UnitShardingComponentKeys.STATUS_READY_FOR_UPGRADE.value
-        ] = json.dumps(value)

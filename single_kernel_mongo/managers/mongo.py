@@ -28,6 +28,7 @@ from pymongo.errors import (
     PyMongoError,
     ServerSelectionTimeoutError,
 )
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
@@ -35,6 +36,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
+    FailedToElectNewPrimaryError,
     MissingCredentialsError,
     SetPasswordError,
 )
@@ -561,3 +563,34 @@ class MongoManager(Object, ManagerStatusProtocol):
             return [MongodStatuses.WAITING_RECONFIG.value]
 
         return charm_statuses
+
+    def set_feature_compatibility_version(self, feature_version: str) -> None:
+        """Sets the mongos feature compatibility version."""
+        if self.state.is_role(MongoDBRoles.REPLICATION):
+            config = self.state.mongo_config
+        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            config = self.state.mongos_config
+        else:
+            return
+        with MongoConnection(config) as mongos:
+            mongos.client.admin.command(
+                "setFeatureCompatibilityVersion", value=feature_version, confirm=True
+            )
+
+    def step_down_primary_and_wait_reelection(self):
+        """Steps down the current primary and waits for a new one to be elected."""
+        if len(self.state.internal_hosts) < 2:
+            logger.warning(
+                "No secondaries to become primary - upgrading primary without electing a new one, expect downtime."
+            )
+            return
+
+        old_primary = self.dependent.primary_unit_name  # type: ignore
+        with MongoConnection(self.state.mongo_config) as mongod:
+            mongod.step_down_primary()
+
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(1), reraise=True):
+            with attempt:
+                new_primary = self.dependent.primary_unit_name  # type: ignore
+                if new_primary == old_primary:
+                    raise FailedToElectNewPrimaryError()
