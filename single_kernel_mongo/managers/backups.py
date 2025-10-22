@@ -258,6 +258,20 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Relation broken event occurring due to scale down.")
             return
 
+        # We have to wait until the backup / restore finishes if it is running.
+        while True:
+            match self.backup_state():
+                case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
+                    self.dependent.charm.status_handler.set_running_status(
+                        BackupStatuses.ACTION_RUNNING.value,
+                        scope="unit",
+                        component_name=self.name,
+                    )
+                    # Wait for 10 seconds before retrying
+                    time.sleep(10)
+                case _:
+                    break
+
         # cleanup local certificate if it exists
         local_cert_file = TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         if local_cert_file.exists() and local_cert_file.is_file():
@@ -436,7 +450,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             case BackupState.EMPTY:
                 return []
             case BackupState.MISSING_CONFIG:
-                return [BackupStatuses.PBM_MISSING_CONFIGS.value]
+                return [BackupStatuses.PBM_MISSING_CONF.value]
             case BackupState.WAITING_PBM_START:
                 return [BackupStatuses.WAITING_FOR_PBM_START.value]
             case BackupState.INCORRECT_CREDS:
@@ -444,7 +458,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             case BackupState.INCOMPATIBLE_CONF:
                 return [BackupStatuses.PBM_INCOMPATIBLE_CONF.value]
             case BackupState.UNKNOWN_ERROR:
-                return [BackupStatuses.UNKNOWN_PBM_ERROR.value]
+                return [BackupStatuses.PBM_UNKNOWN_ERROR.value]
             case BackupState.WAITING_TO_SYNC:
                 return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
             case BackupState.FAILED_TO_CREATE_BUCKET:
