@@ -348,8 +348,8 @@ rst_prolog = """
 
 # Workaround for https://github.com/canonical/canonical-sphinx/issues/34
 
-if "discourse_prefix" not in html_context and "discourse" in html_context:
-    html_context["discourse_prefix"] = html_context["discourse"] + "/t/"
+# if "discourse_prefix" not in html_context and "discourse" in html_context:
+#     html_context["discourse_prefix"] = html_context["discourse"] + "/t/"
 
 # Workaround for substitutions.yaml
 
