@@ -65,6 +65,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
+    InvalidConfigRoleError,
     InvalidLdapQueryTemplateError,
     InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
@@ -298,9 +299,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Truncate the file.
         self.workload.write(self.workload.paths.config_file, "")
 
-    @override
-    def prepare_for_startup(self) -> None:
-        """Handler on start."""
+    def _run_startup_checks(self):
+        """Runs the startup checks.
+
+        None of those steps should fail otherwise the service is not yet allowed to start.
+        """
         if not self.workload.workload_present:
             logger.debug("mongod installation is not ready yet.")
             raise ContainerNotReadyError("Mongo DB installation not ready yet")
@@ -309,6 +312,30 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.debug("Storages not attached yet.")
             raise ContainerNotReadyError("Missing storage")
 
+        if self.state.is_role(MongoDBRoles.UNKNOWN):
+            raise InvalidConfigRoleError()
+
+    @override
+    def prepare_for_startup(self) -> None:
+        """Handler on start."""
+        # Ensure we're allowed to run.
+        try:
+            self._run_startup_checks()
+        except InvalidConfigRoleError:
+            if self.charm.unit.is_leader():
+                self.state.statuses.add(
+                    MongoDBStatuses.INVALID_ROLE.value,
+                    scope="app",
+                    component=self.name,
+                )
+                raise
+
+        if self.charm.unit.is_leader():
+            self.state.statuses.clear(scope="app", component=self.name)
+
+        # Configure the workload. This requires a valid role!
+        # In the _run_startup_checks method, we ensure that we have a valid role before
+        # allowing that event to run.
         self._configure_workloads()
 
         logger.info("Starting MongoDB.")
@@ -433,6 +460,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
             )
             raise UpgradeInProgressError
+
+        if self.config.role == MongoDBRoles.INVALID:
+            logger.error(
+                f"Invalid role config - Please revert the config role to {self.state.app_peer_data.role}"
+            )
+            raise InvalidConfigRoleError("Invalid role")
 
         if not self.state.is_role(self.config.role):
             logger.error(
@@ -898,8 +931,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.logrotate_config_manager.configure_and_restart()
 
     @override
-    def is_relation_feasible(self, rel_name: str) -> bool:
+    def get_relation_feasible_status(self, rel_name: str) -> StatusObject | None:
         """Checks if the relation is feasible in the current context.
+
+        Invalid relations are such:
+         * any sharding component on the database endpoint.
+         * shard on the config-server endpoints.
+         * config-server on the shard endpoint.
+         * database on sharding endpoints.
 
         TODO: in the future expand this to a handle other non-feasible
         relations (i.e. mongos-shard, shard-s3)
@@ -911,11 +950,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-
-            self.state.statuses.add(
-                MongoDBStatuses.INVALID_DB_REL.value, scope="unit", component=self.name
-            )
-            return False
+            return MongoDBStatuses.INVALID_DB_REL.value
         if not self.state.is_sharding_component and rel_name in {
             RelationNames.SHARDING,
             RelationNames.CONFIG_SERVER,
@@ -925,11 +960,17 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.state.app_peer_data.role,
                 rel_name,
             )
-            self.state.statuses.add(
-                MongoDBStatuses.INVALID_SHARDING_REL.value, scope="unit", component=self.name
-            )
-            return False
-        return True
+            return MongoDBStatuses.INVALID_SHARDING_REL.value
+        if self.state.is_role(MongoDBRoles.SHARD) and rel_name == RelationNames.CONFIG_SERVER:
+            logger.error("Charm is in sharding mode. Does not support %s interface.", rel_name)
+            return MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.SHARDING:
+            logger.error("Charm is in config-server mode. Does not support %s interface.", rel_name)
+            return MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.CLUSTER:
+            logger.error("Charm is not a config-server, cannot integrate mongos")
+            return MongoDBStatuses.INVALID_MONGOS_REL.value
+        return None
 
     def _configure_workloads(self) -> None:
         """Handle filesystem interactions for charm configuration."""
@@ -995,19 +1036,26 @@ class MongoDBOperator(OperatorProtocol, Object):
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""
         statuses = []
-        if not self.cluster_manager.is_valid_mongos_integration():
-            statuses.append(MongoDBStatuses.INVALID_MONGOS_REL.value)
-
         if not self.backup_manager.is_valid_s3_integration():
             statuses.append(MongoDBStatuses.INVALID_S3_REL.value)
-
-        if self.state.client_relations and self.state.is_sharding_component:
-            statuses.append(MongoDBStatuses.INVALID_DB_REL.value)
+        # Add valid statuses for all invalid integrated relations
+        for relation_name in [
+            RelationNames.DATABASE,
+            RelationNames.SHARDING,
+            RelationNames.CONFIG_SERVER,
+            RelationNames.CLUSTER,
+        ]:
+            if (
+                self.model.relations[relation_name.value]
+                and (status := self.get_relation_feasible_status(relation_name)) is not None
+            ):
+                statuses.append(status)
 
         if not self.state.is_sharding_component and self.state.has_sharding_integration:
-            statuses.append(MongoDBStatuses.INVALID_SHARDING_REL.value)
-        elif rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
             # don't bother checking revision mismatch on sharding interface if replica
+            return statuses
+
+        if rev_status := self.cluster_version_checker.get_cluster_mismatched_revision_status():
             statuses.append(rev_status)
 
         return statuses
@@ -1019,22 +1067,26 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not recompute:
             return self.state.statuses.get(scope=scope, component=self.name).root
 
-        if scope == "app":
-            return charm_statuses
+        if scope == "unit" and not self.workload.workload_present:
+            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+
+        if self.config.role == MongoDBRoles.INVALID:
+            charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
 
         if not is_valid_ldapusertodnmapping(self.config.ldap_user_to_dn_mapping):
             logger.error("Invalid LDAP Config - Please refer to the config option description.")
             charm_statuses.append(LdapStatuses.INVALID_LDAP_USER_MAPPING.value)
+
         if not is_valid_ldap_options(
             self.config.ldap_user_to_dn_mapping, self.config.ldap_query_template
         ):
             logger.info("Invalid LDAP Config - Please refer to the config option description.")
             charm_statuses.append(LdapStatuses.INVALID_LDAP_QUERY_TEMPLATE.value)
 
-        if not self.workload.workload_present:
-            return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
-
         charm_statuses += self.basic_statuses()
+
+        if scope == "app":
+            return charm_statuses
 
         if not self.state.db_initialised:
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_MONGODB_START.value)
@@ -1042,6 +1094,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.mongodb_exporter_config_manager.workload.active():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_EXPORTER_START.value)
 
-            return charm_statuses
+        # PBM does not start until the shard is integrated with a config-server
+        # So if we're everything BUT a shard or not added to cluster, let's check PBM as well
+        if not self.state.is_role(MongoDBRoles.SHARD) or self.state.is_shard_added_to_cluster():
+            if not self.backup_manager.workload.active():
+                charm_statuses.append(BackupStatuses.WAITING_FOR_PBM_START.value)
 
         return charm_statuses

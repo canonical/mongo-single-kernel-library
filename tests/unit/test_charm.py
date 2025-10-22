@@ -4,11 +4,14 @@
 import json
 
 import pytest
+from data_platform_helpers.advanced_statuses.models import StatusObject
+from ops import BlockedStatus
 from ops.pebble import PathError, ProtocolError
 from ops.testing import ActionFailed, Harness
 from pymongo.errors import ConfigurationError, ConnectionFailure, OperationFailure
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import LdapStatuses, MongoDBStatuses, MongodStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
@@ -482,11 +485,27 @@ def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
-def test_on_config_changed_invalid_role(harness):
+def test_on_config_changed_inmpossible_to_change_role(harness):
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
     with pytest.raises(ShardingMigrationError):
         harness.update_config({"role": "shard"})
+
+
+def test_on_config_changed_invalid_role(harness):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION.value
+    harness.update_config({"role": "invalidrole"})
+    harness.evaluate_status()
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+
+
+def test_on_config_changed_no_role_yet(harness: Harness[MongoTestCharm], mocker):
+    mocked_defer = mocker.patch("ops.framework.EventBase.defer")
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.UNKNOWN.value
+    harness.update_config({"role": "shard"})
+    mocked_defer.assert_called()
 
 
 def test_on_config_changed_invalid_ldap_user_to_dn_mapping(harness):
@@ -599,6 +618,23 @@ def test_on_leader_elected_dont_rotate_if_present(harness):
     operator_password = state.get_user_password(OperatorUser)
     harness.charm.on.leader_elected.emit()
     assert state.get_user_password(OperatorUser) == operator_password
+
+
+def test_leader_elected_invalid_role(harness: Harness[MongoTestCharm]):
+    state = harness.charm.operator.state
+    with harness.hooks_disabled():
+        harness.update_config({"role": "invalidrole"})
+
+    assert state.is_role(MongoDBRoles.UNKNOWN)
+
+    harness.set_leader(True)
+    assert harness.charm.app.status == BlockedStatus("The role config option is invalid.")
+    assert state.app_peer_data.role == MongoDBRoles.UNKNOWN
+
+    harness.update_config({"role": "replication"})
+    harness.set_leader(True)
+
+    assert state.app_peer_data.role == MongoDBRoles.REPLICATION
 
 
 def test_on_secret_changed(
@@ -1157,3 +1193,57 @@ def test_primary_other_unit(
     harness.update_relation_data(rel.id, f"{mongodb_name}/1", PEER_ADDR[substrate])
     output = harness.run_action("get-primary")
     assert output.results["replica-set-primary"] == f"{mongodb_name}/1"
+
+
+@pytest.mark.parametrize(
+    ("role", "rel_name", "status"),
+    (
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.SHARDING,
+            MongoDBStatuses.INVALID_SHARDING_REL.value,
+        ),
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.CONFIG_SERVER,
+            MongoDBStatuses.INVALID_SHARDING_REL.value,
+        ),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.DATABASE, MongoDBStatuses.INVALID_DB_REL.value),
+        (MongoDBRoles.SHARD, RelationNames.DATABASE, MongoDBStatuses.INVALID_DB_REL.value),
+        (
+            MongoDBRoles.SHARD,
+            RelationNames.CONFIG_SERVER,
+            MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value,
+        ),
+        (
+            MongoDBRoles.CONFIG_SERVER,
+            RelationNames.SHARDING,
+            MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value,
+        ),
+        (
+            MongoDBRoles.REPLICATION,
+            RelationNames.CLUSTER,
+            MongoDBStatuses.INVALID_MONGOS_REL.value,
+        ),
+        (
+            MongoDBRoles.SHARD,
+            RelationNames.CLUSTER,
+            MongoDBStatuses.INVALID_MONGOS_REL.value,
+        ),
+        (MongoDBRoles.REPLICATION, RelationNames.DATABASE, None),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.CONFIG_SERVER, None),
+        (MongoDBRoles.CONFIG_SERVER, RelationNames.CLUSTER, None),
+        (MongoDBRoles.SHARD, RelationNames.SHARDING, None),
+    ),
+)
+def test_get_relation_feasible_status(
+    harness: Harness[MongoTestCharm],
+    role: MongoDBRoles,
+    rel_name: RelationNames,
+    status: StatusObject | None,
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = role
+
+    computed_status = harness.charm.operator.get_relation_feasible_status(rel_name.value)
+    assert computed_status == status

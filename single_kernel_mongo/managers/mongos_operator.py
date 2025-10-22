@@ -329,7 +329,7 @@ class MongosOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.status_handler.set_running_status(
-                MongosStatuses.MONGOS_NOT_STARTED.value,
+                MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",
                 statuses_state=self.state.statuses,
                 component_name=self.name,
@@ -337,12 +337,14 @@ class MongosOperator(OperatorProtocol, Object):
             raise
 
     @override
-    def is_relation_feasible(self, name: str) -> bool:
+    def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible.
 
         In the mongos case, we only allow the mongos proxy client relation.
         """
-        return name == RelationNames.MONGOS_PROXY
+        if name not in (RelationNames.MONGOS_PROXY, RelationNames.CLUSTER):
+            return MongosStatuses.INVALID_REL.value
+        return None
 
     def share_connection_info(self):
         """Shares the connection information of clients."""
@@ -563,7 +565,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")
-            charm_statuses.append(CharmStatuses.MONGOS_NOT_STARTED.value)
+            charm_statuses.append(MongosStatuses.WAITING_FOR_MONGOS_START.value)
             return charm_statuses
 
         username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
