@@ -292,6 +292,17 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
                     f"{path}",
                 ]
             )
+
+        if self.substrate == Substrates.VM:
+            self.workload.exec(
+                [
+                    "chown",
+                    "-R",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{self.workload.paths.common_path}",
+                ]
+            )
+
         for path in (
             self.workload.paths.config_file,
             self.workload.paths.mongos_config_file,
