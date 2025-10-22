@@ -24,7 +24,7 @@ CLUSTER_COMPONENTS = [
 
 
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource
+    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource: dict[str, str]
 ) -> None:
     charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
     await deploy_charm(
@@ -73,17 +73,17 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_local_config_server_reports_remote_shard(ops_test: OpsTest) -> None:
     """Tests that the local config server reports remote shard."""
-    # await ops_test.model.integrate(
-    #    f"{REMOTE_SHARD_APP_NAME}:{SHARD_REL_NAME}",
-    #    f"{LOCAL_CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
-    # )
+    await ops_test.model.integrate(
+        f"{REMOTE_SHARD_APP_NAME}:{SHARD_REL_NAME}",
+        f"{LOCAL_CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    )
 
-    # await ops_test.model.wait_for_idle(
-    #    apps=[LOCAL_CONFIG_SERVER_APP_NAME],
-    #    raise_on_blocked=False,
-    #    idle_period=20,
-    #    timeout=TIMEOUT,
-    # )
+    await ops_test.model.wait_for_idle(
+        apps=[LOCAL_CONFIG_SERVER_APP_NAME],
+        raise_on_blocked=False,
+        idle_period=20,
+        timeout=TIMEOUT,
+    )
     await check_app_status(ops_test, LOCAL_CONFIG_SERVER_APP_NAME, status="waiting")
 
     config_server_app = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME]
@@ -112,5 +112,5 @@ async def test_local_shard_reports_remote_config_server(
     local_shard_app = ops_test.model.applications[LOCAL_SHARD_APP_NAME]
 
     assert (
-        "is not up-to data with config-server" in local_shard_app.status_message
+        "is not up-to date with config-server" in local_shard_app.status_message
     ), "Shard does not correctly report mismatch in revision"
