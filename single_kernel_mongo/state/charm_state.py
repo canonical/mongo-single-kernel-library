@@ -212,9 +212,14 @@ class CharmState(Object, StatusesStateProtocol):
         return set(self.model.relations[RelationNames.CONFIG_SERVER.value])
 
     @property
-    def tls_relation(self) -> Relation | None:
-        """The TLS relation."""
-        return self.model.get_relation(ExternalRequirerRelations.TLS.value)
+    def client_tls_relation(self) -> Relation | None:
+        """The client TLS relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.CLIENT_TLS.value)
+
+    @property
+    def peer_tls_relation(self) -> Relation | None:
+        """The peer TLS relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.PEER_TLS.value)
 
     @property
     def s3_relation(self) -> Relation | None:
@@ -342,7 +347,11 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def tls(self) -> TLSState:
         """A view of the TLS status from the local unit databag."""
-        return TLSState(relation=self.peer_relation, secrets=self.secrets)
+        return TLSState(
+            peer_relation=self.peer_tls_relation,
+            client_relation=self.client_tls_relation,
+            secrets=self.secrets,
+        )
 
     @property
     def ldap(self) -> LdapState:
@@ -554,8 +563,8 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def update_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the CA secret in the cluster and config-server relations."""
+    def _update_ca_secrets(self, new_ca: str | None, cluster_key: str, sharding_key: str) -> None:
+        """Updates the CA secret for the right values on the right fields."""
         # Only the leader can update the databag
         if not self.charm.unit.is_leader():
             return
@@ -564,21 +573,35 @@ class CharmState(Object, StatusesStateProtocol):
         for relation in self.cluster_relations:
             if new_ca is None:
                 self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [ClusterStateKeys.INT_CA_SECRET.value]
+                    relation.id, [cluster_key]
                 )
             else:
                 self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {ClusterStateKeys.INT_CA_SECRET.value: new_ca}
+                    relation.id, {cluster_key: new_ca}
                 )
         for relation in self.config_server_relation:
             if new_ca is None:
-                self.config_server_data_interface.delete_relation_data(
-                    relation.id, [AppShardingComponentKeys.INT_CA_SECRET.value]
-                )
+                self.config_server_data_interface.delete_relation_data(relation.id, [sharding_key])
             else:
                 self.config_server_data_interface.update_relation_data(
-                    relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
+                    relation.id, {sharding_key: new_ca}
                 )
+
+    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the peer CA secret in the cluster and config-server relations."""
+        self._update_ca_secrets(
+            new_ca=new_ca,
+            cluster_key=ClusterStateKeys.INT_CA_SECRET.value,
+            sharding_key=AppShardingComponentKeys.INT_CA_SECRET.value,
+        )
+
+    def update_client_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the client CA secret in the cluster and config-server relations."""
+        self._update_ca_secrets(
+            new_ca=new_ca,
+            cluster_key=ClusterStateKeys.EXT_CA_SECRET.value,
+            sharding_key=AppShardingComponentKeys.EXT_CA_SECRET.value,
+        )
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
@@ -606,7 +629,7 @@ class CharmState(Object, StatusesStateProtocol):
             return False
 
         # We can't check if we don't have a valid certificate
-        if self.shard_state.internal_ca_secret is not None and not self.tls.external_enabled:
+        if self.shard_state.external_ca_secret is not None and not self.tls.client_enabled:
             return False
 
         try:
@@ -665,7 +688,7 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.external_enabled,
+            tls_enabled=self.tls.client_enabled,
             tls_external_keyfile=self.paths.ext_pem_file,
             tls_external_ca=self.paths.ext_ca_file,
             standalone=standalone,
@@ -695,7 +718,7 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.external_enabled,
+            tls_enabled=self.tls.client_enabled,
             tls_external_keyfile=self.paths.ext_pem_file,
             tls_external_ca=self.paths.ext_ca_file,
         )
@@ -751,7 +774,7 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_enabled=self.tls.external_enabled,
+            tls_enabled=self.tls.client_enabled,
             tls_external_keyfile=self.paths.ext_pem_file,
             tls_external_ca=self.paths.ext_ca_file,
         )
