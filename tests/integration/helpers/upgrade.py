@@ -13,6 +13,7 @@ from ..helpers.common import (
     execute_on_mongod,
     find_unit,
     get_address_of_unit,
+    get_juju_status,
     get_password,
     get_unit_id,
 )
@@ -71,9 +72,9 @@ async def assert_successful_run_upgrade_sequence(
     await refresh_charm(ops_test, substrate, app_name, new_charm, mongod_resource)
     # TODO future work, resolve flickering status of app
     async with ops_test.fast_forward(fast_interval="120s"):
-        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
 
-    if "incompatible" in ops_test.model.applications[app_name].status_message:
+    if "incompatible" in get_juju_status(ops_test, app_name):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")

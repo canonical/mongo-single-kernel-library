@@ -271,12 +271,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.refresh:
             return
 
+        # Update the version across all relations so that we can notify other units
+        self.cross_app_version_checker.set_version_across_all_relations()
+
         if self.state.app_peer_data.feature_compatibility_version == FEATURE_VERSION:
             # We have already run all this logic before, no need to run it again.
             return
-
-        # Update the version across all relations so that we can notify other units
-        self.cross_app_version_checker.set_version_across_all_relations()
 
         if (
             self.state.is_role(MongoDBRoles.CONFIG_SERVER)
@@ -321,12 +321,15 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not refresh.workload_allowed_to_start:
             return
+
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
         self._configure_workloads()
         self.start_charm_services()
 
-        self.state.unit_peer_data.current_revision = self.cross_app_version_checker.version
+        if self.charm.unit.is_leader():
+            # Update the version across all relations so that we can notify other units
+            self.cross_app_version_checker.set_version_across_all_relations()
 
         if self.name == CharmKind.MONGOD:
             self._restart_related_services()
