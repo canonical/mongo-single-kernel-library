@@ -1,7 +1,7 @@
 (disable-tls)=
 # How to disable TLS
 
-This guide assumes that you have a Charmed MongoDB deployment with TLS enabled. See [How to enable TLS](#enable-tls) for more information. 
+This guide assumes that you have a Charmed MongoDB deployment with TLS enabled. See {ref}`enable-tls` for more information. 
 
 To disable TLS encryption, remove the relation between your MongoDB applications and the TLS provider on the endpoint specific to the peer-to-peer or client-to-server communication.
 
