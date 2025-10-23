@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, check_app_status, find_unit
+from ..helpers.common import MONGOS_APP_NAME, check_app_status, find_unit, get_juju_status
 from ..helpers.mongos import build_cluster, deploy_cluster_components
 from ..helpers.types import Substrate
 from ..helpers.upgrade import refresh_charm
@@ -56,7 +56,7 @@ async def test_upgrade(
     await refresh_charm(ops_test, substrate, MONGOS_APP_NAME, mongos_charm, mongos_resource)
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], timeout=1000, idle_period=60)
 
-    if "incompatible" in ops_test.model.applications[MONGOS_APP_NAME].status_message:
+    if "incompatible" in get_juju_status(ops_test.model.name, MONGOS_APP_NAME):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")
@@ -68,7 +68,8 @@ async def test_upgrade(
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
-    await check_app_status(ops_test, MONGOS_APP_NAME, raise_on_blocked=False)
+    await check_app_status(ops_test, MONGOS_APP_NAME)
+
     if "resume-refresh" in mongodb_application.status_message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")

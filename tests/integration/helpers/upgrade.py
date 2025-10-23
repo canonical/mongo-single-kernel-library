@@ -74,7 +74,7 @@ async def assert_successful_run_upgrade_sequence(
     async with ops_test.fast_forward(fast_interval="120s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
 
-    if "incompatible" in get_juju_status(ops_test, app_name):
+    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")
