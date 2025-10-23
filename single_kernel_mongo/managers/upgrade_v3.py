@@ -11,10 +11,7 @@ from tenacity import Retrying, retry, stop_after_attempt, wait_fixed
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
-from single_kernel_mongo.exceptions import (
-    BalancerStillRunningError,
-    ClusterNotHealthyError,
-)
+from single_kernel_mongo.exceptions import BalancerStillRunningError, ClusterNotHealthyError
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
@@ -242,6 +239,8 @@ class MongoDBUpgradesManager:
         secondary_config = copy.deepcopy(mongodb_config)
 
         for replica_ip in mongodb_config.hosts:
+            if replica_ip == self.state.unit_peer_data.internal_address:
+                continue
             secondary_config.hosts = {replica_ip}
             with MongoConnection(secondary_config, direct=True) as direct_secondary:
                 db = direct_secondary.client[db_name]
