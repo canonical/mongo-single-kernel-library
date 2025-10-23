@@ -57,6 +57,24 @@ class MongoDBUpgradesManager:
             )
             return False
 
+    def are_shards_accessible(self) -> bool:
+        """Checks if all nodes are accessible, fails otherwise."""
+        mongos_config = self.get_cluster_mongos()
+        for replica_set_config in self.get_all_replica_set_configs_in_cluster(mongos_config):
+            for single_host in replica_set_config.hosts:
+                if single_host != self.state.unit_peer_data.internal_address:
+                    single_replica_config = self.state.mongodb_config_for_user(
+                        OperatorUser,
+                        hosts={single_host},
+                        replset=replica_set_config.replset,
+                    )
+                    try:
+                        with MongoConnection(single_replica_config, direct=True) as mongod:
+                            mongod.admin.command("ping")
+                    except PyMongoError:
+                        return False
+        return True
+
     def are_nodes_healthy(self) -> bool:
         """Returns true if all nodes in the MongoDB deployment are healthy."""
         if self.state.is_sharding_component and not self.state.has_sharding_integration:
@@ -65,6 +83,9 @@ class MongoDBUpgradesManager:
             return self.are_replica_set_nodes_healthy(self.state.mongo_config)
 
         mongos_config = self.get_cluster_mongos()
+        if not self.are_shards_accessible():
+            return False
+
         if not self.are_shards_healthy(mongos_config):
             logger.info(
                 "One or more individual shards are not healthy - do not proceed with refresh."

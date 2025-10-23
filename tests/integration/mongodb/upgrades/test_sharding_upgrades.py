@@ -171,12 +171,9 @@ async def test_pre_upgrade_check_failure(
 
     assert non_leader_unit, "No non leader unit found"
 
-    if substrate == "lxd":
-        hostname = await unit_hostname(ops_test, non_leader_unit.name)
-    else:
-        hostname = non_leader_unit.name
+    machine_name = await unit_hostname(ops_test, unit.name)
 
-    cut_network_from_unit(ops_test, substrate, hostname)
+    cut_network_from_unit(ops_test, substrate, machine_name)
 
     for sharding_component in CLUSTER_COMPONENTS:
         leader_unit = await find_unit(ops_test, leader=True, app_name=sharding_component)
@@ -185,7 +182,7 @@ async def test_pre_upgrade_check_failure(
         assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
 
     # restore network after test
-    restore_network_for_unit(ops_test, substrate, hostname)
+    restore_network_for_unit(ops_test, substrate, machine_name)
     await ops_test.model.wait_for_idle(
         apps=[SHARD_TWO_APP_NAME],
         status="active",
