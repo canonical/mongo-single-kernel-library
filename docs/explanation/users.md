@@ -5,20 +5,20 @@ Charmed MongoDB has the following internal users:
 
 | user        | function                                              |
 |-------------|-------------------------------------------------------|
-| `operator`  | Admin user that manages database/cluster (i.e. admin) |
-| `monitor`   | Manages COS integration                               |
-| `backup`    | Manages all backup operations                         |
-| `logrotate` | Manages log rotation                                  |
+| `charmed-operator`  | Admin user that manages database/cluster (i.e. admin) |
+| `charmed-stats`   | Manages COS integration                               |
+| `charmed-backup`    | Manages all backup operations                         |
+| `charmed-logrotate` | Manages log rotation                                  |
 
 Sample full dump of internal users on a newly installed Charmed MongoDB replica set:
 
 \`\`\`
 [
   {
-    _id: 'admin.operator',
+    _id: 'admin.charmed-operator',
     userId: UUID('d2d91b91-e8e2-462c-85a2-bf4683bb6a8d'),
-    user: 'operator',
-    db: 'admin',
+    user: 'charmed-operator',
+    db: 'charmed-admin',
     credentials: {
       'SCRAM-SHA-256': {
         iterationCount: 15000,
@@ -34,9 +34,9 @@ Sample full dump of internal users on a newly installed Charmed MongoDB replica 
     ]
   },
   {
-    _id: 'admin.monitor',
+    _id: 'admin.charmed-stats',
     userId: UUID('68d02deb-bac1-4bbf-bfde-60d746fb1aa0'),
-    user: 'monitor',
+    user: 'charmed-stats',
     db: 'admin',
     credentials: {
       'SCRAM-SHA-256': {
@@ -53,9 +53,9 @@ Sample full dump of internal users on a newly installed Charmed MongoDB replica 
     ]
   },
   {
-    _id: 'admin.backup',
+    _id: 'admin.charmed-backup',
     userId: UUID('88e4b516-43a8-4679-a2f9-5bd4f79f6f57'),
-    user: 'backup',
+    user: 'charmed-backup',
     db: 'admin',
     credentials: {
       'SCRAM-SHA-256': {
@@ -74,9 +74,9 @@ Sample full dump of internal users on a newly installed Charmed MongoDB replica 
     ]
   },
   {
-    _id: 'admin.logrotate',
+    _id: 'admin.charmed-logrotate',
     userId: UUID('6771cf52-1afc-4ae3-9330-30f4fd576f55'),
-    user: 'logrotate',
+    user: 'charmed-logrotate',
     db: 'admin',
     credentials: {
       'SCRAM-SHA-256': {
