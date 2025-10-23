@@ -107,7 +107,7 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     @property
     def backup_ca_secret(self) -> list[str] | None:
-        """Returns the sbackup ca secret."""
+        """Returns the backup ca secret."""
         if not self.relation:
             return None
         return json.loads(

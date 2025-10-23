@@ -196,7 +196,7 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username, _ in USERNAME_MAPPING.items():
+    for rel6_username in USERNAME_MAPPING.keys():
         password = await get_password_action(
             ops_test, username=rel6_username, app_name=CONFIG_SERVER_SIX
         )
@@ -362,7 +362,7 @@ async def test_restore_backup_7_to_8(
     await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_six = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SIX)
-    leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
+    leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
     # count total writes
     n_writes_six = await count_writes(
         ops_test, substrate, CONFIG_SERVER_SIX, leader_unit_six, mongos=True, username="operator"

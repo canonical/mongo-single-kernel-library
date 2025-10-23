@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
@@ -35,7 +35,7 @@ from ...helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     all_db_processes_down,
     db_step_down,
     fetch_replica_set_members,
@@ -53,7 +53,7 @@ from ...helpers.ha import (
     verify_replica_set_configuration,
     verify_writes,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
 RESTART_DELAY = 60 * 3

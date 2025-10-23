@@ -137,7 +137,7 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username, _ in USERNAME_MAPPING.items():
+    for rel6_username in USERNAME_MAPPING.keys():
         password = await get_password_action(ops_test, username=rel6_username, app_name=MONGODB_SIX)
         await set_password(
             ops_test, username=rel6_username, password=password, app_name=MONGODB_SEVEN

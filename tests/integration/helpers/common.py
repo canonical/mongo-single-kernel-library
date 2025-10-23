@@ -32,7 +32,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOD_PORT = 27017
@@ -480,7 +480,7 @@ async def set_password(
         password: password to use
         app_name: the application the created secret will be granted to
     """
-    secret_name = "system_users_secret"
+    secret_name = f"system_users_secret_{app_name}"
 
     try:
         secret_id = await ops_test.model.add_secret(
@@ -497,7 +497,7 @@ async def set_password(
 
     # update the application config to include the secret
     logger.info(
-        f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config to {secret_id} {username}={password}"
+        f"Setting the {INTERNAL_USER_PASSWORD_CONFIG} config in {app_name} to {secret_id} {username}={password}"
     )
     await ops_test.model.applications[app_name].set_config(
         {INTERNAL_USER_PASSWORD_CONFIG: secret_id}

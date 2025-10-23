@@ -725,12 +725,12 @@ class CharmState(Object, StatusesStateProtocol):
 
     @property
     def backup_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the backup user."""
+        """Mongo Configuration for the charmed-backup user."""
         return self.mongodb_config_for_user(CharmedBackupUser, standalone=True)
 
     @property
     def stats_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the charmed stats user."""
+        """Mongo Configuration for the charmed-stats user."""
         return self.mongodb_config_for_user(CharmedStatsUser, hosts=self.internal_hosts)
 
     @property
@@ -740,7 +740,7 @@ class CharmState(Object, StatusesStateProtocol):
 
     @property
     def operator_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the charmed operator user."""
+        """Mongo Configuration for the charmed-operator user."""
         return self.mongodb_config_for_user(CharmedOperatorUser, hosts=self.internal_hosts)
 
     @property
