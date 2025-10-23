@@ -251,12 +251,20 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     [major, minor, patch] = workload_version.split(".")
     initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
+
+    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
+        with charm_zip.open("refresh_versions.toml") as versions_file:
+            file_data = versions_file.read().decode()
+
+    versions = tomli.loads(file_data)
+
+    versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     if new_snap_revision:
-        initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"
+        versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
     # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
-        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(initial_version_data))
+        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(versions))
 
     yield fault_charm
 
@@ -282,12 +290,20 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     [major, minor, patch] = workload_version.split(".")
     initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
+
+    with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
+        with charm_zip.open("refresh_versions.toml") as versions_file:
+            file_data = versions_file.read().decode()
+
+    versions = tomli.loads(file_data)
+
+    versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
     if new_snap_revision:
-        initial_version_data["snap"]["revisions"][machine()] = f"{new_snap_revision}"
+        versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
     # Update the faulty charm to write the updated values in the correct files
     with zipfile.ZipFile(fault_charm, mode="a") as charm_zip:
-        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(initial_version_data))
+        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(versions))
     yield fault_charm
 
 
