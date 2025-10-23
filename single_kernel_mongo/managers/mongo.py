@@ -507,6 +507,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return []
 
         try:
+            logger.info(f"MONGO CONFIG: {self.state.mongo_config}")
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
 
