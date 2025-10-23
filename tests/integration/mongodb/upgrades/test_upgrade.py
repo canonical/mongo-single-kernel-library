@@ -12,6 +12,7 @@ from ...helpers.common import (
     deploy_charm,
     find_unit,
     get_app_name,
+    get_juju_status,
     unit_hostname,
 )
 from ...helpers.ha import (
@@ -81,7 +82,7 @@ async def test_upgrade(
     await refresh_charm(ops_test, substrate, app_name, mongodb_charm, mongod_resource)
     await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=120)
 
-    if "incompatible" in ops_test.model.applications[app_name].status_message:
+    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")
