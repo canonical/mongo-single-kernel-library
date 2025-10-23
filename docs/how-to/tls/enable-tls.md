@@ -17,10 +17,12 @@ You can enable peer-to-peer encryption alone, client-to-server encryption alone,
 
 This guide will use the [Self-signed Certificates](https://charmhub.io/self-signed-certificates) charm as an example for all cases.
 
-```{caution}
+```{admonition} Caution
+:class: warning
+
 **[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
 
-Check [this guide](https://charmhub.io/topics/security-with-x-509-certificates) for an overview of all the TLS certificates charms available. 
+See [this guide](https://charmhub.io/topics/security-with-x-509-certificates) for an overview of the available TLS certificates charms and how to choose the right one for your use-case.
 ```
 
 Deploy the `self-signed-certificates` charm.
@@ -33,15 +35,39 @@ Integrate your replica set with the TLS provider according the required encrypti
 
 ### Peer-to-peer
 
-```shell
-juju integrate self-signed-certificates mongodb:peer-certificates
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+    juju deploy self-signed-certificates
+    juju integrate self-signed-certificates mongodb:peer-certificates
 ```
+
+```{tab-item} K8s
+:sync: k8s
+
+    juju deploy self-signed-certificates
+    juju integrate self-signed-certificates mongodb-k8s:peer-certificates
+```
+````
 
 ### Client-to-server
 
-```shell
-juju integrate self-signed-certificates mongodb:client-certificates
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+    juju deploy self-signed-certificates
+    juju integrate self-signed-certificates mongodb:client-certificates
 ```
+
+```{tab-item} K8s
+:sync: k8s
+
+    juju deploy self-signed-certificates
+    juju integrate self-signed-certificates mongodb-k8s:client-certificates
+```
+````
 
 ## Enable TLS in a sharded cluster
 
@@ -52,12 +78,16 @@ However, it requires that:
 1. All cluster components have encryption enabled
 2. All cluster components are integrated to the **same** Certificate Authority (CA).
 
+To enable TLS, integrate the TLS provider charm with all cluster components.
+
+In a cluster with two shards (named `shard0` and `shard1`) and a config-server, it would look as follows:
+
 ### Peer-to-peer
 
 ```shell
 juju integrate self-signed-certificates config-server:peer-certificates
-juju integrate self-signed-certificates shard-one:peer-certificates
-juju integrate self-signed-certificates shard-two :peer-certificates
+juju integrate self-signed-certificates shard0:peer-certificates
+juju integrate self-signed-certificates shard1:peer-certificates
 ```
 
 Your sharded cluster now has peer-to-peer encryption enabled via TLS.
@@ -66,8 +96,8 @@ Your sharded cluster now has peer-to-peer encryption enabled via TLS.
 
 ```shell
 juju integrate self-signed-certificates config-server:client-certificates
-juju integrate self-signed-certificates shard-one:client-certificates
-juju integrate self-signed-certificates shard-two :client-certificates
+juju integrate self-signed-certificates shard0:client-certificates
+juju integrate self-signed-certificates shard1:client-certificates
 ```
 
 Your sharded cluster now has client-to-server encryption enabled via TLS.

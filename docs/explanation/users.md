@@ -3,10 +3,10 @@
 
 Charmed MongoDB has the following internal users:
 
-| user        | function                                              |
-|-------------|-------------------------------------------------------|
+| user                | function                                              |
+|---------------------|-------------------------------------------------------|
 | `charmed-operator`  | Admin user that manages database/cluster (i.e. admin) |
-| `charmed-stats`   | Manages COS integration                               |
+| `charmed-stats`     | Manages COS integration                               |
 | `charmed-backup`    | Manages all backup operations                         |
 | `charmed-logrotate` | Manages log rotation                                  |
 

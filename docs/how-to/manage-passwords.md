@@ -44,8 +44,10 @@ Set the `system-users` configuration option in your replica set or config-server
 Make sure to include the `secret:` prefix.
 ```
 
-```{caution}
-Do not set this configuration option for applications using the `shard` role.
+```{admonition} Caution
+:class: warning
+
+Do not set this configuration option for shards.
 ```
 
 ```shell

@@ -21,8 +21,10 @@ openssl genrsa -out <private-key-name>.pem 3072
 
 Create a juju secret for each private key generated:
 
-```{caution}
-Passing keys to juju should only be done with `base64 -w0`, not `cat`.
+```{admonition} Caution
+:class: warning
+
+Passing keys to Juju should only be done with `base64 -w0`, not `cat`.
 ```
 
 ```shell
@@ -40,6 +42,7 @@ Grant the secret to your MongoDB application:
 ```shell
 juju grant-secret <secret-name> <application-name>
 ```
+
 ## Reference the secret in the charm configuration
 
 According to the required TLS encryption, set the configuration option in your MongoDB application to the secret’s URI obtained in the previous step:

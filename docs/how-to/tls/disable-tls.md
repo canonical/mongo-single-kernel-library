@@ -9,32 +9,56 @@ You can disable **peer-to-peer** encryption alone, **client-to-server** encrypti
 
 ## Disable TLS in a replica set
 
+To disable TLS, simply remove the integration with the TLS provider.
+
 ### Peer-to-peer
 
-```shell
-juju remove-relation self-signed-certificates mongodb:peer-certificates
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+    juju remove-relation self-signed-certificates mongodb:peer-certificates
 ```
+
+```{tab-item} K8s
+:sync: k8s
+
+    juju remove-relation self-signed-certificates mongodb-k8s:peer-certificates
+```
+````
 
 You have successfully disabled peer-to-peer TLS encryption with for your replica set
 
 ### Client-to-server
 
-```shell
-juju remove-relation self-signed-certificates mongodb:client-certificates
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+    juju remove-relation self-signed-certificates mongodb:client-certificates
 ```
+
+```{tab-item} K8s
+:sync: k8s
+
+    juju remove-relation self-signed-certificates mongodb-k8s:client-certificates
+```
+````
 
 You have successfully disabled client-to-server TLS encryption with for your replica set
 
 ## Disable TLS in a  sharded cluster
 
-Remove the relations from all the cluster components.
+Remove the relations with the TLS provider, from all the cluster components.
+
+In a cluster with two shards (named `shard0` and `shard1`) and a config-server, it would look as follows:
 
 ### Peer-to-peer
 
 ```shell
 juju remove-relation self-signed-certificates config-server:peer-certificates
-juju remove-relation self-signed-certificates shard-one:peer-certificates
-juju remove-relation self-signed-certificates shard-two:peer-certificates
+juju remove-relation self-signed-certificates shard0:peer-certificates
+juju remove-relation self-signed-certificates shard1:peer-certificates
 ```
 
 You have successfully disabled peer-to-peer TLS encryption with for your sharded cluster.
@@ -43,8 +67,8 @@ You have successfully disabled peer-to-peer TLS encryption with for your sharded
 
 ```shell
 juju remove-relation self-signed-certificates config-server:client-certificates
-juju remove-relation self-signed-certificates shard-one:client-certificates
-juju remove-relation self-signed-certificates shard-two:client-certificates
+juju remove-relation self-signed-certificates shard0:client-certificates
+juju remove-relation self-signed-certificates shard1:client-certificates
 ```
 
 You have successfully disabled client-to-server TLS encryption with for your sharded cluster.

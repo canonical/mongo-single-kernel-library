@@ -34,15 +34,23 @@ old cluster
 
 The migration process will restore the password from the {term}`new cluster` to your {term}`old cluster`.
 
-For all four internal users, set the password of your old cluster to the new cluster’s password:
-
-<!--TODO: Update for MongoDB 8 -->
+Create a juju secret with the internal user's passwords in the new cluster:
 
 ```shell
-juju run <app>/leader set-password username=<username> password=<new password>
+juju add-secret <secret-name> charmed-operator=<password-1> charmed-backup=<password-2> charmed-stats=<password-3> charmed-logrotate=<password-4>
 ```
 
-Where  `<username>` is `operator`, `backup`, `monitor`, and `logrotate`. 
+Note the secret URI obtained in the previous command and set it in the `system-users` configuration
+option of your replica set or config server:
+
+```shell
+juju grant-secret <secret-name> <application-name>
+juju config <application-name> system-users=<secret_URI>
+```
+
+```{seealso}
+[How to > Manage passwords](/how-to/manage-passwords)
+```
 
 ## List all backups
 
