@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
+from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.utils import as_status
-from ops.model import BlockedStatus, Relation, WaitingStatus
+from ops.model import Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -200,7 +201,7 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     (
         "mongo_has_tls",
         "config_server_has_tls",
-        "is_waiting_to_request_certs",
+        "is_waiting_for_a_cert",
         "expected_error",
     ),
     (
@@ -208,13 +209,13 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
             False,
             True,
             True,
-            "Config-Server uses TLS but mongos does not. Please synchronise encryption method.",
+            "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method.",
         ),
         (
             True,
             False,
             True,
-            "Mongos uses TLS but config-server does not. Please synchronise encryption method.",
+            "Mongos uses peer TLS but config-server does not. Please synchronise encryption method.",
         ),
         (
             False,
@@ -228,7 +229,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
     mongo_has_tls,
-    is_waiting_to_request_certs,
+    is_waiting_for_a_cert,
     config_server_has_tls,
     expected_error,
 ):
@@ -238,12 +239,12 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.tls_status",
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_peer_tls_status",
         return_value=(mongo_has_tls, config_server_has_tls),
     )
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.is_waiting_to_request_certs",
-        return_value=is_waiting_to_request_certs,
+        "single_kernel_mongo.managers.tls.TLSManager.is_waiting_for_a_cert",
+        return_value=is_waiting_for_a_cert,
     )
 
     with pytest.raises(DeferrableFailedHookChecksError) as err:
@@ -507,7 +508,12 @@ def test_cluster_requirer_is_ca_compatible(
     rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
 
     # Create the TLS relation
-    mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    mongos_harness.add_relation(
+        ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+    )
+    mongos_harness.add_relation(
+        ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+    )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("charmed-operator", "password")
@@ -540,7 +546,7 @@ def test_cluster_requirer_is_ca_compatible(
     )
 
     # Actual check
-    assert manager.is_ca_compatible() == expected_compatibility
+    assert manager.is_peer_ca_compatible() == expected_compatibility
 
 
 @pytest.mark.parametrize(
@@ -578,81 +584,11 @@ def test_cluster_requirer_tls_status(
 
     # Create the TLS relation if it should have one
     if mongos_has_tls:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
-
-    # Ensure some credentials are present
-    manager.share_credentials_to_clients("charmed-operator", "password")
-
-    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
-
-    mocker.patch(
-        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
-        return_value=data,
-    )
-    mocker.patch(
-        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
-        return_value=data,
-    )
-
-    # Write the information + optional certificate
-    mongos_harness.update_relation_data(
-        rel_id_cluster,
-        "mongodb",
-        {
-            "key-file": "deadbeef",
-            "config-server-db": "mongodb/2.2.2.2:27017",
-            "int-ca-secret": cluster_ca_secret or "",
-        },
-    )
-
-    # Actual check
-    assert manager.tls_status() == expected_statuses
-
-
-@pytest.mark.parametrize(
-    ("mongos_ca_secret", "cluster_ca_secret", "expected_status"),
-    (
-        (None, "deadbeef", MongosStatuses.MISSING_TLS_REL.value),
-        (
-            "deadbeef",
-            None,
-            MongosStatuses.INVALID_TLS_REL.value,
-        ),
-        (None, None, None),
-        ("deadbeef", "deadbeef", None),
-        (
-            "feeddead",
-            "deadbeef",
-            MongosStatuses.CA_MISMATCH.value,
-        ),
-    ),
-)
-def test_cluster_requirer_get_tls_statuses(
-    mongos_harness: Harness[MongosTestCharm],
-    mock_fs_interactions,
-    mocker,
-    mongos_ca_secret: str | None,
-    cluster_ca_secret: str | None,
-    expected_status: BlockedStatus | None,
-):
-    manager = mongos_harness.charm.operator.cluster_manager
-    mongos_harness.set_leader(True)
-
-    mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
-        return_value=True,
-    )
-    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
-
-    # Create the cluster relation
-    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
-
-    # Create the TLS relation if it should have one
-    if mongos_ca_secret:
-        mongos_harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
-        # Local certificate
-        manager.state.tls.set_secret(
-            internal=True, label_name=SECRET_CA_LABEL, contents=mongos_ca_secret
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+        )
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
         )
 
     # Ensure some credentials are present
@@ -681,4 +617,105 @@ def test_cluster_requirer_get_tls_statuses(
     )
 
     # Actual check
-    assert manager.get_tls_statuses() == expected_status
+    assert manager.mongos_and_config_server_peer_tls_status() == expected_statuses
+
+
+@pytest.mark.parametrize(
+    (
+        "mongos_peer_ca_secret",
+        "cluster_peer_ca_secret",
+        "mongos_client_ca_secret",
+        "cluster_client_ca_secret",
+        "expected_status",
+    ),
+    (
+        (None, "deadbeef", None, None, [MongosStatuses.MISSING_PEER_TLS_REL.value]),
+        ("deadbeef", None, None, None, [MongosStatuses.INVALID_PEER_TLS_REL.value]),
+        (None, None, None, None, []),
+        ("deadbeef", "deadbeef", None, None, []),
+        ("deadbeef", "deadbeef", "deadbeef", "deadbeef", []),
+        ("feeddead", "deadbeef", None, None, [MongosStatuses.PEER_CA_MISMATCH.value]),
+        (None, None, None, "deadbeef", [MongosStatuses.MISSING_CLIENT_TLS_REL.value]),
+        (None, None, "deadbeef", None, [MongosStatuses.INVALID_CLIENT_TLS_REL.value]),
+        ("deadbeef", "deadbeef", "deadbeef", None, [MongosStatuses.INVALID_CLIENT_TLS_REL.value]),
+        (None, None, "deadbeef", "deadbeef", []),
+        (None, None, "feeddead", "deadbeef", [MongosStatuses.CLIENT_CA_MISMATCH.value]),
+        (
+            None,
+            "deadbeef",
+            None,
+            "deadbeef",
+            [
+                MongosStatuses.MISSING_PEER_TLS_REL.value,
+                MongosStatuses.MISSING_CLIENT_TLS_REL.value,
+            ],
+        ),
+    ),
+)
+def test_cluster_requirer_get_tls_statuses(
+    mongos_harness: Harness[MongosTestCharm],
+    mock_fs_interactions,
+    mocker,
+    mongos_peer_ca_secret: str | None,
+    cluster_peer_ca_secret: str | None,
+    mongos_client_ca_secret: str | None,
+    cluster_client_ca_secret: str | None,
+    expected_status: list[StatusObject],
+):
+    manager = mongos_harness.charm.operator.cluster_manager
+    mongos_harness.set_leader(True)
+
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=True,
+    )
+    mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+
+    # Create the cluster relation
+    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+
+    # Create the TLS relation if it should have one
+    if mongos_peer_ca_secret:
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+        )
+        # Local certificate
+        manager.state.tls.set_secret(
+            internal=True, label_name=SECRET_CA_LABEL, contents=mongos_peer_ca_secret
+        )
+    if mongos_client_ca_secret:
+        mongos_harness.add_relation(
+            ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+        )
+        manager.state.tls.set_secret(
+            internal=False, label_name=SECRET_CA_LABEL, contents=mongos_client_ca_secret
+        )
+
+    # Ensure some credentials are present
+    manager.share_credentials_to_clients("charmed-operator", "password")
+
+    data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
+
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.read",
+        return_value=data,
+    )
+    mocker.patch(
+        "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.read",
+        return_value=data,
+    )
+
+    # Write the information + optional certificate
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "mongodb",
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "mongodb/2.2.2.2:27017",
+            "int-ca-secret": cluster_peer_ca_secret or "",
+            "ext-ca-secret": cluster_client_ca_secret or "",
+        },
+    )
+
+    # Actual check
+    assert manager.tls_statuses() == expected_status

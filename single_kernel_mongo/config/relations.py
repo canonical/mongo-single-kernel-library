@@ -35,7 +35,8 @@ class Scopes(str, Enum):
 class ExternalRequirerRelations(str, Enum):
     """The relations we require externally."""
 
-    TLS = "certificates"
+    CLIENT_TLS = "client-certificates"
+    PEER_TLS = "peer-certificates"
     S3_CREDENTIALS = "s3-credentials"
     LDAP = "ldap"
     LDAP_CERT = "ldap-certificate-transfer"

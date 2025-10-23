@@ -8,9 +8,9 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
 from ..helpers.common import (
+    CHARMED_OPERATOR_PASSWORD,
     CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
-    OPERATOR_PASSWORD,
     TIMEOUT,
     deploy_charm,
     find_unit,
@@ -157,14 +157,14 @@ async def test_set_operator_password(ops_test: OpsTest):
             ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password != OPERATOR_PASSWORD
+            operator_password != CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
     await set_password(
         ops_test,
         username=CHARMED_OPERATOR_USERNAME,
-        password=OPERATOR_PASSWORD,
+        password=CHARMED_OPERATOR_PASSWORD,
         app_name=CONFIG_SERVER_APP_NAME,
     )
     await ops_test.model.wait_for_idle(
@@ -178,7 +178,7 @@ async def test_set_operator_password(ops_test: OpsTest):
             ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password == OPERATOR_PASSWORD
+            operator_password == CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} did not rotate to new password."
 
 

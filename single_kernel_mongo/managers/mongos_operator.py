@@ -104,12 +104,7 @@ class MongosOperator(OperatorProtocol, Object):
             self.state,
             self.substrate,
         )
-        self.tls_manager = TLSManager(
-            self,
-            self.workload,
-            self.state,
-            self.substrate,
-        )
+        self.tls_manager = TLSManager(self, self.workload, self.state)
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
@@ -201,9 +196,10 @@ class MongosOperator(OperatorProtocol, Object):
     @property
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
-        return (self, self.ldap_manager, self.upgrades_status_manager)
+        return (self, self.tls_manager, self.ldap_manager, self.upgrades_status_manager)
 
     @property
+    @override
     def config(self) -> MongosCharmConfig:
         """Returns the actual config."""
         return self.charm.parsed_config
@@ -222,8 +218,8 @@ class MongosOperator(OperatorProtocol, Object):
         # Instantiate the local directory for k8s
         self.build_local_tls_directory()
 
-        # Push certificates
-        self.tls_manager.push_tls_files_to_workload()
+        for internal in [True, False]:
+            self.tls_manager.push_tls_files_to_workload(internal)
 
         # Save LDAP certificates
         self.ldap_manager.save_certificates(self.state.ldap.chain)
@@ -301,8 +297,7 @@ class MongosOperator(OperatorProtocol, Object):
                 component=self.name,
             )
             self.update_k8s_external_services()
-
-            self.tls_manager.update_tls_sans()
+            self.tls_events.refresh_certificates()
             self.share_connection_info()
 
     @override
@@ -345,7 +340,7 @@ class MongosOperator(OperatorProtocol, Object):
             # our SANS as necessary.
             # The connection info will be updated when we receive the new certificates.
             if self.substrate == Substrates.K8S:
-                self.tls_manager.update_tls_sans()
+                self.tls_events.refresh_certificates()
 
     @override
     def new_peer(self) -> None:
@@ -390,11 +385,10 @@ class MongosOperator(OperatorProtocol, Object):
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
-            self.charm.status_handler.set_running_status(
+            self.charm.state.statuses.add(
                 MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",
-                statuses_state=self.state.statuses,
-                component_name=self.name,
+                component=self.name,
             )
             raise
 
@@ -579,8 +573,9 @@ class MongosOperator(OperatorProtocol, Object):
             )
             return False
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+        if statuses := self.cluster_manager.tls_statuses():
+            for status in statuses:
+                logger.info(f"Invalid TLS integration: {status.message}")
             return False
 
         if not self.is_mongos_running():
@@ -618,10 +613,11 @@ class MongosOperator(OperatorProtocol, Object):
             # don't bother checking remaining statuses if no config-server is present
             return charm_statuses
 
-        if status := self.cluster_manager.get_tls_statuses():
-            logger.info(f"Invalid TLS integration: {status.message}")
+        if statuses := self.cluster_manager.tls_statuses():
+            for status in statuses:
+                logger.info(f"Invalid TLS integration: {status.message}")
             # if TLS is misconfigured we will get redherrings on the remaining messages
-            charm_statuses.append(status)
+            charm_statuses += statuses
             return charm_statuses
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:

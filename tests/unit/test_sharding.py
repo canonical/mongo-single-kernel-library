@@ -113,7 +113,7 @@ def test_config_server_database_requested_failed_not_leader(
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.prepare_sharding_config(relation)
 
-    assert err.value.args == ()
+    assert err.value.args == ("Not leader",)
 
 
 def test_config_server_database_requested_failed_wrong_pbm_status(
@@ -173,7 +173,7 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
 
-    manager.state.update_ca_secrets("newca")
+    manager.state.update_peer_ca_secrets("newca")
 
     assert manager.data_interface.as_dict(rel_id).get("int-ca-secret") == "newca"
 
@@ -350,7 +350,7 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
     assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
-def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTestCharm]):
+def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.shard_manager
 
     harness.set_leader(True)
@@ -359,6 +359,11 @@ def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTe
 
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
     relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
+
+    mocker.patch(
+        "single_kernel_mongo.state.config_server_state.AppShardingComponentState.has_received_credentials",
+        return_value=True,
+    )
 
     with pytest.raises(NonDeferrableFailedHookChecksError) as err:
         manager.synchronise_cluster_secrets(relation)
@@ -404,7 +409,7 @@ def test_shard_manager_synchronise_cluster_secrets_success(
 
     manager.synchronise_cluster_secrets(relation)
 
-    mocked_update_member_auth.assert_called_with("deadbeef", None)
+    mocked_update_member_auth.assert_called_with("deadbeef", None, None)
     mocked_sync.assert_called_with("test-operator", "test-backup")
 
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "true"
@@ -450,12 +455,14 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
     harness.charm.operator.state.db_initialised = True
 
     # Simulate missing certs
+    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.sync_cluster_passwords")
     mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.update_member_auth",
         side_effect=WaitingForCertificatesError,
     )
 
-    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation(ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates")
+    harness.add_relation(ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates")
     rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
 
     harness.update_relation_data(
@@ -464,6 +471,7 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         {
             "key-file": "feeddead",
             "int-ca-secret": "deadbeef",
+            "ext-ca-secret": "deadbeef",
             "charmed-operator-password": "test-operator",
             "charmed-backup-password": "test-backup",
             "username": "unused",
@@ -487,6 +495,7 @@ def test_shard_manager_synchronise_cluster_secrets_mongod_not_ready(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
     harness.charm.operator.state.db_initialised = True
 
+    mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.sync_cluster_passwords")
     mocker.patch("single_kernel_mongo.managers.sharding.ShardManager.update_member_auth")
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",

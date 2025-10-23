@@ -33,7 +33,10 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -47,7 +50,7 @@ from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRef
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.secrets import generate_secret_label
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoDBCharmConfig, MongoDBRoles
 from single_kernel_mongo.core.version_checker import VersionChecker
 from single_kernel_mongo.events.backups import BackupEventsHandler
 from single_kernel_mongo.events.cluster import ClusterConfigServerEventHandler
@@ -167,12 +170,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state,
             container,
         )
-        self.tls_manager = TLSManager(
-            self,
-            self.workload,
-            self.state,
-            self.substrate,
-        )
+        self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
             self.workload,
@@ -345,7 +343,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 return
 
     @property
-    def config(self):
+    @override
+    def config(self) -> MongoDBCharmConfig:
         """Returns the actual config."""
         return self.charm.parsed_config
 
@@ -393,6 +392,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         return (
             self,
             self.mongo_manager,
+            self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,
@@ -487,7 +487,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError, WorkloadExecError) as e:
             logger.error(f"Deferring on start: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_REPL_SET_INIT.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_REPL_SET_INIT.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -879,21 +881,16 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def update_status(self) -> None:
         """Status update Handler."""
-        # TODO update the usage of this once the spec is approved and we have a consistent way of
-        # handling statuses
         if self.basic_statuses():
             logger.info("Early return invalid statuses.")
+            return
+
+        if self.state.is_role(MongoDBRoles.SHARD) and self._should_skip_because_of_incomplete_tls():
             return
 
         if self.cluster_version_checker.get_cluster_mismatched_revision_status():
             logger.info("Early return, cluster mismatch version.")
             return
-
-        if self.state.is_role(MongoDBRoles.SHARD):
-            shard_has_tls, config_server_has_tls = self.shard_manager.tls_status()
-            if config_server_has_tls and not shard_has_tls:
-                logger.info("Shard is missing TLS.")
-                return
 
         if not self.mongo_manager.mongod_ready():
             logger.info("Mongod not ready.")
@@ -1057,7 +1054,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value, scope="unit", component=self.name
+                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -1077,7 +1076,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.backup_manager.configure_and_restart()
         except WorkloadServiceError:
             self.state.statuses.add(
-                BackupStatuses.WAITING_FOR_PBM_START.value, scope="unit", component=self.name
+                BackupStatuses.WAITING_FOR_PBM_START.value,
+                scope="unit",
+                component=self.name,
             )
             raise
 
@@ -1118,7 +1119,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Charm is in sharding mode. Does not support %s interface.", rel_name)
             return MongoDBStatuses.INVALID_CFG_SRV_ON_SHARD_REL.value
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.SHARDING:
-            logger.error("Charm is in config-server mode. Does not support %s interface.", rel_name)
+            logger.error(
+                "Charm is in config-server mode. Does not support %s interface.",
+                rel_name,
+            )
             return MongoDBStatuses.INVALID_SHARD_ON_CFG_SRV_REL.value
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER) and rel_name == RelationNames.CLUSTER:
             logger.error("Charm is not a config-server, cannot integrate mongos")
@@ -1138,7 +1142,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.build_local_tls_directory()
 
         # Push TLS files if necessary
-        self.tls_manager.push_tls_files_to_workload()
+        for internal in [True, False]:
+            self.tls_manager.push_tls_files_to_workload(internal)
+
         self.ldap_manager.save_certificates(self.state.ldap.chain)
 
         # Update licenses
@@ -1356,3 +1362,19 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope="app",
                 component=self.name,
             )
+
+    def _should_skip_because_of_incomplete_tls(self) -> bool:
+        """Checks if the update status hook needs skipping due to an incomplete TLS integration."""
+        shard_has_peer_tls, config_server_has_peer_tls = (
+            self.shard_manager.shard_and_config_server_peer_tls_status()
+        )
+        if config_server_has_peer_tls and not shard_has_peer_tls:
+            logger.info("Shard is missing peer TLS.")
+            return True
+        shard_has_client_tls, config_server_has_client_tls = (
+            self.shard_manager.shard_and_config_server_client_tls_status()
+        )
+        if config_server_has_client_tls and not shard_has_client_tls:
+            logger.info("Shard is missing client TLS.")
+            return True
+        return False
