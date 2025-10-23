@@ -7,7 +7,7 @@ import pytest
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     CHARMED_OPERATOR_PASSWORD,
     CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
@@ -22,7 +22,7 @@ from ..helpers.common import (
     set_password,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_APPS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
@@ -35,7 +35,7 @@ from ..helpers.sharding import (
     verify_data_mongodb,
     write_data_to_mongodb,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 # for now we have a large timeout due to the slow drainage of the `config.system.sessions`
 # collection. More info here:

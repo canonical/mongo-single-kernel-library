@@ -16,7 +16,7 @@ from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
     CHARMED_STATS_USERNAME,
     DEFAULT_COLLECTION_NAME,
@@ -49,7 +49,7 @@ from ..helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 

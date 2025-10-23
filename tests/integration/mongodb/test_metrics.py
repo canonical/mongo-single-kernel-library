@@ -8,7 +8,7 @@ import pytest
 from juju.unit import Unit as JujuUnit
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     CHARMED_STATS_USERNAME,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
@@ -22,8 +22,12 @@ from ..helpers.common import (
     set_password,
     unit_hostname,
 )
-from ..helpers.ha import cut_network_from_unit, restore_network_for_unit, wait_network_restore
-from ..helpers.types import Substrate
+from tests.integration.helpers.ha import (
+    cut_network_from_unit,
+    restore_network_for_unit,
+    wait_network_restore,
+)
+from tests.integration.helpers.types import Substrate
 
 MONGODB_EXPORTER_PORT = 9216
 MEDIAN_REELECTION_TIME = 12

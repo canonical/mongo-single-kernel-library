@@ -6,7 +6,10 @@ import logging
 
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_BACKUP_USERNAME,
+    CHARMED_OPERATOR_USERNAME,
+    CHARMED_STATS_USERNAME,
     MONGOD_PORT,
     execute_on_mongod,
     find_unit,
@@ -14,9 +17,16 @@ from ..helpers.common import (
     get_password,
     get_unit_id,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+USERNAME_MAPPING = {
+    "operator": CHARMED_OPERATOR_USERNAME,
+    "monitor": CHARMED_STATS_USERNAME,
+    "backup": CHARMED_BACKUP_USERNAME,
+    "logrotate": "charmed-logrotate",
+}
 
 
 async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:

@@ -31,7 +31,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
@@ -54,7 +54,7 @@ from ..helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 

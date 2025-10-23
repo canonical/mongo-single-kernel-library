@@ -9,9 +9,9 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from single_kernel_mongo.utils.mongodb_users import InternalUsers
 from tests.integration.helpers.backups import S3_APP_NAME, count_logical_backups
 from tests.integration.helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     TIMEOUT,
@@ -28,7 +28,7 @@ from tests.integration.helpers.sharding import (
     integrate_sharding_components,
 )
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import get_password_action, set_fcv
+from tests.integration.helpers.upgrade import USERNAME_MAPPING, get_password_action, set_fcv
 
 CONFIG_SERVER_SIX = "config-server-six"
 SHARD_ONE_SIX = "shard-one-six"
@@ -196,12 +196,12 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for user in InternalUsers:
+    for rel6_username, _ in USERNAME_MAPPING.items():
         password = await get_password_action(
-            ops_test, username=user.username, app_name=CONFIG_SERVER_SIX
+            ops_test, username=rel6_username, app_name=CONFIG_SERVER_SIX
         )
         await set_password(
-            ops_test, username=user.username, password=password, app_name=CONFIG_SERVER_SEVEN
+            ops_test, username=rel6_username, password=password, app_name=CONFIG_SERVER_SEVEN
         )
 
         await ops_test.model.wait_for_idle(
@@ -222,7 +222,7 @@ async def test_restore_backup_6_to_7(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "6.0", "operator")
 
     leader_unit_seven = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
     action = await leader_unit_seven.run_action(
@@ -239,7 +239,7 @@ async def test_restore_backup_6_to_7(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_SEVEN, "7.0", "operator")
 
 
 @pytest.mark.abort_on_fail
@@ -313,12 +313,12 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for user in InternalUsers:
+    for rel6_username, rel8_username in USERNAME_MAPPING.items():
         password = await get_password_action(
-            ops_test, username=user.username, app_name=CONFIG_SERVER_SIX
+            ops_test, username=rel6_username, app_name=CONFIG_SERVER_SIX
         )
         await set_password(
-            ops_test, username=user.username, password=password, app_name=CONFIG_SERVER_EIGHT
+            ops_test, username=rel8_username, password=password, app_name=CONFIG_SERVER_EIGHT
         )
 
         await ops_test.model.wait_for_idle(
@@ -342,7 +342,7 @@ async def test_restore_backup_7_to_8(
 
     backup_id = most_recent_backup.split()[0]
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "7.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_EIGHT)
     action = await leader_unit_eight.run_action(
@@ -359,7 +359,7 @@ async def test_restore_backup_7_to_8(
 
     await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active")
 
-    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0")
+    await set_fcv(ops_test, substrate, CONFIG_SERVER_EIGHT, "8.0", CHARMED_OPERATOR_USERNAME)
 
     leader_unit_six = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SIX)
     leader_unit_eight = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_SEVEN)
