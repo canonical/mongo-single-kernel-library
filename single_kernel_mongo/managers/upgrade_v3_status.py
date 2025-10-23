@@ -79,10 +79,7 @@ class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
             return status_list
 
         if self.refresh.in_progress and not self.refresh.next_unit_allowed_to_refresh:
-            if not self.dependent.mongo_manager.mongod_ready():
-                status_list.append(UpgradeStatuses.HEALTH_CHECK_FAILED.value)
-            else:
-                status_list.append(UpgradeStatuses.CLUSTER_CHECK_FAILED.value)
+            status_list.append(UpgradeStatuses.HEALTH_CHECK_FAILED.value)
 
         if refresh_unit_status := self.refresh.unit_status_higher_priority:
             unit_status = self._convert_ops_status_to_advanced_status(refresh_unit_status)

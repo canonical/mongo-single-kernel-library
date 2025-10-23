@@ -75,6 +75,7 @@ async def test_build_and_deploy(
 async def test_rollback_on_shard_and_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongod_base_path: Path,
     mongodb_charm: str,
     mongod_resource: dict,
@@ -85,8 +86,7 @@ async def test_rollback_on_shard_and_config_server(
         ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource
     )
 
-    with open(mongod_base_path / "charm_version") as fd:
-        revision = fd.read().strip()
+    revision = "test/0.0.0+dirty"
 
     # Wait for statuses to settle down
     asyncio.gather(
@@ -120,7 +120,9 @@ async def test_rollback_on_shard_and_config_server(
         ),
     )
 
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, channel="8/edge")
+    await refresh_with_juju(
+        ops_test, CONFIG_SERVER_APP_NAME, channel="8/edge", charm_name=base_app_name
+    )
 
     # verify no writes were skipped during upgrade process
     shard_one_expected_writes = await stop_continous_writes(

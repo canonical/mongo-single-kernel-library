@@ -2,14 +2,20 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
+
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
+
+from tests.integration.mongodb.upgrades.test_rollback import UPGRADE_TIMEOUT
 
 from ...helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
+    get_juju_status,
     stop_continous_writes,
 )
 from ...helpers.sharding import (
@@ -27,6 +33,8 @@ from ...helpers.sharding import (
 )
 from ...helpers.types import Substrate
 from ...helpers.upgrade import refresh_charm, refresh_with_juju
+
+logger = logging.getLogger()
 
 
 @pytest.mark.abort_on_fail
@@ -71,28 +79,72 @@ async def test_build_and_deploy(
 async def test_rollback_on_config_server(
     ops_test: OpsTest,
     substrate: Substrate,
-    mongodb_charm,
-    mongod_resource,
+    base_app_name: str,
+    mongodb_charm: dict[str, str],
+    mongod_resource: dict[str, str],
     add_continuous_writes_to_shards,
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
+
+    logger.info("Running pre refresh checks")
     action = await config_server_unit.run_action("pre-refresh-check")
     await action.wait()
     assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
 
+    mongodb_application = ops_test.model.applications[CONFIG_SERVER_APP_NAME]
+    refresh_order = sorted(
+        mongodb_application.units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
+
+    logger.info("Refresing the charm")
     await refresh_charm(ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource)
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME], timeout=TIMEOUT, idle_period=120
     )
+    for attempt in Retrying(
+        reraise=True,
+        stop=stop_after_delay(UPGRADE_TIMEOUT),
+        wait=wait_fixed(10),
+    ):
+        with attempt:
+            assert "incompatible" in get_juju_status(
+                ops_test.model.name, CONFIG_SERVER_APP_NAME
+            ), "Not indicating charm incompatible"
+
+    logger.info("Re-refresh the charm")
 
     # instead of resuming upgrade refresh with the old version
     # TODO: Use this when https://github.com/juju/python-libjuju/issues/1086 is fixed
     # await ops_test.model.applications[CONFIG_SERVER_APP_NAME].refresh(
     #     channel="6/edge", switch="ch:mongodb"
     # )
-    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "6/stable")
+    await refresh_with_juju(ops_test, CONFIG_SERVER_APP_NAME, "8/edge", charm_name=base_app_name)
+
+    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_APP_NAME], idle_period=30)
+
+    if "incompatible" in get_juju_status(ops_test.model.name, CONFIG_SERVER_APP_NAME):
+        # will be marked "incompatible" if rollback is not to the same revision as initially
+        # deployed
+        logger.info("Rollback is blocked due to incompatibility")
+
+        logger.info("Running `force-refresh-start` action with check-compatibility=false")
+        action = await refresh_order[0].run_action(
+            "force-refresh-start", **{"check-compatibility": False}
+        )
+        result = await action.wait()
+        logger.info(f"force refresh start {result}")
+        assert result.results.get("return-code") == 0, "force-refresh-start failed"
+
+    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_APP_NAME], idle_period=20)
+
+    if "resume-refresh" in get_juju_status(ops_test.model.name, CONFIG_SERVER_APP_NAME):
+        action = await config_server_unit.run_action("resume-refresh")
+        await action.wait()
+        assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],

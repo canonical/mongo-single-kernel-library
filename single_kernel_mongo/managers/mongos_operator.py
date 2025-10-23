@@ -162,6 +162,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         Checks if unit is healthy and allow the next unit to update.
         """
+        if not self.state.db_initialised:
+            return
+
         if not refresh.workload_allowed_to_start:
             return
 

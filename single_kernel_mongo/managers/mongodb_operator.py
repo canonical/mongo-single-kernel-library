@@ -388,13 +388,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         """The ordered list of components for this operator."""
         return (
             self,
+            self.upgrades_status_manager,
             self.mongo_manager,
             self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,
             self.ldap_manager,
-            self.upgrades_status_manager,
         )
 
     # BEGIN: Handlers.

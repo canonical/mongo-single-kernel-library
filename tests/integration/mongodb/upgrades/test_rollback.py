@@ -11,7 +11,7 @@ import tomllib
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, get_app_name, get_juju_status
+from ...helpers.common import DEPLOYMENT_TIMEOUT, find_unit, get_app_name, get_juju_status
 from ...helpers.types import Substrate
 from ...helpers.upgrade import get_workload_version, refresh_with_juju
 
@@ -45,6 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
 async def test_rollback(
     ops_test: OpsTest,
     substrate: Substrate,
+    base_app_name: str,
     mongod_base_path: Path,
     mongodb_charm: str,
     mongod_resource: dict,
@@ -52,6 +53,7 @@ async def test_rollback(
 ) -> None:
     app_name = await get_app_name(ops_test)
     mongodb_application = ops_test.model.applications[app_name]
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
 
     resources = mongod_resource if substrate == "microk8s" else None
 
@@ -79,7 +81,8 @@ async def test_rollback(
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
-    await refresh_with_juju(ops_test, app_name, "8/edge")
+
+    await refresh_with_juju(ops_test, app_name, "8/edge", charm_name=base_app_name)
 
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
@@ -96,6 +99,13 @@ async def test_rollback(
         result = await action.wait()
         logger.info(f"force refresh start {result}")
         assert result.results.get("return-code") == 0, "force-refresh-start failed"
+
+    await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
+
+    if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
+        assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(
