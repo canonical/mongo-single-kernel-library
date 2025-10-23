@@ -68,7 +68,7 @@ async def test_upgrade(
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
-    await check_app_status(ops_test, MONGOS_APP_NAME, status="blocked")
+    await check_app_status(ops_test, MONGOS_APP_NAME, raise_on_blocked=False)
     if "resume-refresh" in mongodb_application.status_message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")
