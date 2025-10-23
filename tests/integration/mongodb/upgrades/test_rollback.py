@@ -11,7 +11,13 @@ import tomllib
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import DEPLOYMENT_TIMEOUT, find_unit, get_app_name, get_juju_status
+from ...helpers.common import (
+    DEPLOYMENT_TIMEOUT,
+    find_unit,
+    get_app_name,
+    get_juju_status,
+    get_unit_id,
+)
 from ...helpers.types import Substrate
 from ...helpers.upgrade import get_workload_version, refresh_with_juju
 
@@ -54,6 +60,8 @@ async def test_rollback(
     app_name = await get_app_name(ops_test)
     mongodb_application = ops_test.model.applications[app_name]
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    number_of_units = len(ops_test.model.applications[app_name].units)
+    leader_id = get_unit_id(leader_unit.name)
 
     resources = mongod_resource if substrate == "microk8s" else None
 
@@ -105,6 +113,8 @@ async def test_rollback(
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
         assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     logger.info("Wait for the charm to be rolled back")

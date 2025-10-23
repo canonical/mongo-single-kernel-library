@@ -12,7 +12,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.upgrade import refresh_charm
 
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT, find_unit, get_juju_status
+from ..helpers.common import MONGOS_APP_NAME, TIMEOUT, find_unit, get_juju_status, get_unit_id
 from ..helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     build_cluster,
@@ -58,6 +58,7 @@ async def test_failed_upgrade_and_rollback(
 ) -> None:
     """Tests that upgrade can be ran successfully."""
     leader_unit = await find_unit(ops_test, leader=True, app_name=MONGOS_APP_NAME)
+    leader_id = get_unit_id(leader_unit.name)
     mongos_application = ops_test.model.applications[MONGOS_APP_NAME]
     refresh_order = sorted(
         mongos_application.units,
@@ -97,6 +98,8 @@ async def test_failed_upgrade_and_rollback(
     if "resume-refresh" in get_juju_status(ops_test.model.name, MONGOS_APP_NAME):
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
         assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     for unit in mongos_application.units:

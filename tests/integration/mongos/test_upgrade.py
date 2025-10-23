@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, find_unit, get_juju_status
+from ..helpers.common import MONGOS_APP_NAME, find_unit, get_juju_status, get_unit_id
 from ..helpers.mongos import build_cluster, deploy_cluster_components
 from ..helpers.types import Substrate
 from ..helpers.upgrade import refresh_charm
@@ -46,6 +46,7 @@ async def test_upgrade(
 ):
     """Refreshes the charm and wait for it to be active again."""
     leader_unit = await find_unit(ops_test, leader=True, app_name=MONGOS_APP_NAME)
+    leader_id = get_unit_id(leader_unit.name)
     mongodb_application = ops_test.model.applications[MONGOS_APP_NAME]
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
@@ -75,4 +76,6 @@ async def test_upgrade(
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
         assert action.status == "completed", "resume-refresh failed, expected to succeed"

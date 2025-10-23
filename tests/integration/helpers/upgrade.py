@@ -96,7 +96,7 @@ async def assert_successful_run_upgrade_sequence(
         # unit is the second unit to upgrade because it will be shut down
         # immediately on k8S.
         # This is a known limitation, so in that case we allow the action to fail.
-        if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     async with ops_test.fast_forward(fast_interval="60s"):

@@ -13,6 +13,7 @@ from ...helpers.common import (
     find_unit,
     get_app_name,
     get_juju_status,
+    get_unit_id,
     unit_hostname,
 )
 from ...helpers.ha import (
@@ -56,14 +57,15 @@ async def test_upgrade(
     ops_test: OpsTest,
     substrate: Substrate,
     mongodb_charm: str,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     continuous_writes_to_db,
 ) -> None:
     """Verifies that the upgrade can run successfully."""
     app_name = await get_app_name(ops_test)
 
+    number_of_units = len(ops_test.model.applications[app_name].units)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    app_name = await get_app_name(ops_test)
+    leader_id = get_unit_id(leader_unit.name)
     mongodb_application = ops_test.model.applications[app_name]
     # Refresh always happens from highest to lowest unit number
     refresh_order = sorted(
@@ -101,6 +103,8 @@ async def test_upgrade(
         logger.info("Calling resume refresh")
         action = await leader_unit.run_action("resume-refresh")
         await action.wait()
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
         assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
