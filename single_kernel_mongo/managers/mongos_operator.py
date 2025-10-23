@@ -250,19 +250,24 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.refresh.in_progress:
             # Bypass the regular start if refresh is in progress
+            logger.info("Refresh in progress, skipping regular start")
             return
 
         self._configure_workloads()
 
-        # start hooks are fired before relation hooks and `mongos` requires a config-server in
+        if self.state.mongos_cluster_relation:
+            self.instantiate_keyfile()
+            self.start_charm_services()
+            return
+
+        # start hooks that are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        if not self.state.mongos_cluster_relation:
-            self.state.statuses.add(
-                MongosStatuses.MISSING_CONF_SERVER_REL.value,
-                scope="unit",
-                component=self.name,
-            )
+        self.state.statuses.add(
+            MongosStatuses.MISSING_CONF_SERVER_REL.value,
+            scope="unit",
+            component=self.name,
+        )
 
     @override
     def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:
