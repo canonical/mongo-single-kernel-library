@@ -174,7 +174,7 @@ class MongosOperator(OperatorProtocol, Object):
         self._configure_workloads()
         self.start_charm_services()
 
-        logger.debug("Running post refresh checks to verify monogs is not broken after refresh")
+        logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:
             refresh.next_unit_allowed_to_refresh = True
             return
@@ -227,6 +227,12 @@ class MongosOperator(OperatorProtocol, Object):
         self.set_permissions()
 
         self.mongos_config_manager.set_environment()
+
+        # Instantiate the keyfile
+        try:
+            self.instantiate_keyfile()
+        except Exception:
+            logger.info("Not instantiating as we don't have a keyfile yet.")
 
     @override
     def prepare_for_startup(self) -> None:

@@ -1151,13 +1151,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Sets directory permissions
         self.set_permissions()
 
-    def instantiate_keyfile(self):
-        """Instantiate the keyfile."""
-        if not (keyfile := self.state.get_keyfile()):
-            raise Exception("Waiting for leader unit to generate keyfile contents")
-
-        self.workload.write(self.workload.paths.keyfile, keyfile)
-
     def _initialise_replica_set(self):
         """Helpful method to initialise the replica set and the users.
 
