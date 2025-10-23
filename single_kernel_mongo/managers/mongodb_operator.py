@@ -480,7 +480,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.mongo_manager.mongod_ready():
             raise WorkloadNotReadyError
 
-        self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+        self.state.statuses.clear(scope="unit", component=self.name)
 
         try:
             self._initialise_replica_set()
@@ -503,7 +503,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
-        self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+        self.state.statuses.clear(scope="unit", component=self.name)
 
     @override
     def prepare_for_shutdown(self) -> None:  # pragma: nocover

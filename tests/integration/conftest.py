@@ -259,6 +259,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     versions = tomli.loads(file_data)
 
     versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    versions["charm"] = "test/0.1.0+dirty"
     if new_snap_revision:
         versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
@@ -298,6 +299,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     versions = tomli.loads(file_data)
 
     versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    versions["charm"] = "test/0.1.0+dirty"
     if new_snap_revision:
         versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
 
