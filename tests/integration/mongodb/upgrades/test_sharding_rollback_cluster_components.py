@@ -92,11 +92,11 @@ async def test_rollback_on_shard_and_config_server(
     asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
-        ops_test.model.wait_for_idle(
-            apps=[CONFIG_SERVER_APP_NAME],
-            timeout=1000,
-            idle_period=20,
-            status=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
+        check_app_status(
+            ops_test,
+            CONFIG_SERVER_APP_NAME,
+            status="waiting",
+            message=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
         ),
     )
 
@@ -115,7 +115,7 @@ async def test_rollback_on_shard_and_config_server(
         check_app_status(
             ops_test,
             CONFIG_SERVER_APP_NAME,
-            status="blocked",
+            status="waiting",
             message=f"Waiting for shards to upgrade/downgrade to revision {revision}-locally built.",
         ),
     )

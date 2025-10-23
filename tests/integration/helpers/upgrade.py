@@ -88,25 +88,16 @@ async def assert_successful_run_upgrade_sequence(
 
     await ops_test.model.wait_for_idle(apps=[app_name], raise_on_blocked=False)
 
-    # resume upgrade only needs to be ran when:
-    # 1. there are more than one units in the application
-    # 2. AND the underlying workload was updated
-    if len(ops_test.model.applications[app_name].units) < 2:
-        return
-
-    if "resume-refresh" not in ops_test.model.applications[app_name].status_message:
-        return
-
-    logger.info(f"Calling resume-refresh for {app_name}")
-    action = await leader_unit.run_action("resume-refresh")
-    await action.wait()
-
-    # Resume-refresh can fail while still triggering the upgrade if the leader
-    # unit is the second unit to upgrade because it will be shut down
-    # immediately on k8S.
-    # This is a known limitation, so in that case we allow the action to fail.
-    if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
-        assert action.status == "completed", "resume-refresh failed, expected to succeed."
+    if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
+        logger.info(f"Calling resume-refresh for {app_name}")
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
+        # Resume-refresh can fail while still triggering the upgrade if the leader
+        # unit is the second unit to upgrade because it will be shut down
+        # immediately on k8S.
+        # This is a known limitation, so in that case we allow the action to fail.
+        if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)

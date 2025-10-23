@@ -94,6 +94,8 @@ async def test_upgrade(
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
+    await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
+
     if "resume-refresh" in mongodb_application.status_message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")

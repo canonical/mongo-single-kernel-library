@@ -139,7 +139,9 @@ async def test_rollback_on_config_server(
         logger.info(f"force refresh start {result}")
         assert result.results.get("return-code") == 0, "force-refresh-start failed"
 
-    await ops_test.model.wait_for_idle(apps=[CONFIG_SERVER_APP_NAME], idle_period=20)
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME], idle_period=20, raise_on_blocked=False
+    )
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, CONFIG_SERVER_APP_NAME):
         action = await config_server_unit.run_action("resume-refresh")
