@@ -25,7 +25,7 @@ This guide requires that your MongoDB deployment is integrated with [S3-integrat
 
 If you are not relying on Amazon S3, you can use microceph and rados-gateway (or any S3-compatible storage). The {ref}`last section of this guide <configure-microceph-and-radosgw-for-backups>` shows how to install and configure them for the purpose of major version upgrades through backups.
 
-## Add the MongoDB-8 internal users to MongoDB 6
+## Add the MongoDB 8 internal users to MongoDB 6
 
 MongoDB 8 uses different internal usernames. You must create the new users in the MongoDB 6 deployment before performing the upgrade.
 
@@ -65,16 +65,64 @@ juju ssh --container=mongod <app>/leader
 ````
 `````
 
-Create the MongoDB-8 internal users (`charmed-operator`, `charmed-backup`, `charmed-logrotate`, `charmed-stats`). Replace the password placeholders with the passwords previously obtained, and the `<app>` placeholder with your ochestrator application:
+[Log into your MongoDB 6 cluster](https://canonical-charmed-mongodb.readthedocs-hosted.com/6/tutorial/#access-a-replica-set) and create the MongoDB 8 internal users (`charmed-operator`, `charmed-backup`, `charmed-logrotate`, `charmed-stats`).
 
-```shell
-mongosh "mongodb://operator:<operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.createUser({user: 'charmed-operator', pwd: '<operator-password>', roles: [{role: 'userAdminAnyDatabase', db: 'admin'},{role: 'readWriteAnyDatabase', db: 'admin'}, {role: 'clusterAdmin', db: 'admin'}], mechanisms: ['SCRAM-SHA-256'], passwordDigestor: 'server'})"
+Replace the password placeholders with the passwords previously obtained:
 
-mongosh "mongodb://operator:<operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.createUser({user: 'charmed-backup', pwd: '<backup-password>', roles: [{role: 'backup', db: 'admin'}, {role: 'readWrite', db: 'admin'}, {role: 'clusterMonitor', db: 'admin'}, {role: 'restore', db: 'admin'}, {role:'pbmAnyAction', db:'admin'}], mechanisms: ['SCRAM-SHA-256'], passwordDigestor: 'server'})"
+```javascript
+db.createUser(
+    {
+        user: 'charmed-operator',
+        pwd: '<operator-password>',
+        roles: [
+            {role: 'userAdminAnyDatabase', db: 'admin'},
+            {role: 'readWriteAnyDatabase', db: 'admin'},
+            {role: 'clusterAdmin', db: 'admin'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
 
-mongosh "mongodb://operator:<operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.createUser({user: 'charmed-logrotate', pwd: '<logrotate-password>', roles: [{role: 'logRotate', db: 'admin'}], mechanisms: ['SCRAM-SHA-256'], passwordDigestor: 'server'})"
+db.createUser(
+    {
+        user: 'charmed-backup',
+        pwd: '<backup-password>',
+        roles: [
+            {role: 'backup', db: 'admin'},
+            {role: 'readWrite', db: 'admin'},
+            {role: 'clusterMonitor', db: 'admin'},
+            {role: 'restore', db: 'admin'},
+            {role:'pbmAnyAction', db:'admin'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
 
-mongosh "mongodb://operator:<operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.createUser({user: 'charmed-stats', pwd: '<monitor-password>', roles: [{role: 'explainRole', db: 'admin'}, {role: 'clusterMonitor', db: 'admin'}, {role: 'read', db: 'local'}], mechanisms: ['SCRAM-SHA-256'], passwordDigestor: 'server'})"
+db.createUser(
+    {
+        user: 'charmed-logrotate',
+        pwd: '<logrotate-password>',
+        roles: [{role: 'logRotate', db: 'admin'}],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
+
+db.createUser(
+    {
+        user: 'charmed-stats',
+        pwd: '<monitor-password>',
+        roles: [
+            {role: 'explainRole', db: 'admin'},
+            {role: 'clusterMonitor', db: 'admin'},
+            {role: 'read', db: 'local'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
 ```
 
 ## Deploy MongoDB 7 cluster
@@ -224,15 +272,15 @@ sudo microceph.radosgw-admin user create --uid <username> --display-name <userna
 
 This will output an `access_key` and a `secret_key`. Those are the credentials that you will use to configure your s3-integrator.
 
-## Remove MongoDB-6 internal users from MongoDB 8
+## Remove MongoDB 6 internal users from MongoDB 8
 
 `operator`, `backup`, `logrotate` and `monitor` users are no longer needed in MongoDB 8, so they can be removed.
 
-Replace the `<charmed-operator-password>` placeholders with the password previously obtained, and the `<app>` placeholder with your ochestrator application:
+Log into your MongoDB 8 cluster using the `charmed-operator` user and remove the MongoDB 6 users:
 
-```shell
-mongosh "mongodb://charmed-operator:<charmed-operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.dropUser('operator')"
-mongosh "mongodb://charmed-operator:<charmed-operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.dropUser('backup')"
-mongosh "mongodb://charmed-operator:<charmed-operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.dropUser('monitor')"
-mongosh "mongodb://charmed-operator:<charmed-operator-password>@<app>-0.<app>-endpoints:27017/admin?replicaSet=<app>" --quiet --eval "db.dropUser('logrotate')"
+```javascript
+db.dropUser('operator')
+db.dropUser('backup')
+db.dropUser('monitor')
+db.dropUser('logrotate')
 ```
