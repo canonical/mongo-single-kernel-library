@@ -1,7 +1,7 @@
 (migrate-a-cluster)=
 # How to migrate a cluster
 
-Cluster migration via restore is a method of restoring a bacup from a different cluster.
+Cluster migration via restore is a method of restoring a backup from a different cluster.
 
 The following terms will be used throughout this guide:
 
