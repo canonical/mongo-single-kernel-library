@@ -31,12 +31,11 @@ or
 grep avx /proc/cpuinfo
 ```
 
-
 ## Kernel Parameters
 
 Charmed MongoDB 8 works best with Transparent Hugepages enabled.
 
-If you're running Charmed MongoDB on VM, this is handled by the charm
+If you're running Charmed MongoDB on VM, this is handled by the charm.
 
 If you're running Charmed MongoDB on an LXD Container, please enable the Transparent Huge Tabes on the host:
 * Follow the [official documentation](https://www.mongodb.com/docs/manual/administration/tcmalloc-performance/#std-label-enable-thp) to enable the Tranparent Hugepages on the host.

@@ -4,7 +4,7 @@
 ```{admonition} Emergency stop button
 :class: attention
 Use `juju config <app name> pause-after-unit-refresh=all` to halt an in-progress refresh.
-Then, consider [rolling back](#roll-back)
+Then, consider {ref}`rolling back <roll-back>`.
 ```
 
 Charmed MongoDB supports minor version in-place refresh via the [`juju refresh`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/#details) command.
@@ -46,7 +46,7 @@ These refreshes are well-tested and should be preferred.
 +--------------+------------+----------+--------------+------------+----------+-----------------------------------------------------------------------------------------------+
 | .. centered:: From                   | .. centered:: To                     | Charm release notes to review                                                                 |
 +--------------+------------+----------+--------------+------------+----------+                                                                                               |
-| Charm        | MongoDB    | Snap     | Charm        | PostgreSQL | Snap     |                                                                                               |
+| Charm        | MongoDB    | Snap     | Charm        | MongoDB    | Snap     |                                                                                               |
 | revision     | Version    | revision | revision     | Version    | revision |                                                                                               |
 +==============+============+==========+==============+============+==========+===============================================================================================+
 |              |            |          |              |            |          |                                                                                               |
@@ -56,7 +56,7 @@ These refreshes are well-tested and should be preferred.
 
 ## Create a backup
 
-See [](/how-to/back-up-and-restore/create-a-backup).
+See {ref}`create-a-backup`.
 
 ### Verify the backup
 
@@ -126,6 +126,7 @@ Set the `pause-after-unit-refresh` config option to:
 * `none` to never wait for your confirmation
 
 For example:
+
 ```shell
 juju config <app-name> pause-after-unit-refresh=all
 ```
@@ -178,7 +179,7 @@ The procedure for the rollback is the same as described in [](#monitor-the-refre
 
 After the application has been rolled back and you have confirmed that service has been fully restored, investigate what went wrong.
 
-If applicable, please file a bug report.
+If applicable, please [file a bug report](https://github.com/canonical/mongo-single-kernel-library/issues).
 
 Once you understand what went wrong and have tested that it has been fixed, the refresh can be attempted again.
 
