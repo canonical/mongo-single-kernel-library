@@ -1,7 +1,7 @@
 (users)=
-# Users
+# Internal users
 
-Charmed MongoDB has the following internal users:
+Charmed MongoDB includes the following internal users, which are automatically created and managed by the charm:
 
 | user                | function                                              |
 |---------------------|-------------------------------------------------------|
