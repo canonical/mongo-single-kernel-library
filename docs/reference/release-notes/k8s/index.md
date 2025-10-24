@@ -1,5 +1,5 @@
-(release-notes-vm)=
-# Release notes (VM)
+(release-notes-k8s)=
+# Release notes (K8s)
 
 ```{toctree}
 :titlesonly:
