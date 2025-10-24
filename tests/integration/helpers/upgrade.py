@@ -213,9 +213,9 @@ async def delete_rel6_internal_users(
     replica_set_uri = f"mongodb://{CHARMED_OPERATOR_USERNAME}:{operator_password}@{hosts}/admin?replicaSet={app_name}"
 
     for rel6_username in USERNAME_MAPPING.values():
-        add_user_cmd = f"db.dropUser('{rel6_username}')"
+        delete_user_cmd = f"db.dropUser('{rel6_username}')"
         result = await execute_on_mongod(
-            ops_test, app_name, substrate, replica_set_uri, add_user_cmd, expecting_output=False
+            ops_test, app_name, substrate, replica_set_uri, delete_user_cmd, expecting_output=False
         )
         assert result.succeeded, f"Failed to delete internal user {rel6_username} from {app_name}."
 
