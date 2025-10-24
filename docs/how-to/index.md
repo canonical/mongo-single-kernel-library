@@ -6,7 +6,8 @@
 
 Deploy <deploy/index>
 Scale replicas and shards <scale-replicas-and-shards>
-Enable TLS <enable-tls>
+Manage TLS encryption <tls/index>
+Manage passwords <manage-passwords>
 Manage client connections <manage-client-connections>
 Enable LDAP <enable-ldap>
 Monitoring <monitoring/index>
