@@ -126,7 +126,7 @@ async def set_fcv(
 
 
 def _build_create_user_command(username: str, password: str, roles: list[dict]) -> str:
-    """Builds a MongoDB createUser command string."""
+    """Build a MongoDB createUser command string."""
     roles_str = ", ".join([f"{{role: '{r['role']}', db: '{r['db']}'}}" for r in roles])
     return (
         "db.createUser({"
@@ -147,7 +147,7 @@ async def _add_internal_user(
     password: str,
     roles: list[dict],
 ) -> None:
-    """Adds an internal MongoDB user with given roles."""
+    """Add an internal MongoDB user with given roles."""
     operator_password = await get_password(ops_test, username="operator", app_name=app_name)
     replica_set_hosts = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
@@ -166,7 +166,7 @@ async def _add_internal_user(
 
 
 async def add_rel8_internal_users(ops_test: OpsTest, substrate: Substrate, app_name: str) -> None:
-    """Adds all internal MongoDB8 user with given roles."""
+    """Add all internal MongoDB8 user with given roles."""
     rel8_internal_users = {
         "charmed-operator": [
             {"role": "userAdminAnyDatabase", "db": "admin"},
@@ -194,6 +194,30 @@ async def add_rel8_internal_users(ops_test: OpsTest, substrate: Substrate, app_n
         rel6_username = USERNAME_MAPPING[rel8_username]
         password = await get_password(ops_test, username=rel6_username, app_name=app_name)
         await _add_internal_user(ops_test, substrate, app_name, rel8_username, password, roles)
+
+
+async def delete_rel6_internal_users(
+    ops_test: OpsTest, substrate: Substrate, app_name: str
+) -> None:
+    """Delete all the internal MongoDB6 users."""
+    operator_password = await get_password(
+        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name
+    )
+    replica_set_hosts = [
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
+    replica_set_hosts = [f"{host}:{MONGOD_PORT}" for host in replica_set_hosts]
+    hosts = ",".join(replica_set_hosts)
+
+    replica_set_uri = f"mongodb://{CHARMED_OPERATOR_USERNAME}:{operator_password}@{hosts}/admin?replicaSet={app_name}"
+
+    for rel6_username in USERNAME_MAPPING.values():
+        add_user_cmd = f"db.dropUser('{rel6_username}')"
+        result = await execute_on_mongod(
+            ops_test, app_name, substrate, replica_set_uri, add_user_cmd, expecting_output=False
+        )
+        assert result.succeeded, f"Failed to delete internal user {rel6_username} from {app_name}."
 
 
 async def get_password_action(

@@ -27,6 +27,7 @@ from tests.integration.helpers.types import Substrate
 from tests.integration.helpers.upgrade import (
     USERNAME_MAPPING,
     add_rel8_internal_users,
+    delete_rel6_internal_users,
     get_password_action,
     set_fcv,
 )
@@ -277,3 +278,5 @@ async def test_restore_backup_7_to_8(
     n_writes_eight = await count_writes(ops_test, substrate, MONGODB_EIGHT, leader_unit_eight)
 
     assert n_writes_six == n_writes_eight
+
+    await delete_rel6_internal_users(ops_test, substrate, MONGODB_EIGHT)
