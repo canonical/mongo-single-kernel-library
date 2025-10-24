@@ -63,6 +63,7 @@ class MongoDBUpgradesManager:
         for replica_set_config in self.get_all_replica_set_configs_in_cluster(mongos_config):
             for single_host in replica_set_config.hosts:
                 if single_host != self.state.unit_peer_data.internal_address:
+                    logger.info(f"Checking if shard {single_host} is responding to ping")
                     single_replica_config = self.state.mongodb_config_for_user(
                         OperatorUser,
                         hosts={single_host},
@@ -70,8 +71,9 @@ class MongoDBUpgradesManager:
                     )
                     try:
                         with MongoConnection(single_replica_config, direct=True) as mongod:
-                            mongod.admin.command("ping")
-                    except PyMongoError:
+                            mongod.client.admin.command("ping")
+                    except PyMongoError as e:
+                        logger.info(f"{single_host} does not respond to ping: {e}")
                         return False
         return True
 
