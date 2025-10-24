@@ -5,7 +5,7 @@ By default, Charmed MongoDB 8 automatically manages private keys when TLS is ena
 
 If preferred, you can use [Juju secrets](https://documentation.ubuntu.com/juju/latest/reference/secret/#secret) to manage the private keys used by the charm to generate the certificate signing requests (CSR).
 
-You can manage the private keys used by the charm to generate the certificate signing requests (CSR), by storing the private key in a [juju secret](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/secret/) and then referencing the secret in the [charm configuration](https://documentation.ubuntu.com/juju/latest/user/howto/manage-applications/#configure-an-application).
+You can manage the private keys used by the charm to generate the certificate signing requests (CSR), by storing the private key in a [juju secret](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/secret/) and then referencing the secret in the [charm configuration](https://documentation.ubuntu.com/juju/latest/howto/manage-applications/index.html#configure-an-application).
 
 ```{seealso}
 [Juju | How to manage secrets](https://documentation.ubuntu.com/juju/latest/howto/manage-secrets/#manage-secrets)
