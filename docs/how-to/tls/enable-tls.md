@@ -32,6 +32,7 @@ juju deploy self-signed-certificates
 ```
 
 ## Enable TLS in a replica set
+
 Integrate your replica set with the TLS provider according the required encryption.
 
 ### Peer-to-peer
