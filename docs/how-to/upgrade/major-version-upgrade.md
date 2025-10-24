@@ -25,6 +25,106 @@ This guide requires that your MongoDB deployment is integrated with [S3-integrat
 
 If you are not relying on Amazon S3, you can use microceph and rados-gateway (or any S3-compatible storage). The {ref}`last section of this guide <configure-microceph-and-radosgw-for-backups>` shows how to install and configure them for the purpose of major version upgrades through backups.
 
+## Add the MongoDB 8 internal users to MongoDB 6
+
+MongoDB 8 uses different internal usernames. You must create the new users in the MongoDB 6 deployment before performing the upgrade.
+
+| MongoDB 6      | MongoDB 7      | MongoDB 8         |
+|----------------|----------------|-------------------|
+| operator       | operator       | charmed-operator  |
+| backup         | backup         | charmed-backup    |
+| logrotate      | logrotate      | charmed-logrotate |
+| monitor        | monitor        | charmed-stats     |
+
+Retrieve the passwords for all MongoDB 6 internal users:
+
+```shell
+operator_password=$(juju run <app>/leader get-password username=operator)
+backup_password=$(juju run <app>/leader get-password username=backup)
+logrotate_password=$(juju run <app>/leader get-password username=logrotate)
+monitor_password=$(juju run <app>/leader get-password username=monitor)
+```
+
+SSH into your deployment:
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+
+```shell
+juju ssh <app>/leader
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+
+```shell
+juju ssh --container=mongod <app>/leader
+```
+````
+`````
+
+[Log into your MongoDB 6 cluster](https://canonical-charmed-mongodb.readthedocs-hosted.com/6/tutorial/#access-a-replica-set) and create the MongoDB 8 internal users (`charmed-operator`, `charmed-backup`, `charmed-logrotate`, `charmed-stats`).
+
+Replace the password placeholders with the passwords previously obtained:
+
+```javascript
+db.createUser(
+    {
+        user: 'charmed-operator',
+        pwd: '<operator-password>',
+        roles: [
+            {role: 'userAdminAnyDatabase', db: 'admin'},
+            {role: 'readWriteAnyDatabase', db: 'admin'},
+            {role: 'clusterAdmin', db: 'admin'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
+
+db.createUser(
+    {
+        user: 'charmed-backup',
+        pwd: '<backup-password>',
+        roles: [
+            {role: 'backup', db: 'admin'},
+            {role: 'readWrite', db: 'admin'},
+            {role: 'clusterMonitor', db: 'admin'},
+            {role: 'restore', db: 'admin'},
+            {role:'pbmAnyAction', db:'admin'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
+
+db.createUser(
+    {
+        user: 'charmed-logrotate',
+        pwd: '<logrotate-password>',
+        roles: [{role: 'logRotate', db: 'admin'}],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
+
+db.createUser(
+    {
+        user: 'charmed-stats',
+        pwd: '<monitor-password>',
+        roles: [
+            {role: 'explainRole', db: 'admin'},
+            {role: 'clusterMonitor', db: 'admin'},
+            {role: 'read', db: 'local'}
+        ],
+        mechanisms: ['SCRAM-SHA-256'],
+        passwordDigestor: 'server'
+    }
+)
+```
+
 ## Deploy MongoDB 7 cluster
 
 This first step towards migrating to MongoDB 8 is to upgrade to a transition cluster on MongoDB 7.
@@ -38,16 +138,8 @@ Until you have fully deployed MongoDB 8, ensured it is stable and verified there
 
 Then, integrate the new cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
-Replicate all the passwords from your initial application to the new one:
+Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `operator`, `backup`, `logrotate` and `monitor` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is decribe in {ref}`manage-passwords`.
 
-<!--TODO: Update for MongoDB 8 -->
-
-```shell
-for username in backup orchestrator monitor logrotate; do
-    password=$(juju run <app>/leader get-password username=$username);
-    juju run <app>-seven/leader set-password username=$username password=$password;
-done
-```
 
 ## Back up MongoDB 6 cluster
 
@@ -99,16 +191,7 @@ These steps are pretty similar to the previous ones, but we will go through it a
 
 Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-eight s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
-Replicate all the passwords from your initial application to the new one:
-
-<!--TODO: Update for MongoDB 8 -->
-
-```shell
-for username in backup orchestrator monitor logrotate; do
-    password=$(juju run <app>/leader get-password username=$username);
-    juju run <app>-eight/leader set-password username=$username password=$password;
-done
-```
+Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `charmed-operator`, `charmed-backup`, `charmed-logrotate` and `charmed-stats` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is decribe in {ref}`manage-passwords`.
 
 ## Back up MongoDB 7 cluster
 
@@ -188,3 +271,16 @@ sudo microceph.radosgw-admin user create --uid <username> --display-name <userna
 ```
 
 This will output an `access_key` and a `secret_key`. Those are the credentials that you will use to configure your s3-integrator.
+
+## Remove MongoDB 6 internal users from MongoDB 8
+
+`operator`, `backup`, `logrotate` and `monitor` users are no longer needed in MongoDB 8, so they can be removed.
+
+Log into your MongoDB 8 cluster using the `charmed-operator` user and remove the MongoDB 6 users:
+
+```javascript
+db.dropUser('operator')
+db.dropUser('backup')
+db.dropUser('monitor')
+db.dropUser('logrotate')
+```
