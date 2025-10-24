@@ -22,10 +22,10 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 USERNAME_MAPPING = {
-    "operator": CHARMED_OPERATOR_USERNAME,
-    "monitor": CHARMED_STATS_USERNAME,
-    "backup": CHARMED_BACKUP_USERNAME,
-    "logrotate": "charmed-logrotate",
+    CHARMED_OPERATOR_USERNAME: "operator",
+    CHARMED_STATS_USERNAME: "monitor",
+    CHARMED_BACKUP_USERNAME: "backup",
+    "charmed-logrotate": "logrotate",
 }
 
 
@@ -123,6 +123,77 @@ async def set_fcv(
         ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd, expecting_output=False
     )
     assert result.succeeded, f"Failed to set fcv to {fcv}."
+
+
+def _build_create_user_command(username: str, password: str, roles: list[dict]) -> str:
+    """Builds a MongoDB createUser command string."""
+    roles_str = ", ".join([f"{{role: '{r['role']}', db: '{r['db']}'}}" for r in roles])
+    return (
+        "db.createUser({"
+        f"user: '{username}', "
+        f"pwd: '{password}', "
+        f"roles: [{roles_str}], "
+        "mechanisms: ['SCRAM-SHA-256'], "
+        "passwordDigestor: 'server'"
+        "})"
+    )
+
+
+async def _add_internal_user(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    username: str,
+    password: str,
+    roles: list[dict],
+) -> None:
+    """Adds an internal MongoDB user with given roles."""
+    operator_password = await get_password(ops_test, username="operator", app_name=app_name)
+    replica_set_hosts = [
+        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    ]
+    replica_set_hosts = [f"{host}:{MONGOD_PORT}" for host in replica_set_hosts]
+    hosts = ",".join(replica_set_hosts)
+
+    replica_set_uri = f"mongodb://operator:{operator_password}@{hosts}/admin?replicaSet={app_name}"
+    add_user_cmd = _build_create_user_command(username, password, roles)
+
+    result = await execute_on_mongod(
+        ops_test, app_name, substrate, replica_set_uri, add_user_cmd, expecting_output=False
+    )
+    assert result.succeeded, f"Failed to add internal user {username} to {app_name}."
+
+
+async def add_rel8_internal_users(ops_test: OpsTest, substrate: Substrate, app_name: str) -> None:
+    """Adds all internal MongoDB8 user with given roles."""
+    rel8_internal_users = {
+        "charmed-operator": [
+            {"role": "userAdminAnyDatabase", "db": "admin"},
+            {"role": "readWriteAnyDatabase", "db": "admin"},
+            {"role": "clusterAdmin", "db": "admin"},
+        ],
+        "charmed-backup": [
+            {"role": "backup", "db": "admin"},
+            {"role": "readWrite", "db": "admin"},
+            {"role": "clusterMonitor", "db": "admin"},
+            {"role": "restore", "db": "admin"},
+            {"role": "pbmAnyAction", "db": "admin"},
+        ],
+        "charmed-logrotate": [
+            {"role": "logRotate", "db": "admin"},
+        ],
+        "charmed-stats": [
+            {"role": "explainRole", "db": "admin"},
+            {"role": "clusterMonitor", "db": "admin"},
+            {"role": "read", "db": "local"},
+        ],
+    }
+
+    for rel8_username, roles in rel8_internal_users.items():
+        rel6_username = USERNAME_MAPPING[rel8_username]
+        password = await get_password(ops_test, username=rel6_username, app_name=app_name)
+        await _add_internal_user(ops_test, substrate, app_name, rel8_username, password, roles)
 
 
 async def get_password_action(

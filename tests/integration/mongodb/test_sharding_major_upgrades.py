@@ -28,7 +28,12 @@ from tests.integration.helpers.sharding import (
     integrate_sharding_components,
 )
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import USERNAME_MAPPING, get_password_action, set_fcv
+from tests.integration.helpers.upgrade import (
+    USERNAME_MAPPING,
+    add_rel8_internal_users,
+    get_password_action,
+    set_fcv,
+)
 
 CONFIG_SERVER_SIX = "config-server-six"
 SHARD_ONE_SIX = "shard-one-six"
@@ -109,6 +114,8 @@ async def test_deploy_mongodb_6(
 
     application_name = "application"
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
+
+    await add_rel8_internal_users(ops_test, substrate, CONFIG_SERVER_SIX)
 
     mongos_uri: str = await mongodb_uri(
         ops_test, substrate, app_name=CONFIG_SERVER_SIX, port=MONGOS_PORT
@@ -196,7 +203,7 @@ async def test_deploy_mongodb_7(ops_test: OpsTest, substrate: Substrate, mongodb
         apps=[S3_APP_NAME, CONFIG_SERVER_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username in USERNAME_MAPPING.keys():
+    for rel6_username in USERNAME_MAPPING.values():
         password = await get_password_action(
             ops_test, username=rel6_username, app_name=CONFIG_SERVER_SIX
         )
@@ -313,7 +320,7 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, CONFIG_SERVER_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username, rel8_username in USERNAME_MAPPING.items():
+    for rel8_username, rel6_username in USERNAME_MAPPING.items():
         password = await get_password_action(
             ops_test, username=rel6_username, app_name=CONFIG_SERVER_SIX
         )

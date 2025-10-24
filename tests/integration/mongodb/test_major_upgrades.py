@@ -24,7 +24,12 @@ from tests.integration.helpers.common import (
     stop_continous_writes,
 )
 from tests.integration.helpers.types import Substrate
-from tests.integration.helpers.upgrade import USERNAME_MAPPING, get_password_action, set_fcv
+from tests.integration.helpers.upgrade import (
+    USERNAME_MAPPING,
+    add_rel8_internal_users,
+    get_password_action,
+    set_fcv,
+)
 
 MONGODB_SIX = "mongodb-six"
 MONGODB_SEVEN = "mongodb-seven"
@@ -74,6 +79,8 @@ async def test_deploy_mongodb_6(
     application_name = "application"
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
     await relate_mongodb_and_application(ops_test, MONGODB_SIX, application_name)
+
+    await add_rel8_internal_users(ops_test, substrate, MONGODB_SIX)
 
     await start_continous_writes(ops_test, client_app_name=application_name)
     time.sleep(20)
@@ -137,7 +144,7 @@ async def test_deploy_mongodb_7(
         apps=[S3_APP_NAME, MONGODB_SEVEN], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username in USERNAME_MAPPING.keys():
+    for rel6_username in USERNAME_MAPPING.values():
         password = await get_password_action(ops_test, username=rel6_username, app_name=MONGODB_SIX)
         await set_password(
             ops_test, username=rel6_username, password=password, app_name=MONGODB_SEVEN
@@ -225,7 +232,7 @@ async def test_deploy_mongodb_8(
         apps=[S3_APP_NAME, MONGODB_EIGHT], timeout=TIMEOUT, status="active"
     )
 
-    for rel6_username, rel8_username in USERNAME_MAPPING.items():
+    for rel8_username, rel6_username in USERNAME_MAPPING.items():
         password = await get_password_action(ops_test, username=rel6_username, app_name=MONGODB_SIX)
         await set_password(
             ops_test, username=rel8_username, password=password, app_name=MONGODB_EIGHT
