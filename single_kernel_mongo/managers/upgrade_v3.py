@@ -58,7 +58,7 @@ class MongoDBUpgradesManager:
             return False
 
     def are_shards_accessible(self) -> bool:
-        """Checks if all nodes are accessible, fails otherwise."""
+        """Checks if all nodes are responsive to a simple ping, fails otherwise."""
         mongos_config = self.get_cluster_mongos()
         for replica_set_config in self.get_all_replica_set_configs_in_cluster(mongos_config):
             for single_host in replica_set_config.hosts:
