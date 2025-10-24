@@ -31,11 +31,11 @@ from tenacity import (
     wait_fixed,
 )
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
-    OPERATOR_USERNAME,
     TIMEOUT,
     ProcessError,
     count_primaries,
@@ -54,7 +54,7 @@ from ..helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -239,7 +239,7 @@ async def fetch_primary(
     """Returns IP address of current replica set primary."""
     password = await get_password(
         ops_test,
-        username=OPERATOR_USERNAME,
+        username=CHARMED_OPERATOR_USERNAME,
         app_name=app_name,
     )
 
@@ -593,7 +593,7 @@ async def insert_release_to_cluster(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
     db = client[DEFAULT_DATABASE_NAME]
     test_collection = db[DEFAULT_REPLICATION_COLL_NAME]
@@ -620,7 +620,7 @@ async def retrieve_entries(
         ops_test, substrate, get_unit_id(primary.name), app_name=app_name
     )
 
-    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
     client = MongoClient(unit_uri(primary_ip, password, app_name), directConnection=True)
 
     db = client[db_name]
@@ -923,7 +923,7 @@ async def verify_replica_set_configuration(
     member_ips = await fetch_replica_set_members(ops_test, substrate, app_name=app_name)
     assert set(member_ips) == set(hosts), "all members not running under the same replset"
 
-    password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
 
     # verify there is only one primary
     assert (

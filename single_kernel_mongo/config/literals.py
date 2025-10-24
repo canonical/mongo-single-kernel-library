@@ -51,13 +51,13 @@ class MongoPorts(IntEnum):
 class InternalUsernames(str, Enum):
     """The allowed internal usernames."""
 
-    OPERATOR = "operator"
-    BACKUP = "backup"
-    MONITOR = "monitor"
-    LOGROTATE = "logrotate"
+    CHARMED_OPERATOR = "charmed-operator"
+    CHARMED_BACKUP = "charmed-backup"
+    CHARMED_STATS = "charmed-stats"
+    CHARMED_LOGROTATE = "charmed-logrotate"
 
 
-SECRETS_APP = [f"{user}-password" for user in InternalUsernames] + ["keyfile"]
+SECRETS_APP = [f"{username}-password" for username in InternalUsernames] + ["keyfile"]
 
 VERSIONS_FILE = Path("refresh_versions.toml")
 

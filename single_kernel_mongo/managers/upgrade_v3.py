@@ -15,7 +15,7 @@ from single_kernel_mongo.exceptions import BalancerStillRunningError, ClusterNot
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
-from single_kernel_mongo.utils.mongodb_users import OperatorUser
+from single_kernel_mongo.utils.mongodb_users import CharmedOperatorUser
 
 logger = logging.getLogger()
 
@@ -65,7 +65,7 @@ class MongoDBUpgradesManager:
                 if single_host != self.state.unit_peer_data.internal_address:
                     logger.info(f"Checking if shard {single_host} is responding to ping")
                     single_replica_config = self.state.mongodb_config_for_user(
-                        OperatorUser,
+                        CharmedOperatorUser,
                         hosts={single_host},
                         replset=replica_set_config.replset,
                     )
@@ -113,7 +113,7 @@ class MongoDBUpgradesManager:
             self.state.mongos_config
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER)
             else self.state.mongos_config_for_user(
-                OperatorUser, hosts=set(self.state.shard_state.mongos_hosts)
+                CharmedOperatorUser, hosts=set(self.state.shard_state.mongos_hosts)
             )
         )
 
@@ -162,7 +162,7 @@ class MongoDBUpgradesManager:
             config_server_hosts = self.state.app_peer_data.mongos_hosts
             mongodb_configurations = [
                 self.state.mongodb_config_for_user(
-                    OperatorUser,
+                    CharmedOperatorUser,
                     hosts=set(config_server_hosts),
                     replset=self.state.config_server_name,
                 )
@@ -183,7 +183,7 @@ class MongoDBUpgradesManager:
         shard_hosts = shard_entry["host"].split("/")[1]
         parsed_ips = {host.split(":")[0] for host in shard_hosts.split(",")}
         return self.state.mongodb_config_for_user(
-            OperatorUser, parsed_ips, replset=shard_entry[SHARD_NAME_INDEX]
+            CharmedOperatorUser, parsed_ips, replset=shard_entry[SHARD_NAME_INDEX]
         )
 
     def get_random_write_and_collection(self) -> tuple[str, str, str]:
@@ -422,7 +422,7 @@ class MongoDBUpgradesManager:
         for replica_set_config in self.get_all_replica_set_configs_in_cluster(mongos_config):
             for single_host in replica_set_config.hosts:
                 single_replica_config = self.state.mongodb_config_for_user(
-                    OperatorUser,
+                    CharmedOperatorUser,
                     hosts={single_host},
                     replset=replica_set_config.replset,
                     standalone=True,
@@ -448,7 +448,7 @@ class MongoDBUpgradesManager:
         config = self.state.mongo_config
         for host in config.hosts:
             single_unit_config = self.state.mongodb_config_for_user(
-                OperatorUser, hosts={host}, replset=config.replset, standalone=True
+                CharmedOperatorUser, hosts={host}, replset=config.replset, standalone=True
             )
             with MongoConnection(single_unit_config) as mongod:
                 version = mongod.client.admin.command(

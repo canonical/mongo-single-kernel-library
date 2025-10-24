@@ -73,12 +73,12 @@ from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
+    CharmedBackupUser,
+    CharmedLogRotateUser,
+    CharmedOperatorUser,
+    CharmedStatsUser,
     InternalUsers,
-    LogRotateUser,
     MongoDBUser,
-    MonitorUser,
-    OperatorUser,
     RoleNames,
 )
 
@@ -725,35 +725,35 @@ class CharmState(Object, StatusesStateProtocol):
 
     @property
     def backup_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the backup user."""
-        return self.mongodb_config_for_user(BackupUser, standalone=True)
+        """Mongo Configuration for the charmed-backup user."""
+        return self.mongodb_config_for_user(CharmedBackupUser, standalone=True)
 
     @property
-    def monitor_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the monitoring user."""
-        return self.mongodb_config_for_user(MonitorUser, hosts=self.internal_hosts)
+    def stats_config(self) -> MongoConfiguration:
+        """Mongo Configuration for the charmed-stats user."""
+        return self.mongodb_config_for_user(CharmedStatsUser, hosts=self.internal_hosts)
 
     @property
     def logrotate_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the logrotate user."""
-        return self.mongodb_config_for_user(LogRotateUser, standalone=True)
+        """Mongo Configuration for the charmed-logrotate user."""
+        return self.mongodb_config_for_user(CharmedLogRotateUser, standalone=True)
 
     @property
     def operator_config(self) -> MongoConfiguration:
-        """Mongo Configuration for the operator user."""
-        return self.mongodb_config_for_user(OperatorUser, hosts=self.internal_hosts)
+        """Mongo Configuration for the charmed-operator user."""
+        return self.mongodb_config_for_user(CharmedOperatorUser, hosts=self.internal_hosts)
 
     @property
     def remote_mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the remote mongos server."""
         mongos_hosts = self.app_peer_data.mongos_hosts
-        return self.mongos_config_for_user(OperatorUser, set(mongos_hosts))
+        return self.mongos_config_for_user(CharmedOperatorUser, set(mongos_hosts))
 
     @property
     def mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the admin mongos user."""
         if self.charm_role.name == CharmKind.MONGOD:
-            return self.mongos_config_for_user(OperatorUser, self.internal_hosts)
+            return self.mongos_config_for_user(CharmedOperatorUser, self.internal_hosts)
         username, password = self.get_user_credentials()
         database = self.app_peer_data.database
         port: int | None = MongoPorts.MONGOS_PORT.value
