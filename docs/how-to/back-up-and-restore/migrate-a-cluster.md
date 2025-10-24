@@ -49,7 +49,7 @@ juju config <application-name> system-users=<secret_URI>
 ```
 
 ```{seealso}
-[How to > Manage passwords](/how-to/manage-passwords)
+{ref}`manage-passwords`
 ```
 
 ## List all backups
