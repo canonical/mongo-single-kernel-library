@@ -158,25 +158,3 @@ You can see that all of your client URIs have been updated by running
 To reconfigure the charm for internal access only, set `expose-external` to `none`.
 ```
 ````
-
-## Internal operator user
-
-<!--TODO: Update for MongoDB 8 -->
-
-The `operator` (admin) user is used internally by the MongoDB charm for database and cluster management tasks. <!--See {ref}`users` for more information.-->
-
-To rotate its password, use the {command}`set-password` action:
-
-````{tab-set}
-```{tab-item} VM
-:sync: vm
-
-    juju run mongodb/leader set-password password=<new password>
-```
-
-```{tab-item} K8s
-:sync: k8s
-
-    juju run mongodb-k8s/leader set-password password=<new password>
-```
-````
