@@ -1,32 +1,92 @@
 (upgrade-replica-set)=
 # How to upgrade (refresh) a replica set
 
-This guide goes over the steps to perform a minor in-place upgrade via `juju refresh` for a replica set. Going forward, we will use the word "refresh" instead of "upgrade".
+```{admonition} Emergency stop button
+:class: attention
+Use `juju config <app name> pause-after-unit-refresh=all` to halt an in-progress refresh.
+Then, consider [rolling back](#roll-back)
+```
+
+Charmed MongoDB supports minor version in-place refresh via the [`juju refresh`](https://documentation.ubuntu.com/juju/3.6/reference/juju-cli/list-of-juju-cli-commands/refresh/#details) command.
+
 
 <!--start-include-->
+
 ```{seealso}
 To upgrade from MongoDB 6 to 8, see {ref}`major-version-upgrade`.
 ```
+
+<!--end-include-->
 
 ## Before refreshing
 
 **Ensure your MongoDB deployment is healthy** (`active` and `idle`), and not performing any long-running operations such as creating a backup.
 
-**Do not perform any extraordinary operations on your cluster while refreshing**, as it can lead the cluster into inconsistent states. Some dangerous operations could be:
-* Adding or removing units
-* Creating or destroying relations
+**Do not perform any extraordinary operations on your cluster while refreshing**, as it can lead the cluster into inconsistent states. They might work, but could put your cluster at risk. Some dangerous operations could be:
+* Scaling up the application
+* Scaling down the application—unless it is necessary for recovery
+* Creating or removing relations
+* Creating or restoring a backup (on the Juju application)
+* Changes to config values (except `pause-after-unit-refresh`)
 * Upgrading other related applications simultaneously
 
-**Make sure to have created and tested a backup of your data.** See: {ref}`create-a-backup`.
+## Determine which version to refresh to
 
-**Take note of your MongoDB application's current revision**:
-
+:**Take note of your MongoDB application's current revision**:
 ```shell
-juju status | grep <app-name> | head -1 | awk '{print $5}'
+juju status | grep <app-name> | head -1 | awk '{print $7}'
 ```
 
+### Recommended refreshes
+
+These refreshes are well-tested and should be preferred.
+
+```{eval-rst}
++--------------+------------+----------+--------------+------------+----------+-----------------------------------------------------------------------------------------------+
+| .. centered:: From                   | .. centered:: To                     | Charm release notes to review                                                                 |
++--------------+------------+----------+--------------+------------+----------+                                                                                               |
+| Charm        | MongoDB    | Snap     | Charm        | PostgreSQL | Snap     |                                                                                               |
+| revision     | Version    | revision | revision     | Version    | revision |                                                                                               |
++==============+============+==========+==============+============+==========+===============================================================================================+
+|              |            |          |              |            |          |                                                                                               |
++--------------+------------+----------+--------------+------------+----------+-----------------------------------------------------------------------------------------------+
+```
+
+
+## Create a backup
+
+See [](/how-to/back-up-and-restore/create-a-backup).
+
+### Verify the backup
+
+Verify the integrity of the backup by performing a test [restore on another application](/how-to/back-up-and-restore/migrate-a-cluster).
+Check the restored data by ensuring that:
+* recent data is present
+* the data size is correct
+* the data matches what you expected in the backup
+
+
+## Read the rollback instructions
+
+In the event that something goes wrong (e.g. the refresh fails, the new version of PostgreSQL is not performant enough, a database client is incompatible with the new version), you may want to quickly roll back.
+
+Prepare for this possibility by reading through the entire refresh documentation—with special attention to the [](#halt-the-refresh) and [](#roll-back) sections—before starting the refresh.
 Save this number in case you need to roll back your application.
-<!--end-include-->
+
+## Review release notes
+
+For every charm version between the version that you are refreshing from and to—and for the version you are refreshing to, review the release notes to understand what changed and if any action is required from you before, during, or after the refresh.
+
+For [recommended refreshes](#recommended-refreshes), refer to the rightmost column of the table.
+
+If the MongoDB versions that you are refreshing from and to are different, refer to the [upstream MongoDB release notes](https://docs.percona.com/percona-server-for-mongodb/8.0/release_notes/index.html) to understand what changed and if any action is required from you.
+
+## Consider scaling up
+
+During the refresh of the application, units will be restarted one by one.
+While a unit is restarting, the performance of the cluster will be degraded.
+
+To ensure that the cluster can handle all traffic during the refresh, consider scaling up the application by 1 unit.
 
 (run-a-pre-refresh-check)=
 ## Run a pre-refresh check
@@ -43,6 +103,35 @@ juju <app-name>/leader pre-refresh-check
 Do not proceed if this action is unsuccessful.
 ```
 
+If the action succeeds, copy down the rollback command.
+Keep the command available in case you need to [roll back](#roll-back).
+
+## Configure `pause-after-unit-refresh`
+
+After each unit is refreshed, the charm will perform automatic health checks.
+We recommend supplementing the automatic checks with manual checks.
+
+Examples of manual checks:
+* Database clients are healthy and can connect to the refreshed units
+* Transactions per second and resource consumption (CPU, memory, disk) are similar on refreshed and non-refreshed units
+* Leaving the application in a partially-refreshed state (only some units refreshed) for several weeks and monitoring that the new version is stable in your environment
+
+To facilitate your manual checks, the application can be configured to pause the refresh and wait for your confirmation.
+
+Set the `pause-after-unit-refresh` config option to:
+* `all` to wait for your confirmation after each unit refreshes
+* `first` (default) to wait for your confirmation once, after the first unit refreshes
+* `none` to never wait for your confirmation
+
+For example:
+```shell
+juju config <app-name> pause-after-unit-refresh=all
+```
+
+```{note}
+If the charm's automatic health checks fail, the refresh will be paused (until those health checks succeed) regardless of the value of the `pause-after-unit-refresh` config option.
+```
+
 ## Begin the refresh
 
 To begin the refresh process, run
@@ -53,89 +142,94 @@ juju refresh <app-name> --revision=<new-revision>
 
 It may take a minute before the charm receives the `refresh` command. When it does, the units will begin to execute the command. 
 
-Wait until `juju status --watch 1s` shows that all units in your deployment are `idle`. 
+## Halt the refresh
 
-The refresh process upgrades the charm and services inside the charm. There are three possible outcomes:
-* {ref}`Case 1 <case-1>`: Successful upgrade - where the new charm uses the same underlying snap
-* {ref}`Case 2 <case-2>`: Successful upgrade - where the new charm uses a new underlying snap
-* {ref}`Case 3 <case-3>`: Failure to upgrade
-
-(case-1)=
-### Case 1: Success (same snap)
-
-If the new charm revision uses the same underlying snap, all units will finish refresh automatically. If the refresh is successful, your {command}`juju status` will show something similar to:
-
-```text
-App      Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
-mongodb           active      3  mongodb             2  no
-
-Unit        Workload  Agent  Machine  Public address  Ports      Message
-mongodb/0*  active    idle   0        10.84.191.38    27017/tcp
-mongodb/1   active    idle   1        10.84.191.252   27017/tcp
-mongodb/2   active    idle   2        10.84.191.189   27017/tcp
-
-Machine  State    Address        Inst id        Base          AZ  Message
-0        started  10.84.191.38   juju-9ac398-0  ubuntu@22.04      Running
-1        started  10.84.191.252  juju-9ac398-1  ubuntu@22.04      Running
-2        started  10.84.191.189  juju-9ac398-2  ubuntu@22.04      Running
-```
-
-If this is the case, proceed directly to section {ref}`verify-the-success-of-the-refresh`.
-
-(case-2)=
-### Case 2: Success (new snap)
-
-If the new revision has a new underlying snap, the charm only refreshes the first unit and waits for you to proceed with the refresh.
-
-Your model will show that the first unit has successfully upgraded and you will see the following message in {command}`juju status`: 
-
-```text
-Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision.
-```
-
-Running {command}`juju status | grep mongo | awk 'END{print $2 " " $3}'` outputs `active idle`.
-
-If this is the case, proceed to section {ref}`continue-the-refresh`.
-
-(case-3)=
-### Case 3: Failure to refresh
-
-If your upgrade failed, then ` juju status` will show that the unit is blocked with the message `Unhealthy after refresh. Rollback to previous revision with \`juju refresh`\.`. 
-
-If the upgrade of the first unit failed, you can:
-
-* Wait for 5-10 minutes to see if the cluster can heal itself 
-* Roll back. To roll back, repeat the refresh steps starting from {ref}`run-a-pre-refresh-check` using the original revision number.
-
-```{warning}
-In extreme cases, a refresh can be forced by running `juju run <app-name>/leader force-refresh-start`.
-
-**This is NOT recommended - it can break your database**
-```
-
-(continue-the-refresh)=
-## Continue the refresh
-
-Before continuing the upgrade, verify that your deployment is healthy. The charm performs a simple health check after upgrading the unit, but it is suggested that the user verifies that the database is indeed healthy.
-
-To proceed with the upgrade run the `resume-refresh` action on the leader of the deployment:
+If something goes wrong, halt the refresh by running:
 
 ```shell
-juju <app-name>/leader resume-refresh
+juju config <app-name> pause-after-unit-refresh=all
 ```
 
-(verify-the-success-of-the-refresh)=
-## Verify the success of the refresh
+Next, assess the situation and plan the recovery.
+Often, the safest recovery path is to [roll back](#roll-back).
+Consider [contacting us](/reference/contacts).
 
-Wait until `juju status --watch 1s` shows all units in the `active` status. If all nodes in your Charm MongoDB deployment are `active`, your upgrade was successful. 
+## Roll back
 
-If your upgrade failed, you should see the charm go into the `blocked` state with the message `Unhealthy after refresh. Rollback to previous revision with \`juju refresh\`.`. 
+If something went wrong, the safest recovery path is often to roll back to the original version.
 
-* Wait for 5-10 minutes to see if the cluster can heal itself 
-* Roll back. To roll back, repeat the refresh steps starting from {ref}`run-a-pre-refresh-check` using the original revision number.
+First, [halt the refresh](#halt-the-refresh).
 
-```{warning}
-In extreme cases, a refresh can be forced by running `juju run <app-name>/leader force-refresh-start`.
+Run the rollback command [you copied down earlier](#pre-refresh-check).
+In most cases, the rollback command is also displayed in the application's status message in `juju status`.
 
+### Resume the rollback
+
+If more than one unit was refreshed before the rollback was started and `pause-after-unit-refresh` is set to `all` or `first`, your manual confirmation will be needed to complete the rollback.
+The procedure for the rollback is the same as described in [](#monitor-the-refresh).
+
+### Reflect
+
+After the application has been rolled back and you have confirmed that service has been fully restored, investigate what went wrong.
+
+If applicable, please file a [bug report](/reference/contacts).
+
+Once you understand what went wrong and have tested that it has been fixed, the refresh can be attempted again.
+
+## Monitor the refresh
+
+Use `juju status` to monitor the progress of the refresh.
+
+In some cases, it may take a few minutes for the statuses to update after the refresh has started.
+
+If the application status or any of the unit statuses are `blocked`, your action is required.
+Follow the instructions in the status messages.
+
+If the application status or any of the unit statuses are `error`, your action may be required.
+Monitor `juju debug-log`.
+The error may have been a temporary issue.
+If the error persists, your action is required—consider [rolling back](#roll-back).
+
+Monitor the refresh until it successfully finishes.
+When the refresh completes, the application status will go from a message beginning with "Refreshing" to an `active` status with no message.
+
+### Resume refresh
+
+If `pause-after-unit-refresh` is set to `all` or `first` (default), your confirmation will be needed during the refresh.
+
+The application status in `juju status` will instruct you when your confirmation is needed with the `resume-refresh` action.
+
+Before running the `resume-refresh` action:
+* Wait until all of the application's unit agent statuses are `idle`
+* Wait until all of the refreshed units' workload statuses are `active`
+* Perform [manual checks](#configure-pause-after-unit-refresh) to ensure that everything is healthy
+
+Example of running the `resume-refresh` action on leader unit:
+
+```shell
+juju run <app-name>/leader resume-refresh
+```
+
+### Force refresh start
+
+If anything wrong happens after the charm is refreshed, you might have to force the start of the refresh. Often, the safest way is to [roll back](#roll-back).
+Consider [contacting us](/reference/contacts).
+
+This can happen in the following situations:
+ * The charm you're refreshing to is incompatible: a status indicating the incompatibility will be displayed.
+ * The health checks failed after the charm code was refreshed, which indicates that something is wrong. First, [reflect](#reflect) on the situation.
+
+
+ If you really want to continue, this is at your own risk.
 **This is NOT recommended - it can break your database**
+
+ You can use the `force-refresh-start` command on the last upgraded unit (usually the unit with the highest unit id):
+
+```shell
+juju run <app-name>/leader force-refresh-start
 ```
+
+This command has the following options:
+ * check-compatibility: If `false`, force refresh if new version of MongoDB and/or charm is not compatible with previous version
+ * run-pre-refresh-checks: If `false`, force refresh if app is unhealthy or not ready to refresh (and unit status shows "Pre-refresh check failed")
+ * check-workload-container: MongoDB-k8s only, if `false`, allow refresh to MongoDB container version that has not been validated to work with the charm revision
