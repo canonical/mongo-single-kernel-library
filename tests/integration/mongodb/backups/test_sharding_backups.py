@@ -6,21 +6,22 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.backups import (
+from tests.integration.helpers.backups import (
     S3_APP_NAME,
     S3_ENDPOINT,
     count_logical_backups,
     get_backup_list,
     set_credentials,
 )
-from ...helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_BACKUP_USERNAME,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
     get_password,
     set_password,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_APPS,
@@ -34,7 +35,7 @@ from ...helpers.sharding import (
     integrate_sharding_components,
     verify_writes_restored,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
@@ -145,21 +146,24 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
     new_password = "new-password"
 
     shard_backup_password = await get_password(
-        ops_test, username="backup", app_name=SHARD_ONE_APP_NAME
+        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
     )
     assert (
         shard_backup_password != new_password
     ), "shard-one is incorrectly already set to the new password."
 
     shard_backup_password = await get_password(
-        ops_test, username="backup", app_name=SHARD_TWO_APP_NAME
+        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
     )
     assert (
         shard_backup_password != new_password
     ), "shard-two is incorrectly already set to the new password."
 
     await set_password(
-        ops_test, username="backup", password=new_password, app_name=CONFIG_SERVER_APP_NAME
+        ops_test,
+        username=CHARMED_BACKUP_USERNAME,
+        password=new_password,
+        app_name=CONFIG_SERVER_APP_NAME,
     )
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
@@ -168,7 +172,7 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
         status="active",
     )
     config_svr_backup_password = await get_password(
-        ops_test, username="backup", app_name=CONFIG_SERVER_APP_NAME
+        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=CONFIG_SERVER_APP_NAME
     )
 
     assert (
@@ -176,12 +180,12 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
     ), "Application config-srver did not rotate password"
 
     shard_backup_password = await get_password(
-        ops_test, username="backup", app_name=SHARD_ONE_APP_NAME
+        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_ONE_APP_NAME
     )
     assert shard_backup_password == new_password, "Application shard-one did not rotate password"
 
     shard_backup_password = await get_password(
-        ops_test, username="backup", app_name=SHARD_TWO_APP_NAME
+        ops_test, username=CHARMED_BACKUP_USERNAME, app_name=SHARD_TWO_APP_NAME
     )
     assert shard_backup_password == new_password, "Application shard-two did not rotate password"
 

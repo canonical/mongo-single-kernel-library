@@ -204,7 +204,7 @@ def test_proxy_information_to_client_and_handler_connectivity(
     mock_open_port = mocker.patch("ops.model.Unit.open_port")
 
     manager = mongos_harness.charm.operator.cluster_manager
-    manager.share_credentials_to_clients("operator", "password")
+    manager.share_credentials_to_clients("charmed-operator", "password")
 
     if substrate == "microk8s":
         mocker.patch(

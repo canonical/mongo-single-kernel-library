@@ -129,14 +129,14 @@ class MongoDBUser(BaseModel):
         return self.hosts
 
 
-OperatorUser = MongoDBUser(
-    username=InternalUsernames.OPERATOR,
+CharmedOperatorUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_OPERATOR,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.DEFAULT},
 )
 
-MonitorUser = MongoDBUser(
-    username=InternalUsernames.MONITOR,
+CharmedStatsUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_STATS,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.MONITOR},
     privileges={
@@ -154,16 +154,16 @@ MonitorUser = MongoDBUser(
     hosts={LOCALHOST},  # MongoDB Exporter can only connect to one replica.
 )
 
-BackupUser = MongoDBUser(
-    username=InternalUsernames.BACKUP,
+CharmedBackupUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_BACKUP,
     roles={RoleNames.BACKUP},
     privileges={"resource": {"anyResource": True}, "actions": ["anyAction"]},
     mongodb_role="pbmAnyAction",
     hosts={LOCALHOST},  # pbm cannot make a direct connection if multiple hosts are used
 )
 
-LogRotateUser = MongoDBUser(
-    username=InternalUsernames.LOGROTATE,
+CharmedLogRotateUser = MongoDBUser(
+    username=InternalUsernames.CHARMED_LOGROTATE,
     database_name=SystemDBS.ADMIN,
     roles={RoleNames.LOGROTATE},
     privileges={"resource": {"cluster": True}, "actions": ["logRotate"]},
@@ -172,10 +172,10 @@ LogRotateUser = MongoDBUser(
 )
 
 InternalUsers = (
-    OperatorUser,
-    BackupUser,
-    MonitorUser,
-    LogRotateUser,
+    CharmedOperatorUser,
+    CharmedBackupUser,
+    CharmedStatsUser,
+    CharmedLogRotateUser,
 )
 
 
@@ -185,14 +185,14 @@ def get_user_from_username(username: str) -> MongoDBUser:
     Raises:
         ValueError: If the username is not one of the known users.
     """
-    if username == OperatorUser.username:
-        return OperatorUser
-    if username == MonitorUser.username:
-        return MonitorUser
-    if username == BackupUser.username:
-        return BackupUser
-    if username == LogRotateUser.username:
-        return LogRotateUser
+    if username == CharmedOperatorUser.username:
+        return CharmedOperatorUser
+    if username == CharmedStatsUser.username:
+        return CharmedStatsUser
+    if username == CharmedBackupUser.username:
+        return CharmedBackupUser
+    if username == CharmedLogRotateUser.username:
+        return CharmedLogRotateUser
     raise ValueError(f"Unknown user: {username}")
 
 

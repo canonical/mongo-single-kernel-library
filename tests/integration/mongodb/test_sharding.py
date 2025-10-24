@@ -7,10 +7,10 @@ import pytest
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_OPERATOR_PASSWORD,
+    CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
-    OPERATOR_PASSWORD,
-    OPERATOR_USERNAME,
     TIMEOUT,
     deploy_charm,
     find_unit,
@@ -22,7 +22,7 @@ from ..helpers.common import (
     set_password,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_APPS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
@@ -35,7 +35,7 @@ from ..helpers.sharding import (
     verify_data_mongodb,
     write_data_to_mongodb,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 # for now we have a large timeout due to the slow drainage of the `config.system.sessions`
 # collection. More info here:
@@ -151,20 +151,20 @@ async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
 
 @pytest.mark.abort_on_fail
 async def test_set_operator_password(ops_test: OpsTest):
-    """Tests that the cluster can safely set the operator password."""
+    """Tests that the cluster can safely set the charemd_operator password."""
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password != OPERATOR_PASSWORD
+            operator_password != CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
     await set_password(
         ops_test,
-        username=OPERATOR_USERNAME,
-        password=OPERATOR_PASSWORD,
+        username=CHARMED_OPERATOR_USERNAME,
+        password=CHARMED_OPERATOR_PASSWORD,
         app_name=CONFIG_SERVER_APP_NAME,
     )
     await ops_test.model.wait_for_idle(
@@ -175,10 +175,10 @@ async def test_set_operator_password(ops_test: OpsTest):
 
     for cluster_app_name in CLUSTER_APPS:
         operator_password = await get_password(
-            ops_test, username=OPERATOR_USERNAME, app_name=cluster_app_name
+            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
-            operator_password == OPERATOR_PASSWORD
+            operator_password == CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} did not rotate to new password."
 
 

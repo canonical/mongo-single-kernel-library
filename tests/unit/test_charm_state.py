@@ -4,7 +4,11 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import PeerRelationNames
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.utils.mongodb_users import BackupUser, MonitorUser, OperatorUser
+from single_kernel_mongo.utils.mongodb_users import (
+    CharmedBackupUser,
+    CharmedOperatorUser,
+    CharmedStatsUser,
+)
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
 
@@ -53,10 +57,14 @@ def test_users_secrets(harness: Harness[MongoTestCharm], mongodb_name: str):
 
     state = harness.charm.operator.state
     assert state.operator_config.password == state.secrets.get_for_key(
-        Scope.APP, "operator-password"
+        Scope.APP, "charmed-operator-password"
     )
-    assert state.monitor_config.password == state.secrets.get_for_key(Scope.APP, "monitor-password")
-    assert state.backup_config.password == state.secrets.get_for_key(Scope.APP, "backup-password")
+    assert state.stats_config.password == state.secrets.get_for_key(
+        Scope.APP, "charmed-stats-password"
+    )
+    assert state.backup_config.password == state.secrets.get_for_key(
+        Scope.APP, "charmed-backup-password"
+    )
 
 
 def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
@@ -71,12 +79,12 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     assert len(state.get_keyfile() or "") == 1024
     assert state.app_peer_data.replica_set == mongodb_name
 
-    assert not state.app_peer_data.is_user_created(MonitorUser.username)
-    assert not state.app_peer_data.is_user_created(BackupUser.username)
-    assert not state.app_peer_data.is_user_created(OperatorUser.username)
+    assert not state.app_peer_data.is_user_created(CharmedStatsUser.username)
+    assert not state.app_peer_data.is_user_created(CharmedBackupUser.username)
+    assert not state.app_peer_data.is_user_created(CharmedOperatorUser.username)
 
-    state.app_peer_data.set_user_created(MonitorUser.username)
-    assert state.app_peer_data.is_user_created(MonitorUser.username)
+    state.app_peer_data.set_user_created(CharmedStatsUser.username)
+    assert state.app_peer_data.is_user_created(CharmedStatsUser.username)
 
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True

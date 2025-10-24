@@ -12,13 +12,13 @@ from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_OPERATOR_USERNAME,
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
-    OPERATOR_USERNAME,
     UNIT_IDS,
     check_or_scale_app,
     count_primaries,
@@ -35,7 +35,7 @@ from ...helpers.common import (
     stop_continous_writes,
     unit_uri,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     all_db_processes_down,
     db_step_down,
     fetch_replica_set_members,
@@ -53,7 +53,7 @@ from ...helpers.ha import (
     verify_replica_set_configuration,
     verify_writes,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 ANOTHER_DATABASE_APP_NAME = "another-database-a"
 RESTART_DELAY = 60 * 3
@@ -191,7 +191,7 @@ async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuou
     member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
     assert set(member_hosts) == set(hostnames)
 
-    password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
     assert (
         await count_primaries(ops_test, substrate, password, app_name=app_name) == 1
     ), "there is more than one primary in the replica set."
@@ -442,7 +442,7 @@ async def test_replication_across_members(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
 
-    password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
 
     secondaries = set(ip_addresses) - {primary.public_address}
     for secondary in secondaries:
@@ -540,7 +540,7 @@ async def test_replication_member_scaling(
 
     new_member_ip = list(set(new_ip_addresses) - set(original_ip_addresses))[0]
 
-    password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
 
     client = MongoClient(unit_uri(new_member_ip, password, app_name), directConnection=True)
 
@@ -676,7 +676,7 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     assert set(member_ips) == set(unit_hostnames), "all members not running under the same replset"
 
     # verify there is only one primary after un-freezing old primary
-    password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=app_name)
+    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
     assert (
         await count_primaries(ops_test, substrate, password=password, app_name=app_name) == 1
     ), "there are more than one primary in the replica set."
