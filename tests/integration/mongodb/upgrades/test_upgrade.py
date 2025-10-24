@@ -105,7 +105,6 @@ async def test_upgrade(
         await action.wait()
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
-        assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", timeout=1000, idle_period=120

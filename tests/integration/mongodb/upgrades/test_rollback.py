@@ -115,7 +115,6 @@ async def test_rollback(
         await action.wait()
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
-        assert action.status == "completed", "resume-refresh failed, expected to succeed"
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(

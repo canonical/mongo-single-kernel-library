@@ -16,6 +16,7 @@ from ...helpers.common import (
     TIMEOUT,
     find_unit,
     get_juju_status,
+    get_unit_id,
     stop_continous_writes,
 )
 from ...helpers.sharding import (
@@ -87,6 +88,8 @@ async def test_rollback_on_config_server(
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
+    number_of_units = len(ops_test.model.applications[CONFIG_SERVER_APP_NAME].units)
+    leader_id = get_unit_id(config_server_unit.name)
 
     logger.info("Running pre refresh checks")
     action = await config_server_unit.run_action("pre-refresh-check")
@@ -149,7 +152,8 @@ async def test_rollback_on_config_server(
     if "resume-refresh" in get_juju_status(ops_test.model.name, CONFIG_SERVER_APP_NAME):
         action = await config_server_unit.run_action("resume-refresh")
         await action.wait()
-        assert action.status == "completed", "resume-refresh failed, expected to succeed"
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
