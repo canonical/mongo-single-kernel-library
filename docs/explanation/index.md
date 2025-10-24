@@ -6,6 +6,6 @@
 
 Security <security/index>
 Sharding <sharding>
-Users <users>
+Internal users <users>
 Advanced statuses <advanced-statuses>
 ```
