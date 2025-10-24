@@ -20,7 +20,7 @@ class ConfigServerData(ProviderData, RequirerData):  # type: ignore[misc]
         "tls-ca",
         "uris",
         "key-file",
-        "operator-password",
-        "backup-password",
+        "charmed-operator-password",
+        "charmed-backup-password",
         "int-ca-secret",
     ]

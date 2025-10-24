@@ -8,9 +8,9 @@ import pytest
 from juju.unit import Unit as JujuUnit
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
+    CHARMED_STATS_USERNAME,
     DEPLOYMENT_TIMEOUT,
-    MONITOR_USERNAME,
     TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
@@ -22,8 +22,12 @@ from ..helpers.common import (
     set_password,
     unit_hostname,
 )
-from ..helpers.ha import cut_network_from_unit, restore_network_for_unit, wait_network_restore
-from ..helpers.types import Substrate
+from tests.integration.helpers.ha import (
+    cut_network_from_unit,
+    restore_network_for_unit,
+    wait_network_restore,
+)
+from tests.integration.helpers.types import Substrate
 
 MONGODB_EXPORTER_PORT = 9216
 MEDIAN_REELECTION_TIME = 12
@@ -64,10 +68,10 @@ async def test_endpoints(ops_test: OpsTest, substrate: Substrate):
 
 
 async def test_endpoints_new_password(ops_test: OpsTest, substrate: Substrate):
-    """Verify that endpoints still function correctly after the monitor user password changes."""
+    """Verify that endpoints still function correctly after the stats user password changes."""
     app_name = await get_app_name(ops_test)
     await set_password(
-        ops_test, username=MONITOR_USERNAME, password="new_password", app_name=app_name
+        ops_test, username=CHARMED_STATS_USERNAME, password="new_password", app_name=app_name
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 

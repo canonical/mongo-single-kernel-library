@@ -2,7 +2,7 @@ from pathlib import Path
 
 import factory
 
-from single_kernel_mongo.config.literals import LOCALHOST, MongoPorts
+from single_kernel_mongo.config.literals import LOCALHOST, InternalUsernames, MongoPorts
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 
 
@@ -12,7 +12,7 @@ class MongoConfigurationFactory(factory.Factory):
 
     hosts = {LOCALHOST}
     database = "abadcafe"
-    username = "operator"
+    username = InternalUsernames.CHARMED_OPERATOR
     password = "deadbeef"
     roles: set[str] = set()
     tls_enabled = False
