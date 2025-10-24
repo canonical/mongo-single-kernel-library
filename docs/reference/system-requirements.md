@@ -1,9 +1,11 @@
 (system-requirements)=
+
 # System requirements
 
 Below are the minimum software and hardware requirements for running Charmed MongoDB 8.
 
 ## Software
+
 * Juju `3.0` or higher
 * Ubuntu 24.04 (Noble)
 
@@ -38,7 +40,8 @@ Charmed MongoDB 8 works best with Transparent Hugepages enabled.
 If you're running Charmed MongoDB on VM, this is handled by the charm.
 
 If you're running Charmed MongoDB on an LXD Container, please enable the Transparent Huge Tabes on the host:
-* Follow the [official documentation](https://www.mongodb.com/docs/manual/administration/tcmalloc-performance/#std-label-enable-thp) to enable the Tranparent Hugepages on the host.
+
+* Follow the [official documentation](https://www.mongodb.com/docs/manual/administration/tcmalloc-performance/#std-label-enable-thp) to enable the Transparent Hugepages on the host.
 * Configure each host manually to set the max number of hugepages of each size allowed for that host: [see the official documentation](https://documentation.ubuntu.com/lxd/stable-5.21/reference/instance_options/#huge-page-limits):
 
 ```shell
