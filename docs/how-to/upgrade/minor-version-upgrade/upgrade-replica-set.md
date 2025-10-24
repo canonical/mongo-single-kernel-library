@@ -37,6 +37,7 @@ To upgrade from MongoDB 6 to 8, see {ref}`major-version-upgrade`.
 juju status | grep <app-name> | head -1 | awk '{print $7}'
 ```
 
+(recommended-refreshes)=
 ### Recommended refreshes
 
 These refreshes are well-tested and should be preferred.
@@ -88,7 +89,7 @@ While a unit is restarting, the performance of the cluster will be degraded.
 
 To ensure that the cluster can handle all traffic during the refresh, consider scaling up the application by 1 unit.
 
-(run-a-pre-refresh-check)=
+(pre-refresh-check)=
 ## Run a pre-refresh check
 
 Before refreshing, the charm needs to perform some preparatory tasks to define the refresh plan. 
@@ -106,6 +107,7 @@ Do not proceed if this action is unsuccessful.
 If the action succeeds, copy down the rollback command.
 Keep the command available in case you need to [roll back](#roll-back).
 
+(configure-pause-after-unit-refresh)=
 ## Configure `pause-after-unit-refresh`
 
 After each unit is refreshed, the charm will perform automatic health checks.
@@ -142,6 +144,7 @@ juju refresh <app-name> --revision=<new-revision>
 
 It may take a minute before the charm receives the `refresh` command. When it does, the units will begin to execute the command. 
 
+(halt-the-refresh)=
 ## Halt the refresh
 
 If something goes wrong, halt the refresh by running:
@@ -152,8 +155,10 @@ juju config <app-name> pause-after-unit-refresh=all
 
 Next, assess the situation and plan the recovery.
 Often, the safest recovery path is to [roll back](#roll-back).
-Consider [contacting us](/reference/contacts).
+Consider contacting us.
 
+
+(roll-back)=
 ## Roll back
 
 If something went wrong, the safest recovery path is often to roll back to the original version.
@@ -168,14 +173,16 @@ In most cases, the rollback command is also displayed in the application's statu
 If more than one unit was refreshed before the rollback was started and `pause-after-unit-refresh` is set to `all` or `first`, your manual confirmation will be needed to complete the rollback.
 The procedure for the rollback is the same as described in [](#monitor-the-refresh).
 
+(reflect)=
 ### Reflect
 
 After the application has been rolled back and you have confirmed that service has been fully restored, investigate what went wrong.
 
-If applicable, please file a [bug report](/reference/contacts).
+If applicable, please file a bug report.
 
 Once you understand what went wrong and have tested that it has been fixed, the refresh can be attempted again.
 
+(monitor-the-refresh)=
 ## Monitor the refresh
 
 Use `juju status` to monitor the progress of the refresh.
@@ -213,7 +220,7 @@ juju run <app-name>/leader resume-refresh
 ### Force refresh start
 
 If anything wrong happens after the charm is refreshed, you might have to force the start of the refresh. Often, the safest way is to [roll back](#roll-back).
-Consider [contacting us](/reference/contacts).
+Consider contacting us.
 
 This can happen in the following situations:
  * The charm you're refreshing to is incompatible: a status indicating the incompatibility will be displayed.

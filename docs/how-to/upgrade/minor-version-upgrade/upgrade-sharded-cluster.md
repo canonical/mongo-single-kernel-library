@@ -14,7 +14,7 @@ This guide goes over the steps to perform a minor in-place upgrade via `juju ref
 Upgrade your config-server following the instructions in {ref}`upgrade-replica-set`.
 
 ```{warning}
-Do not proceed if this step was not successful. If your refresh failed, {ref}`roll back <roll-back>` the cluster.
+Do not proceed if this step was not successful. If your refresh failed, {ref}`roll-back <roll-back>` the cluster.
 ```
 
 ## Begin the refresh
