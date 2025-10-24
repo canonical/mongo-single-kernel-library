@@ -71,6 +71,7 @@ In this example,
 * `username-3`’s password was updated from an auto-generated password to `password-3`
 * `username-2`’s password remains as it was when the secret was added, but **`username-2` is no longer part of the secret**.
 
-See also: [Explanation > Users](/explanation/users)
-
-See also: [How to > Manage client connections](/how-to/manage-client-connections) to manage client passwords
+```{seealso}
+* {ref}`users`
+* {ref}`manage-client-connections`
+```
