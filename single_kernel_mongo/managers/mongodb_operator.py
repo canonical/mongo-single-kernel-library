@@ -100,12 +100,12 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import is_valid_ldap_options, is_valid_ldapusertodnmapping
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
-    BackupUser,
+    CharmedBackupUser,
+    CharmedLogRotateUser,
+    CharmedOperatorUser,
+    CharmedStatsUser,
     InternalUsers,
-    LogRotateUser,
     MongoDBUser,
-    MonitorUser,
-    OperatorUser,
     get_user_from_username,
     validate_charm_user_password_config,
 )
@@ -719,10 +719,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
-        # Changing the monitor or the backup password will lead to non-leader
-        # units receiving a relation changed event. We must update the monitor
-        # and pbm URI if the password changes so that COS/pbm can continue to
-        # work.
+        # Changing the charmed-stats or the charmed-backup password will lead
+        # to non-leader units receiving a relation changed event. We must update
+        # the monitor and pbm URI if the password changes so that COS/pbm can
+        # continue to work.
         if self.state.db_initialised and self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
             self.backup_manager.configure_and_restart()
@@ -912,16 +912,18 @@ class MongoDBOperator(OperatorProtocol, Object):
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""
         self.mongo_manager.set_user_password(user, new_password)
-        if user == BackupUser:
+        if user == CharmedBackupUser:
             # Update and restart PBM Agent.
             self.backup_manager.configure_and_restart()
-        if user == MonitorUser:
+        if user == CharmedStatsUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
-        if user == LogRotateUser:
+        if user == CharmedLogRotateUser:
             # Update and restart logrotate.
             self.logrotate_config_manager.configure_and_restart()
-        if user in (OperatorUser, BackupUser) and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+        if user in (CharmedOperatorUser, CharmedBackupUser) and self.state.is_role(
+            MongoDBRoles.CONFIG_SERVER
+        ):
             self.config_server_manager.update_credentials(
                 user.password_key_name,
                 new_password,

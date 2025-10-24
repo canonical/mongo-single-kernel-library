@@ -18,8 +18,8 @@ class AppShardingComponentKeys(str, Enum):
     """Config Server State Model for the application."""
 
     DATABASE = "database"
-    OPERATOR_PASSWORD = "operator-password"
-    BACKUP_PASSWORD = "backup-password"
+    OPERATOR_PASSWORD = "charmed-operator-password"
+    BACKUP_PASSWORD = "charmed-backup-password"
     HOST = "host"
     KEY_FILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
@@ -32,8 +32,8 @@ class AppShardingComponentKeys(str, Enum):
 
 
 SECRETS_FIELDS = [
-    "operator-password",
-    "backup-password",
+    "charmed-operator-password",
+    "charmed-backup-password",
     "key-file",
     "int-ca-secret",
     "ext-ca-secret",
@@ -93,14 +93,14 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     @property
     def operator_password(self) -> str | None:
-        """Returns the operator password."""
+        """Returns the charmed-operator password."""
         if not self.relation:
             return None
         return self.relation_data.get(AppShardingComponentKeys.OPERATOR_PASSWORD.value, None)
 
     @property
     def backup_password(self) -> str | None:
-        """Returns the operator password."""
+        """Returns the charmed-backup password."""
         if not self.relation:
             return None
         return self.relation_data.get(AppShardingComponentKeys.BACKUP_PASSWORD.value, None)
