@@ -111,6 +111,9 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
             isinstance(charm_api.event, charm_api.ActionEvent)
             and charm_api.event.action == "pre-refresh-check"
         ):
+            logger.info(
+                "Not checking the compatibility version, this can only run in manual pre-refresh-check."
+            )
             return
 
         fcv = self.state.app_peer_data.feature_compatibility_version
