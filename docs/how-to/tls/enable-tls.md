@@ -26,6 +26,7 @@ See [this guide](https://charmhub.io/topics/security-with-x-509-certificates) fo
 ```
 
 Deploy the `self-signed-certificates` charm.
+
 ```shell
 juju deploy self-signed-certificates
 ```
