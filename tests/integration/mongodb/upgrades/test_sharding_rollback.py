@@ -82,6 +82,7 @@ async def test_rollback_on_config_server(
     base_app_name: str,
     mongodb_charm: dict[str, str],
     mongod_resource: dict[str, str],
+    faulty_mongodb_upgrade_charm,
     add_continuous_writes_to_shards,
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
@@ -100,7 +101,9 @@ async def test_rollback_on_config_server(
     )
 
     logger.info("Refresing the charm")
-    await refresh_charm(ops_test, substrate, CONFIG_SERVER_APP_NAME, mongodb_charm, mongod_resource)
+    await refresh_charm(
+        ops_test, substrate, CONFIG_SERVER_APP_NAME, faulty_mongodb_upgrade_charm, mongod_resource
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME], timeout=TIMEOUT, idle_period=120
