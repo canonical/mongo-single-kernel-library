@@ -20,7 +20,7 @@ Charmed MongoDB uses four storage volumes:
 ## Prerequisites
 
 The storage volumes that can be attached to charmed MongoDB depend on the storage providers available in the cloud where
-charmed MongoDB gets deployed. Please refer to the documentation about [Juju storage](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/storage)
+charmed MongoDB gets deployed. Please refer to the documentation about [Juju storage](https://documentation.ubuntu.com/juju/latest/reference/storage/)
 for more information on possible providers.
 
 ## Create a storage pool
@@ -51,7 +51,7 @@ rootfs           rootfs
 tmpfs            tmpfs 
 ```     
 
-Details about how to manage storage pools with Juju can be found [in this guide](https://canonical-juju.readthedocs-hosted.com/en/latest/user/howto/manage-storage-pools/#manage-storage-pools).
+Details about how to manage storage pools with Juju can be found [in this guide](https://documentation.ubuntu.com/juju/latest/howto/manage-storage-pools).
 
 ## Deploy with persistent storage
 The decision about using the persistent storage feature of charmed MongoDB has to be made at deploy time. In order to create
