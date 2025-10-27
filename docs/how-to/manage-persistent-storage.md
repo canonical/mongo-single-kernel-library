@@ -1,8 +1,7 @@
 (manage-persistent-storage)=
 # How to manage persistent storage (VM only)
 
-
-MongoDB K8s atuomatically manages persistent storages using the Kubernetes persistent volumes. This guide explains how to manage persistent storage only for VM MongoDB.
+MongoDB K8s atuomatically manages persistent storage using the Kubernetes persistent volumes. This guide explains how to manage persistent storage only for VM charmed MongoDB.
 
 Like many other databases, MongoDB stores its state on disk. In a default deployment the file system attached to 
 charmed MongoDB will be removed when charmed MongoDB is removed. The content of the MongoDB database
