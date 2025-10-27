@@ -1,9 +1,14 @@
 (revision-240)=
 # Revision 240
 
-<sub>24 October 2025</sub>
+<sub>27 October 2025</sub>
 
-Charmed MongoDB Revision 240 has been deployed to the [`8/stable` channel](https://charmhub.io/mongodb?channel=8/stable) on Charmhub.
+This is the first release of Charmed MongoDB and Mongos 8 for VM, featuring a Ubuntu 24.04 base, security improvements, and other new features.
+
+| Charm   | Revision | Charmhub track                                             |
+|---------|----------|------------------------------------------------------------|
+| MongoDB | 240      | [`8/stable`](https://charmhub.io/mongodb?channel=8/stable) |
+| Mongos  | 62       | [`8/stable`](https://charmhub.io/mongos?channel=8/stable)  |
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
@@ -13,6 +18,7 @@ Charmed MongoDB Revision 240 has been deployed to the [`8/stable` channel](https
 * This new charm features Noble Numbat (Ubuntu 24.04) as its base 
 * Juju secrets-based management
 * Migration to TLSv4 library
+    * Client TLS is now mandatory if integrated
 * In-place upgrades via refresh v3
 * New storage volumes
 * New [documentation site](https://canonical-charmed-mongodb.readthedocs-hosted.com/8/#)

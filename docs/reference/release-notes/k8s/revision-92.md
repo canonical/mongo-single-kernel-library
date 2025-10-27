@@ -1,9 +1,14 @@
-(revision-91)=
-# Revision 91
+(revision-92)=
+# Revision 92
 
-<sub>24 October 2025</sub>
+<sub>27 October 2025</sub>
 
-Charmed MongoDB K8s Revision 91 has been deployed to the [`8/edge` channel](https://charmhub.io/mongodb-k8s?channel=8/edge) on Charmhub.
+This is the first release of Charmed MongoDB and Mongos 8 for Kubernetes, featuring a Ubuntu 24.04 base, security improvements, and other new features.
+
+| Charm   | Revision | Charmhub track                                                 |
+|---------|----------|----------------------------------------------------------------|
+| MongoDB | 92       | [`8/stable`](https://charmhub.io/mongodb-k8s?channel=8/stable) |
+| Mongos  | 54       | [`8/stable`](https://charmhub.io/mongos-k8s?channel=8/stable)  |
 
 [Charmhub](https://charmhub.io/mongodb-k8s) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
 
@@ -13,6 +18,7 @@ Charmed MongoDB K8s Revision 91 has been deployed to the [`8/edge` channel](http
 * This new charm features Noble Numbat (Ubuntu 24.04) as its base 
 * Juju secrets-based management
 * Migration to TLSv4 library
+    * Client TLS is now mandatory if integrated
 * In-place upgrades via refresh v3
 * New storage volumes
 * New [documentation site](https://canonical-charmed-mongodb.readthedocs-hosted.com/8/#)
