@@ -33,10 +33,7 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
-from single_kernel_mongo.config.relations import (
-    ExternalRequirerRelations,
-    RelationNames,
-)
+from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -236,7 +233,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
-            state=self.state, workload=self.workload, refresh=self.refresh
+            self, state=self.state, workload=self.workload, refresh=self.refresh
         )
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
@@ -274,12 +271,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.refresh:
             return
 
+        # Update the version across all relations so that we can notify other units
+        self.cross_app_version_checker.set_version_across_all_relations()
+
         if self.state.app_peer_data.feature_compatibility_version == FEATURE_VERSION:
             # We have already run all this logic before, no need to run it again.
             return
-
-        # Update the version across all relations so that we can notify other units
-        self.cross_app_version_checker.set_version_across_all_relations()
 
         if (
             self.state.is_role(MongoDBRoles.CONFIG_SERVER)
@@ -324,12 +321,15 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if not refresh.workload_allowed_to_start:
             return
+
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
         self._configure_workloads()
         self.start_charm_services()
 
-        self.state.unit_peer_data.current_revision = self.cross_app_version_checker.version
+        if self.charm.unit.is_leader():
+            # Update the version across all relations so that we can notify other units
+            self.cross_app_version_checker.set_version_across_all_relations()
 
         if self.name == CharmKind.MONGOD:
             self._restart_related_services()
@@ -391,13 +391,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         """The ordered list of components for this operator."""
         return (
             self,
+            self.upgrades_status_manager,
             self.mongo_manager,
             self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
             self.backup_manager,
             self.ldap_manager,
-            self.upgrades_status_manager,
         )
 
     # BEGIN: Handlers.
@@ -480,7 +480,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.mongo_manager.mongod_ready():
             raise WorkloadNotReadyError
 
-        self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+        self.state.statuses.clear(scope="unit", component=self.name)
 
         try:
             self._initialise_replica_set()
@@ -503,7 +503,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.error("Could not restart the related services.")
             return
 
-        self.state.statuses.set(CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+        self.state.statuses.clear(scope="unit", component=self.name)
 
     @override
     def prepare_for_shutdown(self) -> None:  # pragma: nocover
@@ -1152,13 +1152,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Sets directory permissions
         self.set_permissions()
-
-    def instantiate_keyfile(self):
-        """Instantiate the keyfile."""
-        if not (keyfile := self.state.get_keyfile()):
-            raise Exception("Waiting for leader unit to generate keyfile contents")
-
-        self.workload.write(self.workload.paths.keyfile, keyfile)
 
     def _initialise_replica_set(self):
         """Helpful method to initialise the replica set and the users.

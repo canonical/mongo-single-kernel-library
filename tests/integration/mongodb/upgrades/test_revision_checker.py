@@ -7,12 +7,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.sharding import CONFIG_SERVER_REL_NAME, SHARD_REL_NAME
 
-from ...helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    deploy_charm,
-    wait_for_mongodb_units_blocked,
-)
+from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT, check_app_status, deploy_charm
 from ...helpers.types import Substrate
 
 LOCAL_SHARD_APP_NAME = "local-shard"
@@ -29,7 +24,7 @@ CLUSTER_COMPONENTS = [
 
 
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource
+    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource: dict[str, str]
 ) -> None:
     charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
     await deploy_charm(
@@ -40,7 +35,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "config-server"},
-        channel="6/stable",
+        channel="8/edge",
     )
     await deploy_charm(
         ops_test,
@@ -50,7 +45,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "shard"},
-        channel="6/stable",
+        channel="8/edge",
     )
     await deploy_charm(
         ops_test,
@@ -85,18 +80,16 @@ async def test_local_config_server_reports_remote_shard(ops_test: OpsTest) -> No
 
     await ops_test.model.wait_for_idle(
         apps=[LOCAL_CONFIG_SERVER_APP_NAME],
-        status="waiting",
         raise_on_blocked=False,
         idle_period=20,
         timeout=TIMEOUT,
-        wait_for_at_least_units=1,  # Otherwise wait_for_idle fail because of app status
     )
+    await check_app_status(ops_test, LOCAL_CONFIG_SERVER_APP_NAME, status="waiting")
 
-    config_server_unit = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME].units[0]
+    config_server_app = ops_test.model.applications[LOCAL_CONFIG_SERVER_APP_NAME]
 
     assert (
-        "Waiting for shards to upgrade/downgrade to revision"
-        in config_server_unit.workload_status_message
+        "Waiting for shards to upgrade/downgrade to revision" in config_server_app.status_message
     ), "Config server does not correctly report mismatch in revision"
 
 
@@ -110,10 +103,14 @@ async def test_local_shard_reports_remote_config_server(
         f"{REMOTE_CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        LOCAL_SHARD_APP_NAME,
+    await ops_test.model.wait_for_idle(
+        apps=[LOCAL_SHARD_APP_NAME],
+        raise_on_blocked=False,
+        idle_period=20,
         timeout=TIMEOUT,
-        status="is not up-to date with config-server",
     )
+    local_shard_app = ops_test.model.applications[LOCAL_SHARD_APP_NAME]
+
+    assert (
+        "is not up-to date with config-server" in local_shard_app.status_message
+    ), "Shard does not correctly report mismatch in revision"
