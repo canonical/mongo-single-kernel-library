@@ -1,5 +1,5 @@
-(revision-240)=
-# Revision 240
+(revision-241)=
+# Revision 241
 
 <sub>27 October 2025</sub>
 
@@ -7,7 +7,7 @@ This is the first release of Charmed MongoDB and Mongos 8 for VM, featuring a Ub
 
 | Charm   | Revision | Charmhub track                                             |
 |---------|----------|------------------------------------------------------------|
-| MongoDB | 240      | [`8/stable`](https://charmhub.io/mongodb?channel=8/stable) |
+| MongoDB | 241      | [`8/stable`](https://charmhub.io/mongodb?channel=8/stable) |
 | Mongos  | 62       | [`8/stable`](https://charmhub.io/mongos?channel=8/stable)  |
 
 [Charmhub](https://charmhub.io/mongodb) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
