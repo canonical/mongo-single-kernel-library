@@ -9,6 +9,7 @@ Scale replicas and shards <scale-replicas-and-shards>
 Manage TLS encryption <tls/index>
 Manage passwords <manage-passwords>
 Manage client connections <manage-client-connections>
+Manage persistent storage <manage-persistent-storage>
 Enable LDAP <enable-ldap>
 Monitoring <monitoring/index>
 Back up and restore <back-up-and-restore/index>
