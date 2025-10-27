@@ -1,0 +1,112 @@
+name: Run tests
+
+on:
+  pull_request:
+  schedule:
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  pre-commit:
+    name: Run pre-commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install tox & poetry
+        run: |
+          pipx install tox poetry
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Install pre-commit
+        run: |
+          poetry install
+          poetry run pre-commit install
+      - name: Run pre-commit hooks
+        run: |
+          poetry run pre-commit run --all-files
+
+  actionlint:
+    name: Lint .github/workflows/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install actionlint
+        id: install
+        run: |
+          curl -O https://raw.githubusercontent.com/rhysd/actionlint/main/.github/actionlint-matcher.json
+          echo "::add-matcher::actionlint-matcher.json"
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      - name: Run actionlint
+        run: |
+          '${{ steps.install.outputs.executable }}' -color
+
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.7.0
+        with:
+          charm-path: ./single_kernel_mongo/
+          credentials: ${{ secrets.CHARMHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      pull-requests: write
+
+  tox-lint:
+    name: tox run -e lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install tox & poetry
+        run: |
+          pipx install tox poetry
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Run linters
+        run: tox run -e lint
+
+  unit-test:
+    strategy:
+      matrix:
+        env:
+          - lxd
+          - microk8s
+    name: Unit test charm (${{ matrix.env }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install tox & poetry
+        run: |
+          pipx install tox poetry
+      - name: Set up python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Run tests
+        run: tox run -e unit-${{ matrix.env }}
