@@ -4,6 +4,7 @@
 
 import logging
 
+import tomllib
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import (
@@ -14,6 +15,7 @@ from tests.integration.helpers.common import (
     execute_on_mongod,
     find_unit,
     get_address_of_unit,
+    get_juju_status,
     get_password,
     get_unit_id,
 )
@@ -36,11 +38,12 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
         unit_name,
         "sudo",
         "cat",
-        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/workload_version",
+        f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/refresh_versions.toml",
     )
 
     assert return_code == 0
-    return output.strip()
+    data = tomllib.loads(output)
+    return data["workload"]
 
 
 async def refresh_charm(
@@ -62,6 +65,13 @@ async def assert_successful_run_upgrade_sequence(
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     leader_id = get_unit_id(leader_unit.name)
 
+    mongodb_application = ops_test.model.applications[app_name]
+    refresh_order = sorted(
+        mongodb_application.units,
+        key=lambda unit: int(unit.name.split("/")[1]),
+        reverse=True,
+    )
+
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
     assert action.status == "completed", "pre-refresh-check failed, expected to succeed."
@@ -71,34 +81,42 @@ async def assert_successful_run_upgrade_sequence(
     await refresh_charm(ops_test, substrate, app_name, new_charm, mongod_resource)
     # TODO future work, resolve flickering status of app
     async with ops_test.fast_forward(fast_interval="120s"):
-        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
 
-    # resume upgrade only needs to be ran when:
-    # 1. there are more than one units in the application
-    # 2. AND the underlying workload was updated
-    if len(ops_test.model.applications[app_name].units) < 2:
-        return
+    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
+        logger.info("Upgrade is blocked due to incompatibility")
 
-    if "resume-refresh" not in ops_test.model.applications[app_name].status_message:
-        return
+        logger.info(f"Continue refresh on unit {refresh_order[0].name}")
+        logger.info("Running `force-refresh-start` action with check-compatibility=false")
+        force_refresh_action = await refresh_order[0].run_action(
+            "force-refresh-start",
+            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+        )
+        force_refresh_response = await force_refresh_action.wait()
+        assert force_refresh_response.results.get("return-code") == 0, "action failed"
 
-    logger.info(f"Calling resume-refresh for {app_name}")
-    action = await leader_unit.run_action("resume-refresh")
-    await action.wait()
+    await ops_test.model.wait_for_idle(apps=[app_name], raise_on_blocked=False)
 
-    # Resume-refresh can fail while still triggering the upgrade if the leader
-    # unit is the second unit to upgrade because it will be shut down
-    # immediately on k8S.
-    # This is a known limitation, so in that case we allow the action to fail.
-    if "lxd" or (substrate == "microk8s" and leader_id != number_of_units - 2):
-        assert action.status == "completed", "resume-refresh failed, expected to succeed."
+    if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
+        logger.info(f"Calling resume-refresh for {app_name}")
+        action = await leader_unit.run_action("resume-refresh")
+        await action.wait()
+        # Resume-refresh can fail while still triggering the upgrade if the leader
+        # unit is the second unit to upgrade because it will be shut down
+        # immediately on k8S.
+        # This is a known limitation, so in that case we allow the action to fail.
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+            assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
 
 
-async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> None:
-    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:mongodb"
+async def refresh_with_juju(
+    ops_test: OpsTest, app_name: str, channel: str, charm_name: str
+) -> None:
+    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:{charm_name}"
+    logger.info(f"[refresh_with_juju] {refresh_cmd}")
     await ops_test.juju(*refresh_cmd.split())
 
 

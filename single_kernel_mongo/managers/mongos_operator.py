@@ -20,12 +20,7 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import (
-    CharmKind,
-    MongoPorts,
-    Scope,
-    Substrates,
-)
+from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Scope, Substrates
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
@@ -57,9 +52,7 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.workload import (
-    get_mongos_workload_for_substrate,
-)
+from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
@@ -137,7 +130,7 @@ class MongosOperator(OperatorProtocol, Object):
             sys.exit()
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
-            self.state, self.workload, self.refresh
+            self, self.state, self.workload, self.refresh
         )
 
         # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
@@ -169,6 +162,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         Checks if unit is healthy and allow the next unit to update.
         """
+        if not self.state.db_initialised:
+            return
+
         if not refresh.workload_allowed_to_start:
             return
 
@@ -178,7 +174,7 @@ class MongosOperator(OperatorProtocol, Object):
         self._configure_workloads()
         self.start_charm_services()
 
-        logger.debug("Running post refresh checks to verify monogs is not broken after refresh")
+        logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:
             refresh.next_unit_allowed_to_refresh = True
             return
@@ -232,6 +228,12 @@ class MongosOperator(OperatorProtocol, Object):
 
         self.mongos_config_manager.set_environment()
 
+        # Instantiate the keyfile
+        try:
+            self.instantiate_keyfile()
+        except Exception:
+            logger.info("Not instantiating as we don't have a keyfile yet.")
+
     @override
     def prepare_for_startup(self) -> None:
         """For this case, we don't start any service.
@@ -248,19 +250,24 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.refresh.in_progress:
             # Bypass the regular start if refresh is in progress
+            logger.info("Refresh in progress, skipping regular start")
             return
 
         self._configure_workloads()
 
-        # start hooks are fired before relation hooks and `mongos` requires a config-server in
+        if self.state.mongos_cluster_relation:
+            self.instantiate_keyfile()
+            self.start_charm_services()
+            return
+
+        # start hooks that are fired before relation hooks and `mongos` requires a config-server in
         # order to start. Wait to receive config-server info from the relation event before
         # starting `mongos` daemon
-        if not self.state.mongos_cluster_relation:
-            self.state.statuses.add(
-                MongosStatuses.MISSING_CONF_SERVER_REL.value,
-                scope="unit",
-                component=self.name,
-            )
+        self.state.statuses.add(
+            MongosStatuses.MISSING_CONF_SERVER_REL.value,
+            scope="unit",
+            component=self.name,
+        )
 
     @override
     def update_secrets_and_restart(self, secret_label: str, secret_id: str) -> None:

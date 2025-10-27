@@ -42,14 +42,6 @@ class VersionChecker:
             "-locally built" if self.version_checker.is_local_charm(self.charm.app.name) else ""
         )
         try:
-            # This part needs some explanation: On VM, if we are running this
-            # during the pre-refresh hook that happens after the upgrade, all
-            # charm codes have been refreshed.
-            # We want to check our version against the already upgraded config server, so
-            # we use the current revision that stores the revision of the
-            # former charm until that unit is fully upgraded.
-            old_version = self.version_checker.version
-            self.version_checker.version = self.state.unit_peer_data.current_revision
             if self.version_checker.are_related_apps_valid():
                 return None
         except NoVersionError as e:
@@ -60,10 +52,6 @@ class VersionChecker:
                 return ShardStatuses.older_version_shard_needs_upgrade(
                     current_charms_version, local_identifier
                 )
-
-        finally:
-            # Always restore the former version.
-            self.version_checker.version = old_version
 
         if self.state.is_role(MongoDBRoles.SHARD):
             config_server_revision = self.version_checker.get_version_of_related_app(

@@ -4,6 +4,7 @@ import abc
 import dataclasses
 import logging
 
+import charm_ as charm_api
 import charm_refresh
 import poetry.core.constraints.version as poetry_version
 from tenacity import RetryError
@@ -12,9 +13,7 @@ from typing_extensions import override
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.core.operator import OperatorProtocol
-from single_kernel_mongo.exceptions import (
-    FailedToMovePrimaryError,
-)
+from single_kernel_mongo.exceptions import FailedToMovePrimaryError
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.state.charm_state import CharmState
 
@@ -107,6 +106,15 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         if not self.upgrades_manager.is_cluster_able_to_read_write():
             logger.error("Cluster cannot read/write to replicas")
             raise charm_refresh.PrecheckFailed("Cluster is not able to read/write to replicas")
+
+        if not (
+            isinstance(charm_api.event, charm_api.ActionEvent)
+            and charm_api.event.action == "pre-refresh-check"
+        ):
+            logger.info(
+                "Not checking the compatibility version, this can only run in manual pre-refresh-check."
+            )
+            return
 
         fcv = self.state.app_peer_data.feature_compatibility_version
         if not self.upgrades_manager.is_feature_compatibility_version(fcv):

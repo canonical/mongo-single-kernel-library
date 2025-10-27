@@ -10,6 +10,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, UpgradeStatuses
+from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import DeployedWithoutTrustError
 from single_kernel_mongo.state.charm_state import CharmState
@@ -23,8 +24,13 @@ class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
     name: str = "upgrades"
 
     def __init__(
-        self, state: CharmState, workload: WorkloadBase, refresh: charm_refresh.Common | None
+        self,
+        dependent: OperatorProtocol,
+        state: CharmState,
+        workload: WorkloadBase,
+        refresh: charm_refresh.Common | None,
     ) -> None:
+        self.dependent = dependent
         self.state = state
         self.workload = workload
         self.refresh = refresh
@@ -73,10 +79,7 @@ class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
             return status_list
 
         if self.refresh.in_progress and not self.refresh.next_unit_allowed_to_refresh:
-            if not self.dependent.mongo_manager.mongod_ready():
-                status_list.append(UpgradeStatuses.HEALTH_CHECK_FAILED.value)
-            else:
-                status_list.append(UpgradeStatuses.CLUSTER_CHECK_FAILED.value)
+            status_list.append(UpgradeStatuses.HEALTH_CHECK_FAILED.value)
 
         if refresh_unit_status := self.refresh.unit_status_higher_priority:
             unit_status = self._convert_ops_status_to_advanced_status(refresh_unit_status)
