@@ -1,5 +1,5 @@
-(revision-92)=
-# Revision 92
+(revision-93)=
+# Revision 93
 
 <sub>27 October 2025</sub>
 
@@ -7,7 +7,7 @@ This is the first release of Charmed MongoDB and Mongos 8 for Kubernetes, featur
 
 | Charm   | Revision | Charmhub track                                                 |
 |---------|----------|----------------------------------------------------------------|
-| MongoDB | 92       | [`8/stable`](https://charmhub.io/mongodb-k8s?channel=8/stable) |
+| MongoDB | 93       | [`8/stable`](https://charmhub.io/mongodb-k8s?channel=8/stable) |
 | Mongos  | 54       | [`8/stable`](https://charmhub.io/mongos-k8s?channel=8/stable)  |
 
 [Charmhub](https://charmhub.io/mongodb-k8s) | [Deployment guides](how-to-deploy) | [Upgrade guides](how-to-upgrade) | [System requirements](system-requirements)
