@@ -893,11 +893,14 @@ async def get_status_detail(unit: JujuUnit) -> dict:
     return action.results["json-output"]
 
 
-async def check_app_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+async def check_app_status(
+    ops_test: OpsTest, app_name: str, status: str, message: str | None = None
+) -> None:
     """Checks that the application has the correct status and message."""
     app = ops_test.model.applications[app_name]
     await ops_test.model.block_until(*[lambda: app.status == status], timeout=TIMEOUT)
-    assert app.status_message == message
+    if message:
+        assert app.status_message == message
 
 
 def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:

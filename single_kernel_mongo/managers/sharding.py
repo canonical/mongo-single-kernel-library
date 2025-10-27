@@ -18,9 +18,7 @@ from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
-from ops.model import (
-    Relation,
-)
+from ops.model import Relation
 from pymongo.errors import (
     NotPrimaryError,
     OperationFailure,
@@ -37,10 +35,7 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import (
-    ConfigServerStatuses,
-    ShardStatuses,
-)
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
@@ -195,11 +190,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if (
-            rev_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # The status will be added during the get status
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, leaving: bool = False) -> None:
@@ -526,11 +518,8 @@ class ShardManager(Object, ManagerStatusProtocol):
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
-        if (
-            rev_status
-            := self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status()
-        ):
-            self.state.statuses.add(rev_status, scope="app", component=self.dependent.name)
+        if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
+            # The status will be added during the get status
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
 
     def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:

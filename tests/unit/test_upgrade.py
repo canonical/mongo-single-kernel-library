@@ -1,6 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import os
+
 import pytest
 from charm_refresh import PrecheckFailed
 from ops.testing import Harness
@@ -92,6 +94,7 @@ def test_pre_refresh_check_after_1_unit_refreshed_fails(
 
 
 def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
+    os.environ["JUJU_ACTION_NAME"] = "pre-refresh-check"
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     mocker.patch(
@@ -124,6 +127,8 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
     refresh.upgrades_manager = harness.charm.operator.upgrades_manager
 
     refresh.run_pre_refresh_checks_after_1_unit_refreshed()
+
+    del os.environ["JUJU_ACTION_NAME"]
 
 
 @pytest.mark.parametrize(
