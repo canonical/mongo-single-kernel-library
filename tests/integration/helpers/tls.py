@@ -1,16 +1,19 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import base64
 import json
 import os
 from datetime import datetime
 from logging import getLogger
+from pathlib import Path
+from typing import Literal
 
 from juju.unit import Unit as JujuUnit
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOD_PORT,
     MONGOS_APP_NAME,
     MONGOS_PORT,
@@ -23,7 +26,7 @@ from ..helpers.common import (
     get_secret_id,
     mongosh,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -91,6 +94,36 @@ async def mongo_tls_command(
     )
 
 
+async def mongo_no_tls_command(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    mongos: bool = False,
+    uri: str | None = None,
+) -> str:
+    """Generates a command which verifies if we can connect without TLS."""
+    port = MONGOD_PORT if not mongos else MONGOS_PORT
+
+    if not uri:
+        replica_set_hosts = [
+            await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
+            for unit in ops_test.model.applications[app_name].units
+        ]
+        replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
+        username = "operator"
+        password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
+        hosts = ",".join(replica_set_hosts)
+        extra_args = f"?replicaSet={app_name}&connectTimeoutMS=2000" if not mongos else ""
+        uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
+
+    if app_name == MONGOS_APP_NAME:
+        status_command = "db.getUsers()"
+    else:
+        status_command = "rs.status()" if not mongos else "sh.status()"
+
+    return f'{mongosh(substrate)} "{uri}"  --eval "{status_command}"'
+
+
 async def check_tls(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -143,6 +176,42 @@ async def check_tls(
                 return True
     except RetryError:
         return False
+
+
+async def cannot_connect_without_tls(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit: JujuUnit,
+    app_name: str,
+    mongos: bool = False,
+    container: str = "mongod",
+    uri: str | None = None,
+):
+    """Confirms that we cannot connect without TLS.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit: The unit to be checked.
+        enabled: check if TLS is enabled/disabled
+        app_name: name of running mongodb app
+        mongos: whether sharded deployment of replica set
+
+    Returns:
+        True if we can't connect without TLS
+    """
+    ssh_command = (
+        ["ssh", "--container", container, unit.name]
+        if substrate == "microk8s"
+        else ["ssh", unit.name, "sudo"]
+    )
+    mongo_no_tls_check = await mongo_no_tls_command(ops_test, substrate, app_name, mongos, uri)
+    check_no_tls_cmd = ssh_command + [mongo_no_tls_check]
+    return_code, _, _ = await ops_test.juju(*check_no_tls_cmd)
+    tls_disabled = return_code == 1
+    if not tls_disabled:
+        logger.warning("Can connect with TLS on %s", unit.name)
+        return False
+    return True
 
 
 async def time_file_created(
@@ -312,6 +381,28 @@ async def check_certs_correctly_distributed(
         ), f"Relation Content for {cert_type}-cert:\n{relation_cert}\nFile Content:\n{cert_file_content}\nMismatch."
 
 
+async def set_private_key(ops_test: OpsTest, app_name: str, scope: Literal["peer", "client"]):
+    """Sets the private key for one scope."""
+    secret_name = f"tls-{scope}-private-key"
+
+    data = Path(f"tests/integration/data/{scope}-key.pem").read_text()
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"private-key={data}"]
+        )
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"label": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name, data_args=[f"private-key={data}"], new_name=secret_name
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+    await ops_test.model.applications[app_name].set_config({f"tls-{scope}-private-key": secret_id})
+
+
 async def get_file_content(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -330,3 +421,56 @@ async def get_file_content(
     os.remove(cert_file_copy_path)
 
     return cert_file_content
+
+
+async def set_invalid_private_key(
+    ops_test: OpsTest, app_name: str, scope: Literal["peer", "client"]
+):
+    """Sets the private key for one scope."""
+    secret_name = f"tls-{scope}-private-key"
+
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"private-key={base64.b64encode(b'invalid-key').decode()}"]
+        )
+    except Exception:
+        secrets = await ops_test.model.list_secrets({"label": secret_name})
+        secret_id = secrets[0].uri
+        await ops_test.model.update_secret(
+            name=secret_name,
+            data_args=[f"private-key={base64.b64encode(b'invalid-key')}"],
+            new_name=secret_name,
+        )
+
+    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+    logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+    await ops_test.model.applications[app_name].set_config({f"tls-{scope}-private-key": secret_id})
+
+
+async def set_private_keys(ops_test: OpsTest, app_name: str) -> None:
+    """Sets both private keys."""
+    secrets = {}
+
+    for scope in ("peer", "client"):
+        secret_name = f"tls-{scope}-private-key"
+        data = Path(f"tests/integration/data/{scope}-key.pem").read_text()
+
+        try:
+            secret_id = await ops_test.model.add_secret(
+                name=secret_name, data_args=[f"private-key={data}"]
+            )
+        except Exception:
+            _secrets = await ops_test.model.list_secrets({"label": secret_name})
+            secret_id = _secrets[0].uri
+            await ops_test.model.update_secret(
+                name=secret_name, data_args=[f"private-key={data}"], new_name=secret_name
+            )
+
+        secrets[scope] = secret_id
+        await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+        logger.info(f"Setting the tls-{scope}-private-key config to {secret_id}")
+
+    await ops_test.model.applications[app_name].set_config(
+        {f"tls-{scope}-private-key": secrets[scope] for scope in ("peer", "client")}
+    )

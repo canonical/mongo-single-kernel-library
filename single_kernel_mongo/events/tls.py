@@ -9,7 +9,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
+from ops import ConfigChangedEvent
+from ops.charm import RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
@@ -17,6 +18,7 @@ from single_kernel_mongo.config.statuses import MongosStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
+    DeferrableFailedHookChecksError,
     UnknownCertificateAvailableError,
     UnknownCertificateExpiringError,
 )
@@ -26,7 +28,7 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificat
     TLSCertificatesRequiresV3,
 )
 from single_kernel_mongo.utils.event_helpers import (
-    fail_action_with_error_log,
+    defer_event_with_info_log,
 )
 
 if TYPE_CHECKING:
@@ -48,9 +50,6 @@ class TLSEventsHandler(Object):
         self.certs_client = TLSCertificatesRequiresV3(self.charm, self.relation_name)
 
         self.framework.observe(
-            self.charm.on.set_tls_private_key_action, self._on_set_tls_private_key
-        )
-        self.framework.observe(
             self.charm.on[self.relation_name].relation_joined,
             self._on_tls_relation_joined,
         )
@@ -64,36 +63,24 @@ class TLSEventsHandler(Object):
         self.framework.observe(
             self.certs_client.on.certificate_expiring, self._on_certificate_expiring
         )
+        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
-    def _on_set_tls_private_key(self, event: ActionEvent) -> None:
-        """Set the TLS private key which will be used for requesting the certificates."""
-        logger.debug("Request to set TLS private key received.")
-        if (
-            self.manager.state.is_role(MongoDBRoles.MONGOS)
-            and self.manager.state.config_server_name is None
-        ):
-            logger.info(
-                "mongos is not running (not integrated to config-server) deferring renewal of certificates."
-            )
-            event.fail("Mongos cannot set TLS keys until integrated to config-server.")
-            return
-        if self.manager.state.upgrade_in_progress:
-            fail_action_with_error_log(
-                logger,
-                event,
-                "set-tls-private-key",
-                "Setting TLS keys during an upgrade is not supported.",
-            )
-            return
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        """On Config Changed, validate private keys and refresh certs if needed."""
         try:
-            for internal in (True, False):
-                param = "internal-key" if internal else "external-key"
-                key = event.params.get(param, None)
-                csr = self.manager.generate_certificate_request(key, internal=internal)
-                self.certs_client.request_certificate_creation(certificate_signing_request=csr)
-                self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
-        except ValueError as e:
-            event.fail(str(e))
+            self.manager.update_private_keys()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
+            return
+
+    def _on_secret_changed(self, event: ConfigChangedEvent) -> None:
+        """On Secret Changed, validate private keys and refresh certs if needed."""
+        try:
+            self.manager.update_private_keys()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
+            return
 
     def _on_tls_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handler for relation joined."""
@@ -119,10 +106,11 @@ class TLSEventsHandler(Object):
                 MongosStatuses.MISSING_TLS_REL.value, scope="unit", component=self.dependent.name
             )
 
-        for internal in (True, False):
-            csr = self.manager.generate_certificate_request(None, internal=internal)
-            self.certs_client.request_certificate_creation(certificate_signing_request=csr)
-            self.manager.set_waiting_for_cert_to_update(internal=internal, waiting=True)
+        try:
+            self.manager.update_private_keys()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
+            return
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handler for relation joined."""

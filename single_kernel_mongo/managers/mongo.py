@@ -522,7 +522,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return charm_statuses
 
         except ServerSelectionTimeoutError as e:
-            # Usually it is du to ReplicaSetNoPrimary
+            # Usually it is due to ReplicaSetNoPrimary
             logger.debug(f"Got error {e} while checking replica set status")
             return [MongodStatuses.WAITING_ELECTION.value]
         except AutoReconnect as e:

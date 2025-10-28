@@ -9,13 +9,16 @@ Handles MongoDB TLS Files.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import re
 import socket
 from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from ops.model import ModelError, SecretNotFoundError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
@@ -29,6 +32,9 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
+)
+from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
+    PrivateKey,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.tls_state import (
@@ -73,14 +79,8 @@ class TLSManager:
         self.state = state
         self.substrate = substrate
 
-    def generate_certificate_request(self, param: str | None, internal: bool) -> bytes:
+    def generate_certificate_request(self, key: bytes, internal: bool) -> bytes:
         """Generate a TLS Certificate request."""
-        key: bytes
-        if param is None:
-            key = generate_private_key()
-        else:
-            key = parse_tls_file(param)
-
         sans = self.get_new_sans()
         csr = generate_csr(
             private_key=key,
@@ -367,3 +367,148 @@ class TLSManager:
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,
             )
+
+    def _update_peer_private_key_from_config(self):
+        """Take the peer private key from the config.
+
+        Request new certificate if the key had changed.
+        """
+        peer_private_key = None
+
+        self.state.statuses.delete(
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+
+        initial_peer_private_key = self.state.tls.peer_private_key
+
+        if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
+            peer_private_key = self.update_private_key(tls_peer_private_key_id, internal=True)
+
+        if tls_peer_private_key_id and not peer_private_key:
+            self.state.statuses.add(
+                TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+
+        if peer_private_key and (initial_peer_private_key != peer_private_key):
+            bytes_pk = parse_tls_file(peer_private_key.raw)
+            csr = self.generate_certificate_request(key=bytes_pk, internal=True)
+            self.dependent.tls_events.certs_client.request_certificate_creation(
+                certificate_signing_request=csr
+            )
+            self.manager.set_waiting_for_cert_to_update(internal=True, waiting=True)
+            logger.info("New peer certificate requested using the private key from config.")
+
+    def _update_client_private_key_from_config(self):
+        """Take the client private key from the config.
+
+        Request new certificate if the key had changed.
+        """
+        client_private_key = None
+
+        self.state.statuses.delete(
+            TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+
+        initial_client_private_key = self.state.tls.client_private_key
+
+        if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
+            client_private_key = self.update_private_key(tls_client_private_key_id, internal=False)
+
+        if tls_client_private_key_id and not client_private_key:
+            self.state.statuses.add(
+                TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+
+        if client_private_key and (initial_client_private_key != client_private_key):
+            bytes_pk = parse_tls_file(client_private_key.raw)
+            csr = self.generate_certificate_request(key=bytes_pk, internal=False)
+            self.dependent.tls_events.certs_client.request_certificate_creation(
+                certificate_signing_request=csr
+            )
+            self.manager.set_waiting_for_cert_to_update(internal=False, waiting=True)
+            logger.info("New client certificate requested using the private key from config.")
+
+    def _generate_and_update_peer_private_key(self):
+        peer_private_key_bytes = generate_private_key()
+        key_str = peer_private_key_bytes.decode("utf-8")
+        self.state.tls.set_secret(True, SECRET_KEY_LABEL, key_str)
+
+        csr = self.generate_certificate_request(key=peer_private_key_bytes, internal=True)
+        self.dependent.tls_events.certs_client.request_certificate_creation(
+            certificate_signing_request=csr
+        )
+        self.manager.set_waiting_for_cert_to_update(internal=True, waiting=True)
+        logger.info("New peer certificate requested using a new private key.")
+
+    def _generate_and_update_client_private_key(self):
+        client_private_key_bytes = generate_private_key()
+        key_str = client_private_key_bytes.decode("utf-8")
+        self.state.tls.set_secret(False, SECRET_KEY_LABEL, key_str)
+
+        csr = self.generate_certificate_request(key=client_private_key_bytes, internal=False)
+        self.dependent.tls_events.certs_client.request_certificate_creation(
+            certificate_signing_request=csr
+        )
+        self.manager.set_waiting_for_cert_to_update(internal=False, waiting=True)
+        logger.info("New client certificate requested using a new private key.")
+
+    def update_private_keys(self):
+        """Updates the private keys."""
+        if self.dependent.config.tls_peer_private_key_id:
+            self._update_peer_private_key_from_config()
+        else:
+            self._generate_and_update_peer_private_key()
+
+        if self.dependent.config.tls_client_private_key_id:
+            self._update_client_private_key_from_config()
+        else:
+            self._generate_and_update_client_private_key()
+
+    def update_private_key(self, private_key_secret_id: str, internal: bool) -> PrivateKey | None:
+        """Stores the new private key in the relation."""
+        if private_key := self.read_and_validate_private_key(private_key_secret_id):
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
+            return private_key
+
+        logger.error(
+            f"Invalid {'peer' if internal else 'client'} private key provided, cannot update TLS certificates."
+        )
+        return None
+
+    def read_and_validate_private_key(self, private_key_secret_id: str) -> PrivateKey | None:
+        """Reads the private key from the secret and validates it."""
+        try:
+            secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
+                "private-key"
+            )
+        except (ModelError, SecretNotFoundError) as e:
+            logger.error(e)
+            return None
+
+        if secret_content is None:
+            logger.error(f"Secret {private_key_secret_id} does not contain a private key.")
+            return None
+
+        try:
+            _private_key = (
+                secret_content
+                if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
+                else base64.b64decode(secret_content).decode("utf-8").strip()
+            )
+        except UnicodeDecodeError:
+            logger.error("base64 decoding error, invalid key.")
+            return None
+        private_key = PrivateKey(raw=_private_key)
+        if not private_key.is_valid():
+            logger.error("Invalid private key format.")
+            return None
+
+        return private_key
