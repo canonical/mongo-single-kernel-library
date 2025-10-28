@@ -68,16 +68,22 @@ class TLSEventsHandler(Object):
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """On Config Changed, validate private keys and refresh certs if needed."""
+        if self.manager.state.tls_relation is None:
+            return
         try:
-            self.manager.update_private_keys()
+            self.manager._update_peer_private_key_from_config()
+            self.manager._update_client_private_key_from_config()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return
 
     def _on_secret_changed(self, event: ConfigChangedEvent) -> None:
         """On Secret Changed, validate private keys and refresh certs if needed."""
+        if self.manager.state.tls_relation is None:
+            return
         try:
-            self.manager.update_private_keys()
+            self.manager._update_peer_private_key_from_config()
+            self.manager._update_client_private_key_from_config()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return

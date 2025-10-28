@@ -399,7 +399,7 @@ class TLSManager:
             self.dependent.tls_events.certs_client.request_certificate_creation(
                 certificate_signing_request=csr
             )
-            self.manager.set_waiting_for_cert_to_update(internal=True, waiting=True)
+            self.set_waiting_for_cert_to_update(internal=True, waiting=True)
             logger.info("New peer certificate requested using the private key from config.")
 
     def _update_client_private_key_from_config(self):
@@ -433,7 +433,7 @@ class TLSManager:
             self.dependent.tls_events.certs_client.request_certificate_creation(
                 certificate_signing_request=csr
             )
-            self.manager.set_waiting_for_cert_to_update(internal=False, waiting=True)
+            self.set_waiting_for_cert_to_update(internal=False, waiting=True)
             logger.info("New client certificate requested using the private key from config.")
 
     def _generate_and_update_peer_private_key(self):
@@ -445,7 +445,7 @@ class TLSManager:
         self.dependent.tls_events.certs_client.request_certificate_creation(
             certificate_signing_request=csr
         )
-        self.manager.set_waiting_for_cert_to_update(internal=True, waiting=True)
+        self.set_waiting_for_cert_to_update(internal=True, waiting=True)
         logger.info("New peer certificate requested using a new private key.")
 
     def _generate_and_update_client_private_key(self):
@@ -457,7 +457,7 @@ class TLSManager:
         self.dependent.tls_events.certs_client.request_certificate_creation(
             certificate_signing_request=csr
         )
-        self.manager.set_waiting_for_cert_to_update(internal=False, waiting=True)
+        self.set_waiting_for_cert_to_update(internal=False, waiting=True)
         logger.info("New client certificate requested using a new private key.")
 
     def update_private_keys(self):
