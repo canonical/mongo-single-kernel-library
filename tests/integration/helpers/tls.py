@@ -346,6 +346,7 @@ async def check_certs_correctly_distributed(
 
     Verifying certificates downloaded on the charm against the ones distributed by the TLS operator
     """
+    logger.info(f"Checking certs are correctly distributed for {unit}.")
     unit_secret_id = await get_secret_id(ops_test, unit.name)
     unit_secret_content = await get_secret_content(ops_test, unit_secret_id)
 

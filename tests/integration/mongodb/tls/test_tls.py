@@ -68,6 +68,7 @@ async def test_build_and_deploy(
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify each unit has TLS enabled after relating to the TLS application."""
     # Relate it to the MongoDB to enable TLS.
@@ -86,6 +87,7 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
         ), f"TLS not enabled for unit {unit.name}."
 
 
+@pytest.mark.abort_on_fail
 async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify rotating tls private keys restarts mongod with new certificates.
 
@@ -155,6 +157,7 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         ), f"tls is not enabled for {unit.name}."
 
 
+@pytest.mark.abort_on_fail
 async def test_invalid_key(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that setting an invalid key outputs the correct status."""
     app_name = await get_app_name(ops_test)
@@ -180,6 +183,7 @@ async def test_invalid_key(ops_test: OpsTest, substrate: Substrate) -> None:
         ), f"Client can still connect without TLS on unit {unit.name}"
 
 
+@pytest.mark.abort_on_fail
 async def test_disable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Verify each unit has TLS disabled after removing relation to the TLS application."""
     # Remove the relation.

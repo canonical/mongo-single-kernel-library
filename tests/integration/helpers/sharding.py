@@ -249,6 +249,7 @@ async def check_cluster_tls_enabled(
     components: list[str] = CLUSTER_COMPONENTS,
     config_server: str = CONFIG_SERVER_APP_NAME,
 ) -> None:
+    logger.info("Checking TLS is enabled.")
     # check each replica set is running with TLS enabled
     for cluster_component in components:
         for unit in ops_test.model.applications[cluster_component].units:
@@ -264,6 +265,7 @@ async def check_cluster_tls_enabled(
 
 
 async def check_cluster_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
+    logger.info("Checking TLS is disabled.")
     # check each replica set is running with TLS enabled
     for cluster_component in CLUSTER_COMPONENTS:
         for unit in ops_test.model.applications[cluster_component].units:
