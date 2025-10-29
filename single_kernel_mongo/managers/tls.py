@@ -396,7 +396,7 @@ class TLSManager:
 
         logger.info(f"initial_peer_private_key {initial_peer_private_key}")
         logger.info(f"peer_private_key {peer_private_key}")
-        logger.info(f"changed ? {initial_peer_private_key.raw != peer_private_key.raw}")
+        # logger.info(f"changed ? {initial_peer_private_key.raw != peer_private_key.raw}")
         logger.info(f"changed ? {initial_peer_private_key != peer_private_key}")
 
         if peer_private_key is not None and (initial_peer_private_key.raw != peer_private_key.raw):
