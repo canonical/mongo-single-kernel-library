@@ -394,7 +394,10 @@ class TLSManager:
                 component=self.dependent.name,
             )
 
-        if peer_private_key and (initial_peer_private_key != peer_private_key):
+        logger.info(f"initial_peer_private_key {initial_peer_private_key}")
+        logger.info(f"peer_private_key {peer_private_key}")
+
+        if peer_private_key is not None and (initial_peer_private_key != peer_private_key):
             bytes_pk = parse_tls_file(peer_private_key.raw)
             csr = self.generate_certificate_request(key=bytes_pk, internal=True)
             self.dependent.tls_events.certs_client.request_certificate_creation(
@@ -428,7 +431,7 @@ class TLSManager:
                 component=self.dependent.name,
             )
 
-        if client_private_key and (initial_client_private_key != client_private_key):
+        if client_private_key is not None and (initial_client_private_key != client_private_key):
             bytes_pk = parse_tls_file(client_private_key.raw)
             csr = self.generate_certificate_request(key=bytes_pk, internal=False)
             self.dependent.tls_events.certs_client.request_certificate_creation(
