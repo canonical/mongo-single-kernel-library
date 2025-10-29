@@ -279,6 +279,7 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
         self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
+        logger.info(f"{'Internal' if internal else 'External'} certificate stored.")
 
     def renew_expiring_certificate(self, certificate: str) -> tuple[bytes, bytes]:
         """Renew the expiring certificate."""
