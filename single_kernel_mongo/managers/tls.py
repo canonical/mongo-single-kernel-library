@@ -33,9 +33,10 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificat
     generate_csr,
     generate_private_key,
 )
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    PrivateKey,
-)
+
+# from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
+#    PrivateKey,
+# )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
@@ -396,11 +397,10 @@ class TLSManager:
 
         logger.info(f"initial_peer_private_key {initial_peer_private_key}")
         logger.info(f"peer_private_key {peer_private_key}")
-        # logger.info(f"changed ? {initial_peer_private_key.raw != peer_private_key.raw}")
         logger.info(f"changed ? {initial_peer_private_key != peer_private_key}")
 
-        if peer_private_key is not None and (initial_peer_private_key.raw != peer_private_key.raw):
-            bytes_pk = parse_tls_file(peer_private_key.raw)
+        if peer_private_key is not None and (initial_peer_private_key != peer_private_key):
+            bytes_pk = parse_tls_file(peer_private_key)
             csr = self.generate_certificate_request(key=bytes_pk, internal=True)
             self.dependent.tls_events.certs_client.request_certificate_creation(
                 certificate_signing_request=csr
@@ -433,10 +433,8 @@ class TLSManager:
                 component=self.dependent.name,
             )
 
-        if client_private_key is not None and (
-            initial_client_private_key.raw != client_private_key.raw
-        ):
-            bytes_pk = parse_tls_file(client_private_key.raw)
+        if client_private_key is not None and (initial_client_private_key != client_private_key):
+            bytes_pk = parse_tls_file(client_private_key)
             csr = self.generate_certificate_request(key=bytes_pk, internal=False)
             self.dependent.tls_events.certs_client.request_certificate_creation(
                 certificate_signing_request=csr
@@ -480,10 +478,10 @@ class TLSManager:
         else:
             self._generate_and_update_client_private_key()
 
-    def update_private_key(self, private_key_secret_id: str, internal: bool) -> PrivateKey | None:
+    def update_private_key(self, private_key_secret_id: str, internal: bool) -> str | None:
         """Stores the new private key in the relation."""
         if private_key := self.read_and_validate_private_key(private_key_secret_id):
-            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
             return private_key
 
         logger.error(
@@ -491,7 +489,7 @@ class TLSManager:
         )
         return None
 
-    def read_and_validate_private_key(self, private_key_secret_id: str) -> PrivateKey | None:
+    def read_and_validate_private_key(self, private_key_secret_id: str) -> str | None:
         """Reads the private key from the secret and validates it."""
         try:
             secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
@@ -514,9 +512,9 @@ class TLSManager:
         except UnicodeDecodeError:
             logger.error("base64 decoding error, invalid key.")
             return None
-        private_key = PrivateKey(raw=_private_key)
-        if not private_key.is_valid():
-            logger.error("Invalid private key format.")
-            return None
+        # private_key = PrivateKey(raw=_private_key)
+        # if not private_key.is_valid():
+        #    logger.error("Invalid private key format.")
+        #    return None
 
-        return private_key
+        return _private_key
