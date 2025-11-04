@@ -199,7 +199,9 @@ class TLSManager:
         for internal in [True, False]:
             self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
             self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_CSR_LABEL, None)
             self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
         self.state.update_ca_secrets(new_ca=None)
 
