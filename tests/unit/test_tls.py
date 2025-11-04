@@ -443,6 +443,8 @@ def test_tls_config_changed_peer_private_key(harness: Harness[MongoTestCharm], m
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    peer_private_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    client_private_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
     private_key_content = Path("tests/unit/data/key.pem").read_text()
     secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
@@ -450,8 +452,10 @@ def test_tls_config_changed_peer_private_key(harness: Harness[MongoTestCharm], m
     harness.update_config({"tls-peer-private-key": secret_id})
 
     new_peer_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
-
+    new_client_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
     assert private_key_content.strip() == new_peer_key
+    assert peer_private_key != new_peer_key
+    assert client_private_key == new_client_key
 
 
 def test_tls_config_changed_client_private_key(harness: Harness[MongoTestCharm], mongodb_name):
@@ -460,12 +464,17 @@ def test_tls_config_changed_client_private_key(harness: Harness[MongoTestCharm],
     harness.charm.operator.state.db_initialised = True
     rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    peer_private_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    client_private_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
     private_key_content = Path("tests/unit/data/key.pem").read_text()
     secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
     harness.update_config({"tls-client-private-key": secret_id})
 
-    new_peer_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    new_peer_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    new_client_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
 
-    assert private_key_content.strip() == new_peer_key
+    assert private_key_content.strip() == new_client_key
+    assert peer_private_key == new_peer_key
+    assert client_private_key != new_client_key

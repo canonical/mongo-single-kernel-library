@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from ops.model import ModelError, SecretNotFoundError
 
 from single_kernel_mongo.config.literals import Substrates
@@ -513,8 +515,28 @@ class TLSManager:
             logger.error("base64 decoding error, invalid key.")
             return None
         # private_key = PrivateKey(raw=_private_key)
-        # if not private_key.is_valid():
-        #    logger.error("Invalid private key format.")
-        #    return None
+        if not self._is_valid_key(_private_key):
+            logger.error("Invalid private key format.")
+            return None
 
         return _private_key
+
+    def _is_valid_key(self, input_key: str) -> bool:
+        try:
+            key = serialization.load_pem_private_key(
+                input_key.encode(),
+                password=None,
+            )
+
+            if not isinstance(key, rsa.RSAPrivateKey):
+                logger.warning("Private key is not an RSA key")
+                return False
+
+            if key.key_size < 2048:
+                logger.warning("RSA key size is less than 2048 bits")
+                return False
+
+            return True
+        except ValueError:
+            logger.warning("Invalid private key format")
+            return False
