@@ -35,10 +35,6 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificat
     generate_csr,
     generate_private_key,
 )
-
-# from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-#    PrivateKey,
-# )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
@@ -396,10 +392,6 @@ class TLSManager:
                 scope="unit",
                 component=self.dependent.name,
             )
-
-        logger.info(f"initial_peer_private_key {initial_peer_private_key}")
-        logger.info(f"peer_private_key {peer_private_key}")
-        logger.info(f"changed ? {initial_peer_private_key != peer_private_key}")
 
         if peer_private_key is not None and (initial_peer_private_key != peer_private_key):
             bytes_pk = parse_tls_file(peer_private_key)
