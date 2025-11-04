@@ -1,5 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+from pathlib import Path
+
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -433,3 +435,37 @@ def test_unknown_certificate_expiring(
     post_event_ext_csr = manager.state.secrets.get_for_key(Scope.UNIT, "ext-csr-secret")
     assert old_int_csr == post_event_int_csr
     assert old_ext_csr == post_event_ext_csr
+
+
+def test_tls_config_changed_peer_private_key(harness: Harness[MongoTestCharm], mongodb_name):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-peer-private-key": secret_id})
+
+    new_peer_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+
+    assert private_key_content.strip() == new_peer_key
+
+
+def test_tls_config_changed_client_private_key(harness: Harness[MongoTestCharm], mongodb_name):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-client-private-key": secret_id})
+
+    new_peer_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+
+    assert private_key_content.strip() == new_peer_key

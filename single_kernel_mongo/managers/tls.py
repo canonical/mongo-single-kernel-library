@@ -505,7 +505,7 @@ class TLSManager:
 
         try:
             _private_key = (
-                secret_content
+                secret_content.strip()
                 if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
                 else base64.b64decode(secret_content).decode("utf-8").strip()
             )
