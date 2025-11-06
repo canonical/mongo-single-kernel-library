@@ -71,8 +71,8 @@ class TLSEventsHandler(Object):
         if self.manager.state.tls_relation is None:
             return
         try:
-            self.manager._update_peer_private_key_from_config()
-            self.manager._update_client_private_key_from_config()
+            self.manager.update_private_key_from_config(internal=False)
+            self.manager.update_private_key_from_config(internal=True)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return
@@ -82,8 +82,8 @@ class TLSEventsHandler(Object):
         if self.manager.state.tls_relation is None:
             return
         try:
-            self.manager._update_peer_private_key_from_config()
-            self.manager._update_client_private_key_from_config()
+            self.manager.update_private_key_from_config(internal=True)
+            self.manager.update_private_key_from_config(internal=False)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return

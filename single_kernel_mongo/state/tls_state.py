@@ -10,10 +10,6 @@ from ops.model import Unit
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.secrets import SecretCache
 
-# from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-#    PrivateKey,
-# )
-
 SECRET_KEY_LABEL = "key-secret"
 SECRET_CA_LABEL = "ca-secret"
 SECRET_CERT_LABEL = "cert-secret"
@@ -74,12 +70,12 @@ class TLSState:
 
     @property
     def client_private_key(self) -> str | None:
-        """Private key for the client relation."""
+        """Private key for the client TLS."""
         private_key_str = self.get_secret(internal=False, label_name=SECRET_KEY_LABEL)
         return private_key_str if private_key_str else None
 
     @property
     def peer_private_key(self) -> str | None:
-        """Private key for the peer relation."""
+        """Private key for the peer TLS."""
         private_key_str = self.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
         return private_key_str if private_key_str else None
