@@ -181,9 +181,6 @@ async def test_invalid_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await check_tls(
             ops_test, substrate, unit, enabled=True, app_name=app_name
         ), f"TLS is not enabled for {unit.name}."
-        # assert await cannot_connect_without_tls(
-        #    ops_test, substrate, unit, app_name=app_name
-        # ), f"TLS is enabled and client can still connect without TLS on unit {unit.name}"
 
 
 @pytest.mark.abort_on_fail

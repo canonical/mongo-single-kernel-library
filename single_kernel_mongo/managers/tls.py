@@ -393,24 +393,16 @@ class TLSManager:
             )
 
     def update_private_key_from_config(self, internal: bool) -> None:
-        """Take the the private key from the config.
-
-        Request new certificate if the key had changed.
-        """
+        """Take the private key from the config. Request new certificate if the key had changed."""
         private_key = None
 
-        if internal:
-            self.state.statuses.delete(
-                TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
-                scope="unit",
-                component=self.dependent.name,
-            )
-        else:
-            self.state.statuses.delete(
-                TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
-                scope="unit",
-                component=self.dependent.name,
-            )
+        status = (
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value
+            if internal
+            else TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value
+        )
+
+        self.state.statuses.delete(status, scope="unit", component=self.dependent.name)
 
         initial_private_key = (
             self.state.tls.peer_private_key if internal else self.state.tls.client_private_key
@@ -425,18 +417,7 @@ class TLSManager:
             private_key = self.update_private_key(key_id, internal=internal)
 
         if key_id and not private_key:
-            if internal:
-                self.state.statuses.add(
-                    TLSStatuses.INVALID_PEER_PRIVATE_KEY.value,
-                    scope="unit",
-                    component=self.dependent.name,
-                )
-            else:
-                self.state.statuses.add(
-                    TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value,
-                    scope="unit",
-                    component=self.dependent.name,
-                )
+            self.state.statuses.add(status, scope="unit", component=self.dependent.name)
 
         if private_key is not None and (initial_private_key != private_key):
             bytes_pk = parse_tls_file(private_key)

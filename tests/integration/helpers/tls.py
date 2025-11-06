@@ -94,36 +94,6 @@ async def mongo_tls_command(
     )
 
 
-async def mongo_no_tls_command(
-    ops_test: OpsTest,
-    substrate: Substrate,
-    app_name: str,
-    mongos: bool = False,
-    uri: str | None = None,
-) -> str:
-    """Generates a command which verifies if we can connect without TLS."""
-    port = MONGOD_PORT if not mongos else MONGOS_PORT
-
-    if not uri:
-        replica_set_hosts = [
-            await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-            for unit in ops_test.model.applications[app_name].units
-        ]
-        replica_set_hosts = [f"{host}:{port}" for host in replica_set_hosts]
-        username = "operator"
-        password = await get_password(ops_test, OPERATOR_USERNAME, app_name=app_name)
-        hosts = ",".join(replica_set_hosts)
-        extra_args = f"?replicaSet={app_name}&connectTimeoutMS=2000" if not mongos else ""
-        uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
-
-    if app_name == MONGOS_APP_NAME:
-        status_command = "db.getUsers()"
-    else:
-        status_command = "rs.status()" if not mongos else "sh.status()"
-
-    return f'{mongosh(substrate)} "{uri}"  --eval "{status_command}"'
-
-
 async def check_tls(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -176,42 +146,6 @@ async def check_tls(
                 return True
     except RetryError:
         return False
-
-
-async def cannot_connect_without_tls(
-    ops_test: OpsTest,
-    substrate: Substrate,
-    unit: JujuUnit,
-    app_name: str,
-    mongos: bool = False,
-    container: str = "mongod",
-    uri: str | None = None,
-):
-    """Confirms that we cannot connect without TLS.
-
-    Args:
-        ops_test: The ops test framework instance.
-        unit: The unit to be checked.
-        enabled: check if TLS is enabled/disabled
-        app_name: name of running mongodb app
-        mongos: whether sharded deployment of replica set
-
-    Returns:
-        True if we can't connect without TLS
-    """
-    ssh_command = (
-        ["ssh", "--container", container, unit.name]
-        if substrate == "microk8s"
-        else ["ssh", unit.name, "sudo"]
-    )
-    mongo_no_tls_check = await mongo_no_tls_command(ops_test, substrate, app_name, mongos, uri)
-    check_no_tls_cmd = ssh_command + [mongo_no_tls_check]
-    return_code, _, _ = await ops_test.juju(*check_no_tls_cmd)
-    tls_disabled = return_code == 1
-    if not tls_disabled:
-        logger.warning("Can connect with TLS on %s", unit.name)
-        return False
-    return True
 
 
 async def time_file_created(
