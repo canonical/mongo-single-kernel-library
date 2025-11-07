@@ -721,11 +721,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         # regenerates the cert with the appropriate configurations needed for sharding.
         if cluster_auth_tls and tls_integrated and self._should_request_new_certs():
             logger.info("Cluster implements internal membership auth via certificates")
-            try:
-                self.dependent.tls_manager.update_private_keys()
-            except DeferrableFailedHookChecksError:
-                logger.info("Failed to update private key.")
-                return
+            self.dependent.tls_manager.update_private_keys()
         else:
             logger.info("Cluster implements internal membership auth via keyFile")
 
