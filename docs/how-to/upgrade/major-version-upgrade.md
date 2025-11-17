@@ -138,7 +138,7 @@ Until you have fully deployed MongoDB 8, ensured it is stable and verified there
 
 Then, integrate the new cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-seven s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
-Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `operator`, `backup`, `logrotate` and `monitor` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is decribe in {ref}`manage-passwords`.
+Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `operator`, `backup`, `logrotate` and `monitor` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is described in {ref}`manage-passwords`.
 
 
 ## Back up MongoDB 6 cluster
@@ -191,7 +191,7 @@ These steps are pretty similar to the previous ones, but we will go through it a
 
 Then, integrate that cluster with S3-integrator. If you're deploying your new cluster in the same model, it should be as easy as {command}`juju integrate mongodb-eight s3-integrator`. See {ref}`configure-s3-aws` for more information.
 
-Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `charmed-operator`, `charmed-backup`, `charmed-logrotate` and `charmed-stats` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is decribe in {ref}`manage-passwords`.
+Replicate all the passwords from your initial application to the new one. Create a new Juju secret including `charmed-operator`, `charmed-backup`, `charmed-logrotate` and `charmed-stats` usernames and theirs passwords and set it to the `system-user` configuration option of your orchestrator application as it is described in {ref}`manage-passwords`.
 
 ## Back up MongoDB 7 cluster
 
