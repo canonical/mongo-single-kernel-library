@@ -58,11 +58,11 @@ Make sure to include the `secret:` prefix.
 ### Peer-to-peer TLS
 
 ```shell
-juju config <application-name> tls-peer-private-key=<secret-uri>`
+juju config <application-name> tls-peer-private-key=<secret-uri>
 ```
 
 ### Client-to-server TLS
 
 ```shell
-juju config <application-name> tls-client-private-key=<secret-uri>`
+juju config <application-name> tls-client-private-key=<secret-uri>
 ```
