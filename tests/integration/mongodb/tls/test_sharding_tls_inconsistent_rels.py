@@ -149,7 +149,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard has TLS enabled, but config-server does not.",
+        status="Shard requires TLS to be disabled.",
         timeout=450,
     )
 
@@ -172,7 +172,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard CA and Config-Server CA don't match.",
+        status="Shard CA and config-server CA don't match.",
         timeout=450,
     )
 

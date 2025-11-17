@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, TypedDict
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
-from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -65,13 +64,13 @@ class TLSManager:
         dependent: OperatorProtocol,
         workload: MongoDBWorkload | MongosWorkload,
         state: CharmState,
-        substrate: Substrates,
     ) -> None:
         self.dependent = dependent
         self.charm = dependent.charm
         self.workload = workload
         self.state = state
-        self.substrate = substrate
+        self.substrate = self.dependent.substrate
+        self.name = "tls"
 
     def generate_certificate_request(self, param: str | None, internal: bool) -> bytes:
         """Generate a TLS Certificate request."""
