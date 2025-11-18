@@ -3,6 +3,7 @@
 import base64
 from pathlib import Path
 
+import pytest
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -547,3 +548,29 @@ def test_tls_config_changed_invalid_client_private_key(
         manager.state.tls.get_secret(internal=False, label_name=SECRET_KEY_LABEL)
         == private_key_content
     )
+
+
+@pytest.mark.parametrize(
+    ("config_param", "expected_status"),
+    (
+        ("tls-peer-private-key", "Invalid peer private key."),
+        ("tls-client-private-key", "Invalid client private key."),
+    ),
+)
+def test_tls_status_on_invalid_private_key_no_tls_relation(
+    harness: Harness[MongoTestCharm], mongodb_name, config_param, expected_status
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    secret_id = harness.add_model_secret(
+        mongodb_name, {"private-key": base64.b64encode(b"invalid_key").decode()}
+    )
+    harness.update_config({config_param: secret_id})
+
+    assert manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL) is None
+    assert manager.state.tls.get_secret(internal=False, label_name=SECRET_KEY_LABEL) is None
+    harness.evaluate_status()
+
+    assert harness.charm.model.unit.status.message == expected_status

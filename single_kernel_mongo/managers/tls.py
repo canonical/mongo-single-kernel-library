@@ -414,7 +414,7 @@ class TLSManager:
         )
 
         if key_id:
-            private_key = self.update_private_key(key_id, internal=internal)
+            private_key = self._update_private_key(key_id, internal=internal)
 
         if key_id and not private_key:
             self.state.statuses.add(status, scope="unit", component=self.dependent.name)
@@ -456,9 +456,9 @@ class TLSManager:
         else:
             self._generate_and_update_private_key(internal=False)
 
-    def update_private_key(self, private_key_secret_id: str, internal: bool) -> str | None:
+    def _update_private_key(self, private_key_secret_id: str, internal: bool) -> str | None:
         """Stores the new private key in the relation."""
-        if private_key := self.read_and_validate_private_key(private_key_secret_id):
+        if private_key := self._read_and_validate_private_key(private_key_secret_id):
             self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
             return private_key
 
@@ -467,7 +467,7 @@ class TLSManager:
         )
         return None
 
-    def read_and_validate_private_key(self, private_key_secret_id: str) -> str | None:
+    def _read_and_validate_private_key(self, private_key_secret_id: str) -> str | None:
         """Reads the private key from the secret and validates it."""
         try:
             secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
@@ -494,3 +494,23 @@ class TLSManager:
             return None
 
         return private_key
+
+    def update_private_key_validation_status(self, internal: bool) -> None:
+        """Add or remove the status of private key validation."""
+        status = (
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value
+            if internal
+            else TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value
+        )
+
+        key_id = (
+            self.dependent.config.tls_peer_private_key_id
+            if internal
+            else self.dependent.config.tls_client_private_key_id
+        )
+
+        if key_id:
+            if self._read_and_validate_private_key(key_id) is None:
+                self.state.statuses.add(status, scope="unit", component=self.dependent.name)
+                return
+        self.state.statuses.delete(status, scope="unit", component=self.dependent.name)

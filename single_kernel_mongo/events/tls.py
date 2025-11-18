@@ -65,6 +65,8 @@ class TLSEventsHandler(Object):
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """Validate private keys and refresh certs if needed."""
         if self.manager.state.tls_relation is None:
+            self.manager.update_private_key_validation_status(internal=True)
+            self.manager.update_private_key_validation_status(internal=False)
             return
 
         self.manager.update_private_key_from_config(internal=True)
@@ -73,6 +75,8 @@ class TLSEventsHandler(Object):
     def _on_secret_changed(self, event: ConfigChangedEvent) -> None:
         """Validate private keys and refresh certs if needed."""
         if self.manager.state.tls_relation is None:
+            self.manager.update_private_key_validation_status(internal=True)
+            self.manager.update_private_key_validation_status(internal=False)
             return
 
         self.manager.update_private_key_from_config(internal=True)
