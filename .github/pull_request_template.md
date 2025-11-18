@@ -44,6 +44,6 @@ Describe your changes in detail including:
 
 - [ ] My code follows the code style of this project.
 - [ ] I have added or updated any relevant documentation.
-- [ ] I have read the [**CONTRIBUTING**](../blob/8/edge/CONTRIBUTING.md) document.
+- [ ] I have read the [**CONTRIBUTING**](../blob/8-transition/edge/CONTRIBUTING.md) document.
 - [ ] I have added tests to cover my changes.
 - [ ] All new and existing tests passed.
