@@ -127,7 +127,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     workload: MongoDBWorkload
     refresh: charm_refresh.Common | None
 
-    def __init__(self, charm: AbstractMongoCharm):
+    def __init__(self, charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
         super(OperatorProtocol, self).__init__(charm, self.name)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
@@ -387,12 +387,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         # END: Define config managers
 
     @property
+    @override
     def components(self) -> tuple[ManagerStatusProtocol, ...]:
         """The ordered list of components for this operator."""
         return (
             self,
-            self.upgrades_status_manager,
             self.mongo_manager,
+            self.upgrades_status_manager,
             self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
