@@ -514,8 +514,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             return []
 
         if not self.mongod_ready():
-            logger.error("MongoD is not ready.")
-            return []
+            return [MongodStatuses.NOT_READY.value]
 
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
