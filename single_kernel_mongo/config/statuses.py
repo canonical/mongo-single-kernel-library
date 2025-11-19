@@ -440,7 +440,7 @@ class MongodStatuses(Enum):
     ADDING_MEMBER = StatusObject(status="maintenance", message="Adding member...")
     REMOVING_MEMBER = StatusObject(status="maintenance", message="Removing member...")
     SYNCING_MEMBER = StatusObject(status="maintenance", message="Syncing member...")
-    NOT_READY = StatusObject(status="maintenance", message="MongoD is not ready.")
+    NOT_READY = StatusObject(status="waiting", message="Mongod is not ready.")
     WAITING_REPL_SET_INIT = StatusObject(
         status="waiting", message="Waiting for replica set initialisation..."
     )
