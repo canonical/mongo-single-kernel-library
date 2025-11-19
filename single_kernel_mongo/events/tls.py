@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
-from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import MongosStatuses, TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -142,7 +141,6 @@ class TLSEventsHandler(Object):
             scope="unit",
         )
         self.manager.disable_certificates_for_unit()
-        self._recompute_statuses()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
@@ -194,8 +192,6 @@ class TLSEventsHandler(Object):
             logger.error("An unknown certificate is available -- ignoring.")
             return
 
-        self._recompute_statuses()
-
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Handle certificate expiring events."""
         if (
@@ -215,14 +211,3 @@ class TLSEventsHandler(Object):
             )
         except UnknownCertificateExpiringError:
             logger.debug("An unknown certificate is expiring.")
-
-    def _recompute_statuses(self):
-        """Recomputes the statuses for those components as the tls changes are impactful."""
-        if self.dependent.name == CharmKind.MONGOD:
-            self.charm.status_handler._recompute_statuses_for_scope(
-                "unit", self.dependent.shard_manager
-            )
-        else:
-            self.charm.status_handler._recompute_statuses_for_scope("unit", self.dependent)
-            if self.charm.unit.is_leader():
-                self.charm.status_handler._recompute_statuses_for_scope("app", self.dependent)

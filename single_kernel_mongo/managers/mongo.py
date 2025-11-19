@@ -513,6 +513,10 @@ class MongoManager(Object, ManagerStatusProtocol):
         if scope == "app":
             return []
 
+        if not self.mongod_ready():
+            logger.error("MongoD is not ready.")
+            return []
+
         try:
             with MongoConnection(self.state.mongo_config) as mongo:
                 replset_status = mongo.get_replset_status()
