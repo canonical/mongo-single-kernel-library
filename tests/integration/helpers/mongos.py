@@ -10,7 +10,7 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
@@ -27,7 +27,7 @@ from ..helpers.common import (
     mongosh,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.tls import (
+from tests.integration.helpers.tls import (
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
@@ -36,10 +36,11 @@ from ..helpers.tls import (
     external_cert_path,
     get_file_content,
     internal_cert_path,
+    set_private_keys,
     time_file_created,
     time_process_started,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -389,11 +390,7 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
             ops_test, substrate, app_name=app_name, unit=unit, container="mongos"
         )
 
-    # set external and internal key using auto-generated key for each unit
-    for unit in ops_test.model.applications[app_name].units:
-        action = await unit.run_action(action_name="set-tls-private-key")
-        action = await action.wait()
-        assert action.status == "completed", "setting external and internal key failed."
+    await set_private_keys(ops_test, app_name)
 
     # wait for certificate to be available and processed. Can get receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute

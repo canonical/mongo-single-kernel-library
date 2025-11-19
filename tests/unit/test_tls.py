@@ -1,14 +1,14 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+import base64
+from pathlib import Path
+
 import pytest
-from ops.testing import ActionFailed, Harness
+from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v3.tls_certificates import (
-    generate_private_key,
-)
 from single_kernel_mongo.state.tls_state import SECRET_CSR_LABEL, SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
@@ -69,68 +69,6 @@ def test_tls_relation_joined_fails_upgrade_in_progress(harness: Harness[MongoTes
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
     mock_defer.assert_called()
-
-
-def test_set_private_key(harness: Harness[MongoTestCharm]):
-    manager = harness.charm.operator.tls_manager
-
-    harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
-    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
-
-    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
-
-    internal_key = generate_private_key().decode()
-    external_key = generate_private_key().decode()
-
-    harness.run_action(
-        "set-tls-private-key", params={"internal-key": internal_key, "external-key": external_key}
-    )
-
-    external_key_from_secret = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
-    internal_key_from_secret = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
-
-    assert internal_key.rstrip() == internal_key_from_secret
-    assert external_key.rstrip() == external_key_from_secret
-
-
-def test_tls_set_private_key_fail_conditions(harness: Harness[MongoTestCharm]):
-    harness.set_leader(True)
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
-    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
-
-    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
-
-    internal_key = generate_private_key().decode()
-    external_key = generate_private_key().decode()
-
-    with pytest.raises(ActionFailed):
-        harness.run_action(
-            "set-tls-private-key",
-            params={"internal-key": internal_key, "external-key": external_key},
-        )
-
-
-def test_tls_set_private_key_fails_upgrade_in_progress(harness: Harness[MongoTestCharm], mocker):
-    harness.set_leader(True)
-    mocker.patch(
-        "single_kernel_mongo.state.charm_state.CharmState.upgrade_in_progress",
-        new_callable=mocker.PropertyMock,
-        return_value=True,
-    )
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
-    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
-
-    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
-
-    internal_key = generate_private_key().decode()
-    external_key = generate_private_key().decode()
-
-    with pytest.raises(ActionFailed):
-        harness.run_action(
-            "set-tls-private-key",
-            params={"internal-key": internal_key, "external-key": external_key},
-        )
 
 
 def test_external_certificate_available(
@@ -499,3 +437,140 @@ def test_unknown_certificate_expiring(
     post_event_ext_csr = manager.state.secrets.get_for_key(Scope.UNIT, "ext-csr-secret")
     assert old_int_csr == post_event_int_csr
     assert old_ext_csr == post_event_ext_csr
+
+
+def test_tls_config_changed_peer_private_key(harness: Harness[MongoTestCharm], mongodb_name):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    peer_private_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    client_private_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-peer-private-key": secret_id})
+
+    new_peer_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    new_client_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    assert private_key_content.strip() == new_peer_key
+    assert peer_private_key != new_peer_key
+    assert client_private_key == new_client_key
+
+
+def test_tls_config_changed_client_private_key(harness: Harness[MongoTestCharm], mongodb_name):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    peer_private_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    client_private_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-client-private-key": secret_id})
+
+    new_peer_key = manager.state.tls.get_secret(True, SECRET_KEY_LABEL)
+    new_client_key = manager.state.tls.get_secret(False, SECRET_KEY_LABEL)
+
+    assert private_key_content == new_client_key
+    assert peer_private_key == new_peer_key
+    assert client_private_key != new_client_key
+
+
+def test_tls_config_changed_invalid_peer_private_key(
+    harness: Harness[MongoTestCharm], mongodb_name
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-peer-private-key": secret_id})
+
+    assert (
+        manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
+        == private_key_content
+    )
+
+    secret_id_bis = harness.add_model_secret(
+        mongodb_name, {"private-key": base64.b64encode(b"invalid_key").decode()}
+    )
+    harness.update_config({"tls-peer-private-key": secret_id_bis})
+
+    harness.evaluate_status()
+
+    assert harness.charm.model.unit.status.message == "Invalid peer private key."
+
+    assert (
+        manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
+        == private_key_content
+    )
+
+
+def test_tls_config_changed_invalid_client_private_key(
+    harness: Harness[MongoTestCharm], mongodb_name
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    harness.update_config({"tls-client-private-key": secret_id})
+
+    assert (
+        manager.state.tls.get_secret(internal=False, label_name=SECRET_KEY_LABEL)
+        == private_key_content
+    )
+
+    secret_id_bis = harness.add_model_secret(
+        mongodb_name, {"private-key": base64.b64encode(b"invalid_key").decode()}
+    )
+    harness.update_config({"tls-client-private-key": secret_id_bis})
+
+    harness.evaluate_status()
+
+    assert harness.charm.model.unit.status.message == "Invalid client private key."
+
+    assert (
+        manager.state.tls.get_secret(internal=False, label_name=SECRET_KEY_LABEL)
+        == private_key_content
+    )
+
+
+@pytest.mark.parametrize(
+    ("config_param", "expected_status"),
+    (
+        ("tls-peer-private-key", "Invalid peer private key."),
+        ("tls-client-private-key", "Invalid client private key."),
+    ),
+)
+def test_tls_status_on_invalid_private_key_no_tls_relation(
+    harness: Harness[MongoTestCharm], mongodb_name, config_param, expected_status
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    secret_id = harness.add_model_secret(
+        mongodb_name, {"private-key": base64.b64encode(b"invalid_key").decode()}
+    )
+    harness.update_config({config_param: secret_id})
+
+    assert manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL) is None
+    assert manager.state.tls.get_secret(internal=False, label_name=SECRET_KEY_LABEL) is None
+    harness.evaluate_status()
+
+    assert harness.charm.model.unit.status.message == expected_status

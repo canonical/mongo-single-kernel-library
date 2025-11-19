@@ -10,8 +10,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.backups import insert_unwanted_data
-
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     deploy_charm,
@@ -19,7 +18,7 @@ from ..helpers.common import (
     get_leader_id,
     mongodb_uri,
 )
-from ..helpers.tls import (
+from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
     SNAP_MONGOS_SERVICE,
     TLS_CERTIFICATES_APP_NAME,
@@ -29,10 +28,11 @@ from ..helpers.tls import (
     external_cert_path,
     get_file_content,
     internal_cert_path,
+    set_private_keys,
     time_file_created,
     time_process_started,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -249,6 +249,7 @@ async def check_cluster_tls_enabled(
     components: list[str] = CLUSTER_COMPONENTS,
     config_server: str = CONFIG_SERVER_APP_NAME,
 ) -> None:
+    logger.info("Checking TLS is enabled.")
     # check each replica set is running with TLS enabled
     for cluster_component in components:
         for unit in ops_test.model.applications[cluster_component].units:
@@ -264,6 +265,7 @@ async def check_cluster_tls_enabled(
 
 
 async def check_cluster_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> None:
+    logger.info("Checking TLS is disabled.")
     # check each replica set is running with TLS enabled
     for cluster_component in CLUSTER_COMPONENTS:
         for unit in ops_test.model.applications[cluster_component].units:
@@ -309,10 +311,7 @@ async def rotate_and_verify_certs(ops_test: OpsTest, substrate: Substrate, app_n
         await check_certs_correctly_distributed(ops_test, substrate, app_name=app_name, unit=unit)
 
     # set external and internal key using auto-generated key for each unit
-    for unit in ops_test.model.applications[app_name].units:
-        action = await unit.run_action(action_name="set-tls-private-key")
-        action = await action.wait()
-        assert action.status == "completed", "setting external and internal key failed."
+    await set_private_keys(ops_test, app_name)
 
     # wait for certificate to be available and processed. Can get receive two certificate
     # available events and restart twice so we want to ensure we are idle for at least 1 minute

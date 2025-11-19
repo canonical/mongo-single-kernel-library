@@ -9,13 +9,18 @@ Handles MongoDB TLS Files.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import re
 import socket
 from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from ops.model import ModelError, SecretNotFoundError
 
 from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.statuses import TLSStatuses
@@ -57,6 +62,28 @@ class Sans(TypedDict):
 logger = logging.getLogger(__name__)
 
 
+def _is_valid_key(input_key: str) -> bool:
+    """Returns true if the input key is valid."""
+    try:
+        key = serialization.load_pem_private_key(
+            input_key.encode(),
+            password=None,
+        )
+
+        if not isinstance(key, rsa.RSAPrivateKey):
+            logger.warning("Private key is not an RSA key.")
+            return False
+
+        if key.key_size < 2048:
+            logger.warning("RSA key size is less than 2048 bits.")
+            return False
+
+        return True
+    except ValueError:
+        logger.warning("Invalid private key format.")
+        return False
+
+
 class TLSManager:
     """Manager for building necessary files for mongodb."""
 
@@ -73,14 +100,8 @@ class TLSManager:
         self.state = state
         self.substrate = substrate
 
-    def generate_certificate_request(self, param: str | None, internal: bool) -> bytes:
+    def generate_certificate_request(self, key: bytes, internal: bool) -> bytes:
         """Generate a TLS Certificate request."""
-        key: bytes
-        if param is None:
-            key = generate_private_key()
-        else:
-            key = parse_tls_file(param)
-
         sans = self.get_new_sans()
         csr = generate_csr(
             private_key=key,
@@ -200,7 +221,9 @@ class TLSManager:
         for internal in [True, False]:
             self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
             self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_CSR_LABEL, None)
             self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
         self.state.update_ca_secrets(new_ca=None)
 
@@ -279,6 +302,7 @@ class TLSManager:
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
         self.set_waiting_for_cert_to_update(internal=internal, waiting=False)
+        logger.info(f"{'Internal' if internal else 'External'} certificate stored.")
 
     def renew_expiring_certificate(self, certificate: str) -> tuple[bytes, bytes]:
         """Renew the expiring certificate."""
@@ -367,3 +391,126 @@ class TLSManager:
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,
             )
+
+    def update_private_key_from_config(self, internal: bool) -> None:
+        """Take the private key from the config. Request new certificate if the key had changed."""
+        private_key = None
+
+        status = (
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value
+            if internal
+            else TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value
+        )
+
+        self.state.statuses.delete(status, scope="unit", component=self.dependent.name)
+
+        initial_private_key = (
+            self.state.tls.peer_private_key if internal else self.state.tls.client_private_key
+        )
+        key_id = (
+            self.dependent.config.tls_peer_private_key_id
+            if internal
+            else self.dependent.config.tls_client_private_key_id
+        )
+
+        if key_id:
+            private_key = self._update_private_key(key_id, internal=internal)
+
+        if key_id and not private_key:
+            self.state.statuses.add(status, scope="unit", component=self.dependent.name)
+
+        if private_key is not None and (initial_private_key != private_key):
+            bytes_pk = parse_tls_file(private_key)
+            csr = self.generate_certificate_request(key=bytes_pk, internal=internal)
+            self.dependent.tls_events.certs_client.request_certificate_creation(
+                certificate_signing_request=csr
+            )
+            self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
+            logger.info(
+                f"New {'peer' if internal else 'client'} certificate requested using the private key from config."
+            )
+
+    def _generate_and_update_private_key(self, internal: bool) -> None:
+        private_key_bytes = generate_private_key()
+        key_str = private_key_bytes.decode("utf-8")
+        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, key_str)
+
+        csr = self.generate_certificate_request(key=private_key_bytes, internal=internal)
+        self.dependent.tls_events.certs_client.request_certificate_creation(
+            certificate_signing_request=csr
+        )
+        self.set_waiting_for_cert_to_update(internal=internal, waiting=True)
+        logger.info(
+            f"New {'peer' if internal else 'client'} certificate requested using a new private key."
+        )
+
+    def update_private_keys(self) -> None:
+        """Updates the private keys."""
+        if self.dependent.config.tls_peer_private_key_id:
+            self.update_private_key_from_config(internal=True)
+        else:
+            self._generate_and_update_private_key(internal=True)
+
+        if self.dependent.config.tls_client_private_key_id:
+            self.update_private_key_from_config(internal=False)
+        else:
+            self._generate_and_update_private_key(internal=False)
+
+    def _update_private_key(self, private_key_secret_id: str, internal: bool) -> str | None:
+        """Stores the new private key in the relation."""
+        if private_key := self._read_and_validate_private_key(private_key_secret_id):
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
+            return private_key
+
+        logger.error(
+            f"Invalid {'peer' if internal else 'client'} private key provided, cannot update TLS certificates."
+        )
+        return None
+
+    def _read_and_validate_private_key(self, private_key_secret_id: str) -> str | None:
+        """Reads the private key from the secret and validates it."""
+        try:
+            secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
+                "private-key"
+            )
+        except (ModelError, SecretNotFoundError) as e:
+            logger.error(f"Failed to validate private key: {e}")
+            return None
+
+        if secret_content is None:
+            logger.error(f"Secret {private_key_secret_id} does not contain a private key.")
+            return None
+
+        try:
+            private_key = (
+                secret_content.strip()
+                if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", secret_content)
+                else base64.b64decode(secret_content).decode("utf-8").strip()
+            )
+        except UnicodeDecodeError:
+            logger.error("Failed to validate private key: base64 decoding error.")
+            return None
+        if not _is_valid_key(private_key):
+            return None
+
+        return private_key
+
+    def update_private_key_validation_status(self, internal: bool) -> None:
+        """Add or remove the status of private key validation."""
+        status = (
+            TLSStatuses.INVALID_PEER_PRIVATE_KEY.value
+            if internal
+            else TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value
+        )
+
+        key_id = (
+            self.dependent.config.tls_peer_private_key_id
+            if internal
+            else self.dependent.config.tls_client_private_key_id
+        )
+
+        if key_id:
+            if self._read_and_validate_private_key(key_id) is None:
+                self.state.statuses.add(status, scope="unit", component=self.dependent.name)
+                return
+        self.state.statuses.delete(status, scope="unit", component=self.dependent.name)

@@ -67,3 +67,15 @@ class TLSState:
         scope = "int" if internal else "ext"
         label_name = f"{scope}-{label_name}"
         return self.secrets.get_for_key(Scope.UNIT, label_name)
+
+    @property
+    def client_private_key(self) -> str | None:
+        """Private key for the client TLS."""
+        private_key_str = self.get_secret(internal=False, label_name=SECRET_KEY_LABEL)
+        return private_key_str if private_key_str else None
+
+    @property
+    def peer_private_key(self) -> str | None:
+        """Private key for the peer TLS."""
+        private_key_str = self.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
+        return private_key_str if private_key_str else None

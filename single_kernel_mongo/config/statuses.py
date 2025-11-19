@@ -182,6 +182,19 @@ class CharmStatuses(Enum):
 class TLSStatuses(Enum):
     """TLS statuses."""
 
+    INVALID_PEER_PRIVATE_KEY = StatusObject(
+        status="blocked",
+        message="Invalid peer private key.",
+        check="Peer private key format validation failed.",
+        action="Update the peer private key secret.",
+    )
+    INVALID_CLIENT_PRIVATE_KEY = StatusObject(
+        status="blocked",
+        message="Invalid client private key.",
+        check="Client private key format validation failed.",
+        action="Update the client privatekey secret.",
+    )
+
     # RUNNING statuses:
     DISABLING_TLS = StatusObject(
         status="maintenance",
