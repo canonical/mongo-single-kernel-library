@@ -362,16 +362,17 @@ class ShardStatuses(Enum):
         status="waiting",
         message="Shard is not yet shard aware.",
     )
-
     REQUIRES_TLS = StatusObject(
         status="blocked",
-        message="Shard requires TLS to be enabled.",
+        message="TLS must be enabled in shard, since it is enabled on the config-server in the cluster relation.",
+        short_message="Shard requires TLS to be enabled.",
         check="Relation validation failed.",
         action="Align the TLS configuration in all the cluster components: add the certificates relation to the shard.",
     )
     REQUIRES_NO_TLS = StatusObject(
         status="blocked",
-        message="Shard requires TLS to be disabled.",
+        message="TLS must be disabled in shard, since it is disabled on the config-server in the cluster relation.",
+        short_message="Shard requires TLS to be disabled.",
         check="Relation validation failed.",
         action="Align the TLS configuration in all the cluster components: remove the certificates relation from the shard.",
     )
@@ -382,7 +383,6 @@ class ShardStatuses(Enum):
         check="TLS configuration validation failed.",
         action="Verify the certificates relations. Use the same CA for all the cluster components.",
     )
-
     MISSING_CONF_SERVER_REL = StatusObject(
         status="blocked",
         message="Missing relation to config-server.",
