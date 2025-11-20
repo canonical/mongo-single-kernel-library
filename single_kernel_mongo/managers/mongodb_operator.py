@@ -172,7 +172,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             self,
             self.workload,
             self.state,
-            self.substrate,
         )
         self.mongo_manager = MongoManager(
             self,

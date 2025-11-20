@@ -103,6 +103,22 @@ def test_mongo_get_status_no_error_microk8s(
     assert as_status(status) == expected_status
 
 
+def test_mongo_get_status_not_ready(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=False,
+    )
+
+    statuses = harness.charm.operator.mongo_manager.get_statuses(scope=Scope.UNIT, recompute=True)
+    status = next(iter(statuses), None)
+
+    assert status == MongodStatuses.NOT_READY.value
+
+
 @pytest.mark.parametrize(
     ("error", "expected_status"),
     (
