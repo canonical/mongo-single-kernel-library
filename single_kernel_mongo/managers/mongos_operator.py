@@ -107,7 +107,6 @@ class MongosOperator(OperatorProtocol, Object):
             self,
             self.workload,
             self.state,
-            self.substrate,
         )
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
