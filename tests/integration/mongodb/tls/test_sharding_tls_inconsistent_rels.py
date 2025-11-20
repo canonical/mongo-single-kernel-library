@@ -149,7 +149,7 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
         ops_test,
         substrate,
         SHARD_ONE_APP_NAME,
-        status="Shard requires TLS to be disabled.",
+        status="TLS must be disabled in shard, since it is disabled on the config-server in the cluster relation.",
         timeout=450,
     )
 
