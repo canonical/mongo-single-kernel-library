@@ -356,36 +356,57 @@ class ConfigServerStatuses(Enum):
 class ShardStatuses(Enum):
     """Shard statuses."""
 
-    REQUIRES_TLS = StatusObject(status="blocked", message="Shard requires TLS to be enabled.")
-    REQUIRES_NO_TLS = StatusObject(
-        status="blocked", message="Shard has TLS enabled, but config-server does not."
-    )
-    CA_MISMATCH = StatusObject(
-        status="blocked", message="Shard CA and Config-Server CA don't match."
-    )
+    ACTIVE_IDLE = StatusObject(status="active", message="")
 
-    MISSING_CONF_SERVER_REL = StatusObject(
-        status="blocked", message="Missing relation to config-server."
-    )
     SHARD_DRAINED = StatusObject(
         status="active", message="Shard drained from cluster, ready for removal."
     )
-    WAITING_TO_REMOVE = StatusObject(
-        status="waiting", message="Waiting for config-server to remove shard", running="blocking"
-    )
-    SYNCING_PASSWORDS = StatusObject(
-        status="waiting", message="Waiting to sync passwords across the cluster..."
-    )
+
     ADDING_TO_CLUSTER = StatusObject(status="maintenance", message="Adding shard to config-server")
-    SHARD_NOT_AWARE = StatusObject(status="blocked", message="Shard is not yet shard aware.")
-    ACTIVE_IDLE = StatusObject(status="active", message="")
+    SYNCING_PASSWORDS = StatusObject(
+        status="waiting", message="Waiting for passwords to be synced across the cluster..."
+    )
+    SHARD_NOT_AWARE = StatusObject(status="waiting", message="Shard is not yet shard aware.")
+
+    REQUIRES_TLS = StatusObject(
+        status="blocked",
+        message="TLS must be enabled in shard, since it is enabled on the config-server in the cluster relation.",
+        short_message="Shard requires TLS to be enabled.",
+        check="Relation validation failed.",
+        action="Align the TLS configuration in all the cluster components: add the certificates relation to the shard.",
+    )
+    REQUIRES_NO_TLS = StatusObject(
+        status="blocked",
+        message="TLS must be disabled in shard, since it is disabled on the config-server in the cluster relation.",
+        short_message="Shard requires TLS to be disabled.",
+        check="Relation validation failed.",
+        action="Align the TLS configuration in all the cluster components: remove the certificates relation from the shard.",
+    )
+    CA_MISMATCH = StatusObject(
+        status="blocked",
+        message="Shard CA and config-server CA don't match.",
+        short_message="CA mismatch.",
+        check="TLS configuration validation failed.",
+        action="Verify the certificates relations. Use the same CA for all the cluster components.",
+    )
+    MISSING_CONF_SERVER_REL = StatusObject(
+        status="blocked",
+        message="Missing relation to config-server.",
+        check="Relation validation failed.",
+        action="Add the sharding relation (shards interface) to the shard.",
+    )
 
     # RUNNING status:
     DRAINING_SHARD = StatusObject(
         status="maintenance", message="Draining shard from cluster...", running="blocking"
     )
     FAILED_TO_DRAIN = StatusObject(
-        status="blocked", message="Failed to drain shard from cluster", running="blocking"
+        status="blocked", message="Failed to drain shard from cluster.", running="blocking"
+    )
+    WAITING_TO_REMOVE = StatusObject(
+        status="waiting",
+        message="Waiting for config-server to remove shard...",
+        running="blocking",
     )
 
     @staticmethod
@@ -398,6 +419,7 @@ class ShardStatuses(Enum):
         """Returns needs shard upgrade status."""
         return StatusObject(
             status="blocked",
+            short_message="Charm revision mismatch.",
             message=f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier}).",
         )
 
@@ -409,6 +431,7 @@ class ShardStatuses(Enum):
         """Returns needs shard upgrade status."""
         return StatusObject(
             status="blocked",
+            short_message="Charm revision mismatch.",
             message=f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server.",
         )
 
@@ -423,6 +446,7 @@ class MongodStatuses(Enum):
     ADDING_MEMBER = StatusObject(status="maintenance", message="Adding member...")
     REMOVING_MEMBER = StatusObject(status="maintenance", message="Removing member...")
     SYNCING_MEMBER = StatusObject(status="maintenance", message="Syncing member...")
+    NOT_READY = StatusObject(status="waiting", message="Mongod is not ready.")
     WAITING_REPL_SET_INIT = StatusObject(
         status="waiting", message="Waiting for replica set initialisation..."
     )
