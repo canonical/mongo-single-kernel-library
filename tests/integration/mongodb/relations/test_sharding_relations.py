@@ -31,6 +31,8 @@ from tests.integration.helpers.sharding import (
 )
 from tests.integration.helpers.tls import (
     TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     integrate_apps_with_tls,
     remove_tls_integrations,
 )
@@ -88,7 +90,7 @@ async def test_build_and_deploy(
         num_units=(1 if substrate == "microk8s" else 0),
     )
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE
     )
     await ops_test.model.deploy(S3_APP_NAME, channel="edge")
 

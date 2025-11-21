@@ -9,7 +9,7 @@ from urllib.parse import quote_plus
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOD_PORT,
     MONGOS_PORT,
     execute_on_mongod,
@@ -17,10 +17,14 @@ from ..helpers.common import (
     get_address_of_unit,
     run_action,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.tls import (
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.types import Substrate
 
 POSTGRESQL_K8S = "postgresql-k8s"
-CERTIFICATES = "self-signed-certificates"
 LDAP_APP_NAME = "glauth-k8s"
 LDAP_UTILS_APP_NAME = "glauth-utils"
 TRAEFIK_CHARM = "traefik-k8s"
@@ -65,11 +69,16 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
                 config={"ldaps_enabled": True},
             ),
             kubernetes_model.deploy(LDAP_UTILS_APP_NAME, channel="latest/edge", trust=True),
-            kubernetes_model.deploy(CERTIFICATES, channel="latest/stable", trust=True),
+            kubernetes_model.deploy(
+                TLS_CERTIFICATES_APP_NAME,
+                channel=TLS_CERTIFICATES_CHANNEL,
+                base=TLS_CERTIFICATES_BASE,
+                trust=True,
+            ),
             kubernetes_model.deploy(TRAEFIK_CHARM, trust=True),
         )
         await kubernetes_model.wait_for_idle(
-            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, CERTIFICATES, LDAP_UTILS_APP_NAME],
+            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, TLS_CERTIFICATES_APP_NAME, LDAP_UTILS_APP_NAME],
             raise_on_blocked=False,
         )
 
@@ -81,16 +90,16 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
         await kubernetes_model.wait_for_idle([TRAEFIK_CHARM], status="active")
 
         await kubernetes_model.integrate(LDAP_APP_NAME, POSTGRESQL_K8S)
-        await kubernetes_model.integrate(LDAP_APP_NAME, CERTIFICATES)
+        await kubernetes_model.integrate(LDAP_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await kubernetes_model.integrate(LDAP_APP_NAME, LDAP_UTILS_APP_NAME)
 
         await kubernetes_model.wait_for_idle(
-            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, CERTIFICATES, LDAP_UTILS_APP_NAME],
+            apps=[LDAP_APP_NAME, POSTGRESQL_K8S, TLS_CERTIFICATES_APP_NAME, LDAP_UTILS_APP_NAME],
             raise_on_blocked=False,
         )
 
         await kubernetes_model.wait_for_idle(
-            apps=[LDAP_APP_NAME, CERTIFICATES, TRAEFIK_CHARM],
+            apps=[LDAP_APP_NAME, TLS_CERTIFICATES_APP_NAME, TRAEFIK_CHARM],
             raise_on_blocked=False,  # postgresql can be in Blocked State because of low free space
             status="active",
         )

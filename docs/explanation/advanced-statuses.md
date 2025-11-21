@@ -31,7 +31,7 @@ data-integrator                    blocked      1  data-integrator           lat
 mongos                             unknown      0  mongos                                     0  no
 replication               8.0.10   active       1  mongodb                                    3  no
 s3-integrator                      active       1  s3-integrator             latest/edge    192  no
-self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no
+self-signed-certificates           active       1  self-signed-certificates  1/stable       264  no
 shard-one                 8.0.10   active       1  mongodb                                    2  no
 
 Unit                         Workload  Agent  Machine  Public address  Ports            Message
