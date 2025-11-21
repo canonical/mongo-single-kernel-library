@@ -402,8 +402,23 @@ class ConfigServerStatuses(Enum):
 class ShardStatuses(Enum):
     """Shard statuses."""
 
+    ACTIVE_IDLE = StatusObject(status="active", message="")
+    SHARD_DRAINED = StatusObject(
+        status="active", message="Shard drained from cluster, ready for removal."
+    )
+
+    ADDING_TO_CLUSTER = StatusObject(status="maintenance", message="Adding shard to config-server")
+    SYNCING_PASSWORDS = StatusObject(
+        status="waiting", message="Waiting for passwords to be synced across the cluster..."
+    )
+    SHARD_NOT_AWARE = StatusObject(status="waiting", message="Shard is not yet shard aware.")
+
     MISSING_PEER_TLS_REL = StatusObject(
-        status="blocked", message="Shard requires peer TLS to be enabled."
+        status="blocked",
+        message="Peer TLS must be enabled in shard, since it is enabled in the related config-server.",
+        short_message="Shard requires peer TLS to be enabled.",
+        check="Relation validation failed.",
+        action="Align the peer TLS configuration in all the cluster components: add the peer-certificates relation to the shard.",
     )
     INVALID_PEER_TLS_REL = StatusObject(
         status="blocked",
@@ -413,14 +428,18 @@ class ShardStatuses(Enum):
         action="Align the peer TLS configuration in all the cluster components: remove the peer-certificates relation from the shard.",
     )
     MISSING_CLIENT_TLS_REL = StatusObject(
-        status="blocked", message="Shard requires client TLS to be enabled."
+        status="blocked",
+        message="Client TLS must be enabled in shard, since it is enabled in the related config-server.",
+        short_message="Shard requires client TLS to be enabled.",
+        check="Relation validation failed.",
+        action="Align the client TLS configuration in all the cluster components: add the client-certificates relation to the shard.",
     )
     INVALID_CLIENT_TLS_REL = StatusObject(
         status="blocked",
-        message="Peer TLS must be disabled in shard, since it is disabled in the related config-server.",
+        message="Client TLS must be disabled in shard, since it is disabled in the related config-server.",
         short_message="Invalid client-certificates relation.",
         check="Relation validation failed.",
-        action="Align the peer TLS configuration in all the cluster components: remove the client-certificates relation from the shard.",
+        action="Align the client TLS configuration in all the cluster components: remove the client-certificates relation from the shard.",
     )
     PEER_CA_MISMATCH = StatusObject(
         status="blocked",
@@ -436,29 +455,22 @@ class ShardStatuses(Enum):
         check="Relation validation failed.",
         action="Verify the client-certificates relations. Use the same CA for all cluster components.",
     )
-
     MISSING_CONF_SERVER_REL = StatusObject(
-        status="blocked", message="Missing relation to config-server."
+        status="blocked",
+        message="Missing relation to config-server.",
+        check="Relation validation failed.",
+        action="Add the sharding relation (shards interface) to the shard.",
     )
-    SHARD_DRAINED = StatusObject(
-        status="active", message="Shard drained from cluster, ready for removal."
-    )
-    WAITING_TO_REMOVE = StatusObject(
-        status="waiting", message="Waiting for config-server to remove shard", running="blocking"
-    )
-    SYNCING_PASSWORDS = StatusObject(
-        status="waiting", message="Waiting to sync passwords across the cluster..."
-    )
-    ADDING_TO_CLUSTER = StatusObject(status="maintenance", message="Adding shard to config-server")
-    SHARD_NOT_AWARE = StatusObject(status="blocked", message="Shard is not yet shard aware.")
-    ACTIVE_IDLE = StatusObject(status="active", message="")
 
     # RUNNING status:
     DRAINING_SHARD = StatusObject(
         status="maintenance", message="Draining shard from cluster...", running="blocking"
     )
     FAILED_TO_DRAIN = StatusObject(
-        status="blocked", message="Failed to drain shard from cluster", running="blocking"
+        status="blocked", message="Failed to drain shard from cluster.", running="blocking"
+    )
+    WAITING_TO_REMOVE = StatusObject(
+        status="waiting", message="Waiting for config-server to remove shard.", running="blocking"
     )
 
     @staticmethod
@@ -471,6 +483,7 @@ class ShardStatuses(Enum):
         """Returns needs shard upgrade status."""
         return StatusObject(
             status="blocked",
+            short_message="Charm revision mismatch.",
             message=f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server ({config_server_revision}{remote_local_identifier}).",
         )
 
@@ -482,6 +495,7 @@ class ShardStatuses(Enum):
         """Returns needs shard upgrade status."""
         return StatusObject(
             status="blocked",
+            short_message="Charm revision mismatch.",
             message=f"Charm revision ({current_charms_version}{local_identifier}) is not up-to date with config-server.",
         )
 
@@ -517,6 +531,7 @@ class MongodStatuses(Enum):
     ADDING_MEMBER = StatusObject(status="maintenance", message="Adding member...")
     REMOVING_MEMBER = StatusObject(status="maintenance", message="Removing member...")
     SYNCING_MEMBER = StatusObject(status="maintenance", message="Syncing member...")
+    NOT_READY = StatusObject(status="waiting", message="Mongod is not ready.")
     WAITING_REPL_SET_INIT = StatusObject(
         status="waiting", message="Waiting for replica set initialisation..."
     )
