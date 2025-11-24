@@ -69,7 +69,7 @@ Check the restored data by ensuring that:
 
 ## Read the rollback instructions
 
-In the event that something goes wrong (e.g. the refresh fails, the new version of MongoDB is not performant enough, a database client is incompatible with the new version), you may want to quickly roll back.
+In the event that something goes wrong (e.g. the refresh fails, the new version of MongoDB is not meeting performance requirements, a database client is incompatible with the new version), you may want to quickly roll back.
 
 Prepare for this possibility by reading through the entire refresh documentation—with special attention to the [](#halt-the-refresh) and [](#roll-back) sections—before starting the refresh.
 Save this number in case you need to roll back your application.
