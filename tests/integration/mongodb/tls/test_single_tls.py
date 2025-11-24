@@ -16,6 +16,8 @@ from tests.integration.helpers.tls import (
     CLIENT_TLS_RELATION_NAME,
     PEER_TLS_RELATION_NAME,
     TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     cannot_connect_without_tls,
     check_tls,
 )
@@ -49,9 +51,9 @@ async def test_build_and_deploy(
     config = {"ca-common-name": "Test CA"}
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
-        channel="latest/stable",
+        channel=TLS_CERTIFICATES_CHANNEL,
         config=config,
-        base="ubuntu@22.04",
+        base=TLS_CERTIFICATES_BASE,
     )
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT

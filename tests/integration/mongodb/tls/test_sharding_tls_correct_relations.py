@@ -16,6 +16,8 @@ from tests.integration.helpers.sharding import (
 )
 from tests.integration.helpers.tls import (
     TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     integrate_apps_with_tls,
     remove_tls_integrations,
 )
@@ -41,8 +43,8 @@ async def test_build_and_deploy(
     # deploy the self-signed-certificates charm
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
-        channel="latest/stable",
-        base="ubuntu@22.04",
+        channel=TLS_CERTIFICATES_CHANNEL,
+        base=TLS_CERTIFICATES_BASE,
     )
 
     await ops_test.model.wait_for_idle(

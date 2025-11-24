@@ -13,7 +13,12 @@ from tests.integration.helpers.mongos import (
     deploy_cluster_components,
 )
 from tests.integration.helpers.sharding import CLUSTER_REL_NAME, CONFIG_SERVER_APP_NAME
-from tests.integration.helpers.tls import TLS_CERTIFICATES_APP_NAME, integrate_apps_with_tls
+from tests.integration.helpers.tls import (
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+    integrate_apps_with_tls,
+)
 from tests.integration.helpers.types import Substrate
 
 
@@ -39,7 +44,7 @@ async def test_build_and_deploy(
     )
     await build_cluster(ops_test, substrate, integrate_with_mongos=False)
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE
     )
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME],

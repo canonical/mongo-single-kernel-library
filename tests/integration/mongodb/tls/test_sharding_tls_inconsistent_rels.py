@@ -30,6 +30,8 @@ from tests.integration.helpers.sharding import (
 from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     integrate_apps_with_tls,
     remove_tls_integrations,
 )
@@ -57,8 +59,8 @@ async def test_tls_then_build_cluster(
     # deploy the self-signed-certificates charm
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
-        channel="latest/stable",
-        base="ubuntu@22.04",
+        channel=TLS_CERTIFICATES_CHANNEL,
+        base=TLS_CERTIFICATES_BASE,
     )
 
     await ops_test.model.wait_for_idle(
@@ -98,8 +100,8 @@ async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) ->
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
         application_name=DIFFERENT_CERTIFICATES_APP_NAME,
-        channel="latest/stable",
-        base="ubuntu@22.04",
+        channel=TLS_CERTIFICATES_CHANNEL,
+        base=TLS_CERTIFICATES_BASE,
     )
 
     # CASE 1: Config-server has TLS enabled - but shard does not

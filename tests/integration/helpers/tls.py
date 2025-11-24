@@ -31,6 +31,8 @@ from tests.integration.helpers.types import Substrate
 logger = getLogger(__name__)
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+TLS_CERTIFICATES_CHANNEL = "1/stable"
+TLS_CERTIFICATES_BASE = "ubuntu@24.04"
 PEER_TLS_RELATION_NAME = "peer-certificates"
 CLIENT_TLS_RELATION_NAME = "client-certificates"
 

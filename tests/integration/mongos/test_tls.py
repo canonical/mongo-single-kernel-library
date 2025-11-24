@@ -25,6 +25,8 @@ from tests.integration.helpers.mongos import (
 from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
     integrate_apps_with_tls,
 )
 from tests.integration.helpers.types import Substrate
@@ -53,7 +55,7 @@ async def test_build_and_deploy(
     await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
+        TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE
     )
 
     await ops_test.model.wait_for_idle(
@@ -185,8 +187,8 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME,
         application_name=DIFFERENT_CERTIFICATES_APP_NAME,
-        channel="latest/stable",
-        base="ubuntu@22.04",
+        channel=TLS_CERTIFICATES_CHANNEL,
+        base=TLS_CERTIFICATES_BASE,
     )
 
     await ops_test.model.wait_for_idle(
