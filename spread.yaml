@@ -86,7 +86,10 @@ backends:
       PermitEmptyPasswords yes
       EOF
 
-      sudo passwd -d runner
+      sudo systemctl daemon-reload
+      sudo systemctl start ssh
+
+      sudo passwd -d ubuntu
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
@@ -98,9 +101,13 @@ backends:
       AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
       GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
       GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
+      DOCKERHUB_MIRROR: '$(HOST: echo $DOCKERHUB_MIRROR)'
+      CONCIERGE_MICROK8S_CHANNEL: 1.34-strict/stable
     systems:
-      - ubuntu-24.04:
-          username: runner
+      - self-hosted-linux-amd64-noble-medium:
+          username: ubuntu
+      - self-hosted-linux-amd64-noble-large:
+          username: ubuntu
 
 suites:
   tests/spread/mongodb/lxd/:
@@ -118,25 +125,51 @@ kill-timeout: 3h
 environment:
   PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
   CONCIERGE_JUJU_CHANNEL: 3.6/stable
-  CHARM_UBUNTU_BASE: 22.04
+  CHARM_UBUNTU_BASE: 24.04
 prepare: |
   snap refresh --hold
   chown -R root:root "$SPREAD_PATH"
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
-  # Install charmcraft & pipx (on lxd-vm backend)
+  if [[ -n "$DOCKERHUB_MIRROR" ]] && ([[ $SPREAD_SUITE == *"microk8s"* ]] || [[ $SPREAD_TASK == *"ldap"* ]])
+  then
+    # Running on IS-hosted runner; configure microk8s to use Docker Hub mirror
+    # Run before concierge prepare because of https://github.com/canonical/concierge/issues/75
+
+    snap install microk8s --channel "$CONCIERGE_MICROK8S_CHANNEL" --classic
+
+    # Wait for microk8s to populate iptables
+    # https://chat.canonical.com/canonical/pl/jo5cg6wqjjrudqd5ybj6hhttee
+    until [[ -n $(iptables --list | grep -i "microk8s") ]]
+    do
+      echo "MicroK8s has not yet configured iptables."
+      sleep 10
+    done
+
+    tee /var/snap/microk8s/current/args/certs.d/docker.io/hosts.toml << EOF
+    server = "$DOCKERHUB_MIRROR"
+    [host."${DOCKERHUB_MIRROR#'https://'}"]
+    capabilities = ["pull", "resolve"]
+  EOF
+    microk8s stop
+    microk8s start
+  fi
+
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
     concierge prepare --trace -c concierge-lxd.yaml
-    if [[ $SPREAD_TASK == *"ldap"* ]]
-    then
-      concierge prepare --trace -c concierge-microk8s.yaml
-    fi
-  else
-    concierge prepare --trace -c concierge-microk8s.yaml
   fi
 
+  if [[ $SPREAD_SUITE == *"microk8s"* ]] || [[ $SPREAD_TASK == *"ldap"* ]]
+  then
+    concierge prepare --trace -c concierge-microk8s.yaml
+    # microk8s config | juju add-k8s my-k8s --client
+    # juju bootstrap my-k8s concierge-microk8s
+    # juju add-model --controller concierge-microk8s testing
+  fi
+
+  # Install charmcraft & pipx (on lxd-vm backend)
   pipx install tox poetry
 prepare-each: |
   cd "$SPREAD_PATH"
