@@ -1,0 +1,82 @@
+name: Bump dependent charm versions
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      branch_name:
+        required: true
+        type: string
+
+jobs:
+  update-dependent-charms:
+    name: Open PRs in dependent charm repos
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        repo:
+          - canonical/mongodb-operator
+          - canonical/mongodb-k8s-operator
+          - canonical/mongos-k8s-operator
+          - canonical/mongos-operator
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      VERSION: ${{ inputs.version }}
+      BASE_BRANCH: ${{ inputs.branch_name }}
+      DEP_NAME: mongo-charms-single-kernel
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Create update branch
+        run: |
+          BRANCH="bump-${DEP_NAME}-${VERSION}"
+          git checkout -b "$BRANCH"
+
+      - name: Update dependency version in pyproject.toml
+        run: |
+          sed -i "s/${DEP_NAME} = \".*\"/${DEP_NAME} = \"${VERSION}\"/" pyproject.toml
+
+      - name: Poetry update
+        run: poetry update ${DEP_NAME}
+
+      - name: Commit changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml poetry.lock
+          git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
+
+      - name: Push branch
+        run: |
+          git push origin "$BRANCH" -f
+
+      - name: Open Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Bump ${DEP_NAME} to ${VERSION}" \
+            --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
+            --base ${{ env.BASE_BRANCH }}  \
+            --head "$BRANCH"

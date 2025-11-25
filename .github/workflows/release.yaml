@@ -61,3 +61,14 @@ jobs:
       git-tag: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
       contents: write  # Needed to create GitHub release
+
+  trigger-bump-dependent-charms:
+    name: Trigger bump-dependent-charms workflow
+    needs:
+      - release-part1
+      - release-part2
+    uses: ./.github/workflows/bump_dependent_charms.yaml
+    with:
+      version: ${{ needs.release-part1.outputs.git-tag }}
+      branch_name: ${{ github.ref_name }}
+    secrets: inherit
