@@ -38,15 +38,21 @@ jobs:
         with:
           repository: ${{ matrix.repo }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: main
+          ref: ${{ env.BASE_BRANCH }}
 
-      - name: Set up Python
+      - name: Install tox & poetry
+        run: |
+          pipx install tox poetry
+
+      - name: Set up python environment
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Poetry
-        run: pip install poetry
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
 
       - name: Create update branch
         run: |
@@ -58,7 +64,7 @@ jobs:
           sed -i "s/${DEP_NAME} = \".*\"/${DEP_NAME} = \"${VERSION}\"/" pyproject.toml
 
       - name: Poetry update
-        run: poetry update ${DEP_NAME}
+        run: poetry update "${DEP_NAME}"
 
       - name: Commit changes
         run: |
