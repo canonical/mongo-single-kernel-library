@@ -176,7 +176,7 @@ jobs:
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh ${{ matrix.path }}
         env:
-          CI_CACHE: false
+          CI_CACHE: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute path in artifact
         id: path-in-artifact
@@ -201,7 +201,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.2.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: false
+      cache: true
 
   integration-test:
     name: Integration test charm
