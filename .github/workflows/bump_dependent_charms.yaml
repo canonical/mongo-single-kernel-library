@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ matrix.repo }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT }}
           ref: ${{ env.BASE_BRANCH }}
 
       - name: Install tox & poetry
@@ -61,7 +61,9 @@ jobs:
 
       - name: Update dependency version in pyproject.toml
         run: |
-          sed -i "s/${DEP_NAME} = \".*\"/${DEP_NAME} = \"${VERSION}\"/" pyproject.toml
+          poetry remove "${DEP_NAME}"
+          poetry add "${DEP_NAME}"=="${VERSION}" --group main
+          poetry add "${DEP_NAME}"=="${VERSION}" --group integration
 
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
