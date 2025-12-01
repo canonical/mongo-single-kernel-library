@@ -42,14 +42,13 @@ jobs:
           token: ${{ secrets.PAT }}
           ref: ${{ env.BASE_BRANCH }}
 
-      - name: Install tox & poetry
-        run: |
-          pipx install tox poetry
-
-      - name: Set up python environment
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Setup python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "poetry"
 
       - name: Install deps
         run: |
