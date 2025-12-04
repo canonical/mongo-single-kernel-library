@@ -9,7 +9,6 @@ on:
         required: true
         type: string
 
-
 jobs:
   collect-integration-tests:
     name: Collect integration test spread jobs
@@ -80,7 +79,6 @@ jobs:
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
 
-
   integration-test:
     strategy:
       fail-fast: false
@@ -90,7 +88,7 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 226  # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 227 # Sum of steps `timeout-minutes` + 5
     steps:
       - name: Disk usage
         timeout-minutes: 1
@@ -112,8 +110,12 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
-
-
+      - name: Override lxd image
+        timeout-minutes: 2
+        id: override-lxd
+        run: |
+          sudo lxc image copy ubuntu:568f69ff1166 local:
+          sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
       - name: Run spread job
         timeout-minutes: 180
         id: spread
