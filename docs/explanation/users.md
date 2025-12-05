@@ -3,16 +3,18 @@
 
 Charmed MongoDB has the following internal users:
 
+```text
 | user        | function                                              |
 |-------------|-------------------------------------------------------|
 | `operator`  | Admin user that manages database/cluster (i.e. admin) |
 | `monitor`   | Manages COS integration                               |
 | `backup`    | Manages all backup operations                         |
 | `logrotate` | Manages log rotation                                  |
+```
 
 Sample full dump of internal users on a newly installed Charmed MongoDB replica set:
 
-\`\`\`
+```text
 [
   {
     _id: 'admin.operator',
@@ -89,7 +91,7 @@ Sample full dump of internal users on a newly installed Charmed MongoDB replica 
     roles: [ { role: 'logRotate', db: 'admin' } ]
   }
 ]
-\`\`\`
+```
 
 ```{caution}
 These users are dedicated to the operator's logic, and **using them incorrectly could damage your deployment.**
