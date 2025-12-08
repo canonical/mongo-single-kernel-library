@@ -1,5 +1,9 @@
 name: Run integration tests
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 on:
   pull_request:
     paths-ignore:
@@ -58,7 +62,7 @@ jobs:
         run: |
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh ${{ matrix.path }}
         env:
-          CI_CACHE: false
+          CI_CACHE: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute path in artifact
         id: path-in-artifact

@@ -9,7 +9,6 @@ on:
         required: true
         type: string
 
-
 jobs:
   collect-integration-tests:
     name: Collect integration test spread jobs
@@ -80,7 +79,6 @@ jobs:
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
 
-
   integration-test:
     strategy:
       fail-fast: false
@@ -90,22 +88,11 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 226  # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 226 # Sum of steps `timeout-minutes` + 5
     steps:
-      - name: Free up disk space
-        timeout-minutes: 10
-        run: |
-          printf '\nDisk usage before cleanup\n'
-          df --human-readable
-          # Based on https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-          rm -r /opt/hostedtoolcache/
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/julia*
-          sudo apt purge -y firefox google-chrome-stable microsoft-edge-stable
-          printf '\nDisk usage after cleanup\n'
-          df --human-readable
+      - name: Disk usage
+        timeout-minutes: 1
+        run: df --human-readable
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v4
@@ -123,8 +110,12 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
-
-
+      - name: Override lxd image
+        timeout-minutes: 1
+        id: override-lxd
+        run: |
+          sudo lxc image copy ubuntu:568f69ff1166 local:
+          sudo lxc image alias create "juju/ubuntu@22.04/amd64" 568f69ff1166
       - name: Run spread job
         timeout-minutes: 180
         id: spread
@@ -137,19 +128,12 @@ jobs:
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
           GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
-
-      #- name: Setup tmate session
-      #  uses: mxschmitt/action-tmate@v3
-      #  if: ${{ failure() }}
-      #  with:
-      #    limit-access-to-actor: true
-
       - name: Upload Allure results
         timeout-minutes: 3
         # Only upload results from one spread system & one spread variant
         # Allure can only process one result per pytest test ID. If parameterization is done via
         # spread instead of pytest, there will be overlapping pytest test IDs.
-        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:ubuntu-22.04:') && github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && github.event_name == 'schedule' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration-test-${{ matrix.job.name_in_artifact }}
