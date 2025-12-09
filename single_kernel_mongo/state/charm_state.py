@@ -819,7 +819,7 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def monitor_config(self) -> MongoConfiguration:
         """Mongo Configuration for the monitoring user."""
-        return self.mongodb_config_for_user(MonitorUser, hosts=self.internal_hosts)
+        return self.mongodb_config_for_user(MonitorUser)
 
     @property
     def logrotate_config(self) -> MongoConfiguration:
