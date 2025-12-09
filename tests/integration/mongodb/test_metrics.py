@@ -119,3 +119,4 @@ async def verify_endpoints(ops_test: OpsTest, substrate: Substrate, unit: JujuUn
     # if configured correctly there should be more than one mongodb metric present
     mongodb_metrics = mongo_resp.text
     assert mongodb_metrics.count("mongo") > 1
+    assert mongodb_metrics.count(f'rs_nm="{app_name}"') > 1
