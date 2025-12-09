@@ -731,7 +731,7 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def stats_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-stats user."""
-        return self.mongodb_config_for_user(CharmedStatsUser, hosts=self.internal_hosts)
+        return self.mongodb_config_for_user(CharmedStatsUser)
 
     @property
     def logrotate_config(self) -> MongoConfiguration:
