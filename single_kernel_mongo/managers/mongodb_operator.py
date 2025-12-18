@@ -819,15 +819,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
-        self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.tmp_path}"])
-        self.workload.exec(
-            [
-                "chown",
-                "-R",
-                f"{self.workload.users.user}:{self.workload.users.group}",
-                f"{self.workload.paths.tmp_path}",
-            ]
-        )
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:

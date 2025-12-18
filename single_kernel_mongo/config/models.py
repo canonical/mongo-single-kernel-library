@@ -104,7 +104,7 @@ VM_PATH = {
         "BIN": "/snap/bin",
         "SHELL": "/snap/bin/charmed-mongodb.mongosh",
         "LICENSES": f"/snap/{SNAP_NAME}/current/licenses",
-        "TEMP": "/tmp/mongodb",
+        "TEMP": "/tmp",
     }
 }
 K8S_PATH = {
@@ -118,7 +118,7 @@ K8S_PATH = {
         "BIN": "/usr/bin/",
         "SHELL": "/usr/bin/mongosh",
         "LICENSES": "/licenses",
-        "TEMP": "/tmp/mongodb",
+        "TEMP": "/tmp",
     }
 }
 
