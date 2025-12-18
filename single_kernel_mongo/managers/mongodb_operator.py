@@ -805,7 +805,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def prepare_storage(self) -> None:  # pragma: nocover
         """Handler for `storage_attached` event.
 
-        This should handle fixing the permissions for the data dir.
+        Set the permissions for the common and tmp dir.
         """
         if self.substrate == Substrates.K8S:
             return
@@ -817,6 +817,15 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "-R",
                 f"{self.workload.users.user}:{self.workload.users.group}",
                 f"{self.workload.paths.common_path}",
+            ]
+        )
+        self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.tmp_path}"])
+        self.workload.exec(
+            [
+                "chown",
+                "-R",
+                f"{self.workload.users.user}:{self.workload.users.group}",
+                f"{self.workload.paths.tmp_path}",
             ]
         )
 
