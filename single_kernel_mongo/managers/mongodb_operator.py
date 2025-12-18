@@ -324,6 +324,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
+        self.prepare_storage()
         self._configure_workloads()
         self.start_charm_services()
 
