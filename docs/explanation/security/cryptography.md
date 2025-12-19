@@ -5,7 +5,7 @@ This document describes the cryptography used by Charmed MongoDB and [Charmed Mo
 
 ## Resource checksums
 
-Charmed MongoDB and Charmed Mongos operators use pinned revisions of the [Charmed MongoDB snap](https://snapcraft.io/charmed-mongodb). This provides a reproducible and secure environments The snap packages the workloads associated with both charms (percona-server-mongodb, mongodb-exporter, pbm, etc), see [Charmed MongoDB snap contents](https://github.com/canonical/charmed-mongodb-snap/blob/6/edge/snap/snapcraft.yaml).
+Charmed MongoDB and Charmed Mongos operators use pinned revisions of the [Charmed MongoDB snap](https://snapcraft.io/charmed-mongodb). This provides a reproducible and secure environments The snap packages the workloads associated with both charms (percona-server-mongodb, mongodb-exporter, pbm, etc), see [Charmed MongoDB snap contents](https://github.com/canonical/charmed-mongodb-snap/blob/8/edge/snap/snapcraft.yaml).
 
 Every artifact bundled into the Charmed MongoDB snap is verified against their MD5, SHA256 or SHA512 checksum after download. The installation of certified snaps into the rock is ensured by snap primitives that verify their squashfs filesystems images GPG signature. For more information on the snap verification process, refer to the [snapcraft.io documentation](https://snapcraft.io/docs/assertions).
 
@@ -44,12 +44,15 @@ for:
 * External client connection 
 
 To set up secure connections to Charmed MongoDB, the database must be integrated with TLS Certificate Provider charms, e.g. 
-`self-signed-certificates` operator. CSRs are generated for every unit using `tls_certificates_interface` library that uses the `cryptography` 
-Python library to create X.509 compatible certificates. The CSR is signed by the TLS Certificate Provider, returned to the units, and stored in a file with limited permissions and stored in Juju Secrets. 
+`self-signed-certificates` operator. Charmed MongoDB TLS management is done via the `tls_certificates_interface` 
+library v4, which uses the `cryptography` Python library to create X.509 compatible certificates. 
+
+The TLS Certificate Provider manages the lifetime of CSRs and private keys. Those are provided to the unit together
+with a certificate to the units, and stored in a file with limited permissions and stored in Juju Secrets. 
 
 When encryption is enabled, hostname verification is turned on for existing connections, including clients, shards, replicas, and routers.
 
-Encryption at rest is currently not supported, although it can be provided by the substrate (cloud or on-premises).
+Encryption at REST is currently not supported, although it can be provided by the substrate (cloud or on-premises).
 
 ## Authentication
 

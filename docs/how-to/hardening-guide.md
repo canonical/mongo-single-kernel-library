@@ -1,5 +1,5 @@
 (hardening-guide)=
-# Security hardening guide
+# How to harden your deployment
 
 This document provides guidance and instructions to achieve a secure deployment of Charmed MongoDB and Charmed Mongos. We discuss both charms since we acknowledge that Charmed Mongos is required to access a sharded cluster. Additionally, we include guidance and instructions for setting up and managing a secure environment.
 
@@ -110,13 +110,13 @@ In the following section , we provide guidance on how to harden your deployment 
 
 ### Operating system (VM)
 
-Charmed MongoDB VM and Charmed Mongos VM currently run on top of Ubuntu 22.04. Deploy a [Landscape Client Charm](https://charmhub.io/landscape-client?) to 
+Charmed MongoDB VM and Charmed Mongos VM currently run on top of Ubuntu 24.04. Deploy a [Landscape Client Charm](https://charmhub.io/landscape-client?) to 
 connect the underlying VM to a Landscape User Account to manage security upgrades and integrate Ubuntu Pro subscriptions. 
 
 ### Base images (K8s)
 
 Charmed MongoDB K8s and Charmed Mongos K8s run on top of rockcraft-based image shipping the percona-server, mongodb-exporter, and pbm
-distribution binaries built by Canonical with its images are based on Ubuntu 22.04. 
+distribution binaries built by Canonical with its images are based on Ubuntu 24.04. 
 The images that can be found in the [Charmed MongoDB rock](https://github.com/canonical/charmed-mongodb-rock) Github repository are used as the base 
 images for the different pods providing MongoDB services. 
 The following table summarise the relation between the component and its underlying base image. 

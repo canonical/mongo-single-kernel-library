@@ -5,7 +5,7 @@ Charmed MongoDB development supports software unit tests, integration tests, and
 
 ## Unit tests
 
-See [CONTRIBUTING.md](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/CONTRIBUTING.md#testing) and follow the `tox` examples
+See [CONTRIBUTING.md](https://github.com/canonical/mongo-single-kernel-library/blob/8/edge/CONTRIBUTING.md#testing) and follow the `tox` examples
 
 ## Integration tests
 
