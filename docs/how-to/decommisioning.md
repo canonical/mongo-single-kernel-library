@@ -35,6 +35,8 @@ To ensure data is securely removed, destroy all associated storage:
 juju remove-application <application-name> --destroy-storage
 ```
 
+See: [How to remove an application](https://documentation.ubuntu.com/juju/3.6/howto/manage-applications/#remove-an-application)
+
 ### 4. Remove the environment
 
 If the entire environment is no longer needed, destroy the Juju model to ensure no residual resources remain.
@@ -43,7 +45,7 @@ If the entire environment is no longer needed, destroy the Juju model to ensure 
 juju destroy-model <model-name> --destroy-storage
 ```
 
-See: [How to remove an application](https://documentation.ubuntu.com/juju/3.6/howto/manage-applications/#remove-an-application)
+See: [How to remove a model](https://documentation.ubuntu.com/juju/3.6/howto/manage-models/#destroy-a-model)
 
 Then, remove the Juju controller:
 
@@ -51,9 +53,7 @@ Then, remove the Juju controller:
 juju destroy-controller <controller-name>
 ```
 
-See:
-- [How to remove a model](https://documentation.ubuntu.com/juju/3.6/howto/manage-models/#destroy-a-model)
-- [How to remove a controller](https://documentation.ubuntu.com/juju/3.6/howto/manage-controllers/#remove-a-controller)
+See:[How to remove a controller](https://documentation.ubuntu.com/juju/3.6/howto/manage-controllers/#remove-a-controller)
 
 ### 5. Remove Juju
 
