@@ -36,6 +36,7 @@ from ops.charm import (
     StorageAttachedEvent,
     StorageDetachingEvent,
     UpdateStatusEvent,
+    UpgradeCharmEvent,
 )
 from ops.framework import Object
 from ops.pebble import ChangeError
@@ -104,6 +105,8 @@ class LifecycleEventsHandler(Object):
         self.framework.observe(
             self.charm.on[rel_name.value].relation_departed, self.on_relation_departed
         )
+
+        self.framework.observe(self.charm.on.upgrade_charm, self.on_upgrade_charm)
 
         if self.dependent.name == CharmKind.MONGOD:
             self.framework.observe(
@@ -286,3 +289,7 @@ class LifecycleEventsHandler(Object):
     def on_remove(self, _):
         """For MongoD VM, remove sysctl config."""
         self.dependent.sysctl_config.remove()  # type: ignore[attr-defined]
+
+    def on_upgrade_charm(self, event: UpgradeCharmEvent):
+        """Upgrade Charm Event."""
+        self.dependent.upgrade_charm()

@@ -882,6 +882,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
     @override
+    def upgrade_charm(self) -> None:
+        """Set storage permissions after revision upgrade."""
+        self.prepare_storage()
+
+    @override
     def update_status(self) -> None:
         """Status update Handler."""
         if self.basic_statuses():
