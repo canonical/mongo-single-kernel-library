@@ -274,8 +274,14 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.log_options,
                 self.audit_options,
                 self.ldap_parameters,
+                self.patch_parameters,
             ],
         )
+
+    @property
+    def patch_parameters(self) -> dict[str, Any]:
+        """The additional patch parameters added to the conf."""
+        return {"net": {"compression": {"compressors": "snappy,zstd"}}}
 
     @property
     @abstractmethod
