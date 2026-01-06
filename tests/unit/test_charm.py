@@ -188,7 +188,7 @@ def test_pebble_ready_no_storage_yet(harness, mocker, mock_fs_interactions):
     harness.set_can_connect(container, True)
 
     # Mock storages
-    harness.charm.model._storages = {"mongodb": None, "mongodb-logs": None}
+    harness.charm.model._storages = {"data": None, "logs": None}
     # Emit the PebbleReadyEvent carrying the mock_container
     harness.charm.on.mongod_pebble_ready.emit(container)
     configure.assert_not_called()

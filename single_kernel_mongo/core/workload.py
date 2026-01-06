@@ -31,6 +31,7 @@ class MongoPaths:
         self.logs_path = role.paths["LOGS"]
         self.shell_path = role.paths["SHELL"]
         self.licenses_path = role.paths["LICENSES"]
+        self.tmp_path = role.paths["TEMP"]
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         if not isinstance(other, MongoPaths):
