@@ -144,6 +144,11 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
+    def upgrade_charm(self) -> None:
+        """Handles upgrade charm events."""
+        ...
+
+    @abstractmethod
     def prepare_storage_for_shutdown(self) -> None:
         """Handles the storage attached events."""
         ...
