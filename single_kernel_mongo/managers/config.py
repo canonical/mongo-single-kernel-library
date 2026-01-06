@@ -274,8 +274,15 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.log_options,
                 self.audit_options,
                 self.ldap_parameters,
+                self.patch_parameters,
             ],
         )
+
+    @property
+    def patch_parameters(self) -> dict[str, Any]:
+        """The additional patch parameters added to the conf."""
+        # This patches CVE-2025-14847.
+        return {"net": {"compression": {"compressors": "snappy,zstd"}}}
 
     @property
     @abstractmethod
