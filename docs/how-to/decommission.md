@@ -1,4 +1,4 @@
-(decommissioning)=
+(decommission)=
 # How to decommission your deployment
 
 When Charmed MongoDB is no longer required, it is important to decommission it securely to avoid accidental retention or exposure of sensitive data such as credentials, user data, or operational metadata.
@@ -53,7 +53,7 @@ Then, remove the Juju controller:
 juju destroy-controller <controller-name>
 ```
 
-See:[How to remove a controller](https://documentation.ubuntu.com/juju/3.6/howto/manage-controllers/#remove-a-controller)
+See: [How to remove a controller](https://documentation.ubuntu.com/juju/3.6/howto/manage-controllers/#remove-a-controller)
 
 ### 5. Remove Juju
 
