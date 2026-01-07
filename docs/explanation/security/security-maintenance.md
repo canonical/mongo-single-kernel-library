@@ -30,7 +30,6 @@ Users are responsible for:
 - Applying updates and upgrades in a timely manner.
 - Monitoring official Charmed MongoDB and Canonical announcements regarding security maintenance and EoL timelines.
 
-
 ## Reporting vulnerabilities
 
 Security issues in Charmed MongoDB should be reported responsibly to ensure they are addressed quickly and safely.
@@ -42,5 +41,6 @@ Instead, follow the guidance in the security policy:
 - [Charmed MongoDB K8s operator](https://github.com/canonical/mongodb-operator/blob/8/edge/SECURITY.md)
 - [Charmed Mongos operator](https://github.com/canonical/mongos-k8s-operator/blob/8/edge/SECURITY.md)
 - [Charmed Mongos K8s operator](https://github.com/canonical/mongos-operator/blob/8/edge/SECURITY.md)
+- [Mongo Charms Single Kernel library](https://github.com/canonical/mongo-single-kernel-library/blob/8/edge/SECURITY.md)
 
 Security reports should comply with the [Ubuntu Disclosure Policy](https://ubuntu.com/security/disclosure-policy), which outlines responsible disclosure practices and expectations.

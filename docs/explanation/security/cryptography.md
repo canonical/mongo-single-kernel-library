@@ -52,7 +52,7 @@ with a certificate to the units, and stored in a file with limited permissions a
 
 When encryption is enabled, hostname verification is turned on for existing connections, including clients, shards, replicas, and routers.
 
-Encryption at REST is currently not supported, although it can be provided by the substrate (cloud or on-premises).
+Encryption at rest is currently not supported, although it can be provided by the substrate (cloud or on-premises).
 
 ## Authentication
 
