@@ -22,7 +22,7 @@ jobs:
       - name: Checkout the project
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_branch || github.ref_name }}
+          ref: ${{ inputs.target_branch }}
 
       - name: Install tox & poetry
         run: |
@@ -39,8 +39,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev libldap2-dev libssl-dev
-          poetry install
+          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
       - name: Run tox unit tests to create coverage.xml
         run: tox run -e unit
