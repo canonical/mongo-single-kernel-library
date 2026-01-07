@@ -1,5 +1,5 @@
 (hardening-guide)=
-# How to harden your deployment
+# Security hardening guide
 
 This document provides guidance and instructions to achieve a secure deployment of Charmed MongoDB and Charmed Mongos. We discuss both charms since we acknowledge that Charmed Mongos is required to access a sharded cluster. Additionally, we include guidance and instructions for setting up and managing a secure environment.
 
