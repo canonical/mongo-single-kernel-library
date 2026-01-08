@@ -28,6 +28,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
     CertificateRequestAttributes,
     PrivateKey,
 )
@@ -242,7 +243,7 @@ class TLSManager(ManagerStatusProtocol):
         certificate: str | None,
         csr: str | None,
         ca: str | None,
-        private_key: str | None,
+        private_key: PrivateKey | None,
         internal: bool,
     ):
         """Sets the certificates."""
@@ -251,7 +252,8 @@ class TLSManager(ManagerStatusProtocol):
             SECRET_CHAIN_LABEL,
             "\n".join(secret_chain) if secret_chain else None,
         )
-        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
+        if private_key:
+            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
         self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
@@ -410,4 +412,30 @@ class TLSManager(ManagerStatusProtocol):
             return True
         if not self.workload.exists(self.workload.paths.int_pem_file):
             return True
+        return False
+
+    def is_certificate_match(
+        self, certificate: Certificate, private_key: PrivateKey | None, internal: bool
+    ) -> bool:
+        """Checks a given certificates matches the private key."""
+        private_key_id = (
+            self.dependent.config.tls_peer_private_key_id
+            if internal
+            else self.dependent.config.tls_client_private_key_id
+        )
+
+        logger.info(f"is_certificate_match {private_key_id}")
+
+        if private_key_id:
+            config_private_key = self.read_and_validate_private_key(private_key_id)
+
+            if config_private_key is not None:
+                if private_key != config_private_key:
+                    logger.info("key in config and received private key do not match")
+                    return False
+
+        if private_key:
+            logger.info("cert and received private key do not match")
+            return certificate.matches_private_key(private_key)
+        logger.info("received private key is none")
         return False
