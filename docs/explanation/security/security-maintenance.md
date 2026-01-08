@@ -9,8 +9,8 @@ Security updates are provided only for the following **actively supported channe
 
 | Charm channel | Upstream MongoDB version | Base | End of Life (EoL) |
 |--------------|--------------------------|------|------------------|
-| `6/stable`   | MongoDB 6.0              | Ubuntu 22.04 LTS (jammy) | 2033 |
-| `8/stable`   | MongoDB 8.0              | Ubuntu 24.04 LTS (noble) | Oct 2035 |
+| `6/stable`   | MongoDB 6.0              | Ubuntu 22.04 LTS (jammy) | March 2034 |
+| `8/stable`   | MongoDB 8.0              | Ubuntu 24.04 LTS (noble) | October 2035 |
 
 - Only the channels listed above receive security patches and updates.
 - Support timelines are aligned with upstream MongoDB maintenance policies and the underlying Ubuntu LTS base.
