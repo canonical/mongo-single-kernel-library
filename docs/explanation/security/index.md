@@ -6,4 +6,5 @@
 
 Hardening guide <hardening-guide>
 Cryptography <cryptography>
+Maintenance <security-maintenance>
 ```

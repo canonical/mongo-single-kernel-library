@@ -21,11 +21,11 @@ Charmed MongoDB is an open source project that warmly welcomes community contrib
 * Raise software issues or feature requests in [GitHub](https://github.com/canonical/mongo-single-kernel-library/issues)
 <!-- * Report security issues through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File).  -->
 * Meet the community and chat with us on [Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
-* [Contribute](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/CONTRIBUTING.md)
+* [Contribute](https://github.com/canonical/mongo-single-kernel-library/blob/8/edge/CONTRIBUTING.md)
 
 ## Licensing & trademark
 
-The Charmed MongoDB Operator is free software, distributed under the [Apache Software License, version 2.0](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/LICENSE). It installs, operates, and depends on [MongoDB Community Version](https://github.com/mongodb/mongo), which is licensed under the Server Side Public License (SSPL)
+The Charmed MongoDB Operator is free software, distributed under the [Apache Software License, version 2.0](https://github.com/canonical/mongo-single-kernel-library/blob/8/edge/LICENSE). It installs, operates, and depends on [MongoDB Community Version](https://github.com/mongodb/mongo), which is licensed under the Server Side Public License (SSPL)
 
 MongoDB is a trademark or registered trademark of MongoDB, Inc. Other trademarks are property of their respective owners.
 

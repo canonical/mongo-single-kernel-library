@@ -11,6 +11,7 @@ Manage passwords <manage-passwords>
 Manage client connections <manage-client-connections>
 Manage persistent storage <manage-persistent-storage>
 Enable LDAP <enable-ldap>
+Decommission your deployment <decommission>
 Monitoring <monitoring/index>
 Back up and restore <back-up-and-restore/index>
 Upgrade <upgrade/index>

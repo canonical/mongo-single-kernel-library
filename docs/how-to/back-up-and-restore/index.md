@@ -1,3 +1,4 @@
+(how-to-backup-index)=
 # How to back up and restore
 
 ```{toctree}
