@@ -641,6 +641,7 @@ db.test_collection.find()
 
 Return to the original shell where you can interact with Juju and LXD by typing {command}`exit` twice.
 
+(remove-the-integration)=
 ### Remove the integration
 
 Removing the integration automatically removes the user that was created with it.
