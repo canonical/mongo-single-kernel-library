@@ -3,16 +3,8 @@ name: TICS run self-hosted test
 on:
   schedule:
     - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
-  workflow_dispatch: # Allows manual triggering
-    inputs:
-      target_branch:
-        description: "Branch to run TICS on"
-        required: true
-        default: "8/edge"
-        type: choice
-        options:
-          - 6/edge
-          - 8/edge
+  workflow_dispatch:
+
 
 jobs:
   tics-build:
@@ -21,8 +13,6 @@ jobs:
     steps:
       - name: Checkout the project
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.target_branch || github.ref_name }}
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y python3-venv build-essential libldap-dev libsasl2-dev
@@ -46,18 +36,11 @@ jobs:
           mkdir .cover
           mv coverage.xml .cover/coverage.xml
 
-      - name: Compute TICS project name
-        id: tics_project
-        run: |
-          BRANCH="${{ inputs.target_branch || github.ref_name }}"
-          PROJECT="mongo-single-kernel-library_${BRANCH//\//_}"
-          echo "project=${PROJECT}" >> "$GITHUB_OUTPUT"
-
       - name: Run TICS analysis with github-action
         uses: tiobe/tics-github-action@v3
         with:
           mode: qserver
-          project: ${{ steps.tics_project.outputs.project }}
+          project: mongo-single-kernel-library_6_edge
           branchdir: .
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
