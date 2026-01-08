@@ -22,24 +22,21 @@ jobs:
       - name: Checkout the project
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_branch }}
+          ref: ${{ inputs.target_branch || github.ref_name }}
 
-      - name: Install tox & poetry
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-venv build-essential libldap-dev libsasl2-dev
+
+      - name: Install pipx
+        run: sudo apt install -y pipx && pipx ensurepath
+
+      - name: Add pipx to PATH
+        run: echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Install tox and poetry using pipx
         run: |
-          pipx ensurepath
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-          pipx install tox poetry
-
-      - name: Set up python environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-
-      - name: Install deps
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
+          pipx install tox
+          pipx install poetry
 
       - name: Run tox unit tests to create coverage.xml
         run: tox run -e unit
