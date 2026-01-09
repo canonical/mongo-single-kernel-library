@@ -324,6 +324,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
+        self.prepare_storage()
         self._configure_workloads()
         self.start_charm_services()
 
@@ -805,7 +806,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def prepare_storage(self) -> None:  # pragma: nocover
         """Handler for `storage_attached` event.
 
-        This should handle fixing the permissions for the data dir.
+        Set the permissions for the common and tmp dir.
         """
         if self.substrate == Substrates.K8S:
             return
@@ -819,6 +820,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:
@@ -878,6 +880,11 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.charm.unit.name,
                 e,
             )
+
+    @override
+    def upgrade_charm(self) -> None:
+        """Set storage permissions after revision upgrade."""
+        self.prepare_storage()
 
     @override
     def update_status(self) -> None:

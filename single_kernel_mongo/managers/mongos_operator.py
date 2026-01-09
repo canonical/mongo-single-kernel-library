@@ -317,6 +317,10 @@ class MongosOperator(OperatorProtocol, Object):
         """Nothing happens in this handler for mongos operators."""
         pass
 
+    def upgrade_charm(self) -> None:
+        """Nothing happens in this handler for mongos operators."""
+        pass
+
     @override
     def new_leader(self) -> None:
         """Just forward the call, this is for simplicity and typing.
