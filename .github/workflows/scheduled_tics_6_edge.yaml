@@ -1,0 +1,19 @@
+name: Schedule TICS 6/edge
+
+on:
+  # GitHub will only trigger workflows `on: schedule` for workflow files in the default GitHub branch
+  schedule:
+    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
+
+jobs:
+  trigger:
+    name: Trigger workflow on branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger workflow
+        run: gh workflow run tics_run.yaml --repo "${{ github.repository }}" --ref 6/edge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      actions: write  # Needed to trigger workflow
