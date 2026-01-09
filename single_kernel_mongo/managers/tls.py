@@ -243,7 +243,7 @@ class TLSManager(ManagerStatusProtocol):
         certificate: str | None,
         csr: str | None,
         ca: str | None,
-        private_key: PrivateKey | None,
+        private_key: str | None,
         internal: bool,
     ):
         """Sets the certificates."""
@@ -252,8 +252,7 @@ class TLSManager(ManagerStatusProtocol):
             SECRET_CHAIN_LABEL,
             "\n".join(secret_chain) if secret_chain else None,
         )
-        if private_key:
-            self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
+        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
         self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
@@ -414,28 +413,24 @@ class TLSManager(ManagerStatusProtocol):
             return True
         return False
 
-    def is_certificate_match(
-        self, certificate: Certificate, private_key: PrivateKey | None, internal: bool
+    def certificate_and_private_key_match(
+        self, certificate: Certificate, private_key: PrivateKey, internal: bool
     ) -> bool:
-        """Checks a given certificates matches the private key."""
+        """Returns true if the certificate and the private key match.
+
+        Private key must also match the config private key if it exists.
+        """
         private_key_id = (
             self.dependent.config.tls_peer_private_key_id
             if internal
             else self.dependent.config.tls_client_private_key_id
         )
 
-        logger.info(f"is_certificate_match {private_key_id}")
-
         if private_key_id:
             config_private_key = self.read_and_validate_private_key(private_key_id)
-
             if config_private_key is not None:
                 if private_key != config_private_key:
-                    logger.info("key in config and received private key do not match")
+                    logger.debug("Certificate private key do not match the config private key.")
                     return False
 
-        if private_key:
-            logger.info("cert and received private key do not match")
-            return certificate.matches_private_key(private_key)
-        logger.info("received private key is none")
-        return False
+        return certificate.matches_private_key(private_key)
