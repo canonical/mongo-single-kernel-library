@@ -176,9 +176,7 @@ def test_internal_certificate_available(
         MongoDBRoles.CONFIG_SERVER,
     ],
 )
-def test_unknown_certificate_available(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, role
-):
+def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker, role):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
