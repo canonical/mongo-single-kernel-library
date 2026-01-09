@@ -176,7 +176,9 @@ def test_internal_certificate_available(
         MongoDBRoles.CONFIG_SERVER,
     ],
 )
-def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker, role):
+def test_unknown_certificate_available(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, role
+):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
@@ -196,6 +198,7 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
     )
 
     harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = role
     client_rel_id = harness.add_relation(
         ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
@@ -217,7 +220,7 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
 
     # Mock an unknown certificate
     event = MagicMock(spec=CertificateAvailableEvent)
-    event.certificate = new_cert.certificate
+    event.certificate = MagicMock()
     event.certificate.raw = "1234"
 
     harness.charm.operator.tls_events._on_certificate_available(event)
@@ -244,6 +247,214 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
     assert harness.charm.operator.state.tls.client_enabled
     assert harness.charm.operator.state.tls.peer_enabled
 
+    mock_restart.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.REPLICATION,
+        MongoDBRoles.SHARD,
+        MongoDBRoles.CONFIG_SERVER,
+    ],
+)
+def test_private_key_is_none_certificate_available(harness: Harness[MongoTestCharm], mocker, role):
+    manager = harness.charm.operator.tls_manager
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        return_value=None,
+    )
+    new_private_key = MagicMock()
+    new_private_key.raw = "my_new_private_key"
+    new_cert = get_certificate_mock(
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        side_effect=[([new_cert], None), ([new_cert], None)],
+    )
+
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = role
+    client_rel_id = harness.add_relation(
+        ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+    )
+    harness.add_relation_unit(client_rel_id, "self-signed-certificates/0")
+    peer_rel_id = harness.add_relation(
+        ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+    )
+    harness.add_relation_unit(peer_rel_id, "self-signed-certificates/0")
+
+    manager.state.secrets.set("ext-chain-secret", "app-chain-old-1", Scope.UNIT)
+    manager.state.secrets.set("ext-cert-secret", "app-cert-old-1", Scope.UNIT)
+    manager.state.secrets.set("ext-ca-secret", "app-ca-old-1", Scope.UNIT)
+    manager.state.secrets.set("ext-key-secret", "unit-key-1", Scope.UNIT)
+    manager.state.secrets.set("int-chain-secret", "app-chain-old-2", Scope.UNIT)
+    manager.state.secrets.set("int-cert-secret", "app-cert-old-2", Scope.UNIT)
+    manager.state.secrets.set("int-ca-secret", "app-ca-old-2", Scope.UNIT)
+    manager.state.secrets.set("int-key-secret", "unit-key-2", Scope.UNIT)
+
+    event = MagicMock(spec=CertificateAvailableEvent)
+    event.certificate = new_cert.certificate
+
+    harness.charm.operator.tls_events._on_certificate_available(event)
+
+    ext_chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-chain-secret")
+    ext_unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-cert-secret")
+    ext_ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret")
+    ext_key_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-key-secret")
+    int_chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret")
+    int_unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret")
+    int_ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret")
+    int_key_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-key-secret")
+
+    assert ext_chain_secret == "app-chain-old-1"
+    assert ext_unit_secret == "app-cert-old-1"
+    assert ext_ca_secret == "app-ca-old-1"
+    assert ext_key_secret == "unit-key-1"
+
+    assert int_chain_secret == "app-chain-old-2"
+    assert int_unit_secret == "app-cert-old-2"
+    assert int_ca_secret == "app-ca-old-2"
+    assert int_key_secret == "unit-key-2"
+
+    assert harness.charm.operator.state.tls.client_enabled
+    assert harness.charm.operator.state.tls.peer_enabled
+
+    mock_restart.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.REPLICATION,
+        MongoDBRoles.SHARD,
+        MongoDBRoles.CONFIG_SERVER,
+    ],
+)
+def test_private_key_does_not_match_config_client_certificate_available(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, mongodb_name, role
+):
+    manager = harness.charm.operator.tls_manager
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=None,
+    )
+
+    new_private_key = MagicMock()
+    new_private_key.raw = "my_new_private_key"
+    new_cert = get_certificate_mock(
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        return_value=([new_cert], new_private_key),
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        return_value=(new_cert, new_private_key),
+    )
+
+    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.update_config({"tls-client-private-key": secret_id})
+
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = role
+    rel_id = harness.add_relation(
+        ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
+    )
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+
+    event = MagicMock(spec=CertificateAvailableEvent)
+    event.certificate = new_cert.certificate
+
+    harness.charm.operator.tls_events._on_certificate_available(event)
+
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-key-secret") is not None
+
+    assert not harness.charm.operator.state.tls.client_enabled
+    mock_restart.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.REPLICATION,
+        MongoDBRoles.SHARD,
+        MongoDBRoles.CONFIG_SERVER,
+    ],
+)
+def test_private_key_does_not_match_config_peer_certificate_available(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions, mongodb_name, role
+):
+    manager = harness.charm.operator.tls_manager
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=None,
+    )
+    new_private_key = MagicMock()
+    new_private_key.raw = "my_new_private_key"
+    new_cert = get_certificate_mock(
+        cert="new_certificate_external_value",
+        chain="new_chain",
+        ca="new_test_ca_server",
+        csr="new_csr",
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        side_effect=[([], None), ([new_cert], new_private_key)],
+    )
+    mocker.patch(
+        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        side_effect=[
+            (new_cert, new_private_key),
+            (None, None),
+        ],
+    )
+
+    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
+    harness.update_config({"tls-peer-private-key": secret_id})
+
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.app_peer_data.role = role
+    rel_id = harness.add_relation(
+        ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
+    )
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+
+    event = MagicMock(spec=CertificateAvailableEvent)
+    event.certificate = new_cert.certificate
+
+    harness.charm.operator.tls_events._on_certificate_available(event)
+
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-key-secret") is not None
+
+    assert not harness.charm.operator.state.tls.peer_enabled
     mock_restart.assert_not_called()
 
 

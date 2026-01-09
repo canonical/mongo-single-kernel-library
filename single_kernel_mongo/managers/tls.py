@@ -428,9 +428,8 @@ class TLSManager(ManagerStatusProtocol):
 
         if private_key_id:
             config_private_key = self.read_and_validate_private_key(private_key_id)
-            if config_private_key is not None:
-                if private_key != config_private_key:
-                    logger.debug("Certificate private key do not match the config private key.")
-                    return False
+            if config_private_key is not None and private_key != config_private_key:
+                logger.debug("Certificate private key does not match the config private key.")
+                return False
 
         return certificate.matches_private_key(private_key)
