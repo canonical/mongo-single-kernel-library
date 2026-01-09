@@ -19,7 +19,7 @@ Do not proceed if this step was not successful. If your refresh failed, {ref}`ro
 
 ## Begin the refresh
 
-After successfully refreshing your config-server, the next step is to upgrade your hsards.
+After successfully refreshing your config-server, the next step is to upgrade your shards.
 
 Refresh each shard **one at a time**. Start by refreshing the first shard, and follow the instructions in {ref}`upgrade-replica-set`.
 
