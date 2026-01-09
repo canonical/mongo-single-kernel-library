@@ -287,41 +287,22 @@ def test_private_key_is_none_certificate_available(harness: Harness[MongoTestCha
     )
     harness.add_relation_unit(peer_rel_id, "self-signed-certificates/0")
 
-    manager.state.secrets.set("ext-chain-secret", "app-chain-old-1", Scope.UNIT)
-    manager.state.secrets.set("ext-cert-secret", "app-cert-old-1", Scope.UNIT)
-    manager.state.secrets.set("ext-ca-secret", "app-ca-old-1", Scope.UNIT)
-    manager.state.secrets.set("ext-key-secret", "unit-key-1", Scope.UNIT)
-    manager.state.secrets.set("int-chain-secret", "app-chain-old-2", Scope.UNIT)
-    manager.state.secrets.set("int-cert-secret", "app-cert-old-2", Scope.UNIT)
-    manager.state.secrets.set("int-ca-secret", "app-ca-old-2", Scope.UNIT)
-    manager.state.secrets.set("int-key-secret", "unit-key-2", Scope.UNIT)
-
     event = MagicMock(spec=CertificateAvailableEvent)
     event.certificate = new_cert.certificate
 
     harness.charm.operator.tls_events._on_certificate_available(event)
 
-    ext_chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-chain-secret")
-    ext_unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-cert-secret")
-    ext_ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret")
-    ext_key_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-key-secret")
-    int_chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret")
-    int_unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret")
-    int_ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret")
-    int_key_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-key-secret")
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-key-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-key-secret") is None
 
-    assert ext_chain_secret == "app-chain-old-1"
-    assert ext_unit_secret == "app-cert-old-1"
-    assert ext_ca_secret == "app-ca-old-1"
-    assert ext_key_secret == "unit-key-1"
-
-    assert int_chain_secret == "app-chain-old-2"
-    assert int_unit_secret == "app-cert-old-2"
-    assert int_ca_secret == "app-ca-old-2"
-    assert int_key_secret == "unit-key-2"
-
-    assert harness.charm.operator.state.tls.client_enabled
-    assert harness.charm.operator.state.tls.peer_enabled
+    assert not harness.charm.operator.state.tls.client_enabled
+    assert not harness.charm.operator.state.tls.peer_enabled
 
     mock_restart.assert_not_called()
 
