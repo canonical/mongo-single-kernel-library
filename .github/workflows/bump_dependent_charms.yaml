@@ -6,7 +6,15 @@ on:
       version:
         required: true
         type: string
-      branch_name:
+      base_branch:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+      base_branch:
         required: true
         type: string
 
@@ -29,21 +37,24 @@ jobs:
 
     env:
       VERSION: ${{ inputs.version }}
-      BASE_BRANCH: ${{ inputs.branch_name }}
+      BASE_BRANCH: ${{ inputs.base_branch }}
       DEP_NAME: mongo-charms-single-kernel
 
     steps:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
       - name: Checkout target repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
-          token: ${{ secrets.PAT }}
           ref: ${{ env.BASE_BRANCH }}
 
-      - name: Install poetry
-        run: pipx install poetry
+      - name: Install tox & poetry
+        run: |
+          pipx ensurepath
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          pipx install tox poetry
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
@@ -53,12 +64,13 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
+          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
       - name: Create update branch
         run: |
-          BRANCH="bump-${DEP_NAME}-${VERSION}"
-          git checkout -b "$BRANCH"
+          PR_BRANCH="bump-${DEP_NAME}-${VERSION}"
+          git checkout -b "$PR_BRANCH"
+          echo "PR_BRANCH=$PR_BRANCH" >> "$GITHUB_ENV"
 
       - name: Update dependency version in pyproject.toml
         run: |
@@ -78,14 +90,14 @@ jobs:
 
       - name: Push branch
         run: |
-          git push origin "$BRANCH" -f
+          git push origin "${PR_BRANCH}" -f
 
       - name: Open Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           gh pr create \
-            --title "Bump ${DEP_NAME} to ${VERSION}" \
+            --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
             --base ${{ env.BASE_BRANCH }}  \
-            --head "$BRANCH"
+            --head "${PR_BRANCH}"
