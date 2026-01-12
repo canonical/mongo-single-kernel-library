@@ -143,7 +143,7 @@ async def test_check_max_tasks(ops_test: OpsTest, substrate: Substrate):
             unit,
             "systemctl show --property TasksMax snap.charmed-mongodb.mongod",
         )
-        assert output == "infinity", f"Unit {unit.name} has an invalid TasksMax value"
+        assert "infinity" in output, f"Unit {unit.name} has an invalid TasksMax value"
 
 
 @pytest.mark.abort_on_fail
