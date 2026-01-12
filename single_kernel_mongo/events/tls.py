@@ -182,14 +182,18 @@ class TLSEventsHandler(Object):
         )
         peer_certificates, peer_private_key = self.peer_certificate.get_assigned_certificates()
 
-        if client_certificates and client_certificates[0].certificate == cert:
+        if (
+            client_certificates
+            and client_private_key
+            and client_certificates[0].certificate == cert
+        ):
             internal = False
             provider_cert = client_certificates[0]
-            private_key = client_private_key.raw if client_private_key else None
-        elif peer_certificates and peer_certificates[0].certificate == cert:
+            private_key = client_private_key
+        elif peer_certificates and peer_private_key and peer_certificates[0].certificate == cert:
             internal = True
             provider_cert = peer_certificates[0]
-            private_key = peer_private_key.raw if peer_private_key else None
+            private_key = peer_private_key
         else:
             logger.error("Received certificate does not match any assigned certificates.")
             return
@@ -198,12 +202,18 @@ class TLSEventsHandler(Object):
             f"Received {TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate."
         )
 
+        if not self.manager.certificate_and_private_key_match(
+            provider_cert.certificate, private_key, internal
+        ):
+            logger.error("Received certificate and private key do not match.")
+            return
+
         self.manager.set_certificates(
             secret_chain=[c.raw for c in provider_cert.chain],
             certificate=provider_cert.certificate.raw,
             csr=provider_cert.certificate_signing_request.raw,
             ca=provider_cert.ca.raw,
-            private_key=private_key,
+            private_key=private_key.raw,
             internal=internal,
         )
         if internal:
