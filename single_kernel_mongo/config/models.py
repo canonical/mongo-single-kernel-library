@@ -68,10 +68,21 @@ class THPConfig:
 
     service_template: Traversable = TEMPLATE_DIRECTORY / "enable-transparent-huge-pages.service.j2"
     service_file_path: Path = Path("/etc/systemd/system/enable-transparent-huge-pages.service")
-    service_name = "enable-transparent-huge-pages"
+    service_name: str = "enable-transparent-huge-pages"
 
 
 THP_CONFIG = THPConfig()
+
+
+@dataclass(frozen=True)
+class OverrideFile:
+    """Dataclass for the systemd override."""
+
+    override_template: Path = Path(f"{TEMPLATE_DIRECTORY}") / "override.conf"
+    override_path: Path = Path("override.conf")
+
+
+OVERRIDE_FILES = OverrideFile()
 
 
 @dataclass(frozen=True)
