@@ -28,6 +28,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
     CertificateRequestAttributes,
     PrivateKey,
 )
@@ -411,3 +412,24 @@ class TLSManager(ManagerStatusProtocol):
         if not self.workload.exists(self.workload.paths.int_pem_file):
             return True
         return False
+
+    def certificate_and_private_key_match(
+        self, certificate: Certificate, private_key: PrivateKey, internal: bool
+    ) -> bool:
+        """Returns true if the certificate and the private key match.
+
+        Private key must also match the config private key if it exists.
+        """
+        private_key_id = (
+            self.dependent.config.tls_peer_private_key_id
+            if internal
+            else self.dependent.config.tls_client_private_key_id
+        )
+
+        if private_key_id:
+            config_private_key = self.read_and_validate_private_key(private_key_id)
+            if config_private_key is not None and private_key != config_private_key:
+                logger.debug("Certificate private key does not match the config private key.")
+                return False
+
+        return certificate.matches_private_key(private_key)
