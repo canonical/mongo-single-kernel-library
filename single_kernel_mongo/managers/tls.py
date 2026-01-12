@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, TypedDict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
@@ -270,6 +272,9 @@ class TLSManager:
         else:
             raise UnknownCertificateAvailableError
 
+        if not self.certificate_and_private_key_match(certificate, internal):
+            raise UnknownCertificateAvailableError
+
         self.state.tls.set_secret(
             internal,
             SECRET_CHAIN_LABEL,
@@ -366,3 +371,37 @@ class TLSManager:
                 old_certificate_signing_request=old_csr,
                 new_certificate_signing_request=new_csr,
             )
+
+    def certificate_and_private_key_match(self, certificate: str | None, internal: bool) -> bool:
+        """Returns True if the certificate matches the private key, False otherwise."""
+        scope = "internal" if internal else "external"
+        if not certificate:
+            logger.warning(f"Certificate for {scope} TLS is None.")
+            return False
+        private_key = self.state.tls.get_secret(internal=internal, label_name=SECRET_KEY_LABEL)
+
+        if not private_key:
+            logger.warning(f"Private key for {scope} TLS has not been set.")
+            return False
+
+        try:
+            cert_object = x509.load_pem_x509_certificate(certificate.rstrip().encode())
+            key_object = serialization.load_pem_private_key(
+                private_key.rstrip().encode(), password=None
+            )
+
+            cert_public_key = cert_object.public_key()
+            key_public_key = key_object.public_key()
+
+            if not isinstance(cert_public_key, rsa.RSAPublicKey):
+                logger.warning("Certificate does not use RSA public key.")
+                return False
+
+            if not isinstance(key_public_key, rsa.RSAPublicKey):
+                logger.warning("Private key is not an RSA key.")
+                return False
+
+            return cert_public_key.public_numbers() == key_public_key.public_numbers()
+        except Exception as e:
+            logger.warning("Failed to validate certificate and private key match: %s", e)
+            return False
