@@ -56,6 +56,7 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global url.https://${{ secrets.PAT }}@github.com/.insteadOf https://github.com/
 
       - name: Install tox & poetry
         run: |
@@ -86,7 +87,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.PAT }}
-          branch: "${PR_BRANCH}"
+          branch: ${PR_BRANCH}
           commit-message: "patch: Bump ${DEP_NAME} to version ${VERSION}"
           title: "patch: Bump ${DEP_NAME} to ${VERSION}"
           body: "Automated bump of ${DEP_NAME} to version ${VERSION} after PyPI release."
