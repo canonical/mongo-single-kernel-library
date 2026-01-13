@@ -48,17 +48,16 @@ jobs:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
 
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Checkout target repo
         uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
-
-      #- name: Configure git
-      #  run: |
-      #    git config --global user.name "GitHub Actions"
-      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      #    git config --global url.https://${{ secrets.PAT }}@github.com/.insteadOf https://github.com/
 
       - name: Install tox & poetry
         run: |
