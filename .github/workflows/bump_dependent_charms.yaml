@@ -88,10 +88,16 @@ jobs:
           poetry add "${DEP_NAME}"=="${VERSION}" --group integration
           poetry update "${DEP_NAME}"
 
+      - name: Debug git auth
+        working-directory: ${{ matrix.repo }}
+        run: |
+          git remote -v
+          git config --list
+
       - name: Commit changes
         working-directory: ${{ matrix.repo }}
         run: |
-         git checkout -b "${PR_BRANCH}"
+          git checkout -b "${PR_BRANCH}"
           git add pyproject.toml poetry.lock
           git commit -m "patch: Bump ${DEP_NAME} to version ${VERSION}"
           git push origin "${PR_BRANCH}"
