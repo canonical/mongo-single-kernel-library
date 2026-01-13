@@ -45,52 +45,15 @@ jobs:
       PR_BRANCH: "bump-mongo-charms-single-kernel-${{ inputs.version }}2"
 
     steps:
-      - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
-
-      - name: Configure git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Checkout target repo
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
-
-      - name: Install tox & poetry
-        run: |
-          pipx ensurepath
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-          pipx install tox poetry
-
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-
-      - name: Install deps
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
-
-      - name: Update dependency version in pyproject.toml
-        run: |
-          poetry remove "${DEP_NAME}"
-          poetry add "${DEP_NAME}"=="${VERSION}" --group main
-          poetry add "${DEP_NAME}"=="${VERSION}" --group integration
-          poetry update "${DEP_NAME}"
-
-
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.PAT }}
-          branch: ${{ env.PR_BRANCH }}
-          commit-message: "patch: Bump ${DEP_NAME} to version ${VERSION}"
-          title: "patch: Bump ${DEP_NAME} to ${VERSION}"
-          body: "Automated bump of ${DEP_NAME} to version ${VERSION} after PyPI release."
-          base: ${{ env.BASE_BRANCH }}
-        id: cpr
+      - run: |
+          date > generated.txt
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "generated"
+          git push
