@@ -58,9 +58,10 @@ jobs:
 
       - name: Checkout repo
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@github.com/canonical/${{ matrix.repo }}.git
+          git clone https://github.com/canonical/${{ matrix.repo }}.git
           cd ${{ matrix.repo }}
           git checkout ${{ env.BASE_BRANCH }}
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/canonical/${{ matrix.repo }}.git
 
       - name: Install tox & poetry
         run: |
