@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         repo:
-          - mongodb-operator
+          - canonical/mongodb-operator
           #- canonical/mongodb-k8s-operator
           #- canonical/mongos-k8s-operator
           #- canonical/mongos-operator
@@ -46,21 +46,16 @@ jobs:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
 
-      - name: Checkout repo
+      - name: Checkout target repo
         uses: actions/checkout@v6
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ env.BASE_BRANCH }}
 
       - name: Configure git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Clone target repo
-        run: |
-          git clone https://github.com/canonical/${{ matrix.repo }}.git
-          cd ${{ matrix.repo }}
-          git checkout ${{ env.BASE_BRANCH }}
-          # Reconfigure origin with PAT so push works
-          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/canonical/${{ matrix.repo }}.git
 
       - name: Install tox & poetry
         run: |
@@ -80,32 +75,20 @@ jobs:
           sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
       - name: Update dependency version in pyproject.toml
-        working-directory: ${{ matrix.repo }}
         run: |
           poetry remove "${DEP_NAME}"
           poetry add "${DEP_NAME}"=="${VERSION}" --group main
           poetry add "${DEP_NAME}"=="${VERSION}" --group integration
           poetry update "${DEP_NAME}"
 
-      - name: Debug git auth
-        working-directory: ${{ matrix.repo }}
-        run: |
-          git remote -v
-          git config --list
 
-      - name: Commit changes
-        working-directory: ${{ matrix.repo }}
-        run: |
-          git checkout -b "${PR_BRANCH}"
-          git add pyproject.toml poetry.lock
-          git commit -m "patch: Bump ${DEP_NAME} to version ${VERSION}"
-          git push origin "${PR_BRANCH}"
-
-      - name: Open Pull Request
-        run: |
-          gh pr create \
-            --repo canonical/${{ matrix.repo }} \
-            --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
-            --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
-            --base ${{ env.BASE_BRANCH }}  \
-            --head "${PR_BRANCH}"
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.PAT }}
+          branch: "${PR_BRANCH}"
+          commit-message: "patch: Bump ${DEP_NAME} to version ${VERSION}"
+          title: "patch: Bump ${DEP_NAME} to ${VERSION}"
+          body: "Automated bump of ${DEP_NAME} to version ${VERSION} after PyPI release."
+          base: ${{ env.BASE_BRANCH }}
+        id: cpr
