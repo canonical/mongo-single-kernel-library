@@ -26,10 +26,10 @@ jobs:
     strategy:
       matrix:
         repo:
-          - canonical/mongodb-operator
-          - canonical/mongodb-k8s-operator
-          - canonical/mongos-k8s-operator
-          - canonical/mongos-operator
+          - mongodb-operator
+          #- canonical/mongodb-k8s-operator
+          #- canonical/mongos-k8s-operator
+          #- canonical/mongos-operator
 
     permissions:
       contents: write
@@ -39,16 +39,27 @@ jobs:
       VERSION: ${{ inputs.version }}
       BASE_BRANCH: ${{ inputs.base_branch }}
       DEP_NAME: mongo-charms-single-kernel
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
     steps:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
+
       - name: Checkout target repo
         uses: actions/checkout@v6
         with:
-          repository: ${{ matrix.repo }}
-          token: ${{ secrets.PAT }}
           ref: ${{ env.BASE_BRANCH }}
+
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout repo
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/canonical/${{ matrix.repo }}.git
+          cd ${{ matrix.repo }}
+          git checkout ${{ env.BASE_BRANCH }}
 
       - name: Install tox & poetry
         run: |
@@ -84,20 +95,14 @@ jobs:
 
       - name: Commit changes
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add pyproject.toml poetry.lock
-          git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
-
-      - name: Push branch
-        run: |
-          git push origin "${PR_BRANCH}" -f
+          git commit -m "patch: Bump ${DEP_NAME} to version ${VERSION}"
+          git push origin "${PR_BRANCH}"
 
       - name: Open Pull Request
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           gh pr create \
+            --repo canonical/${{ matrix.repo }} \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
             --base ${{ env.BASE_BRANCH }}  \
