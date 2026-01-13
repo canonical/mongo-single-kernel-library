@@ -18,6 +18,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-dependent-charms:
     name: Open PRs in dependent charm repos
@@ -31,9 +35,7 @@ jobs:
           #- canonical/mongos-k8s-operator
           #- canonical/mongos-operator
 
-    permissions:
-      contents: write
-      pull-requests: write
+
 
     env:
       VERSION: ${{ inputs.version }}
@@ -52,11 +54,11 @@ jobs:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
 
-      - name: Configure git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global url.https://${{ secrets.PAT }}@github.com/.insteadOf https://github.com/
+      #- name: Configure git
+      #  run: |
+      #    git config --global user.name "GitHub Actions"
+      #    git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      #    git config --global url.https://${{ secrets.PAT }}@github.com/.insteadOf https://github.com/
 
       - name: Install tox & poetry
         run: |
@@ -87,7 +89,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.PAT }}
-          branch: ${PR_BRANCH}
+          branch: ${{ env.PR_BRANCH }}
           commit-message: "patch: Bump ${DEP_NAME} to version ${VERSION}"
           title: "patch: Bump ${DEP_NAME} to ${VERSION}"
           body: "Automated bump of ${DEP_NAME} to version ${VERSION} after PyPI release."
