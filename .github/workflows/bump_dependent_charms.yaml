@@ -40,6 +40,7 @@ jobs:
       BASE_BRANCH: ${{ inputs.base_branch }}
       DEP_NAME: mongo-charms-single-kernel
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      PR_BRANCH: "bump-${DEP_NAME}-${VERSION}"
 
     steps:
       - name: Install CLI
@@ -78,23 +79,18 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
-      - name: Create update branch
-        run: |
-          PR_BRANCH="bump-${DEP_NAME}-${VERSION}"
-          git checkout -b "$PR_BRANCH"
-          echo "PR_BRANCH=$PR_BRANCH" >> "$GITHUB_ENV"
-
       - name: Update dependency version in pyproject.toml
+        working-directory: ${{ matrix.repo }}
         run: |
           poetry remove "${DEP_NAME}"
           poetry add "${DEP_NAME}"=="${VERSION}" --group main
           poetry add "${DEP_NAME}"=="${VERSION}" --group integration
-
-      - name: Poetry update
-        run: poetry update "${DEP_NAME}"
+          poetry update "${DEP_NAME}"
 
       - name: Commit changes
+        working-directory: ${{ matrix.repo }}
         run: |
+         git checkout -b "${PR_BRANCH}"
           git add pyproject.toml poetry.lock
           git commit -m "patch: Bump ${DEP_NAME} to version ${VERSION}"
           git push origin "${PR_BRANCH}"
