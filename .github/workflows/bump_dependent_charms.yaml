@@ -49,12 +49,12 @@ jobs:
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/${{ matrix.repo }}.git
           git add .
           git commit -m "generated"
           git push
