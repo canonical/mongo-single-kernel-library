@@ -46,25 +46,21 @@ jobs:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
 
-      - name: Checkout target repo
+      - name: Checkout repo
         uses: actions/checkout@v6
-        with:
-          repository: canonical/${{ matrix.repo }}
-          ref: ${{ env.BASE_BRANCH }}
-          token: ${{ secrets.PAT }}
-          path: ${{ matrix.repo }}
 
       - name: Configure git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Checkout repo
+      - name: Clone target repo
         run: |
           git clone https://github.com/canonical/${{ matrix.repo }}.git
           cd ${{ matrix.repo }}
           git checkout ${{ env.BASE_BRANCH }}
-          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/canonical/${{ matrix.repo }}.git
+          # Reconfigure origin with PAT so push works
+          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/canonical/${{ matrix.repo }}.git
 
       - name: Install tox & poetry
         run: |
