@@ -97,8 +97,8 @@ S3_PBM_OPTION_MAP = {
 GCS_PBM_OPTION_MAP = {
     "bucket": "storage.gcs.bucket",
     "path": "storage.gcs.prefix",
-    "access-key": "storage.gcs.credentials.hmac-access-key",
-    "secret-key": "storage.gcs.credentials.hmac-secret",
+    "access-key": "storage.gcs.credentials.hmacAccessKey",
+    "secret-key": "storage.gcs.credentials.hmacSecret",
 }
 
 
