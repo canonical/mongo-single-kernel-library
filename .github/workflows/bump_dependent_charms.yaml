@@ -58,10 +58,10 @@ jobs:
           PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
           VERSION_CONTENT=$(git log --pretty=format:"- %h %s" $PREV_TAG..${VERSION} | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
 
-          cat <<EOF >> "$GITHUB_ENV"
-          VERSION_CONTENT<<EOF
-          $VERSION_CONTENT
-          EOF
+          # Write multiline env variable safely
+          echo "VERSION_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$VERSION_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Checkout target repo
         uses: actions/checkout@v6
