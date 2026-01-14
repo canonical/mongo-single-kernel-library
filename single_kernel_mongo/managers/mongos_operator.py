@@ -220,6 +220,9 @@ class MongosOperator(OperatorProtocol, Object):
         # Save LDAP certificates
         self.ldap_manager.save_certificates(self.state.ldap.chain)
 
+        # Setup systemd overrides to prevent mongos/mongodb from cutting connections
+        self.setup_systemd_overrides()
+
         # Update licenses
         self.handle_licenses()
 
@@ -370,7 +373,13 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def prepare_for_shutdown(self) -> None:
-        return
+        """Handler for the stop event.
+
+        On VM:
+         * Remove the overrides files.
+        """
+        if self.substrate == Substrates.VM:
+            self.remove_systemd_overrides()
 
     @override
     def start_charm_services(self) -> None:
