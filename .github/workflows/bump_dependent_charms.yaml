@@ -35,8 +35,6 @@ jobs:
           #- canonical/mongos-k8s-operator
           #- canonical/mongos-operator
 
-
-
     env:
       VERSION: ${{ inputs.version }}
       BASE_BRANCH: ${{ inputs.base_branch }}
@@ -45,16 +43,66 @@ jobs:
       PR_BRANCH: "bump-mongo-charms-single-kernel-${{ inputs.version }}2"
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Install CLI
+        run: |
+          pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
+          git config user.name "anonical-data-platform-bot"
+          git config user.email "canonical-data-platform-bot@canonical.com"
+
+      - name: Checkout target repo
+        uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
+          token: ${{ secrets.PAT }}
           ref: ${{ env.BASE_BRANCH }}
-      - run: |
-          date > generated.txt
-          # Note: the following account information will not work on GHES
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT }}@github.com/${{ matrix.repo }}.git
-          git add .
-          git commit -m "generated"
-          git push
+
+      - name: Install tox & poetry
+        run: |
+          pipx ensurepath
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          pipx install tox poetry
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "poetry"
+
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
+
+      - name: Create update branch
+        run: |
+          PR_BRANCH="bump-${DEP_NAME}-${VERSION}"
+          git checkout -b "$PR_BRANCH"
+          echo "PR_BRANCH=$PR_BRANCH" >> "$GITHUB_ENV"
+
+      - name: Update dependency version in pyproject.toml
+        run: |
+          poetry remove "${DEP_NAME}"
+          poetry add "${DEP_NAME}"=="${VERSION}" --group main
+          poetry add "${DEP_NAME}"=="${VERSION}" --group integration
+
+      - name: Poetry update
+        run: poetry update "${DEP_NAME}"
+
+      - name: Commit changes
+        run: |
+          git add pyproject.toml poetry.lock
+          git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
+
+      - name: Push branch
+        run: |
+          git push origin "${PR_BRANCH}" -f
+
+      - name: Open Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+        run: |
+          gh pr create \
+            --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
+            --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
+            --base ${{ env.BASE_BRANCH }}  \
+            --head "${PR_BRANCH}"
