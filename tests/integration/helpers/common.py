@@ -1280,7 +1280,7 @@ async def execute_on_server(
     command: str,
     container: str = "mongod",
 ) -> str:
-    """Checks if the file exists or not."""
+    """Executes a command on the server."""
     app_name = get_app_name_from_unit(unit.name)
     match substrate:
         case "lxd":

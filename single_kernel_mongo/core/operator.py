@@ -424,12 +424,12 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             full_path = path / OVERRIDE_FILES.override_path
             # Create the directory if it does not exist.
             path.mkdir(exist_ok=True)
-            # Copy the file to the new directory"
-            _ = shutil.copy(Path(OVERRIDE_FILES.override_template), full_path)
-            # Give it the right permissions
-            _ = self.workload.exec(["chown", "-R", "root:root", f"{full_path}"])
+            # Copy the file to the new directory.
+            shutil.copy(Path(OVERRIDE_FILES.override_template), full_path)
+            # Give it the right permissions.
+            self.workload.exec(["chown", "-R", "root:root", f"{full_path}"])
             # Reload the daemon to take the override into account.
-            _ = self.workload.exec(["systemctl", "daemon-reload"])
+            self.workload.exec(["systemctl", "daemon-reload"])
 
     def remove_systemd_overrides(self) -> None:
         """Sets up some overrides to allow the service to run smoothly."""
@@ -440,5 +440,5 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             full_path = path / OVERRIDE_FILES.override_path
             if path.exists():
                 full_path.unlink()
-                path.rmdir
-            _ = self.workload.exec(["systemctl", "daemon-reload"])
+                path.rmdir()
+            self.workload.exec(["systemctl", "daemon-reload"])
