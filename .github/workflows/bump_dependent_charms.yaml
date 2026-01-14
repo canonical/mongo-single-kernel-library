@@ -95,11 +95,15 @@ jobs:
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
 
+      - name: Config repo auth
+        run: |
+          GH_CREDENTIALS=$(echo -n "canonical-data-platform-bot:${{ secrets.PAT }}" | base64 -w0)
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${GH_CREDENTIALS}"
+
       - name: Commit changes
         run: |
           git config --global user.name "canonical-data-platform-bot"
           git config --global user.email "canonical-data-platform-bot@canonical.com"
-          git remote set-url origin https://canonical-data-platform-bot:${{ secrets.PAT }}@github.com/${{ matrix.repo }}.git
           git add pyproject.toml poetry.lock
           git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
           git push -u origin "${PR_BRANCH}" -f
