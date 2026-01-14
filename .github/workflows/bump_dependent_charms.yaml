@@ -31,9 +31,9 @@ jobs:
       matrix:
         repo:
           - canonical/mongodb-operator
-          - canonical/mongodb-k8s-operator
-          - canonical/mongos-k8s-operator
-          - canonical/mongos-operator
+          #- canonical/mongodb-k8s-operator
+          #- canonical/mongos-k8s-operator
+          #- canonical/mongos-operator
 
     permissions:
       contents: write
@@ -99,9 +99,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
+          git fetch --tags --force
+          PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
+          VERSION_CONTENT=$(git log --pretty=format:"%h %s" $PREV_TAG..${VERSION})
+          BODY="Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release.
+            ### Included changes
+            ${VERSION_CONTENT}"
+
           gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
-            --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
+            --body "${BODY}" \
             --base ${{ env.BASE_BRANCH }}  \
             --head "${PR_BRANCH}" \
             --reviewer Mehdi-Bendriss,Gu1nness,patriciareinoso
