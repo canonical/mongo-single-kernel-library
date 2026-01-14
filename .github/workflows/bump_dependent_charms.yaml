@@ -46,9 +46,6 @@ jobs:
       PR_BRANCH: "bump-mongo-charms-single-kernel-${{ inputs.version }}"
 
     steps:
-      - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
-
       - name: Checkout mongo-single-kernel repo
         uses: actions/checkout@v6
 
@@ -114,7 +111,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           BODY="Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release.
-            ### Included changes
+            ### What's Changed
             ${{ env.VERSION_CONTENT }}"
 
           gh pr create \
