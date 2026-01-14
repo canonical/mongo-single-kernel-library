@@ -57,7 +57,11 @@ jobs:
           git fetch --tags
           PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
           VERSION_CONTENT=$(git log --pretty=format:"- %h %s" $PREV_TAG..${VERSION} | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
-          echo "VERSION_CONTENT=$VERSION_CONTENT" >> "$GITHUB_ENV"
+
+          cat <<EOF >> "$GITHUB_ENV"
+          VERSION_CONTENT<<EOF
+          $VERSION_CONTENT
+          EOF
 
       - name: Checkout target repo
         uses: actions/checkout@v6
