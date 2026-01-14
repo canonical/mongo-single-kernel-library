@@ -428,6 +428,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             shutil.copy(Path(OVERRIDE_FILES.override_template), full_path)
             # Give it the right permissions.
             self.workload.exec(["chown", "-R", "root:root", f"{full_path}"])
+            self.workload.exec(["chmod", "644", f"{full_path}"])
             # Reload the daemon to take the override into account.
             self.workload.exec(["systemctl", "daemon-reload"])
 

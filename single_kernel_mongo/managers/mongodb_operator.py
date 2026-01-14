@@ -525,6 +525,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if self.substrate == Substrates.VM:
             self.remove_systemd_overrides()
+            return
 
         # According to the MongoDB documentation, before upgrading the primary, we must ensure a
         # safe primary re-election.
