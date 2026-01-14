@@ -57,15 +57,11 @@ jobs:
           fi
 
       - name: Checkout target repo
-        uses: actions/checkout@v6
-
-      - name: Checkout target repo
         uses: actions/checkout@v5
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
           persist-credentials: false
-          github-server-url: https://x-access-token:${{ secrets.PAT }}@github.com/${{ matrix.repo }}.git
 
       - name: Install tox & poetry
         run: |
@@ -103,10 +99,10 @@ jobs:
         run: |
           git config --global user.name "canonical-data-platform-bot"
           git config --global user.email "canonical-data-platform-bot@canonical.com"
-          git config --global url.https://${{ secrets.PAT }}@github.com/.insteadOf https://github.com/
+          git remote set-url origin https://${{ secrets.PAT }}@github.com/${{ matrix.repo }}.git
           git add pyproject.toml poetry.lock
           git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
-          git push origin "${PR_BRANCH}" -f
+          git push -u origin "${PR_BRANCH}" -f
 
       - name: Open Pull Request
         env:
