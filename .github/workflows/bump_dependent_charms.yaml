@@ -48,6 +48,12 @@ jobs:
           pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
           git config --global user.name "canonical-data-platform-bot"
           git config --global user.email "canonical-data-platform-bot@canonical.com"
+          if [ -z "${{ secrets.PAT }}" ]; then
+            echo "PAT is empty"
+            exit 1
+          else
+            echo "PAT is present"
+          fi
 
       - name: Checkout target repo
         uses: actions/checkout@v6
