@@ -559,7 +559,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             logger.info("Missing region - this is required for AWS")
 
         if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.endpoint"
+            "storage.s3.endpointUrl"
         ):
             logger.info("Missing S3 endpoint.")
             return False
