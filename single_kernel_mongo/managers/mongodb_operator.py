@@ -343,6 +343,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
+        if self.state.s3_relation:
+            credentials = self.backup_events.s3_client.get_s3_connection_info()
+            self.backup_manager.set_config_options(credentials)
+
+        return
+
     @property
     @override
     def config(self) -> MongoDBCharmConfig:
