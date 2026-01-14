@@ -56,7 +56,7 @@ jobs:
         run: |
           git fetch --tags
           PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
-          VERSION_CONTENT=$(git log --pretty=format:"%h %s" $PREV_TAG..${VERSION})
+          VERSION_CONTENT=$(git log --pretty=format:"- %h %s" $PREV_TAG..${VERSION} | sed 's|#\([0-9]\+\)|canonical/mongo-single-kernel#\1|g')
           echo "VERSION_CONTENT=$VERSION_CONTENT" >> "$GITHUB_ENV"
 
       - name: Checkout target repo
