@@ -231,6 +231,7 @@ def test_start_not_ready(harness, mocker, mock_fs_interactions):
     patched_mongo_initialise = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
 
     harness.set_leader(True)
     harness.charm.on.start.emit()
@@ -354,6 +355,7 @@ def test_start_already_initialised(harness, mocker, mock_fs_interactions):
     init_user = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users"
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     # presets
     harness.set_leader(True)
 
@@ -477,6 +479,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
         side_effect=WorkloadServiceError,
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
 
@@ -488,6 +491,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
 
 def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch(
         "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.start", return_value=True
