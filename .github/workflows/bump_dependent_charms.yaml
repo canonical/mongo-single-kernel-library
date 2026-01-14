@@ -1,26 +1,30 @@
-name: Bump dependent charm versions
+name: Bump Mongo Single Kernel Lib in Charms
 
 on:
   workflow_call:
     inputs:
       version:
+        description: "Version to bump to (e.g. v1.8.22)"
         required: true
         type: string
       base_branch:
+        description: "Target branch to create PR against (e.g. 8/edge)"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       version:
+        description: "Version to bump to (e.g. v1.8.22)"
         required: true
         type: string
       base_branch:
+        description: "Target branch to create PR against (e.g. 8/edge)"
         required: true
         type: string
 
 jobs:
   update-dependent-charms:
-    name: Open PRs in dependent charm repos
+    name: Open PRs to bump Mongo Single Kernel lib in charm repos
     runs-on: ubuntu-latest
 
     strategy:
@@ -39,15 +43,18 @@ jobs:
       VERSION: ${{ inputs.version }}
       BASE_BRANCH: ${{ inputs.base_branch }}
       DEP_NAME: mongo-charms-single-kernel
+      PR_BRANCH: "bump-mongo-charms-single-kernel-${{ inputs.version }}"
 
     steps:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
+
       - name: Checkout target repo
         uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
+          token: ${{ secrets.PAT }}
 
       - name: Install tox & poetry
         run: |
@@ -66,25 +73,21 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
-      - name: Create update branch
-        run: |
-          PR_BRANCH="bump-${DEP_NAME}-${VERSION}"
-          git checkout -b "$PR_BRANCH"
-          echo "PR_BRANCH=$PR_BRANCH" >> "$GITHUB_ENV"
-
       - name: Update dependency version in pyproject.toml
         run: |
           poetry remove "${DEP_NAME}"
-          poetry add "${DEP_NAME}"=="${VERSION}" --group main
-          poetry add "${DEP_NAME}"=="${VERSION}" --group integration
+          VERSION_NUMBER="${VERSION#v}"
+          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group main
+          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group integration
 
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
 
       - name: Commit changes
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "canonical-data-platform-bot"
+          git config user.email "canonical-data-platform-bot@canonical.com"
+          git checkout -b "${PR_BRANCH}"
           git add pyproject.toml poetry.lock
           git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
 
