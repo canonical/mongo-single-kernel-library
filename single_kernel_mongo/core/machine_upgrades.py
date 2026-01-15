@@ -170,8 +170,6 @@ class MachineUpgrade(AbstractUpgrade):
         dependent.start_charm_services()
         if dependent.name == CharmKind.MONGOD:
             dependent._restart_related_services()  # type: ignore[attr-defined]
-            credentials = dependent.backup_events.s3_client.get_s3_connection_info()
-            dependent.backup_manager.set_config_options(credentials)
 
         self.state.unit_upgrade_peer_data.snap_revision = SNAP.revision
         logger.debug(f"Saved {SNAP.revision} in unit databag after refresh")
