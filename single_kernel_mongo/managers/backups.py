@@ -543,7 +543,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
         if not credentials.get("access-key") or not credentials.get("secret-key"):
-            logger.info("Missing s3 credentials")
+            logger.info("Missing s3 or gcs credentials")
             return False
 
         # note this is more of a sanity check - the s3 lib defaults this to the relation name
