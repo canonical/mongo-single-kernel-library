@@ -53,12 +53,13 @@ jobs:
         run: |
           git fetch --tags
           PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
-          VERSION_CONTENT=$(git log --pretty=format:"- %h %s" $PREV_TAG..${VERSION} | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
+          VERSION_CONTENT=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..${VERSION}" | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
 
-          # Write multiline env variable safely
-          echo "VERSION_CONTENT<<EOF" >> $GITHUB_ENV
-          echo "$VERSION_CONTENT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          {
+            echo "VERSION_CONTENT<<EOF"
+            echo "${VERSION_CONTENT}"
+            echo "EOF"
+          } >> "${GITHUB_ENV}"
 
       - name: Checkout target repo
         uses: actions/checkout@v6
@@ -94,10 +95,13 @@ jobs:
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
 
-      - name: Commit changes
+      - name: Set git config
         run: |
           git config user.name "canonical-data-platform-bot"
           git config user.email "canonical-data-platform-bot@canonical.com"
+
+      - name: Commit changes
+        run: |
           git checkout -b "${PR_BRANCH}"
           git add pyproject.toml poetry.lock
           git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
