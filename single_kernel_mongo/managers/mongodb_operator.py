@@ -397,7 +397,8 @@ class MongoDBOperator(OperatorProtocol, Object):
     def prepare_for_shutdown(self) -> None:  # pragma: nocover
         """Handler for the stop event.
 
-        K8S Only, VM has nothing to do on this step.
+        On VM:
+         * Remove the overrides files.
         On K8S:
          * First: Raise partition to prevent other units from restarting if an
          upgrade is in progress. If an upgrade is not in progress, the leader
@@ -411,6 +412,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         `_reconcile_upgrade` handler.
         """
         if self.substrate == Substrates.VM:
+            self.remove_systemd_overrides()
             return
 
         # Raise partition to prevent other units from restarting if an upgrade is in progress.
@@ -1048,6 +1050,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Push TLS files if necessary
         self.tls_manager.push_tls_files_to_workload()
         self.ldap_manager.save_certificates(self.state.ldap.chain)
+
+        # Setup systemd overrides to prevent mongos/mongodb from cutting connections
+        self.setup_systemd_overrides()
 
         # Update licenses
         self.handle_licenses()
