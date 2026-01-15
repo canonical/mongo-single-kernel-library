@@ -91,16 +91,20 @@ def test_external_certificate_available(
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
+    private_key = Path("tests/unit/data/key.pem").read_text()
+    certificate = Path("tests/unit/data/cert.pem").read_text()
+
     manager.state.secrets.set("ext-csr-secret", "csr-secret", Scope.UNIT)
     manager.state.secrets.set("ext-cert-secret", "unit-cert-old", Scope.UNIT)
     manager.state.secrets.set("int-cert-secret", "app-cert", Scope.UNIT)
+    manager.state.secrets.set("ext-key-secret", private_key, Scope.UNIT)
 
     harness.charm.operator.state.db_initialised = True
 
     harness.charm.operator.tls_events.certs_client.on.certificate_available.emit(
         certificate_signing_request="csr-secret",
         chain=["unit-chain"],
-        certificate="unit-cert",
+        certificate=certificate,
         ca="unit-ca",
     )
 
@@ -109,7 +113,7 @@ def test_external_certificate_available(
     ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret")
 
     assert chain_secret == "unit-chain"
-    assert unit_secret == "unit-cert"
+    assert unit_secret == certificate
     assert ca_secret == "unit-ca"
 
     mock_restart.assert_called()
@@ -137,8 +141,97 @@ def test_internal_certificate_available(
 
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
+    private_key = Path("tests/unit/data/key.pem").read_text()
+    certificate = Path("tests/unit/data/cert.pem").read_text()
+
     manager.state.secrets.set("int-csr-secret", "int-csr", Scope.UNIT)
     manager.state.secrets.set("int-cert-secret", "int-cert-old", Scope.UNIT)
+    manager.state.secrets.set("ext-cert-secret", "ext-cert", Scope.UNIT)
+    manager.state.secrets.set("int-key-secret", private_key, Scope.UNIT)
+
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.tls_events.certs_client.on.certificate_available.emit(
+        certificate_signing_request="int-csr",
+        chain=["int-chain"],
+        certificate=certificate,
+        ca="int-ca",
+    )
+
+    chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret")
+    unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret")
+    ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret")
+
+    assert chain_secret == "int-chain"
+    assert unit_secret == certificate
+    assert ca_secret == "int-ca"
+
+    assert harness.charm.operator.state.tls.internal_enabled
+
+    mock_restart.assert_called()
+
+
+def test_external_certificate_available_does_not_match_private_key(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=None,
+    )
+
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+
+    manager.state.secrets.set("ext-csr-secret", "csr-secret", Scope.UNIT)
+    manager.state.secrets.set("int-cert-secret", "app-cert", Scope.UNIT)
+
+    harness.charm.operator.state.db_initialised = True
+
+    harness.charm.operator.tls_events.certs_client.on.certificate_available.emit(
+        certificate_signing_request="csr-secret",
+        chain=["unit-chain"],
+        certificate="unit-cert",
+        ca="unit-ca",
+    )
+
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "ext-ca-secret") is None
+
+    mock_restart.assert_not_called()
+
+    assert not harness.charm.operator.state.tls.external_enabled
+
+
+def test_internal_certificate_available_does_not_match_private_key(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        return_value=None,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
+        return_value=None,
+    )
+
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    rel_id = harness.add_relation(ExternalRequirerRelations.TLS.value, "self-signed-certificates")
+
+    harness.add_relation_unit(rel_id, "self-signed-certificates/0")
+
+    manager.state.secrets.set("int-csr-secret", "int-csr", Scope.UNIT)
     manager.state.secrets.set("ext-cert-secret", "ext-cert", Scope.UNIT)
 
     harness.charm.operator.state.db_initialised = True
@@ -149,17 +242,13 @@ def test_internal_certificate_available(
         ca="int-ca",
     )
 
-    chain_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret")
-    unit_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret")
-    ca_secret = manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret")
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-chain-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-cert-secret") is None
+    assert manager.state.secrets.get_for_key(Scope.UNIT, "int-ca-secret") is None
 
-    assert chain_secret == "int-chain"
-    assert unit_secret == "int-cert"
-    assert ca_secret == "int-ca"
+    assert not harness.charm.operator.state.tls.internal_enabled
 
-    assert harness.charm.operator.state.tls.internal_enabled
-
-    mock_restart.assert_called()
+    mock_restart.assert_not_called()
 
 
 def test_unknown_certificate_available(
