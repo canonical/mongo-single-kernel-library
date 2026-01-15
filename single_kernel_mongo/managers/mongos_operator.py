@@ -295,13 +295,8 @@ class MongosOperator(OperatorProtocol, Object):
     @override
     def prepare_for_shutdown(self) -> None:
         if self.substrate == Substrates.VM:
-            """Handler for the stop event.
-
-            On VM:
-             * Remove the overrides files.
-            """
-            if self.substrate == Substrates.VM:
-                self.remove_systemd_overrides()
+            self.remove_systemd_overrides()
+            return
 
         # Raise partition to prevent other units from restarting if an upgrade is in progress.
         # If an upgrade is not in progress, the leader unit will reset the partition to 0.
