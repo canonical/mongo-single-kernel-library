@@ -202,8 +202,9 @@ class MongoDBUpgradeManager(MongoUpgradeManager[T]):
         logger.debug("Running post refresh checks to verify cluster is not broken after refresh")
         self.run_post_upgrade_checks(finished_whole_cluster=False)
 
-        credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
-        self.dependent.backup_manager.set_config_options(credentials)
+        if self.state.s3_relation:
+            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            self.dependent.backup_manager.set_config_options(credentials)
 
         if self._upgrade.unit_state != UnitState.HEALTHY:
             return
