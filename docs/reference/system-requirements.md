@@ -49,3 +49,8 @@ lxc config set <instance_name> limits.hugepages.<hugepage-size>=<number of hugep
 ```
 
 Charmed MongoDB on Kubernetes does not support yet setting the Transparent Hugepages.
+
+## Systemd Parameters
+
+On VM, this charm sets the `TasksMax` parameter of the Mongod and Mongos services it starts to `infinity`.
+This ensures that MongoDB will not drop connections when it is under high load.

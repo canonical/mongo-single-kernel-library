@@ -90,6 +90,8 @@ class VmUser(WorkloadUser[int]):
 
 CRON_FILE = Path("/etc/cron.d/mongodb")
 
+SYSTEMD_MONGODB_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongod.service.d")
+SYSTEMD_MONGOS_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongos.service.d")
 
 SECRETS_UNIT: list[str] = []
 
