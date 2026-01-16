@@ -60,6 +60,17 @@ LDAP_CONFIG = LdapConfig()
 
 
 @dataclass(frozen=True)
+class OverrideFile:
+    """Dataclass for the systemd override."""
+
+    override_template: Path = Path(f"{TEMPLATE_DIRECTORY}") / "override.conf"
+    override_path: Path = Path("override.conf")
+
+
+OVERRIDE_FILES = OverrideFile()
+
+
+@dataclass(frozen=True)
 class AuditLogConfig:
     """Audit log related configuration."""
 

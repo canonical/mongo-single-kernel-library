@@ -68,10 +68,10 @@ class Snap:
 
     name: str = "charmed-mongodb"
     channel: str = "6/edge"
-    revision: str = "131"
+    revision: str = "139"
 
 
-SNAP = Snap(channel="6/edge", revision="131")
+SNAP = Snap(channel="6/edge", revision="139")
 
 T = TypeVar("T", bound=str | int)
 
@@ -102,6 +102,8 @@ class VmUser(WorkloadUser[int]):
 
 CRON_FILE = Path("/etc/cron.d/mongodb")
 
+SYSTEMD_MONGODB_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongod.service.d")
+SYSTEMD_MONGOS_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongos.service.d")
 
 SECRETS_UNIT: list[str] = []
 
