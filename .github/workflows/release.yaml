@@ -62,9 +62,12 @@ jobs:
     permissions:
       contents: write  # Needed to create GitHub release
 
-  sleep:
+  sleep-after-release:
     name: Sleep after release to PyPI
     runs-on: ubuntu-latest
+    needs:
+      - release-part1
+      - release-part2
     steps:
       - name: Sleep
         run: |
@@ -76,6 +79,7 @@ jobs:
     needs:
       - release-part1
       - release-part2
+      - sleep-after-release
     uses: ./.github/workflows/bump_dependent_charms.yaml
     with:
       version: ${{ needs.release-part1.outputs.git-tag }}
