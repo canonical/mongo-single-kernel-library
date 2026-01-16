@@ -94,6 +94,14 @@ S3_PBM_OPTION_MAP = {
     "storage-class": "storage.s3.storageClass",
 }
 
+GCS_PBM_OPTION_MAP = {
+    "bucket": "storage.gcs.bucket",
+    "path": "storage.gcs.prefix",
+    "access-key": "storage.gcs.credentials.hmacAccessKey",
+    "secret-key": "storage.gcs.credentials.hmacSecret",
+}
+
+
 # Already yaml encoded blackhole config to bootstrap pbm config
 EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
@@ -530,27 +538,30 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return False
 
         # TODO: Rework the S3 client location to make it easier to access that.
-        provided_configs = map_s3_config_to_pbm_config(
-            self.dependent.backup_events.s3_client.get_s3_connection_info()
-        )
-        if not provided_configs.get(
-            "storage.s3.credentials.access-key-id"
-        ) or not provided_configs.get("storage.s3.credentials.secret-access-key"):
-            logger.info("Missing s3 credentials")
+        credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+        provided_configs = map_s3_config_to_pbm_config(credentials)
+
+        # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
+        if not credentials.get("access-key") or not credentials.get("secret-key"):
+            logger.info("Missing s3 or gcs credentials")
             return False
 
         # note this is more of a sanity check - the s3 lib defaults this to the relation name
-        if not provided_configs.get("storage.s3.bucket"):
+        if not credentials.get("bucket"):
             logger.info("Missing bucket")
             return False
 
         # since we cannot determine whether the user has an AWS or GCP bucket or Minio bucket
         # send them an info
-        if not provided_configs.get("storage.s3.region"):
-            logger.info("Missing region - this is required for AWS and GCP")
+        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
+            "storage.s3.region"
+        ):
+            logger.info("Missing region - this is required for AWS")
 
-        if not provided_configs.get("storage.s3.endpointUrl"):
-            logger.info("Missing s3 endpoint.")
+        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
+            "storage.s3.endpointUrl"
+        ):
+            logger.info("Missing S3 endpoint.")
             return False
 
         return True
@@ -959,10 +970,18 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
 def map_s3_config_to_pbm_config(credentials: dict[str, str]):
     """Simple mapping from s3 integration to current status."""
-    pbm_configs = {"storage.type": "s3"}
+    if "googleapis" in credentials.get("endpoint", ""):
+        logger.debug("Storage type is GCS.")
+        pbm_configs = {"storage.type": "gcs"}
+        config_map = GCS_PBM_OPTION_MAP
+    else:
+        logger.debug("Storage type is S3.")
+        pbm_configs = {"storage.type": "s3"}
+        config_map = S3_PBM_OPTION_MAP
+
     for s3_option, s3_value in credentials.items():
-        if s3_option not in S3_PBM_OPTION_MAP:
+        if s3_option not in config_map:
             continue
 
-        pbm_configs[S3_PBM_OPTION_MAP[s3_option]] = s3_value
+        pbm_configs[config_map[s3_option]] = s3_value
     return pbm_configs
