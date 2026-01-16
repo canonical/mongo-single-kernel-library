@@ -81,16 +81,23 @@ async def assert_successful_run_upgrade_sequence(
     await refresh_charm(ops_test, substrate, app_name, new_charm, mongod_resource)
     # TODO future work, resolve flickering status of app
     async with ops_test.fast_forward(fast_interval="120s"):
-        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
 
-    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
+    if any(
+        item in get_juju_status(ops_test.model.name, app_name)
+        for item in ("incompatible", "missing/incorrect")
+    ):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
         force_refresh_action = await refresh_order[0].run_action(
             "force-refresh-start",
-            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+            **{
+                "check-compatibility": False,
+                "run-pre-refresh-checks": False,
+                "check-workload-container": False,
+            },
         )
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
@@ -99,7 +106,12 @@ async def assert_successful_run_upgrade_sequence(
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
         logger.info(f"Calling resume-refresh for {app_name}")
-        action = await leader_unit.run_action("resume-refresh")
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         await action.wait()
         # Resume-refresh can fail while still triggering the upgrade if the leader
         # unit is the second unit to upgrade because it will be shut down

@@ -115,7 +115,12 @@ async def test_rollback(
     await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
-        action = await leader_unit.run_action("resume-refresh")
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         await action.wait()
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
