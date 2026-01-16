@@ -84,5 +84,5 @@ async def test_upgrade(
             unit = leader_unit
 
         action = await unit.run_action("resume-refresh")
-        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id == 0):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."

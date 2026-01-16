@@ -109,7 +109,7 @@ async def test_failed_upgrade_and_rollback(
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
+        if (substrate == "lxd") or (substrate == "microk8s" and leader_id == 0):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     for unit in mongos_application.units:
