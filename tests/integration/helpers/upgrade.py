@@ -106,7 +106,12 @@ async def assert_successful_run_upgrade_sequence(
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
         logger.info(f"Calling resume-refresh for {app_name}")
-        action = await leader_unit.run_action("resume-refresh")
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         await action.wait()
         # Resume-refresh can fail while still triggering the upgrade if the leader
         # unit is the second unit to upgrade because it will be shut down
