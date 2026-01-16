@@ -1092,7 +1092,6 @@ def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
 def test_connect_mongodb_exporter_success(
     harness: Harness[MongoTestCharm],
     mocker,
-    mongodb_hostname: str,
     mongodb_name,
 ):
     """Tests the correct config is done."""
@@ -1102,6 +1101,8 @@ def test_connect_mongodb_exporter_success(
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
     mocker.patch("single_kernel_mongo.managers.config.LogRotateConfigManager.configure_and_restart")
+
+    mongodb_hostname = "127.0.0.1"
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
