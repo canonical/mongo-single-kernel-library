@@ -81,7 +81,7 @@ async def assert_successful_run_upgrade_sequence(
     await refresh_charm(ops_test, substrate, app_name, new_charm, mongod_resource)
     # TODO future work, resolve flickering status of app
     async with ops_test.fast_forward(fast_interval="120s"):
-        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
+        await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=60)
 
     if any(
         item in get_juju_status(ops_test.model.name, app_name)
