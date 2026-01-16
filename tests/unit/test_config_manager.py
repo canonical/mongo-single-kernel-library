@@ -106,11 +106,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     assert (
         all_params
         == {
-            "net": {
-                "bindIpAll": True,
-                "port": 27017,
-                "compression": {"compressors": "snappy,zstd"},
-            },
+            "net": {"bindIpAll": True, "port": 27017},
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
@@ -258,7 +254,6 @@ def test_mongos_config_manager(mocker):
                 "filePermissions": "0766",
             },
             "port": 27018,
-            "compression": {"compressors": "snappy,zstd"},
         },
         "security": {
             "clusterAuthMode": "keyFile",
