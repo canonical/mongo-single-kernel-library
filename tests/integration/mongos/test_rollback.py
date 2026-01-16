@@ -90,13 +90,24 @@ async def test_failed_upgrade_and_rollback(
         logger.info("Rollback is blocked due to incompatibility")
 
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
-        await refresh_order[0].run_action("force-refresh-start", **{"check-compatibility": False})
+        await refresh_order[0].run_action(
+            "force-refresh-start",
+            **{
+                "check-compatibility": False,
+                "check-workload-container": False,
+            },
+        )
 
     logger.info("Wait for the charm to be rolled back")
     await ops_test.model.wait_for_idle(apps=[MONGOS_APP_NAME], idle_period=20)
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, MONGOS_APP_NAME):
-        action = await leader_unit.run_action("resume-refresh")
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         await action.wait()
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."

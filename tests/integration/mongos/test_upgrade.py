@@ -64,7 +64,11 @@ async def test_upgrade(
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
         force_refresh_action = await refresh_order[0].run_action(
             "force-refresh-start",
-            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+            **{
+                "check-compatibility": False,
+                "run-pre-refresh-checks": False,
+                "check-workload-container": False,
+            },
         )
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
@@ -74,7 +78,11 @@ async def test_upgrade(
     if "resume-refresh" in mongodb_application.status_message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")
-        action = await leader_unit.run_action("resume-refresh")
-        await action.wait()
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != 0):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
