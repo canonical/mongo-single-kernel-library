@@ -710,7 +710,7 @@ def test_event_auto_reset_password_secrets_when_no_pw_value_shipped(
 
 @pytest.mark.skip_if_substrate("lxd")
 def test_connect_mongodb_exporter_success(
-    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str, substrate: Substrate
+    harness: Harness[MongoTestCharm], mocker, substrate: Substrate
 ):
     """Tests the correct config is done."""
     mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.handle_licenses")
@@ -718,6 +718,8 @@ def test_connect_mongodb_exporter_success(
     mocker.patch("single_kernel_mongo.core.k8s_workload.KubernetesWorkload.exec")
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
+
+    mongodb_hostname = "127.0.0.1"
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
