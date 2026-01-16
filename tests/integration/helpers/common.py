@@ -220,10 +220,7 @@ async def generate_mongodb_client(
         complement = f"replicaSet={app_name}"
 
     return (
-        f"mongodb://{username}:"
-        f"{quote_plus(password)}@"
-        f"{hosts}/{quote_plus(database)}?"
-        f"{complement}"
+        f"mongodb://{username}:{quote_plus(password)}@{hosts}/{quote_plus(database)}?{complement}"
     )
 
 
@@ -1222,3 +1219,28 @@ async def has_file(
         universal_newlines=True,
     )
     return filename in files
+
+
+async def execute_on_server(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit: JujuUnit,
+    command: str,
+    container: str = "mongod",
+) -> str:
+    """Executes a command on the server."""
+    app_name = get_app_name_from_unit(unit.name)
+    match substrate:
+        case "lxd":
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
+        case "microk8s":
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {app_name}/leader"
+        case _:
+            raise Exception(f"Invalid substrate {substrate}")
+
+    return subprocess.check_output(
+        f"{base_command} {command}",
+        stderr=subprocess.PIPE,
+        shell=True,
+        universal_newlines=True,
+    )

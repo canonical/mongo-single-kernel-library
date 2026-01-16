@@ -15,6 +15,7 @@ this operator like backups or cluster event handlers, etc.
 
 from __future__ import annotations
 
+import shutil
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from logging import getLogger
@@ -28,12 +29,18 @@ from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
+    SYSTEMD_MONGODB_OVERRIDE,
+    SYSTEMD_MONGOS_OVERRIDE,
     TRUST_STORE_PATH,
     Scope,
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import CharmSpec, LogRotateConfig
+from single_kernel_mongo.config.models import (
+    OVERRIDE_FILES,
+    CharmSpec,
+    LogRotateConfig,
+)
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -316,3 +323,32 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
         self.restart_charm_services(force=True)
+
+    def setup_systemd_overrides(self) -> None:
+        """Sets up some overrides to allow the service to run smoothly."""
+        if self.substrate == Substrates.K8S:
+            return
+
+        for path in (SYSTEMD_MONGODB_OVERRIDE, SYSTEMD_MONGOS_OVERRIDE):
+            full_path = path / OVERRIDE_FILES.override_path
+            # Create the directory if it does not exist.
+            path.mkdir(exist_ok=True)
+            # Copy the file to the new directory.
+            shutil.copy(Path(OVERRIDE_FILES.override_template), full_path)
+            # Give it the right permissions.
+            self.workload.exec(["chown", "-R", "root:root", f"{full_path}"])
+            self.workload.exec(["chmod", "644", f"{full_path}"])
+            # Reload the daemon to take the override into account.
+            self.workload.exec(["systemctl", "daemon-reload"])
+
+    def remove_systemd_overrides(self) -> None:
+        """Sets up some overrides to allow the service to run smoothly."""
+        if self.substrate == Substrates.K8S:
+            return
+
+        for path in (SYSTEMD_MONGODB_OVERRIDE, SYSTEMD_MONGOS_OVERRIDE):
+            full_path = path / OVERRIDE_FILES.override_path
+            if path.exists():
+                full_path.unlink()
+                path.rmdir()
+            self.workload.exec(["systemctl", "daemon-reload"])

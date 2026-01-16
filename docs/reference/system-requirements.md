@@ -1,9 +1,11 @@
 (system-requirements)=
+
 # System requirements
 
 Below are the minimum software and hardware requirements for running Charmed MongoDB 6.
 
 ## Software
+
 * Juju `3.0` or higher
 * Ubuntu 22.04 (Jammy)
 
@@ -30,3 +32,8 @@ or
 ```shell
 grep avx /proc/cpuinfo
 ```
+
+## Systemd Parameters
+
+On VM, this charm sets the `TasksMax` parameter of the Mongod and Mongos services it starts to `infinity`.
+This ensures that MongoDB will not drop connections when it is under high load.
