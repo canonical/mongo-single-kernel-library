@@ -83,14 +83,21 @@ async def assert_successful_run_upgrade_sequence(
     async with ops_test.fast_forward(fast_interval="120s"):
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=20)
 
-    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
+    if any(
+        item in get_juju_status(ops_test.model.name, app_name)
+        for item in ("incompatible", "missing/incorrect")
+    ):
         logger.info("Upgrade is blocked due to incompatibility")
 
         logger.info(f"Continue refresh on unit {refresh_order[0].name}")
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
         force_refresh_action = await refresh_order[0].run_action(
             "force-refresh-start",
-            **{"check-compatibility": False, "run-pre-refresh-checks": False},
+            **{
+                "check-compatibility": False,
+                "run-pre-refresh-checks": False,
+                "check-workload-container": False,
+            },
         )
         force_refresh_response = await force_refresh_action.wait()
         assert force_refresh_response.results.get("return-code") == 0, "action failed"
