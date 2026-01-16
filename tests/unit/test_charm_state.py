@@ -106,5 +106,5 @@ def test_mongodb_status_user(harness: Harness[MongoTestCharm]):
     state = harness.charm.operator.state
     password = state.get_user_password(user=MonitorUser)
     assert state.monitor_config.uri.startswith(
-        f"mongodb://charmed-stats:{password}@127.0.0.1:27017/admin?"
+        f"mongodb://monitor:{password}@127.0.0.1:27017/admin?"
     )
