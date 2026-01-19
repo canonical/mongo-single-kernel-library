@@ -13,7 +13,7 @@ VERSION_TAG="test/0.0.0+dirty"
 
 # Default values
 declare -a TEST_CHARMS=("${CHARMS_PATH}/mongodb_test_charm" "${CHARMS_PATH}/mongodb_k8s_test_charm" "${CHARMS_PATH}/mongos_test_charm" "${CHARMS_PATH}/mongos_k8s_test_charm")
-PLATFORM="ubuntu@24.04:${dpkg --print-architecture}"
+PLATFORM="ubuntu@24.04:$(dpkg --print-architecture)"
 
 POSITIONAL_ARGS=()
 
