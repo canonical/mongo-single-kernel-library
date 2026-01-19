@@ -11,11 +11,36 @@ CHARMS_PATH="./tests/charms"
 # We compute a version based on the tag of the pip package version.
 VERSION_TAG="test/0.0.0+dirty"
 
-if [ $# -ge 1 ]; then
-    declare -a TEST_CHARMS=("$1")
-else
-    declare -a TEST_CHARMS=("${CHARMS_PATH}/mongodb_test_charm" "${CHARMS_PATH}/mongodb_k8s_test_charm" "${CHARMS_PATH}/mongos_test_charm" "${CHARMS_PATH}/mongos_k8s_test_charm")
-fi
+# Default values
+declare -a TEST_CHARMS=("${CHARMS_PATH}/mongodb_test_charm" "${CHARMS_PATH}/mongodb_k8s_test_charm" "${CHARMS_PATH}/mongos_test_charm" "${CHARMS_PATH}/mongos_k8s_test_charm")
+PLATFORM="ubuntu@24.04:amd64"
+
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -c|--charm)
+        TEST_CHARMS=("$2")
+      shift # past argument
+      shift # past value
+      ;;
+    -p|--platform)
+      PLATFORM="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
 for directory in "${TEST_CHARMS[@]}"; do
     echo "clearing out libs for charm"
@@ -52,9 +77,9 @@ for directory in "${TEST_CHARMS[@]}"; do
 
     # Pack the charm
     if $CI_CACHE; then
-        ccc pack -v
+        ccc pack -v --platform="${PLATFORM}"
     else
-        charmcraft pack -v --debug
+        charmcraft pack -v --debug --platform="${PLATFORM}"
     fi
 
     # Cleanup
