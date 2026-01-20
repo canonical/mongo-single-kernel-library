@@ -51,7 +51,7 @@ async def test_deploy_charms(
         num_units=len(UNIT_IDS),
     )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="2/edge", num_units=1)
+    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
 
     logger.info(f"Configure {S3_APP_NAME}")
     await ops_test.model.applications[S3_APP_NAME].set_config(storage_config)

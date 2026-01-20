@@ -60,7 +60,7 @@ async def test_deploy_charms(
         ops_test, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME
     )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="2/edge", num_units=1)
+    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
 
     logger.info(f"Configure {S3_APP_NAME}")
