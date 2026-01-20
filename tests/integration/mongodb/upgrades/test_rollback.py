@@ -95,14 +95,18 @@ async def test_rollback(
     # sleep to ensure that active status from before re-refresh does not affect below check
     time.sleep(15)
     await ops_test.model.wait_for_idle(apps=[app_name], idle_period=30)
-    if "incompatible" in get_juju_status(ops_test.model.name, app_name):
+    if any(
+        item in get_juju_status(ops_test.model.name, app_name)
+        for item in ("incompatible", "missing/incorrect")
+    ):
         # will be marked "incompatible" if rollback is not to the same revision as initially
         # deployed
         logger.info("Rollback is blocked due to incompatibility")
 
         logger.info("Running `force-refresh-start` action with check-compatibility=false")
         action = await refresh_order[0].run_action(
-            "force-refresh-start", **{"check-compatibility": False}
+            "force-refresh-start",
+            **{"check-compatibility": False, "check-workload-container": False},
         )
         result = await action.wait()
         logger.info(f"force refresh start {result}")
@@ -111,7 +115,12 @@ async def test_rollback(
     await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
-        action = await leader_unit.run_action("resume-refresh")
+        if substrate == "lxd":
+            unit = refresh_order[1]
+        else:
+            unit = leader_unit
+
+        action = await unit.run_action("resume-refresh")
         await action.wait()
         if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
