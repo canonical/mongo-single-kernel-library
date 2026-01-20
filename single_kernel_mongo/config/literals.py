@@ -116,6 +116,8 @@ FEATURE_VERSION_6 = "6.0"
 
 OS_REQUIREMENTS = {
     "vm.max_map_count": "262144",
+    "vm.overcommit_memory": "1",
+    "net.ipv4.tcp_keepalive_time": "120",
 }
 
 TRUST_STORE_PATH = Path("/usr/local/share/ca-certificates")
