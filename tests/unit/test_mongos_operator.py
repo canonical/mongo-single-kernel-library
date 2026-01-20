@@ -27,6 +27,8 @@ def test_start(
             "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.copy_to_unit"
         )
 
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
+
     mongos_harness.charm.on.start.emit()
     assert mongos_harness.charm.unit.status == as_status(
         MongosStatuses.MISSING_CONF_SERVER_REL.value

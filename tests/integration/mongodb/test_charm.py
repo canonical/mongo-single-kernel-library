@@ -33,6 +33,7 @@ from ..helpers.common import (
     deploy_application,
     deploy_charm,
     execute_on_mongod,
+    execute_on_server,
     find_unit,
     generate_collection_id,
     generate_mongodb_client,
@@ -125,6 +126,20 @@ async def test_unit_is_running_as_replica_set(
 
     # close connection
     client.close()
+
+
+@pytest.mark.abort_on_fail
+@pytest.mark.skip_if_substrate("microk8s")
+async def test_check_max_tasks(ops_test: OpsTest, substrate: Substrate):
+    app_name = await get_app_name(ops_test)
+    for unit in ops_test.model.applications[app_name].units:
+        output = await execute_on_server(
+            ops_test,
+            substrate,
+            unit,
+            "systemctl show --property TasksMax snap.charmed-mongodb.mongod",
+        )
+        assert "infinity" in output, f"Unit {unit.name} has an invalid TasksMax value"
 
 
 @pytest.mark.abort_on_fail

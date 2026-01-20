@@ -99,3 +99,12 @@ def test_unit_peer_data(
     state = harness.charm.operator.state
 
     assert state.unit_peer_data.internal_address == mongodb_hostname
+
+
+def test_mongodb_status_user(harness: Harness[MongoTestCharm]):
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    password = state.get_user_password(user=MonitorUser)
+    assert state.monitor_config.uri.startswith(
+        f"mongodb://monitor:{password}@127.0.0.1:27017/admin?"
+    )

@@ -202,6 +202,7 @@ def test_start_not_ready(harness, mocker, mock_fs_interactions):
     patched_mongo_initialise = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_replica_set"
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
 
     harness.set_leader(True)
     harness.charm.on.start.emit()
@@ -325,6 +326,7 @@ def test_start_already_initialised(harness, mocker, mock_fs_interactions):
     init_user = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.initialise_charm_admin_users"
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     # presets
     harness.set_leader(True)
 
@@ -448,6 +450,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart",
         side_effect=WorkloadServiceError,
     )
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = False
 
@@ -459,6 +462,7 @@ def test_start_fail_mongodb_exporter(harness, mocker, mock_fs_interactions):
 
 def test_start_fail_pbm_agent(harness, mocker, mock_fs_interactions):
     mocker.patch("single_kernel_mongo.managers.config.CommonConfigManager.set_environment")
+    mocker.patch("single_kernel_mongo.core.operator.OperatorProtocol.setup_systemd_overrides")
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.start", return_value=True)
     mocker.patch(
         "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.start", return_value=True
@@ -706,7 +710,7 @@ def test_event_auto_reset_password_secrets_when_no_pw_value_shipped(
 
 @pytest.mark.skip_if_substrate("lxd")
 def test_connect_mongodb_exporter_success(
-    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str, substrate: Substrate
+    harness: Harness[MongoTestCharm], mocker, substrate: Substrate
 ):
     """Tests the correct config is done."""
     mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.handle_licenses")
@@ -714,6 +718,8 @@ def test_connect_mongodb_exporter_success(
     mocker.patch("single_kernel_mongo.core.k8s_workload.KubernetesWorkload.exec")
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password")
+
+    mongodb_hostname = "127.0.0.1"
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
