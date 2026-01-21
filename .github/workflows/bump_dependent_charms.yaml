@@ -1,26 +1,30 @@
-name: Bump dependent charm versions
+name: Bump Mongo Single Kernel Lib in Charms
 
 on:
   workflow_call:
     inputs:
       version:
+        description: "Version to bump to (e.g. v1.8.22)"
         required: true
         type: string
       base_branch:
+        description: "Target branch to create PR against (e.g. 8/edge)"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       version:
+        description: "Version to bump to (e.g. v1.8.22)"
         required: true
         type: string
       base_branch:
+        description: "Target branch to create PR against (e.g. 8/edge)"
         required: true
         type: string
 
 jobs:
   update-dependent-charms:
-    name: Open PRs in dependent charm repos
+    name: Open PRs to bump Mongo Single Kernel lib in charm repos
     runs-on: ubuntu-latest
 
     strategy:
@@ -39,15 +43,40 @@ jobs:
       VERSION: ${{ inputs.version }}
       BASE_BRANCH: ${{ inputs.base_branch }}
       DEP_NAME: mongo-charms-single-kernel
+      PR_BRANCH: "bump-mongo-charms-single-kernel-${{ inputs.version }}"
 
     steps:
-      - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
+      - name: Checkout mongo-single-kernel repo
+        uses: actions/checkout@v6
+
+      - name: Get new tag content
+        id: get-tag
+        run: |
+          git fetch --tags
+          PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
+          VERSION_CONTENT=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..${VERSION}" | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
+
+          {
+            echo "VERSION_CONTENT<<EOF"
+            echo "${VERSION_CONTENT}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Get reviewers
+        id: get-reviewers
+        run: |
+          REVIEWERS=$(grep ".github/workflows/bump_dependent_charms.yaml" .github/CODEOWNERS \
+                      | awk '{for(i=2;i<=NF;i++) print substr($i,2)}' \
+                      | paste -sd "," -)
+
+          echo "REVIEWERS=${REVIEWERS}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout target repo
         uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
+          token: ${{ secrets.PAT }}
 
       - name: Install tox & poetry
         run: |
@@ -66,25 +95,37 @@ jobs:
           sudo apt update
           sudo apt install -y build-essential python3-dev libldap-dev libsasl2-dev
 
-      - name: Create update branch
-        run: |
-          PR_BRANCH="bump-${DEP_NAME}-${VERSION}"
-          git checkout -b "$PR_BRANCH"
-          echo "PR_BRANCH=$PR_BRANCH" >> "$GITHUB_ENV"
-
       - name: Update dependency version in pyproject.toml
         run: |
           poetry remove "${DEP_NAME}"
-          poetry add "${DEP_NAME}"=="${VERSION}" --group main
-          poetry add "${DEP_NAME}"=="${VERSION}" --group integration
+          VERSION_NUMBER="${VERSION#v}"
+          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group main
+          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group integration
 
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
 
+      - name: Configure git signing
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CI_COMMITS_SSH_SIGNING_KEY }}" > ~/.ssh/ssh-key
+          chmod 600 ~/.ssh/ssh-key
+
+          git config --global user.name "canonical-data-platform-bot"
+          git config --global user.email "canonical-data-platform-bot@canonical.com"
+
+          git config --global gpg.format ssh
+          git config --global user.signingkey ~/.ssh/ssh-key
+          git config --global commit.gpgsign true
+
       - name: Commit changes
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "${PR_BRANCH}" >/dev/null 2>&1; then
+            echo "ERROR: Branch '${PR_BRANCH}' already exists on remote. Refusing to overwrite it."
+            exit 1
+          fi
+
+          git checkout -b "${PR_BRANCH}"
           git add pyproject.toml poetry.lock
           git commit -m "Bump ${DEP_NAME} to version ${VERSION}"
 
@@ -96,8 +137,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
+          BODY="Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release.
+            ### What's Changed
+            ${{ steps.get-tag.outputs.VERSION_CONTENT }}"
+
           gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
-            --body "Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release." \
+            --body "${BODY}" \
             --base ${{ env.BASE_BRANCH }}  \
-            --head "${PR_BRANCH}"
+            --head "${PR_BRANCH}" \
+            --reviewer "${{ steps.get-reviewers.outputs.REVIEWERS }}"
