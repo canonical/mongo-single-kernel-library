@@ -78,7 +78,7 @@ async def test_build_and_deploy(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail
