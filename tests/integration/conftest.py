@@ -51,38 +51,44 @@ from .helpers.types import Substrate
 logger = getLogger(__name__)
 
 
+@pytest.fixture(scope="session")
+def architecture() -> str:
+    platforms = {"x86_64": "amd64", "aarch64": "arm64"}
+    return platforms.get(machine(), "amd64")
+
+
 @pytest.fixture
-def application_path() -> str:
+def application_path(architecture: str) -> str:
     """The test application path."""
-    return "./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def client_relation_charm_path() -> str:
+def client_relation_charm_path(architecture: str) -> str:
     """The test application path."""
-    return "./tests/integration/applications/client_relations_charm/application_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/client_relations_charm/application_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongos_client_application_path() -> str:
+def mongos_client_application_path(architecture: str) -> str:
     """The mongos test application path."""
-    return "./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongodb_charm(substrate, mongod_base_path) -> str:
+def mongodb_charm(substrate, mongod_base_path, architecture: str) -> str:
     """The MongoDB charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-amd64.charm"
-    return f"./{mongod_base_path}/mongodb_ubuntu@24.04-amd64.charm"
+        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-{architecture}.charm"
+    return f"./{mongod_base_path}/mongodb_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongos_charm(substrate, mongos_base_path) -> str:
+def mongos_charm(substrate, mongos_base_path, architecture: str) -> str:
     """The Mongos charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-amd64.charm"
-    return f"./{mongos_base_path}/mongos_ubuntu@24.04-amd64.charm"
+        return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-{architecture}.charm"
+    return f"./{mongos_base_path}/mongos_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
@@ -249,7 +255,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
     snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-    initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    initial_version_data["workload"] = f"{int(major) - 1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
 
     with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
@@ -258,7 +264,7 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
 
     versions = tomli.loads(file_data)
 
-    versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    versions["workload"] = f"{int(major) - 1}.{minor}.{patch}+testrollback"
     versions["charm"] = "test/0.1.0+dirty"
     if new_snap_revision:
         versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
@@ -289,7 +295,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
     snap_revision = initial_version_data.get("snap", {}).get("revisions", {}).get(machine())
 
     [major, minor, patch] = workload_version.split(".")
-    initial_version_data["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    initial_version_data["workload"] = f"{int(major) - 1}.{minor}.{patch}+testrollback"
     new_snap_revision = int(snap_revision) - 1 if snap_revision else None
 
     with zipfile.ZipFile(fault_charm, mode="r") as charm_zip:
@@ -298,7 +304,7 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
 
     versions = tomli.loads(file_data)
 
-    versions["workload"] = f"{int(major) -1}.{minor}.{patch}+testrollback"
+    versions["workload"] = f"{int(major) - 1}.{minor}.{patch}+testrollback"
     versions["charm"] = "test/0.1.0+dirty"
     if new_snap_revision:
         versions["snap"]["revisions"][machine()] = f"{new_snap_revision}"
