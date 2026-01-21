@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+from platform import machine
 from urllib.parse import quote_plus
 
 from juju.model import Model
@@ -30,6 +31,9 @@ LDAP_UTILS_APP_NAME = "glauth-utils"
 TRAEFIK_CHARM = "traefik-k8s"
 LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
+
+
+POSTGRESQL_REVISION_MAPPING = {"x86_64": 495, "aarch64": 494}
 
 
 logger = logging.getLogger(__name__)
@@ -60,6 +64,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             trust=True,
             series="jammy",
             config={"profile": "testing"},
+            revision=POSTGRESQL_REVISION_MAPPING.get(machine(), "x86_64"),
         )
         await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
 
