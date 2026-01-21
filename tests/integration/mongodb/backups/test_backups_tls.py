@@ -11,7 +11,6 @@ from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from ...helpers.backups import (
     S3_APP_NAME,
     S3_ENDPOINT,
-    S3_REVISION_FOR_ARCH,
     count_logical_backups,
     insert_unwanted_data,
 )
@@ -37,11 +36,12 @@ async def test_deploy_charms(
     mongodb_charm: str,
     substrate: Substrate,
     mongod_resource: dict[str, str],
-    architecture: str,
     base_app_name: str,
     storage_credentials: dict[str, str],
     storage_config: dict[str, str],
 ):
+    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+    await ops_test.model.set_config({"image-stream": "daily"})
     app_name = await get_app_name(ops_test)
     if app_name:
         await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
@@ -58,9 +58,7 @@ async def test_deploy_charms(
         num_units=len(UNIT_IDS),
     )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(
-        S3_APP_NAME, channel="1/edge", revision=S3_REVISION_FOR_ARCH.get(architecture, "amd64")
-    )
+    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
 
     logger.info(f"Configure {S3_APP_NAME}")
     await ops_test.model.applications[S3_APP_NAME].set_config(storage_config)

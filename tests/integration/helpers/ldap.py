@@ -32,8 +32,6 @@ LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
 
 
-POSTGRES_REVISION_TO_DEPLOY = {"amd64": 495, "arm64": 494}
-
 logger = logging.getLogger(__name__)
 
 
@@ -48,16 +46,17 @@ async def apply_ldif(ops_test: OpsTest, kubernetes_model: Model, ldif_file: str)
         await run_action(kubernetes_model, LDAP_UTILS_APP_NAME, "apply-ldif", path=target_path)
 
 
-async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model, architecture: str) -> None:
+async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     """Deploys glauth and all required charms coming with glauth and relate them.
 
     Then it offers the two relations provided by glauth.
     """
     with ops_test.model_context("secondary"):
+        # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+        await kubernetes_model.set_config({"image-stream": "daily"})
         await kubernetes_model.deploy(
             POSTGRESQL_K8S,
             channel="14/stable",
-            revision=POSTGRES_REVISION_TO_DEPLOY.get(architecture, "amd64"),
             trust=True,
             series="jammy",
             config={"profile": "testing"},

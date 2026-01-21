@@ -21,11 +21,6 @@ S3_ENDPOINT = "s3-credentials"
 
 NEW_CLUSTER = "new-mongodb"
 
-S3_REVISION_FOR_ARCH = {
-    "amd64": 255,
-    "arm64": 253,
-}
-
 
 async def set_credentials(ops_test: OpsTest, cloud_configs, cloud: str) -> None:
     """Sets the s3 crednetials for the provided cloud, valid options are AWS or GCP."""
