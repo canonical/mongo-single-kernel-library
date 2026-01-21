@@ -13,6 +13,7 @@ from tests.integration.helpers.backups import (
     NEW_CLUSTER,
     S3_APP_NAME,
     S3_ENDPOINT,
+    S3_REVISION_FOR_ARCH,
     count_failed_backups,
     count_logical_backups,
     create_and_verify_backup,
@@ -49,6 +50,7 @@ async def test_deploy_charms(
     substrate: Substrate,
     mongod_resource: dict[str, str],
     base_app_name: str,
+    architecture: str,
 ):
     app_name = await get_app_name(ops_test)
     if app_name:
@@ -64,7 +66,9 @@ async def test_deploy_charms(
         num_units=len(UNIT_IDS),
     )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
+    await ops_test.model.deploy(
+        S3_APP_NAME, channel="1/edge", revision=S3_REVISION_FOR_ARCH.get(architecture, "amd64")
+    )
 
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
 

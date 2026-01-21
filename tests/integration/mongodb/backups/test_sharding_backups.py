@@ -9,6 +9,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from tests.integration.helpers.backups import (
     S3_APP_NAME,
     S3_ENDPOINT,
+    S3_REVISION_FOR_ARCH,
     count_logical_backups,
     get_backup_list,
     set_credentials,
@@ -43,7 +44,8 @@ async def test_build_and_deploy(
     ops_test: OpsTest,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource,
+    mongod_resource: dict[str, str],
+    architecture: str,
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
@@ -60,7 +62,10 @@ async def test_build_and_deploy(
         },
     )
 
-    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
+    await ops_test.model.deploy(
+        S3_APP_NAME, channel="1/edge", revision=S3_REVISION_FOR_ARCH.get(architecture, "amd64")
+    )
+
     await ops_test.model.wait_for_idle(
         apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
         idle_period=20,
