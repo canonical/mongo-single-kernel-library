@@ -60,7 +60,6 @@ async def test_rollback(
     app_name = await get_app_name(ops_test)
     mongodb_application = ops_test.model.applications[app_name]
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    number_of_units = len(ops_test.model.applications[app_name].units)
     leader_id = get_unit_id(leader_unit.name)
 
     resources = mongod_resource if substrate == "microk8s" else None
@@ -122,7 +121,9 @@ async def test_rollback(
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+        if (substrate == "lxd") or (
+            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     logger.info("Wait for the charm to be rolled back")
