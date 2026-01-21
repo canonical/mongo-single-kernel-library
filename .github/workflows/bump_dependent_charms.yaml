@@ -98,14 +98,14 @@ jobs:
       - name: Configure git signing
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DP_BOT_SSH_KEY }}" > ~/.ssh/dp-bot-ssh-key
-          chmod 600 ~/.ssh/dp-bot-ssh-key
+          echo "${{ secrets.CI_COMMITS_SSH_SIGNING_KEY }}" > ~/.ssh/ssh-key
+          chmod 600 ~/.ssh/ssh-key
 
           git config --global user.name "canonical-data-platform-bot"
           git config --global user.email "canonical-data-platform-bot@canonical.com"
 
           git config --global gpg.format ssh
-          git config --global user.signingkey ~/.ssh/dp-bot-ssh-key
+          git config --global user.signingkey ~/.ssh/ssh-key
           git config --global commit.gpgsign true
 
       - name: Commit changes
