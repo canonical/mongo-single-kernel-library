@@ -61,7 +61,6 @@ async def assert_successful_run_upgrade_sequence(
     ops_test: OpsTest, substrate: Substrate, app_name: str, new_charm: str, mongod_resource: dict
 ) -> None:
     """Runs the upgrade sequence on a given app."""
-    number_of_units = len(ops_test.model.applications[app_name].units)
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     leader_id = get_unit_id(leader_unit.name)
 
@@ -113,11 +112,9 @@ async def assert_successful_run_upgrade_sequence(
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        # Resume-refresh can fail while still triggering the upgrade if the leader
-        # unit is the second unit to upgrade because it will be shut down
-        # immediately on k8S.
-        # This is a known limitation, so in that case we allow the action to fail.
-        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+        if (substrate == "lxd") or (
+            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     async with ops_test.fast_forward(fast_interval="60s"):
