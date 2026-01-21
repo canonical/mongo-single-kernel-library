@@ -609,28 +609,6 @@ class ShardManager(Object, ManagerStatusProtocol):
         self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
-    def update_pbm_certificate_in_trust_store(self):
-        """Retrieve the CA certificate for PBM and store it in the trust store if it exists.
-
-        If the certificate does not exist, remove the existing file from the trust store.
-        """
-        if (
-            backup_tls_chain := self.state.shard_state.backup_ca_secret
-        ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
-            logger.debug("Adding certificate for PBM")
-            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
-            # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
-        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
-            TRUST_STORE_PATH / TrustStoreFiles.PBM.value
-        ):
-            logger.debug("Removing certificate for PBM")
-            # If it is not in the databag, always remove it, it won't change a
-            # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
-            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-            # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
-
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """Update charmed-operator and charmed-backup user passwords when rotation occurs.
 
@@ -666,6 +644,28 @@ class ShardManager(Object, ManagerStatusProtocol):
             self.sync_cluster_passwords(operator_password, backup_password)
 
         self.update_pbm_certificate_in_trust_store()
+
+    def update_pbm_certificate_in_trust_store(self):
+        """Retrieve the CA certificate for PBM and store it in the trust store if it exists.
+
+        If the certificate does not exist, remove the existing file from the trust store.
+        """
+        if (
+            backup_tls_chain := self.state.shard_state.backup_ca_secret
+        ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
+            logger.debug("Adding certificate for PBM")
+            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
+        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
+            TRUST_STORE_PATH / TrustStoreFiles.PBM.value
+        ):
+            logger.debug("Removing certificate for PBM")
+            # If it is not in the databag, always remove it, it won't change a
+            # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
+            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            # We updated the configuration, so we restart PBM.
+            self.dependent.backup_manager.configure_and_restart(force=True)
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""
