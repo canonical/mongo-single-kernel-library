@@ -50,6 +50,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Get new tag content
+        id: get-tag
         run: |
           git fetch --tags
           PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
@@ -59,7 +60,16 @@ jobs:
             echo "VERSION_CONTENT<<EOF"
             echo "${VERSION_CONTENT}"
             echo "EOF"
-          } >> "${GITHUB_ENV}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Get reviewers
+        id: get-reviewers
+        run: |
+          REVIEWERS=$(grep ".github/workflows/bump_dependent_charms.yaml" .github/CODEOWNERS \
+                      | awk '{for(i=2;i<=NF;i++) print substr($i,2)}' \
+                      | paste -sd "," -)
+
+          echo "REVIEWERS=${REVIEWERS}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout target repo
         uses: actions/checkout@v6
@@ -129,16 +139,11 @@ jobs:
         run: |
           BODY="Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release.
             ### What's Changed
-            ${{ env.VERSION_CONTENT }}"
-
-          REVIEWERS=$(grep ".github/workflows/bump_dependent_charms.yaml" .github/CODEOWNERS \
-                      | awk '{for(i=2;i<=NF;i++) print substr($i,2)}' \
-                      | sort -u \
-                      | paste -sd "," -)
+            ${{ steps.get-tag.outputs.VERSION_CONTENT }}"
 
           gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "${BODY}" \
             --base ${{ env.BASE_BRANCH }}  \
             --head "${PR_BRANCH}" \
-            --reviewer @Mehdi-Bendriss @Gu1nness @patriciareinoso
+            --reviewer "${{ steps.get-reviewers.outputs.REVIEWERS }}"
