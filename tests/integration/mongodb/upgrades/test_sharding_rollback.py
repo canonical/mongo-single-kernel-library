@@ -88,7 +88,6 @@ async def test_rollback_on_config_server(
 ) -> None:
     """Verify that the config-server can safely rollback without losing writes."""
     config_server_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    number_of_units = len(ops_test.model.applications[CONFIG_SERVER_APP_NAME].units)
     leader_id = get_unit_id(config_server_unit.name)
 
     logger.info("Running pre refresh checks")
@@ -161,7 +160,9 @@ async def test_rollback_on_config_server(
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (substrate == "microk8s" and leader_id != number_of_units - 2):
+        if (substrate == "lxd") or (
+            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 
     await ops_test.model.wait_for_idle(
