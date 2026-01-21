@@ -28,8 +28,8 @@ class WorkloadExecError(Exception):
         self,
         cmd: str | list[str],
         return_code: int,
-        stdout: str | None,
-        stderr: str | None,
+        stdout: str | None = None,
+        stderr: str | None = None,
     ):
         super().__init__(self)
         self.cmd = cmd
