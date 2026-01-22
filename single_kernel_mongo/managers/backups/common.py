@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
-# See LICENSE file for licensing details.
+"""The Common backup manager.
 
-"""The backup manager.
+This semi-abstract class provides the common code for s3 and gcs integrations.
+This means, mainly the code for creating, listing, restoring backups + some checks.
 
-In this class, we manage backup configurations and actions.
+The rest will be handled in child classes.
 
 Specifically backups are handled with Percona Backup MongoDB (pbm).
 A user for PBM is created when MongoDB is first started during the start phase.
-This user is named "backup".
+This user is named "charmed-backup".
 """
 
 from __future__ import annotations
@@ -18,31 +17,29 @@ import json
 import logging
 import re
 import time
+from abc import abstractmethod
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, ClassVar, NewType, override
 
-import boto3
-from botocore.client import Config as BotoConfig
-from botocore.exceptions import ClientError, ConnectTimeoutError, SSLError
+from botocore.exceptions import ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
-from mypy_boto3_s3.service_resource import Bucket
-from ops import Container
 from ops.framework import Object
 from ops.model import (
+    Container,
     Relation,
 )
 from tenacity import (
     Retrying,
-    before_log,
     retry,
     retry_if_exception_type,
     retry_if_not_exception_type,
     stop_after_attempt,
-    wait_fixed,
 )
+from tenacity.before import before_log
+from tenacity.wait import wait_fixed
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
@@ -52,13 +49,13 @@ from single_kernel_mongo.config.literals import (
 )
 from single_kernel_mongo.config.models import BackupState, CharmSpec
 from single_kernel_mongo.config.statuses import BackupStatuses
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoDBCharmConfig, MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BackupError,
-    FailedToCreateS3BucketError,
+    FailedToCreateBucketError,
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
-    InvalidS3CredentialsError,
+    InvalidStorageCredentialsError,
     ListBackupError,
     PBMBusyError,
     RestoreError,
@@ -74,6 +71,7 @@ from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
 if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
     from single_kernel_mongo.managers.mongodb_operator import (
         MongoDBOperator,
     )  # pragma: nocover
@@ -83,24 +81,6 @@ BackupListType = NewType("BackupListType", list[tuple[str, str, str]])
 BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
 REMAPPING_PATTERN = r"\ABackup doesn't match current cluster topology - it has different replica set names. Extra shards in the backup will cause this, for a simple example. The extra/unknown replica set names found in the backup are: ([\w\d\-,\s]+)([.] Backup has no data for the config server or sole replicaset)?\Z"
-
-S3_PBM_OPTION_MAP = {
-    "region": "storage.s3.region",
-    "bucket": "storage.s3.bucket",
-    "path": "storage.s3.prefix",
-    "access-key": "storage.s3.credentials.access-key-id",
-    "secret-key": "storage.s3.credentials.secret-access-key",
-    "endpoint": "storage.s3.endpointUrl",
-    "storage-class": "storage.s3.storageClass",
-}
-
-GCS_PBM_OPTION_MAP = {
-    "bucket": "storage.gcs.bucket",
-    "path": "storage.gcs.prefix",
-    "access-key": "storage.gcs.credentials.hmacAccessKey",
-    "secret-key": "storage.gcs.credentials.hmacSecret",
-}
-
 
 # Already yaml encoded blackhole config to bootstrap pbm config
 EMPTY_CONFIG = "storage:\n  type: blackhole\n"
@@ -123,8 +103,12 @@ def _backup_restore_retry_before_sleep(retry_state) -> None:
     )
 
 
-class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
-    """Manager for the S3 integrator and backups."""
+class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
+    """Common Manager for the backups and storage integrators."""
+
+    CONFIG_MAP: ClassVar[dict[str, str]] = {}
+    BASIC_CONFIG: ClassVar[dict[str, str]] = {}
+    invalid_integration_status: StatusObject
 
     def __init__(
         self,
@@ -134,7 +118,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         state: CharmState,
         container: Container | None,
     ) -> None:
-        self.name = "backup"
         super().__init__(parent=dependent, key=self.name)
         super(Object, self).__init__(
             role=role,
@@ -143,14 +126,19 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             state=state,
             container=container,
         )
-        self.dependent = dependent
-        self.charm = dependent.charm
-        self.substrate = substrate
+        self.dependent: MongoDBOperator = dependent
+        self.charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator] = dependent.charm
+        self.substrate: Substrates = substrate
         self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
             role=role, container=container
         )
-        self.state = state
+        self.state: CharmState = state
         self._backup_id: str = ""
+
+    @property
+    def relation(self) -> Relation | None:
+        """The relation for that manager."""
+        raise NotImplementedError
 
     @property
     def backup_id(self) -> str:
@@ -161,85 +149,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     def backup_id(self, value: str):
         self._backup_id = value
 
-    def _get_bucket_resource(self, credentials: dict[str, str]) -> Bucket:
-        """Get the Bucket resource from the s3 connection.
-
-        Returns:
-            Bucket: the s3 bucket for uploading/downloading backups
-        """
-        s3_resource = boto3.resource(
-            "s3",
-            region_name=credentials.get("region"),
-            endpoint_url=credentials["endpoint"],
-            aws_access_key_id=credentials["access-key"],
-            aws_secret_access_key=credentials["secret-key"],
-            config=BotoConfig(
-                # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
-                request_checksum_calculation="when_required",
-                response_checksum_validation="when_required",
-            ),
-            verify=(TRUST_STORE_PATH / TrustStoreFiles.PBM.value)
-            if credentials.get("tls-ca-chain")
-            else True,
-        )
-
-        return s3_resource.Bucket(credentials["bucket"])
-
-    @retry(
-        stop=stop_after_attempt(5),
-        retry=retry_if_exception_type(ConnectTimeoutError),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
-    def create_bucket(self, credentials: dict[str, str]) -> None:
-        """Create bucket if it does not exist yet."""
-        region = credentials.get("region")
-        bucket_name = credentials["bucket"]
-
-        if tls_ca_chain := credentials.get("tls-ca-chain", None):
-            with open(TRUST_STORE_PATH / TrustStoreFiles.PBM.value, mode="w") as fd:
-                # boto3 client will need the certificate on the node that runs the command
-                fd.write("\n".join(tls_ca_chain))
-
-        bucket = self._get_bucket_resource(credentials)
-
-        try:
-            bucket.meta.client.head_bucket(Bucket=bucket_name)
-            logger.info(f"Using existing bucket {bucket_name}")
-            return
-        except ConnectTimeoutError as e:
-            # Re-raise the error if the connection timeouts, so the user has the possibility to
-            # fix network issues and call juju resolve to re-trigger the hook that calls
-            # this method.
-            logger.error(f"error: {e!s} - please fix the error and call juju resolve on this unit")
-            raise e
-        except ClientError:
-            logger.warning("Bucket %s doesn't exist or you don't have access to it.", bucket_name)
-        except SSLError as e:
-            logger.error(f"error: {e!s} - Is TLS enabled and CA chain set on S3?")
-            raise e
-
-        try:
-            # cf https://github.com/aws/aws-sdk-js/issues/3647, setting the
-            # LocationConstraint to the default value of us-east-1 will fail
-            if region and region != "us-east-1":
-                bucket.create(CreateBucketConfiguration={"LocationConstraint": region})  # type: ignore
-            else:
-                bucket.create()
-            bucket.wait_until_exists()
-        except ClientError as e:
-            if (
-                "AccessDenied" in e.args[0]
-                or "InvalidAccessKeyId" in e.args[0]
-                or "SignatureDoesNotMatch" in e.args[0]
-            ):
-                logger.info("Incorrect credentials for S3")
-                raise InvalidS3CredentialsError
-            logger.error(e)
-            raise FailedToCreateS3BucketError from e
-
-        logger.info(f"Bucket {bucket_name} is ready")
-
     @cached_property
     def environment(self) -> dict[str, str]:
         """The environment used to run PBM commands.
@@ -249,16 +158,73 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """
         return {self.workload.env_var: self.state.backup_config.uri}
 
-    def is_valid_s3_integration(self) -> bool:
-        """Returns true if relation to s3-integrator is valid.
+    @abstractmethod
+    def create_bucket(self, credentials: dict[str, str]):
+        """Create a bucket if needed by the storage integrator."""
+        pass
 
-        Only replica sets and config_servers can integrate to s3-integrator.
+    def resync_config_options(self):
+        """Attempts to resync config options and sets status in case of failure."""
+        # Set environment before starting
+        self.set_environment()
+        self.workload.start()
+
+        # Clear statuses before resync as we want to update it anyway.
+        self.state.statuses.clear(scope="unit", component=self.name)
+
+        # pbm has a flakely resync and it is necessary to wait for no actions to be running before
+        # resync-ing. See: https://jira.percona.com/browse/PBM-1038
+        for attempt in Retrying(
+            stop=stop_after_attempt(20),
+            wait=wait_fixed(5),
+            reraise=True,
+        ):
+            with attempt:
+                match self.backup_state():
+                    case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
+                        raise PBMBusyError
+                    case BackupState.WAITING_TO_SYNC:
+                        raise PBMBusyError
+                    case _:
+                        continue
+
+        # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
+        # 2 seconds for pbm_agent to receive the resync command before verifying.
+        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
+        time.sleep(2)
+        self._wait_pbm_status()
+
+    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, str]:
+        """Simple mapping from integrator config to PBM config keys."""
+        return self.BASIC_CONFIG | {
+            self.CONFIG_MAP[s3_option]: s3_value
+            for s3_option, s3_value in credentials.items()
+            if self.CONFIG_MAP.get(s3_option)
+        }
+
+    @cached_property
+    def credentials(self) -> dict[str, str]:
+        """Returns the crendentials for a relation."""
+        if not self.relation:
+            logger.info("No configuration for backups, no relation to integrator charm.")
+            return {}
+        return self.dependent.backup_events.credentials_for(self.relation)
+
+    def is_valid_integration(self) -> bool:
+        """Returns true if relation to the storage integrator is valid.
+
+        Only replica sets and config_servers can integrate to a storage integrator.
         """
         return (
-            self.state.s3_relation is None
+            self.relation is None
             or self.state.is_role(MongoDBRoles.REPLICATION)
             or self.state.is_role(MongoDBRoles.CONFIG_SERVER)
         )
+
+    @abstractmethod
+    def validate_config(self) -> bool:
+        """Validates that the S3 config is complete."""
+        raise NotImplementedError
 
     def cleanup_certs_and_restart(self, relation: Relation) -> None:
         """On relation broken event, we need to remove the certificate from the trust store."""
@@ -416,14 +382,16 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
             raise RestoreError(fail_message)
 
-    def backup_state(self) -> BackupState:
+    def backup_state(self) -> BackupState:  # noqa:C901
         """Gets the backup state that can be mapped to a status."""
         if not self.state.db_initialised:
             return BackupState.EMPTY
-        if not self.state.s3_relation:
+        if not self.relation:
             logger.info("No configuration for backups, not relation to s3-charm")
             return BackupState.EMPTY
-        if not self.validate_s3_config():
+        if self.state.s3_relation and self.state.gcs_relation:
+            return BackupState.MUTUALLY_EXCLUSIVE
+        if not self.validate_config():
             logger.info(
                 "Relation to S3 charm exists but not all necessary configurations have been set."
             )
@@ -432,11 +400,11 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return BackupState.WAITING_PBM_START
 
         try:
-            credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
+            credentials = self.dependent.backup_events.credentials_for(self.relation)
             self.create_bucket(credentials)
-        except InvalidS3CredentialsError:
+        except InvalidStorageCredentialsError:
             return BackupState.INCORRECT_CREDS
-        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError):
+        except (FailedToCreateBucketError, SSLError, ConnectTimeoutError):
             return BackupState.FAILED_TO_CREATE_BUCKET
 
         try:
@@ -457,6 +425,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         match state:
             case BackupState.EMPTY:
                 return []
+            case BackupState.MUTUALLY_EXCLUSIVE:
+                return [BackupStatuses.MUTUALLY_EXCLUSIVE.value]
             case BackupState.MISSING_CONFIG:
                 return [BackupStatuses.PBM_MISSING_CONF.value]
             case BackupState.WAITING_PBM_START:
@@ -471,6 +441,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
             case BackupState.FAILED_TO_CREATE_BUCKET:
                 return [BackupStatuses.FAILED_TO_CREATE_BUCKET.value]
+            case BackupState.CANT_CONFIGURE:
+                return [BackupStatuses.CANT_CONFIGURE.value]
             case BackupState.BACKUP_RUNNING:
                 if operation_result := self._get_backup_restore_operation_result(state):
                     logger.info(operation_result)
@@ -482,6 +454,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             case BackupState.ACTIVE:
                 return [BackupStatuses.ACTIVE_IDLE.value]
 
+    @override
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Gets the PBM statuses."""
         if not recompute:
@@ -499,72 +472,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """Returns the first status of the list."""
         pbm_statuses = self.get_statuses(scope="unit", recompute=True)
         return next(iter(pbm_statuses), None)
-
-    def resync_config_options(self):  # pragma: nocover
-        """Attempts to resync config options and sets status in case of failure."""
-        # Set environment before starting
-        self.set_environment()
-        self.workload.start()
-
-        # Clear statuses before resync as we want to update it anyway.
-        self.state.statuses.clear(scope="unit", component=self.name)
-
-        # pbm has a flakely resync and it is necessary to wait for no actions to be running before
-        # resync-ing. See: https://jira.percona.com/browse/PBM-1038
-        for attempt in Retrying(
-            stop=stop_after_attempt(20),
-            wait=wait_fixed(5),
-            reraise=True,
-        ):
-            with attempt:
-                match self.backup_state():
-                    case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
-                        raise PBMBusyError
-                    case BackupState.WAITING_TO_SYNC:
-                        raise PBMBusyError
-                    case _:
-                        continue
-
-        # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
-        # 2 seconds for pbm_agent to receive the resync command before verifying.
-        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
-        time.sleep(2)
-        self._wait_pbm_status()
-
-    def validate_s3_config(self) -> bool:
-        """Validates that the S3 config is complete."""
-        if not self.state.s3_relation:
-            logger.info("No configuration for backups, no relation to S3 charm.")
-            return False
-
-        # TODO: Rework the S3 client location to make it easier to access that.
-        credentials = self.dependent.backup_events.s3_client.get_s3_connection_info()
-        provided_configs = map_s3_config_to_pbm_config(credentials)
-
-        # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
-        if not credentials.get("access-key") or not credentials.get("secret-key"):
-            logger.info("Missing s3 or gcs credentials")
-            return False
-
-        # note this is more of a sanity check - the s3 lib defaults this to the relation name
-        if not credentials.get("bucket"):
-            logger.info("Missing bucket")
-            return False
-
-        # since we cannot determine whether the user has an AWS or GCP bucket or Minio bucket
-        # send them an info
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.region"
-        ):
-            logger.info("Missing region - this is required for AWS")
-
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.endpointUrl"
-        ):
-            logger.info("Missing S3 endpoint.")
-            return False
-
-        return True
 
     def set_config_options(self, credentials: dict) -> None:
         """Apply the configuration provided by S3 integrator.
@@ -587,10 +494,10 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             # Clear the current config file.
             self.clear_pbm_config_file()
 
-        config = map_s3_config_to_pbm_config(credentials)
+        config = self.map_config_to_pbm_config(credentials)
 
         try:
-            self.workload.run_bin_command(
+            _ = self.workload.run_bin_command(
                 "config",
                 list(
                     itertools.chain(
@@ -622,8 +529,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             "# this file is to be left empty. Changes in this file will be ignored.\n"
             + EMPTY_CONFIG,
         )
-        self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
-        self.workload.run_bin_command(
+        _ = self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
+        _ = self.workload.run_bin_command(
             "config", ["--file", f"{self.workload.paths.pbm_config}"], environment=self.environment
         )
 
@@ -643,9 +550,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if not clusters:
             return ""
 
-        cluster: dict | None = next(
-            (_cluster for _cluster in clusters if _cluster.get("rs") == app_name), None
-        )
+        cluster = next((_cluster for _cluster in clusters if _cluster.get("rs") == app_name), None)
 
         # No matching cluster means no error message
         if not cluster:
@@ -817,7 +722,7 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """
         try:
             pbm_status = self.pbm_status
-            pbm_as_dict = json.loads(pbm_status)
+            pbm_as_dict: dict[str, dict[str, str]] = json.loads(pbm_status)
             current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
 
             if current_pbm_op.get("type", "") == "resync":
@@ -926,9 +831,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
         Raises: CalledProcessError
         """
-        pbm_status = self.pbm_status
-        pbm_status = json.loads(pbm_status)
-
         # grab the error status from the backup if present
         backup_error_status = self.get_backup_error_status(backup_id)
 
@@ -966,22 +868,3 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 self.state.config_server_data_interface.delete_relation_data(
                     relation.id, [AppShardingComponentKeys.BACKUP_CA_SECRET.value]
                 )
-
-
-def map_s3_config_to_pbm_config(credentials: dict[str, str]):
-    """Simple mapping from s3 integration to current status."""
-    if "googleapis" in credentials.get("endpoint", ""):
-        logger.debug("Storage type is GCS.")
-        pbm_configs = {"storage.type": "gcs"}
-        config_map = GCS_PBM_OPTION_MAP
-    else:
-        logger.debug("Storage type is S3.")
-        pbm_configs = {"storage.type": "s3"}
-        config_map = S3_PBM_OPTION_MAP
-
-    for s3_option, s3_value in credentials.items():
-        if s3_option not in config_map:
-            continue
-
-        pbm_configs[config_map[s3_option]] = s3_value
-    return pbm_configs

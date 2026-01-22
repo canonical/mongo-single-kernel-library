@@ -1139,7 +1139,7 @@ def test_connect_mongodb_exporter_success(
 def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
     mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
     harness.charm.operator.state.db_initialised = True
-    harness.charm.operator.backup_manager.configure_and_restart()
+    harness.charm.operator.s3_backup_manager.configure_and_restart()
 
     mock_active.assert_not_called()
 
@@ -1147,7 +1147,7 @@ def test_pbm_connect_no_password(harness: Harness[MongoTestCharm], mocker):
 def test_pbm_connect_no_db_initialised(harness: Harness[MongoTestCharm], mocker):
     mock_active = mocker.patch("single_kernel_mongo.workload.backup_workload.PBMWorkload.active")
     harness.charm.operator.state.db_initialised = False
-    harness.charm.operator.backup_manager.configure_and_restart()
+    harness.charm.operator.s3_backup_manager.configure_and_restart()
 
     mock_active.assert_not_called()
 
@@ -1166,7 +1166,7 @@ def test_pbm_connect_same_env(harness: Harness[MongoTestCharm], mocker):
         "single_kernel_mongo.managers.config.BackupConfigManager.get_environment",
         return_value=uri,
     )
-    harness.charm.operator.backup_manager.configure_and_restart()
+    harness.charm.operator.s3_backup_manager.configure_and_restart()
     mock_start.assert_not_called()
 
 
@@ -1188,7 +1188,7 @@ def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
         "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
     )
 
-    harness.charm.operator.backup_manager.configure_and_restart()
+    harness.charm.operator.s3_backup_manager.configure_and_restart()
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
@@ -1216,7 +1216,7 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
         return_value="deadbeef",
     )
 
-    harness.charm.operator.backup_manager.configure_and_restart()
+    harness.charm.operator.s3_backup_manager.configure_and_restart()
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
@@ -1653,7 +1653,8 @@ def test_password_management_context_update_in_progress(harness, mocker, mongodb
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_password_management_context_backup_running(harness, mocker, mongodb_name, role, pbm_state):
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state", return_value=pbm_state
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
+        return_value=pbm_state,
     )
     secret_id = harness.add_model_secret(mongodb_name, VALID_SYSTEM_USERS)
     harness.set_leader(True)

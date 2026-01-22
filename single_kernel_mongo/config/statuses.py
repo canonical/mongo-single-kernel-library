@@ -66,6 +66,13 @@ class MongoDBStatuses(Enum):
         check="Relation validation.",
         action="Remove the s3-credentials relation (s3 interface) from this application.",
     )
+    INVALID_GCS_REL = StatusObject(
+        status="blocked",
+        message="The gcs-credentials relation can only be used by config servers or replica sets.",
+        short_message="Invalid gcs-credentials relation.",
+        check="Relation validation.",
+        action="Remove the gcs-credentials relation (GCS interface) from this application.",
+    )
     INVALID_DB_REL = StatusObject(
         status="blocked",
         message="The database relation cannot be used by sharding components (shards or config servers).",
@@ -262,6 +269,12 @@ class BackupStatuses(Enum):
     """Backup manager related statuses."""
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    MUTUALLY_EXCLUSIVE = StatusObject(
+        status="blocked",
+        message="Only one storage relation allowed.",
+        action="Remove one of the relations gcs-credentials or s3-credentials.",
+        check="Check that gcs and s3 relations are mutually exclusive.",
+    )
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
     WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for PBM to start...")

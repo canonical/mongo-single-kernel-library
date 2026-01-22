@@ -6,20 +6,25 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from botocore.exceptions import ConnectTimeoutError, SSLError
+from ops import Relation
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
-from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
+from single_kernel_mongo.config.statuses import BackupStatuses
+from single_kernel_mongo.core.structured_config import MongoDBCharmConfig
 from single_kernel_mongo.exceptions import (
-    FailedToCreateS3BucketError,
+    FailedToCreateBucketError,
     InvalidArgumentForActionError,
     InvalidPBMStatusError,
-    InvalidS3CredentialsError,
+    InvalidStorageCredentialsError,
+    InvalidStorageRelationError,
     ListBackupError,
     NonDeferrableFailedHookChecksError,
     PBMBusyError,
@@ -28,6 +33,10 @@ from single_kernel_mongo.exceptions import (
     SetPBMConfigError,
     WorkloadExecError,
     WorkloadServiceError,
+)
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.gcs_storage import (
+    GcsStorageRequires,
+    StorageConnectionInfoChangedEvent,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.s3 import (
     CredentialsChangedEvent,
@@ -41,79 +50,150 @@ from single_kernel_mongo.utils.event_helpers import (
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
+    from single_kernel_mongo.managers.backups.common import CommonBackupManager
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 
 
 logger = logging.getLogger(__name__)
 
 
+@final
 class BackupEventsHandler(Object):
     """Event Handler for managing backups and S3 integration."""
 
     def __init__(self, dependent: MongoDBOperator):
         super().__init__(parent=dependent, key="backup")
         self.dependent = dependent
-        self.manager = self.dependent.backup_manager
-        self.charm: AbstractMongoCharm = dependent.charm
-        self.relation_name = ExternalRequirerRelations.S3_CREDENTIALS
-        self.s3_client = S3Requirer(self.charm, self.relation_name.value)
+        self.state = dependent.state
+        self.s3_manager = self.dependent.s3_backup_manager
+        self.gcs_manager = self.dependent.gcs_backup_manager
+        self.charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator] = dependent.charm
+        self.s3_relation_name = ExternalRequirerRelations.S3_CREDENTIALS
+        self.gcs_relation_name = ExternalRequirerRelations.GCS_CREDENTIALS
 
+        self.s3_client = S3Requirer(self.charm, self.s3_relation_name.value)
+
+        self.gcs_client = GcsStorageRequires(self.charm, self.gcs_relation_name)
+
+        for relation in (self.s3_relation_name, self.gcs_relation_name):
+            self.framework.observe(
+                self.charm.on[relation.value].relation_joined,
+                self._on_relation_joined,
+            )
+            self.framework.observe(
+                self.charm.on[relation.value].relation_departed,
+                self.dependent.check_relation_broken_or_scale_down,
+            )
+            self.framework.observe(
+                self.charm.on[relation.value].relation_broken,
+                self._on_relation_broken,
+            )
+
+        # S3 Handler
+        self.framework.observe(self.s3_client.on.credentials_changed, self._on_credentials_changed)
+
+        # GCS Handler
         self.framework.observe(
-            self.charm.on[self.relation_name.value].relation_joined,
-            self._on_s3_relation_joined,
+            self.gcs_client.on.storage_connection_info_changed, self._on_credentials_changed
         )
-        self.framework.observe(
-            self.charm.on[self.relation_name.value].relation_departed,
-            self.dependent.check_relation_broken_or_scale_down,
-        )
-        self.framework.observe(
-            self.charm.on[self.relation_name.value].relation_broken,
-            self._on_s3_relation_broken,
-        )
-        self.framework.observe(
-            self.s3_client.on.credentials_changed, self._on_s3_credential_changed
-        )
+
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _on_s3_relation_joined(self, event: RelationJoinedEvent) -> None:
+    @property
+    def current_relation(self) -> Relation:
+        """Returns current relation."""
+        if self.state.s3_relation:
+            return self.state.s3_relation
+        if self.state.gcs_relation:
+            return self.state.gcs_relation
+        raise InvalidStorageRelationError
+
+    def manager_for(self, relation: Relation) -> CommonBackupManager:
+        """The manager that maps to this relation."""
+        if relation == self.state.s3_relation:
+            return self.s3_manager
+        if relation == self.state.gcs_relation:
+            return self.gcs_manager
+        raise InvalidStorageRelationError
+
+    def credentials_for(self, relation: Relation) -> dict[str, str]:
+        """This is the credentials."""
+        if relation == self.state.s3_relation:
+            return self.s3_client.get_s3_connection_info()
+        if relation == self.state.gcs_relation:
+            initial_creds = self.gcs_client.get_storage_connection_info(relation)
+            # Flatten the dict to make the mapping easy.
+            # It's guaranteed that the secret-key field exists here, but let's not trust it though.
+            return initial_creds | json.loads(initial_creds.get("secret-key", "{}"))
+        raise InvalidStorageRelationError
+
+    def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Checks for valid integration for s3-integrations."""
+        manager = self.manager_for(event.relation)
+
         if self.dependent.refresh_in_progress:
             logger.warning(
-                "Adding s3-relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+                "Adding backup relations is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
             event.defer()
             return
-        if not self.manager.is_valid_s3_integration():
+
+        if self.state.s3_relation and self.state.gcs_relation:
+            logger.info("GCS and S3 relations are mutually exclusive.")
+            manager.state.statuses.add(
+                BackupStatuses.MUTUALLY_EXCLUSIVE.value,
+                scope="unit",
+                component=manager.name,
+            )
+            return
+
+        if not manager.is_valid_integration():
             logger.info(
                 "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
             )
-            self.manager.state.statuses.add(
-                MongoDBStatuses.INVALID_S3_REL.value,
+            manager.state.statuses.add(
+                manager.invalid_integration_status,
                 scope="unit",
-                component=self.manager.name,
+                component=self.dependent.name,
             )
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
+    def _on_credentials_changed(  # noqa: C901
+        self, event: CredentialsChangedEvent | StorageConnectionInfoChangedEvent
+    ) -> None:
         action = "configure-pbm"
+        manager = self.manager_for(event.relation)
+        credentials = self.credentials_for(event.relation)
+
         if self.dependent.refresh_in_progress:
             logger.warning(
                 "Changing s3-credentials is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
             event.defer()
             return
-        if not self.manager.is_valid_s3_integration():
+
+        if self.state.s3_relation and self.state.gcs_relation:
+            logger.info("GCS and S3 relations are mutually exclusive.")
+            manager.state.statuses.add(
+                BackupStatuses.MUTUALLY_EXCLUSIVE.value,
+                scope="unit",
+                component=manager.name,
+            )
+            return
+
+        if not manager.is_valid_integration():
             logger.debug(
                 "Shard does not support s3 relations, please relate s3-integrator to config-server only."
             )
-            self.manager.state.statuses.add(
-                MongoDBStatuses.INVALID_S3_REL.value,
+            manager.state.statuses.add(
+                manager.invalid_integration_status,
                 scope="unit",
-                component=self.manager.name,
+                component=self.dependent.name,
             )
             return
-        if not self.manager.workload.active():
+
+        if not manager.workload.active():
             defer_event_with_info_log(
                 logger,
                 event,
@@ -122,101 +202,69 @@ class BackupEventsHandler(Object):
             )
             return
 
-        if not self.manager.validate_s3_config():
+        if not manager.validate_config():
             logger.warning(
-                "Relation to S3 charm exists but not all necessary configurations have been set."
+                "Relation to Storage charm exists but not all necessary configurations have been set."
             )
-            self.manager.state.statuses.set(
+            manager.state.statuses.set(
                 BackupStatuses.PBM_MISSING_CONF.value,
                 scope="unit",
-                component=self.manager.name,
+                component=manager.name,
             )
             return
 
-        # Get the credentials from S3 connection
-        credentials = self.s3_client.get_s3_connection_info()
+        # Only leader needs to write and sync config options.
+        if not self.charm.unit.is_leader():
+            return
 
         try:
             # We can clear all statuses as they will get rewritten right after if needed.
             # The only ones we don't want to lose were checked earlier and returned early.
-            self.manager.state.statuses.clear(
+            manager.state.statuses.clear(
                 scope="unit",
-                component=self.manager.name,
+                component=manager.name,
             )
             # First create the bucket if it does not exist.
-            self.manager.create_bucket(credentials=credentials)
+            manager.create_bucket(credentials=credentials)
             # Then set the config options on PBM.
-            self.manager.set_config_options(credentials=credentials)
+            manager.set_config_options(credentials=credentials)
             # Finally, resync the configuration.
-            self.manager.resync_config_options()
-        except InvalidS3CredentialsError:
-            logger.error("Incorrect S3 credentials")
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_INCORRECT_CREDS.value, scope="unit", component=self.manager.name
-            )
-            return
-        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError) as err:
-            logger.error("Failed to create bucket: %s", err)
-            self.manager.state.statuses.add(
-                BackupStatuses.FAILED_TO_CREATE_BUCKET.value,
-                scope="unit",
-                component=self.manager.name,
-            )
+            manager.resync_config_options()
+            backup_state = BackupState.ACTIVE
+        except InvalidStorageCredentialsError:
+            backup_state = BackupState.INCORRECT_CREDS
+        except (FailedToCreateBucketError, SSLError, ConnectTimeoutError):
+            backup_state = BackupState.FAILED_TO_CREATE_BUCKET
             event.defer()
-            return
         except SetPBMConfigError:
-            self.manager.state.statuses.add(
-                BackupStatuses.CANT_CONFIGURE.value, scope="unit", component=self.manager.name
-            )
+            backup_state = BackupState.CANT_CONFIGURE
             event.defer()
-            return
-        except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
-            self.manager.state.statuses.add(
-                BackupStatuses.WAITING_FOR_PBM_START.value,
-                scope="unit",
-                component=self.manager.name,
-            )
-            return
-        except ResyncError:
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope="unit",
-                component=self.manager.name,
-            )
+        except WorkloadServiceError:
+            backup_state = BackupState.WAITING_PBM_START
+        except (ResyncError, PBMBusyError):
+            backup_state = BackupState.WAITING_TO_SYNC
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
             )
-            return
-        except PBMBusyError:
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope="unit",
-                component=self.manager.name,
-            )
-            defer_event_with_info_log(
-                logger,
-                event,
-                action,
-                "Cannot update configs while PBM is running, must wait for PBM action to finish.",
-            )
-            return
         except WorkloadExecError as e:
-            if status := self.manager.process_pbm_error_as_status(e.stdout):
-                self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
+            if status := self.s3_manager.process_pbm_error_as_status(e.stdout):
+                self.s3_manager.state.statuses.add(
+                    status, scope="unit", component=self.s3_manager.name
+                )
             return
 
-        # Safer here, don't add a status if we don't have a status to add…
-        if pbm_status := self.manager.get_main_status():
-            self.manager.state.statuses.add(pbm_status, scope="unit", component=self.manager.name)
+        pbm_status = manager.map_backup_state_to_status(backup_state)[0]
+        manager.state.statuses.add(pbm_status, scope="unit", component=manager.name)
 
-    def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
-        self.manager.cleanup_certs_and_restart(event.relation)
-        self.manager.state.statuses.clear(scope="unit", component=self.manager.name)
+        manager = self.manager_for(event.relation)
+        manager.cleanup_certs_and_restart(event.relation)
+        manager.state.statuses.clear(scope="unit", component=manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
         action = "backup"
+
         if not self.charm.unit.is_leader():
             fail_action_with_error_log(
                 logger, event, action, "The action can be run only on leader unit."
@@ -224,21 +272,26 @@ class BackupEventsHandler(Object):
             return
 
         # Get the credentials from S3 connection
-        credentials = self.s3_client.get_s3_connection_info()
+        try:
+            manager = self.manager_for(self.current_relation)
+            credentials = self.credentials_for(self.current_relation)
+        except InvalidStorageRelationError:
+            event.fail("Relations are mutually exclusive")
+            return
 
         try:
-            self.assert_pass_sanity_checks()
+            self.assert_pass_sanity_checks(manager)
 
-            self.manager.create_bucket(credentials=credentials)
+            manager.create_bucket(credentials=credentials)
 
-            self.manager.assert_can_backup()
-            backup_id = self.manager.create_backup_action()
+            manager.assert_can_backup()
+            backup_id = manager.create_backup_action()
             self.charm.status_handler.set_running_status(
                 BackupStatuses.backup_running(backup_id),
                 scope="unit",
                 is_action=True,
-                statuses_state=self.manager.state.statuses,
-                component_name=self.manager.name,
+                statuses_state=manager.state.statuses,
+                component_name=manager.name,
             )
             success_action_with_info_log(
                 logger,
@@ -246,24 +299,22 @@ class BackupEventsHandler(Object):
                 action,
                 {"backup-status": f"backup started. backup id: {backup_id}"},
             )
-        except (
-            NonDeferrableFailedHookChecksError,
-            InvalidPBMStatusError,
-            FailedToCreateS3BucketError,
-            InvalidS3CredentialsError,
-            SSLError,
-            ConnectTimeoutError,
-            Exception,
-        ) as e:
+        except Exception as e:
             fail_action_with_error_log(logger, event, action, str(e))
             return
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         action = "list-backups"
         try:
-            self.assert_pass_sanity_checks()
-            self.manager.assert_can_list_backup()
-            formatted_list = self.manager.list_backup_action()
+            manager = self.manager_for(self.current_relation)
+        except InvalidStorageRelationError:
+            event.fail("Relations are mutually exclusive")
+            return
+
+        try:
+            self.assert_pass_sanity_checks(manager)
+            manager.assert_can_list_backup()
+            formatted_list = manager.list_backup_action()
             success_action_with_info_log(logger, event, action, {"backups": formatted_list})
         except (
             NonDeferrableFailedHookChecksError,
@@ -278,6 +329,14 @@ class BackupEventsHandler(Object):
 
         backup_id = str(event.params.get("backup-id", ""))
         remapping_pattern = str(event.params.get("remap-pattern", ""))
+
+        try:
+            manager = self.manager_for(self.current_relation)
+        except InvalidStorageRelationError:
+            fail_action_with_error_log(
+                logger, event, action, "No valid relation to restore backup from."
+            )
+            return
 
         if not self.charm.unit.is_leader():
             fail_action_with_error_log(
@@ -295,18 +354,18 @@ class BackupEventsHandler(Object):
             return
 
         try:
-            self.assert_pass_sanity_checks()
-            self.manager.assert_can_restore(
+            self.assert_pass_sanity_checks(manager)
+            manager.assert_can_restore(
                 backup_id,
                 remapping_pattern,
             )
-            self.manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
+            manager.restore_backup(backup_id=backup_id, remapping_pattern=remapping_pattern)
             self.charm.status_handler.set_running_status(
                 BackupStatuses.restore_running(backup_id),
                 scope="unit",
                 is_action=True,
-                statuses_state=self.manager.state.statuses,
-                component_name=self.manager.name,
+                statuses_state=manager.state.statuses,
+                component_name=manager.name,
             )
             success_action_with_info_log(
                 logger, event, action, {"restore-status": "restore started"}
@@ -323,16 +382,16 @@ class BackupEventsHandler(Object):
         except ResyncError:
             raise
 
-    def assert_pass_sanity_checks(self) -> None:
+    def assert_pass_sanity_checks(self, manager: CommonBackupManager) -> None:
         """Return None if basic conditions for running backup actions are met, raises otherwise.
 
         No matter what backup-action is being run, these requirements must be met.
         """
-        if self.manager.state.s3_relation is None:
+        if manager.relation is None:
             raise NonDeferrableFailedHookChecksError(
                 "Relation with s3-integrator charm missing, cannot restore from a backup."
             )
-        if not self.manager.is_valid_s3_integration():
+        if not manager.is_valid_integration():
             raise NonDeferrableFailedHookChecksError(
                 "Shards do not support backup operations, please run action on config-server."
             )

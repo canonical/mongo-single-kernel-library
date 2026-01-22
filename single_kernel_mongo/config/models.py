@@ -166,6 +166,7 @@ class BackupState(Enum):
     """Backup state that can be mapped to a status."""
 
     EMPTY = auto()
+    MUTUALLY_EXCLUSIVE = auto()
     MISSING_CONFIG = auto()
     WAITING_PBM_START = auto()
     INCORRECT_CREDS = auto()
@@ -175,6 +176,7 @@ class BackupState(Enum):
     RESTORE_RUNNING = auto()
     WAITING_TO_SYNC = auto()
     FAILED_TO_CREATE_BUCKET = auto()
+    CANT_CONFIGURE = auto()
     ACTIVE = auto()
 
 

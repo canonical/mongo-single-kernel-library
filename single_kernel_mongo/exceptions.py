@@ -78,11 +78,15 @@ class ListBackupError(Exception):
     """Raised when list backup operation is failed."""
 
 
-class InvalidS3CredentialsError(Exception):
+class InvalidStorageRelationError(Exception):
+    """Raised when storage relation is invalid."""
+
+
+class InvalidStorageCredentialsError(Exception):
     """Raised when list backup operation is failed."""
 
 
-class FailedToCreateS3BucketError(Exception):
+class FailedToCreateBucketError(Exception):
     """Raised when list backup operation is failed."""
 
 
