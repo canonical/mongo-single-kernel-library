@@ -9,7 +9,7 @@ from logging import getLogger
 from pathlib import Path
 
 from ops import Container
-from ops.pebble import ChangeError, ExecError
+from ops.pebble import APIError, ChangeError, ConnectionError, ExecError, TimeoutError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import KubernetesUser
@@ -67,8 +67,14 @@ class KubernetesWorkload(WorkloadBase):
             self.container.add_layer(self.layer_name, self.layer, combine=True)
             self.container.restart(self.service)
         except ChangeError as e:
-            logger.exception(str(e))
+            logger.exception(f"Change Error: {e}")
             raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:
@@ -151,6 +157,21 @@ class KubernetesWorkload(WorkloadBase):
                 e.stdout,
                 e.stderr,
             ) from e
+        except APIError as e:
+            logger.debug(e)
+            raise WorkloadExecError(
+                command,
+                e.code,
+                f"{e.status}: {e.message}",
+            ) from e
+        except ConnectionError as e:
+            logger.debug(e)
+            raise WorkloadExecError(
+                command, -1, "Pebble client can't connect to the socket."
+            ) from e
+        except TimeoutError as e:
+            logger.debug(e)
+            raise WorkloadExecError(command, -1, "Pebble client polling timeout.") from e
 
     @override
     def run_bin_command(
