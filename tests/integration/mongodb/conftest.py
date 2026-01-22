@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from ..helpers.backups import CloudConfigs, CloudConfiguration
 from ..helpers.common import get_app_name
 from ..helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
 from ..helpers.types import Substrate
@@ -33,7 +34,7 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
 
 
 @pytest.fixture(scope="session")
-def cloud_configs_aws(substrate: Substrate) -> tuple[dict[str, str], dict[str, str]]:
+def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
     path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
     configs: dict[str, str] = {
         "endpoint": "https://s3.amazonaws.com",
@@ -49,7 +50,7 @@ def cloud_configs_aws(substrate: Substrate) -> tuple[dict[str, str], dict[str, s
 
 
 @pytest.fixture(scope="session")
-def cloud_configs_gcp(substrate: Substrate) -> tuple[dict[str, str], dict[str, str]]:
+def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
     path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
     configs: dict[str, str] = {
         "bucket": "data-charms-testing",
@@ -65,7 +66,10 @@ def cloud_configs_gcp(substrate: Substrate) -> tuple[dict[str, str], dict[str, s
 
 
 @pytest.fixture(scope="session")
-def cloud_configs(cloud_configs_gcp, cloud_configs_aws):
+def cloud_configs(
+    cloud_configs_gcp: CloudConfiguration,
+    cloud_configs_aws: CloudConfiguration,
+) -> Generator[CloudConfigs]:
     yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp}
 
 
