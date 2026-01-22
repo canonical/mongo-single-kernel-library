@@ -23,6 +23,7 @@ import tomli_w
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
+from .helpers.architecture import architecture as _architecture
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
@@ -47,7 +48,6 @@ from .helpers.sharding import (
     write_data_to_mongodb,
 )
 from .helpers.types import Substrate
-from .integration.helpers.architecture import architecture as _architecture
 
 logger = getLogger(__name__)
 
