@@ -23,12 +23,12 @@ import tomli_w
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from tests.integration.helpers.common import deploy_application, get_app_name
-
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
     clear_continous_writes,
+    deploy_application,
+    get_app_name,
     get_direct_mongo_client,
     mongodb_uri,
     relate_mongodb_and_application,
@@ -47,14 +47,14 @@ from .helpers.sharding import (
     write_data_to_mongodb,
 )
 from .helpers.types import Substrate
+from .integration.helpers.architecture import architecture as _architecture
 
 logger = getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
 def architecture() -> str:
-    platforms = {"x86_64": "amd64", "aarch64": "arm64"}
-    return platforms.get(machine(), "amd64")
+    return _architecture
 
 
 @pytest.fixture

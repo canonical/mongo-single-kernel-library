@@ -4,12 +4,12 @@
 
 import asyncio
 import logging
-from platform import machine
 from urllib.parse import quote_plus
 
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.helpers.architecture import architecture
 from tests.integration.helpers.common import (
     MONGOD_PORT,
     MONGOS_PORT,
@@ -33,9 +33,6 @@ LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
 
 
-POSTGRESQL_REVISION_MAPPING = {"x86_64": 495, "aarch64": 494}
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +54,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     """
     with ops_test.model_context("secondary"):
         # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+        await kubernetes_model.set_constraints({"arch": architecture})
         await kubernetes_model.set_config({"image-stream": "daily"})
         await kubernetes_model.deploy(
             POSTGRESQL_K8S,
@@ -64,7 +62,6 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
             trust=True,
             series="jammy",
             config={"profile": "testing"},
-            revision=POSTGRESQL_REVISION_MAPPING.get(machine(), "x86_64"),
         )
         await kubernetes_model.wait_for_idle([POSTGRESQL_K8S], status="active")
 
