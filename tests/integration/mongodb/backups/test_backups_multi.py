@@ -76,7 +76,7 @@ async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs
 
     # For GCP
     # Set valid configuration
-    configuration_parameters, credentials = cloud_configs["GCP"]
+    configuration_parameters, credentials = cloud_configs["GCS"]
     await configure_gcs(ops_test, configuration_parameters, credentials)
 
     # after applying correct config options and creds the applications should both be active

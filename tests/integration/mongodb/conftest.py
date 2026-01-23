@@ -66,11 +66,27 @@ def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
 
 
 @pytest.fixture(scope="session")
+def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "bucket": "data-charms-testing",
+        "endpoint": "https://storage.googleapis.com",
+        "region": "",
+        "path": f"{path}/{uuid.uuid4()}",
+    }
+    credentials: dict[str, str] = {
+        "secret-key": os.environ["GCS_SERVICE_ACCOUNT"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
 def cloud_configs(
     cloud_configs_gcp: CloudConfiguration,
     cloud_configs_aws: CloudConfiguration,
+    cloud_configs_gcs: CloudConfiguration,
 ) -> Generator[CloudConfigs]:
-    yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp}
+    yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp, "GCS": cloud_configs_gcs}
 
 
 @pytest.fixture()

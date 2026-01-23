@@ -207,7 +207,7 @@ class BackupEventsHandler(Object):
                 "Relation to Storage charm exists but not all necessary configurations have been set."
             )
             manager.state.statuses.set(
-                BackupStatuses.PBM_MISSING_CONF.value,
+                BackupStatuses.pbm_missing_conf(manager.backend),
                 scope="unit",
                 component=manager.name,
             )

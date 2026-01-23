@@ -109,6 +109,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
     CONFIG_MAP: ClassVar[dict[str, str]] = {}
     BASIC_CONFIG: ClassVar[dict[str, str]] = {}
     invalid_integration_status: StatusObject
+    backend: ClassVar[str]
 
     def __init__(
         self,
@@ -428,21 +429,21 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             case BackupState.MUTUALLY_EXCLUSIVE:
                 return [BackupStatuses.MUTUALLY_EXCLUSIVE.value]
             case BackupState.MISSING_CONFIG:
-                return [BackupStatuses.PBM_MISSING_CONF.value]
+                return [BackupStatuses.pbm_missing_conf(self.backend)]
             case BackupState.WAITING_PBM_START:
                 return [BackupStatuses.WAITING_FOR_PBM_START.value]
             case BackupState.INCORRECT_CREDS:
-                return [BackupStatuses.PBM_INCORRECT_CREDS.value]
+                return [BackupStatuses.pbm_incorrect_creds(self.backend)]
             case BackupState.INCOMPATIBLE_CONF:
-                return [BackupStatuses.PBM_INCOMPATIBLE_CONF.value]
+                return [BackupStatuses.pbm_incompatible_conf(self.backend)]
             case BackupState.UNKNOWN_ERROR:
-                return [BackupStatuses.PBM_UNKNOWN_ERROR.value]
+                return [BackupStatuses.pbm_unknown_error(self.backend)]
             case BackupState.WAITING_TO_SYNC:
-                return [BackupStatuses.PBM_WAITING_TO_SYNC.value]
+                return [BackupStatuses.pbm_waiting_to_sync(self.backend)]
             case BackupState.FAILED_TO_CREATE_BUCKET:
-                return [BackupStatuses.FAILED_TO_CREATE_BUCKET.value]
+                return [BackupStatuses.failed_to_create_bucket(self.backend)]
             case BackupState.CANT_CONFIGURE:
-                return [BackupStatuses.CANT_CONFIGURE.value]
+                return [BackupStatuses.cant_configure(self.backend)]
             case BackupState.BACKUP_RUNNING:
                 if operation_result := self._get_backup_restore_operation_result(state):
                     logger.info(operation_result)
@@ -729,7 +730,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 # since this process takes several minutes we should let the user know
                 # immediately.
                 self.charm.status_handler.set_running_status(
-                    BackupStatuses.PBM_WAITING_TO_SYNC.value,
+                    BackupStatuses.pbm_waiting_to_sync(self.backend),
                     scope="unit",
                     statuses_state=self.state.statuses,
                     component_name=self.name,

@@ -229,7 +229,7 @@ def test_get_status_success(
     mock.return_value = '{"running":{"type":"resync","opID":"64f5cc22a73b330c3880e3b2"}}'
     statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)
     status = next(iter(statuses), None)
-    assert status == BackupStatuses.PBM_WAITING_TO_SYNC.value
+    assert status == BackupStatuses.pbm_waiting_to_sync("s3")
 
     mock.return_value = '{"running":{"type":"backup","name":"2024-11-25"}}'
     statuses = backup_manager.get_statuses(scope=Scope.UNIT, recompute=True)

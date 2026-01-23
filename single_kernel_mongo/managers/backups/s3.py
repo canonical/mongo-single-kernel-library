@@ -71,6 +71,7 @@ class S3BackupManager(CommonBackupManager):
         "storage-class": "storage.s3.storageClass",
     }
     BASIC_CONFIG = {"storage.type": "s3"}
+    backend = "s3"
 
     def __init__(
         self,
@@ -196,3 +197,21 @@ class S3BackupManager(CommonBackupManager):
             return False
 
         return True
+
+    def _gcs_obsolecte_map(self, credentials: dict[str, str]) -> dict[str, str]:
+        """This methods maintains the backward compatibility for HMAC based GCP authentication.
+
+        This can still happen for now through the s3 integrator for already integrated clients.
+        When PBM completely disables that support, it will be removed.
+        """
+        return {"storage.type": "gcs"} | {
+            GCS_PBM_OPTION_MAP[s3_option]: s3_value
+            for s3_option, s3_value in credentials.items()
+            if GCS_PBM_OPTION_MAP.get(s3_option)
+        }
+
+    @override
+    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, str]:
+        if "googleapis" in credentials.get("endpoint", ""):
+            return self._gcs_obsolecte_map(credentials)
+        return super().map_config_to_pbm_config(credentials)

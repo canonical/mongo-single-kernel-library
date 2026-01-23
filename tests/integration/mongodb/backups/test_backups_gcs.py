@@ -105,7 +105,7 @@ async def test_blocked_incorrect_creds(
     """Verifies that the charm goes into blocked status when s3 creds are incorrect."""
     db_app_name = await get_app_name(ops_test)
     # set incorrect s3 credentials
-    configuration_parameters, _ = cloud_configs["GCP"]
+    configuration_parameters, _ = cloud_configs["GCS"]
 
     await configure_gcs(
         ops_test,
@@ -124,7 +124,7 @@ async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs
     """Verifies charm goes into active status when s3 config and creds options are correct."""
     db_app_name = await get_app_name(ops_test)
 
-    configuration_parameters, credentials = cloud_configs["GCP"]
+    configuration_parameters, credentials = cloud_configs["GCS"]
     await configure_gcs(ops_test, configuration_parameters, credentials)
 
     # after applying correct config options and creds the applications should both be active
