@@ -205,7 +205,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     @cached_property
     def credentials(self) -> dict[str, str]:
-        """Returns the crendentials for a relation."""
+        """Returns the credentials for a relation."""
         if not self.relation:
             logger.info("No configuration for backups, no relation to integrator charm.")
             return {}
