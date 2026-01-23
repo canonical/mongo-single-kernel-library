@@ -594,23 +594,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
-        # Add the certificate if it is present
-        if (
-            backup_tls_chain := self.state.shard_state.backup_ca_secret
-        ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
-            logger.debug("Adding certificate for PBM")
-            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
-            # We updated the configuration, so we restart PBM.
-            self.dependent.s3_backup_manager.configure_and_restart(force=True)
-        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
-            TRUST_STORE_PATH / TrustStoreFiles.PBM.value
-        ):
-            logger.debug("Removing certificate for PBM")
-            # If it is not in the databag, always remove it, it won't change a
-            # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
-            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-            # We updated the configuration, so we restart PBM.
-            self.dependent.s3_backup_manager.configure_and_restart(force=True)
+        self.update_pbm_certificate_in_trust_store()
 
         if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
@@ -660,7 +644,13 @@ class ShardManager(Object, ManagerStatusProtocol):
                 )
             self.sync_cluster_passwords(operator_password, backup_password)
 
-        # Add the certificate if it is present
+        self.update_pbm_certificate_in_trust_store()
+
+    def update_pbm_certificate_in_trust_store(self):
+        """Retrieve the CA certificate for PBM and store it in the trust store if it exists.
+
+        If the certificate does not exist, remove the existing file from the trust store.
+        """
         if (
             backup_tls_chain := self.state.shard_state.backup_ca_secret
         ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
