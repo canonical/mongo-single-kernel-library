@@ -210,18 +210,22 @@ class GCSBackupManager(CommonBackupManager):
         provided_configs = self.map_config_to_pbm_config(credentials)
 
         # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
-        if not credentials.get("access-key"):
-            logger.info("Missing s3 credentials")
+        if not credentials.get("clientEmail"):
+            logger.info("Missing GCS credentials: clientEmail")
+            return False
+        if not credentials.get("privateKey"):
+            logger.info("Missing GCS credentials: privateKey")
             return False
         if not credentials.get("bucket"):
             logger.info("Missing bucket")
             return False
 
         if not provided_configs.get("storage.gcs.credentials.clientEmail"):
-            logger.info("Missing region - this is required for AWS")
+            logger.info("Missing client email")
+            return False
 
         if not provided_configs.get("storage.gcs.credentials.privateKey"):
-            logger.info("Missing S3 endpoint.")
+            logger.info("Missing private Key.")
             return False
 
         return True

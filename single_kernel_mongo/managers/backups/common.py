@@ -224,7 +224,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
     @abstractmethod
     def validate_config(self) -> bool:
-        """Validates that the S3 config is complete."""
+        """Validates that the S3/GCS config is complete."""
         raise NotImplementedError
 
     def cleanup_certs_and_restart(self, relation: Relation) -> None:
@@ -394,7 +394,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             return BackupState.MUTUALLY_EXCLUSIVE
         if not self.validate_config():
             logger.info(
-                "Relation to S3 charm exists but not all necessary configurations have been set."
+                "Relation to S3/GCS charm exists but not all necessary configurations have been set."
             )
             return BackupState.MISSING_CONFIG
         if not self.workload.active():

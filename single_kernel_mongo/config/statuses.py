@@ -287,7 +287,7 @@ class BackupStatuses(Enum):
             message=f"Missing configurations in the {storage}-credentials relation.",
             short_message=f"Missing {storage.upper()} configurations.",
             action=f"Check the logs and verify the configuration in the {storage.upper()}-credentials relation ({storage} interface).",
-            check=f"{storage}.upper() configuration validation failed.",
+            check=f"{storage.upper()} configuration validation failed.",
         )
 
     @staticmethod
