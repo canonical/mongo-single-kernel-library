@@ -437,7 +437,7 @@ Now view and save the output of the URI:
 echo $URI
 ```
 
-Like earlier, we access `mongo` by `ssh`ing into one of the Charmed MongoDB hosts:
+Like earlier, we access `mongo` by `ssh`-ing into one of the Charmed MongoDB hosts:
 
 ```shell
 juju ssh mongodb/0
