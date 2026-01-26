@@ -70,8 +70,6 @@ def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
     path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
     configs: dict[str, str] = {
         "bucket": "data-charms-testing",
-        "endpoint": "https://storage.googleapis.com",
-        "region": "",
         "path": f"{path}/{uuid.uuid4()}",
     }
     credentials: dict[str, str] = {
