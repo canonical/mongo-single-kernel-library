@@ -73,7 +73,7 @@ class BackupEventsHandler(Object):
 
         self.s3_client = S3Requirer(self.charm, self.s3_relation_name.value)
 
-        self.gcs_client = GcsStorageRequires(self.charm, self.gcs_relation_name)
+        self.gcs_client = GcsStorageRequires(self.charm, self.gcs_relation_name.value)
 
         for relation in (self.s3_relation_name, self.gcs_relation_name):
             self.framework.observe(
