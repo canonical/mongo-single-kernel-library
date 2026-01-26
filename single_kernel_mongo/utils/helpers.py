@@ -4,6 +4,9 @@
 
 """Some helpers functions that doesn't belong anywhere else."""
 
+import base64
+import binascii
+import json
 from functools import partial
 from logging import getLogger
 
@@ -96,3 +99,18 @@ def charm_kind_only(func, charm_kind: CharmKind):
 
 mongodb_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOD)
 mongos_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOS)
+
+
+def json_or_b64_to_dict(content: str) -> dict[str, str]:
+    """Loads a (possibly b64 encoded) json string to a dictionary."""
+    # already JSON
+    if content.startswith("{") and content.endswith("}"):
+        # validate JSON shape
+        return json.loads(content)
+    # base64 (urlsafe)
+    try:
+        decoded_bytes = base64.b64decode(content, altchars=b"-_", validate=True)
+        decoded_text = decoded_bytes.decode("utf-8").strip()
+        return json.loads(decoded_text)
+    except (binascii.Error, ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise ValueError("content is not valid JSON (raw or base64-encoded)") from e

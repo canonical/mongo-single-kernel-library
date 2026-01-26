@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING, final
 
@@ -47,6 +46,7 @@ from single_kernel_mongo.utils.event_helpers import (
     fail_action_with_error_log,
     success_action_with_info_log,
 )
+from single_kernel_mongo.utils.helpers import json_or_b64_to_dict
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -124,9 +124,11 @@ class BackupEventsHandler(Object):
             return self.s3_client.get_s3_connection_info()
         if relation == self.state.gcs_relation:
             initial_creds = self.gcs_client.get_storage_connection_info(relation)
+            secret_dict = json_or_b64_to_dict(initial_creds.get("secret-key", "{}"))
+
             # Flatten the dict to make the mapping easy.
             # It's guaranteed that the secret-key field exists here, but let's not trust it though.
-            return initial_creds | json.loads(initial_creds.get("secret-key", "{}"))
+            return initial_creds | secret_dict
         raise InvalidStorageRelationError
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
