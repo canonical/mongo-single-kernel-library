@@ -56,7 +56,7 @@ async def test_deploy_charms(
     )
     # deploy the s3 integrator charm
     await ops_test.model.deploy(S3_APP_NAME, channel="edge")
-    await ops_test.model.deploy(GCS_APP_NAME, channel="edge")
+    await ops_test.model.deploy(GCS_APP_NAME, channel="1/edge")
 
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
 
