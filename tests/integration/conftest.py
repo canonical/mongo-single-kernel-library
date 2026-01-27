@@ -13,12 +13,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from tests.integration.helpers.common import deploy_application, get_app_name
-
+from .helpers.architecture import architecture as _architecture
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
     clear_continous_writes,
+    deploy_application,
+    get_app_name,
     get_direct_mongo_client,
     mongodb_uri,
     relate_mongodb_and_application,
@@ -39,6 +40,11 @@ from .helpers.sharding import (
 from .helpers.types import Substrate
 
 logger = getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def architecture() -> str:
+    return _architecture
 
 
 @pytest.fixture

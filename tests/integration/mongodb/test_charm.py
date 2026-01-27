@@ -74,7 +74,7 @@ async def test_build_and_deploy(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail
@@ -370,7 +370,7 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     await deploy_application(ops_test, application_path=application_path, app_name=application_name)
     await relate_mongodb_and_application(ops_test, app_name, application_name)
 
-    time_to_write_200m_of_data = 60 * 20
+    time_to_write_200m_of_data = 60 * 25
     logrotate_timeout = 61
 
     match substrate:
