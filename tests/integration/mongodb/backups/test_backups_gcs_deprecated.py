@@ -11,6 +11,7 @@ from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay,
 
 from tests.integration.helpers.backups import (
     S3_APP_NAME,
+    S3_ENDPOINT,
     CloudConfigs,
     count_logical_backups,
     insert_unwanted_data,
@@ -24,6 +25,7 @@ from tests.integration.helpers.common import (
     deploy_charm,
     find_unit,
     get_app_name,
+    is_relation_joined,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -64,6 +66,12 @@ async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs
     s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
 
     configuration_parameters, credentials = cloud_configs["GCP"]
+
+    await ops_test.model.integrate(S3_APP_NAME, db_app_name)
+    await ops_test.model.block_until(
+        lambda: is_relation_joined(ops_test, S3_ENDPOINT, S3_ENDPOINT) is True,
+        timeout=TIMEOUT,
+    )
 
     # apply new configuration options
     await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
