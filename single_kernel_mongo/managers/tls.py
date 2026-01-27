@@ -378,7 +378,11 @@ class TLSManager(ManagerStatusProtocol):
         except UnicodeDecodeError:
             logger.error("base64 decoding error, invalid key.")
             return None
-        private_key = PrivateKey(raw=_private_key)
+        try:
+            private_key = PrivateKey(raw=_private_key)
+        except ValueError:
+            logger.error("Invalid private key")
+            return None
         if not private_key.is_valid():
             logger.error("Invalid private key format.")
             return None
