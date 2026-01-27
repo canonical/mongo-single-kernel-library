@@ -99,7 +99,7 @@ async def test_both_integrated_incompatible(ops_test: OpsTest, substrate: Substr
     )
 
     await ops_test.model.applications[db_app_name].remove_relation(
-        f"{db_app_name}{GCS_ENDPOINT}", f"{GCS_APP_NAME}:{GCS_ENDPOINT}"
+        f"{db_app_name}:{GCS_ENDPOINT}", f"{GCS_APP_NAME}:{GCS_ENDPOINT}"
     )
     await ops_test.model.wait_for_idle(apps=[db_app_name], status="active")
 
