@@ -189,10 +189,14 @@ class S3BackupManager(CommonBackupManager):
             logger.info("Missing bucket")
             return False
 
-        if not provided_configs.get("storage.s3.region"):
+        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
+            "storage.s3.region"
+        ):
             logger.info("Missing region - this is required for AWS")
 
-        if not provided_configs.get("storage.s3.endpointUrl"):
+        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
+            "storage.s3.endpointUrl"
+        ):
             logger.info("Missing S3 endpoint.")
             return False
 
