@@ -42,8 +42,8 @@ class GCSBackupManager(CommonBackupManager):
     CONFIG_MAP = {
         "bucket": "storage.gcs.bucket",
         "path": "storage.gcs.prefix",
-        "clientEmail": "storage.gcs.credentials.clientEmail",
-        "privateKey": "storage.gcs.credentials.privateKey",
+        "client_email": "storage.gcs.credentials.clientEmail",
+        "private_key": "storage.gcs.credentials.privateKey",
     }
     BASIC_CONFIG = {"storage.type": "gcs"}
     backend = "gcs"
@@ -207,25 +207,16 @@ class GCSBackupManager(CommonBackupManager):
             return False
 
         credentials = self.dependent.backup_events.credentials_for(self.relation)
-        provided_configs = self.map_config_to_pbm_config(credentials)
 
         # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
-        if not credentials.get("clientEmail"):
+        if not credentials.get("client_email"):
             logger.info("Missing GCS credentials: clientEmail")
             return False
-        if not credentials.get("privateKey"):
+        if not credentials.get("private_key"):
             logger.info("Missing GCS credentials: privateKey")
             return False
         if not credentials.get("bucket"):
             logger.info("Missing bucket")
-            return False
-
-        if not provided_configs.get("storage.gcs.credentials.clientEmail"):
-            logger.info("Missing client email")
-            return False
-
-        if not provided_configs.get("storage.gcs.credentials.privateKey"):
-            logger.info("Missing private Key.")
             return False
 
         return True
