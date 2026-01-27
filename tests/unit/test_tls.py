@@ -728,7 +728,7 @@ def test_tls_config_changed(harness: Harness[MongoTestCharm], mocker, mongodb_na
         ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
     )
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
-    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
     secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
@@ -753,7 +753,7 @@ def test_tls_config_changed_invalid_key(harness: Harness[MongoTestCharm], mocker
         ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
     )
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
-    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
     secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
@@ -791,7 +791,7 @@ def test_tls_config_changed_invalid_keys(harness: Harness[MongoTestCharm], mocke
     )
     harness.add_relation_unit(rel_id, "self-signed-certificates/0")
 
-    private_key_content = Path("tests/unit/data/key.pem").read_text()
+    private_key_content = Path("tests/unit/data/key.pem").read_text().strip()
     secret_id = harness.add_model_secret(mongodb_name, {"private-key": private_key_content})
     secret_id_bis = harness.add_model_secret(
         mongodb_name, {"private-key": base64.b64encode(b"invalid_key").decode()}
