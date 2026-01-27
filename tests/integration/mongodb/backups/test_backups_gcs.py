@@ -110,7 +110,7 @@ async def test_blocked_incorrect_creds(
     await configure_gcs(
         ops_test,
         configuration_parameters,
-        {"secret-key": '{"clientEmail": "invalid", "privateKey": "invalid"}'},
+        {"secret-key": '{"client_email": "invalid", "private_key": "invalid"}'},
     )
 
     # apply new configuration options
