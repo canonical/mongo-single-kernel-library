@@ -127,9 +127,6 @@ jobs:
           GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
           GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
           GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
-      - name: Setup tmate session
-        uses: canonical/action-tmate@main
-        if: ${{ failure() && steps.spread.outcome == 'failure' && contains(matrix.job.name, 'backups') }}
       - name: Upload Allure results
         timeout-minutes: 3
         # Only upload results from one spread system & one spread variant

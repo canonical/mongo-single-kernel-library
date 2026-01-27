@@ -215,10 +215,6 @@ class BackupEventsHandler(Object):
             )
             return
 
-        # Only leader needs to write and sync config options.
-        if not self.charm.unit.is_leader():
-            return
-
         try:
             # We can clear all statuses as they will get rewritten right after if needed.
             # The only ones we don't want to lose were checked earlier and returned early.
@@ -228,6 +224,9 @@ class BackupEventsHandler(Object):
             )
             # First create the bucket if it does not exist.
             manager.create_bucket(credentials=credentials)
+            if not self.charm.unit.is_leader():
+                return
+
             # Then set the config options on PBM.
             manager.set_config_options(credentials=credentials)
             # Finally, resync the configuration.
