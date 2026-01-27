@@ -165,9 +165,37 @@ jobs:
         timeout-minutes: 3
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
-      - name: Dump logs
-        if: failure()
-        uses: canonical/charming-actions/dump-logs@2.6.3
+      - name: Dump pods and their logs
+        shell: bash
+        run: |
+          # shellcheck disable=SC2162
+          # shellcheck disable=SC2086
+          sudo microk8s.kubectl get pods \
+              -A \
+              -o=jsonpath='{range.items[*]}{.metadata.namespace} {.metadata.name}{"\n"}' \
+              --sort-by=.metadata.namespace \
+              | grep -v "^\s*$" \
+              | while read namespace pod; do \
+                   kubectl -n $namespace describe pod $pod; \
+                   kubectl -n $namespace logs $pod \
+                      --all-containers=true \
+                      --tail=100; \
+               done
+      - name: Dump deployments
+        run: |
+          sudo microk8s.kubectl describe deployments -A | tee ~/logs/kubectl-deployments.txt
+          exit 0
+        shell: bash
+      - name: Dump replicasets
+        run: |
+          sudo microk8s.kubectl describe replicasets -A | tee ~/logs/kubectl-replicasets.txt
+
+          exit 0
+        shell: bash
+      - name: Dump node information
+        run: |
+          sudo microk8s.kubectl get nodes -v=10 | tee ~/logs/kubectl-nodes.txt
+          exit 0
       - name: Upload logs
         timeout-minutes: 5
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
