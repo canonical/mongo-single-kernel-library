@@ -9,7 +9,6 @@ In this class, we manage the GCS specific code for backups.
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from typing import TYPE_CHECKING, final, override
@@ -25,6 +24,7 @@ from single_kernel_mongo.config.statuses import MongoDBStatuses
 from single_kernel_mongo.exceptions import FailedToCreateBucketError, InvalidStorageCredentialsError
 from single_kernel_mongo.managers.backups.common import CommonBackupManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.utils.helpers import json_or_b64_to_dict
 
 if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import (
@@ -64,7 +64,7 @@ class GCSBackupManager(CommonBackupManager):
     def relation(self) -> Relation | None:
         return self.state.gcs_relation
 
-    def get_gcs_client(self, service_account_json: str) -> storage.Client:
+    def get_gcs_client(self, service_account: dict[str, str]) -> storage.Client:
         """Build a GCS client from a service-account JSON string.
 
         Args:
@@ -77,13 +77,8 @@ class GCSBackupManager(CommonBackupManager):
             ValueError: If the input is empty or not valid JSON.
             GoogleAPIError: If the client cannot be created due to SDK errors.
         """
-        if not service_account_json:
+        if not service_account:
             raise ValueError("Missing GCS secret_key (service account JSON).")
-
-        try:
-            service_account = json.loads(service_account_json)
-        except (TypeError, ValueError) as e:
-            raise ValueError("GCS secret_key is not valid JSON.") from e
 
         client_kwargs: dict[str, str] = {}
         if project_id := service_account.get("project_id"):
@@ -135,11 +130,16 @@ class GCSBackupManager(CommonBackupManager):
             - If the configured bucket does not exist, try to create it.
             - Verify access via write and delete a small dummy blob.
         """
-        service_account_json = credentials["secret-key"]
+        try:
+            service_account = json_or_b64_to_dict(credentials["secret-key"])
+        except ValueError:
+            logger.info("Invalid credentials")
+            service_account = {}
+
         bucket_name = credentials["bucket"]
 
         try:
-            client = self.get_gcs_client(service_account_json)
+            client = self.get_gcs_client(service_account)
             bucket = client.bucket(bucket_name)
 
             # ensure bucket exists or create
