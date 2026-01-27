@@ -40,10 +40,12 @@ async def test_deploy_charms(
     ops_test: OpsTest,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     storage_credentials: dict[str, str],
     storage_config: dict[str, str],
 ):
+    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+    await ops_test.model.set_config({"image-stream": "daily"})
     await deploy_cluster_components(
         ops_test,
         substrate=substrate,
@@ -60,7 +62,7 @@ async def test_deploy_charms(
         ops_test, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME
     )
     # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
+    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
 
     logger.info(f"Configure {S3_APP_NAME}")
