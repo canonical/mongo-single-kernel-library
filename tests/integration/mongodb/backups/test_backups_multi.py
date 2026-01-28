@@ -92,6 +92,9 @@ async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs
 async def test_both_integrated_incompatible(ops_test: OpsTest, substrate: Substrate) -> None:
     db_app_name = await get_app_name(ops_test)
     await ops_test.model.integrate(S3_APP_NAME, db_app_name)
+    await ops_test.model.wait_for_idle(
+        apps=[db_app_name], status="active", timeout=TIMEOUT, idle_period=60
+    )
     await ops_test.model.integrate(GCS_APP_NAME, db_app_name)
 
     await wait_for_mongodb_units_blocked(
