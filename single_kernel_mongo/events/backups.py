@@ -260,7 +260,11 @@ class BackupEventsHandler(Object):
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
-        manager = self.manager_for(event.relation)
+        try:
+            manager = self.manager_for(event.relation)
+        except InvalidStorageCredentialsError:
+            logger.warning("Two relations combined, exiting early.")
+            return
         manager.cleanup_certs_and_restart(event.relation)
         manager.state.statuses.clear(scope="unit", component=manager.name)
 
