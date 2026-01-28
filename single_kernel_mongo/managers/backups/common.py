@@ -474,12 +474,8 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         pbm_statuses = self.get_statuses(scope="unit", recompute=True)
         return next(iter(pbm_statuses), None)
 
-    def set_config_options(self, credentials: dict) -> None:
-        """Apply the configuration provided by S3 integrator.
-
-        Args:
-            credentials: A dictionary provided by backup event handler.
-        """
+    def set_certificate(self, credentials: dict) -> None:
+        """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
@@ -487,6 +483,12 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             # Restart after setting all configurations
             self.configure_and_restart(force=True)
 
+    def set_config_options(self, credentials: dict) -> None:
+        """Apply the configuration provided by S3 integrator.
+
+        Args:
+            credentials: A dictionary provided by backup event handler.
+        """
         # First check if we ever had received a config
         with MongoConnection(self.state.backup_config) as conn:
             has_config = conn.client.admin["pbmConfig"].find_one()

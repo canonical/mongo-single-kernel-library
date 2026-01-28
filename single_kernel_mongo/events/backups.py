@@ -224,6 +224,7 @@ class BackupEventsHandler(Object):
             )
             # First create the bucket if it does not exist.
             manager.create_bucket(credentials=credentials)
+            manager.set_certificate(credentials=credentials)
             if not self.charm.unit.is_leader():
                 return
 
