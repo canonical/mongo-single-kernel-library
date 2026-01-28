@@ -167,7 +167,7 @@ jobs:
         run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
       - name: Setup tmate session
         uses: canonical/action-tmate@main
-        if: ${{ contains(matrix.job.name, 'shard') }}
+        if: ${{ failure() && steps.spread.outcome == 'failure' && contains(matrix.job.name, 'shard') }}
       - name: Dump pods and their logs
         shell: bash
         run: |
