@@ -206,6 +206,10 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
     except RetryError:
         assert backups == prev_backups + 1, "Backup not created."
 
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
+    )
+
     # add writes to be cleared after restoring the backup. Note these are written to the same
     # collection that was backed up.
     await insert_unwanted_data(ops_test, substrate, db_app_name, leader_unit)
