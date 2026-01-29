@@ -110,11 +110,11 @@ class BackupEventsHandler(Object):
             return self.state.gcs_relation
         raise InvalidStorageRelationError
 
-    def manager_for(self, relation: Relation) -> CommonBackupManager:
+    def manager_for(self, relation_name: str) -> CommonBackupManager:
         """The manager that maps to this relation."""
-        if relation == self.state.s3_relation:
+        if relation_name == self.s3_relation_name.value:
             return self.s3_manager
-        if relation == self.state.gcs_relation:
+        if relation_name == self.gcs_relation_name.value:
             return self.gcs_manager
         raise InvalidStorageRelationError
 
@@ -133,7 +133,7 @@ class BackupEventsHandler(Object):
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Checks for valid integration for s3-integrations."""
-        manager = self.manager_for(event.relation)
+        manager = self.manager_for(event.relation.name)
 
         if self.dependent.refresh_in_progress:
             logger.warning(
@@ -165,7 +165,7 @@ class BackupEventsHandler(Object):
         self, event: CredentialsChangedEvent | StorageConnectionInfoChangedEvent
     ) -> None:
         action = "configure-pbm"
-        manager = self.manager_for(event.relation)
+        manager = self.manager_for(event.relation.name)
         credentials = self.credentials_for(event.relation)
 
         if self.dependent.refresh_in_progress:
@@ -261,7 +261,7 @@ class BackupEventsHandler(Object):
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""
         try:
-            manager = self.manager_for(event.relation)
+            manager = self.manager_for(event.relation.name)
         except InvalidStorageRelationError:
             logger.warning("Two relations combined, exiting early.")
             return
@@ -279,7 +279,7 @@ class BackupEventsHandler(Object):
 
         # Get the credentials from S3 connection
         try:
-            manager = self.manager_for(self.current_relation)
+            manager = self.manager_for(self.current_relation.name)
             credentials = self.credentials_for(self.current_relation)
         except InvalidStorageRelationError:
             event.fail("Relations are mutually exclusive")
@@ -312,7 +312,7 @@ class BackupEventsHandler(Object):
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         action = "list-backups"
         try:
-            manager = self.manager_for(self.current_relation)
+            manager = self.manager_for(self.current_relation.name)
         except InvalidStorageRelationError:
             event.fail("Relations are mutually exclusive")
             return
@@ -337,7 +337,7 @@ class BackupEventsHandler(Object):
         remapping_pattern = str(event.params.get("remap-pattern", ""))
 
         try:
-            manager = self.manager_for(self.current_relation)
+            manager = self.manager_for(self.current_relation.name)
         except InvalidStorageRelationError:
             fail_action_with_error_log(
                 logger, event, action, "No valid relation to restore backup from."

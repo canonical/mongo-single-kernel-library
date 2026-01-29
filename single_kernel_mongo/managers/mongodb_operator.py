@@ -354,8 +354,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.s3_relation or self.state.gcs_relation:
             relation = self.backup_events.current_relation
             credentials = self.backup_events.credentials_for(relation)
-            self.backup_events.manager_for(relation).set_certificate(credentials)
-            self.backup_events.manager_for(relation).set_config_options(credentials)
+            self.backup_events.manager_for(relation.name).set_certificate(credentials)
+            self.backup_events.manager_for(relation.name).set_config_options(credentials)
 
         return
 
