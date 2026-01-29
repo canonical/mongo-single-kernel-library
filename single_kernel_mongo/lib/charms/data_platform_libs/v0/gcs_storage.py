@@ -616,6 +616,11 @@ class StorageRequirerEventHandlers(RequirerEventHandlers):
                 event.secret.label,
             )
             return
+
+        if relation.name != self.relation_name:
+            logger.info("Invalid relation")
+            return
+
         if relation.app == self.charm.app:
             logging.info("Secret changed event ignored for Secret Owner")
             return
