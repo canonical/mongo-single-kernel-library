@@ -13,6 +13,7 @@ from botocore.exceptions import ConnectTimeoutError, SSLError
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
 
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import BackupStatuses, MongoDBStatuses
 from single_kernel_mongo.exceptions import (
@@ -110,7 +111,7 @@ class BackupEventsHandler(Object):
             self.manager.state.statuses.add(
                 MongoDBStatuses.INVALID_S3_REL.value,
                 scope="unit",
-                component=self.manager.name,
+                component=self.dependent.name,
             )
             return
         if not self.manager.workload.active():
@@ -145,70 +146,36 @@ class BackupEventsHandler(Object):
             )
             # First create the bucket if it does not exist.
             self.manager.create_bucket(credentials=credentials)
-            # Then set the config options on PBM.
-            self.manager.set_config_options(credentials=credentials)
-            # Finally, resync the configuration.
+            self.manager.set_certificate(credentials=credentials)
+            if not self.charm.unit.is_leader():
+                return
+                # Then set the config options on PBM.
+                self.manager.set_config_options(credentials=credentials)
+                # Finally, resync the configuration.
             self.manager.resync_config_options()
+            backup_state = BackupState.ACTIVE
         except InvalidS3CredentialsError:
-            logger.error("Incorrect S3 credentials")
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_INCORRECT_CREDS.value, scope="unit", component=self.manager.name
-            )
-            return
-        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError) as err:
-            logger.error("Failed to create bucket: %s", err)
-            self.manager.state.statuses.add(
-                BackupStatuses.FAILED_TO_CREATE_BUCKET.value,
-                scope="unit",
-                component=self.manager.name,
-            )
+            backup_state = BackupState.INCORRECT_CREDS
+        except (FailedToCreateS3BucketError, SSLError, ConnectTimeoutError):
+            backup_state = BackupState.FAILED_TO_CREATE_BUCKET
             event.defer()
-            return
         except SetPBMConfigError:
-            self.manager.state.statuses.add(
-                BackupStatuses.CANT_CONFIGURE.value, scope="unit", component=self.manager.name
-            )
+            backup_state = BackupState.CANT_CONFIGURE
             event.defer()
-            return
-        except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting pbm agent, error: %s.", str(e))
-            self.manager.state.statuses.add(
-                BackupStatuses.WAITING_FOR_PBM_START.value,
-                scope="unit",
-                component=self.manager.name,
-            )
-            return
-        except ResyncError:
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope="unit",
-                component=self.manager.name,
-            )
+        except WorkloadServiceError:
+            backup_state = BackupState.WAITING_PBM_START
+        except (ResyncError, PBMBusyError):
+            backup_state = BackupState.WAITING_TO_SYNC
             defer_event_with_info_log(
                 logger, event, action, "Sync-ing configurations needs more time."
             )
-            return
-        except PBMBusyError:
-            self.manager.state.statuses.add(
-                BackupStatuses.PBM_WAITING_TO_SYNC.value,
-                scope="unit",
-                component=self.manager.name,
-            )
-            defer_event_with_info_log(
-                logger,
-                event,
-                action,
-                "Cannot update configs while PBM is running, must wait for PBM action to finish.",
-            )
-            return
         except WorkloadExecError as e:
             if status := self.manager.process_pbm_error_as_status(e.stdout):
                 self.manager.state.statuses.add(status, scope="unit", component=self.manager.name)
             return
 
-        # Safer here, don't add a status if we don't have a status to add…
-        if pbm_status := self.manager.get_main_status():
-            self.manager.state.statuses.add(pbm_status, scope="unit", component=self.manager.name)
+        pbm_status = self.manager.map_backup_state_to_status(backup_state)[0]
+        self.manager.state.statuses.add(pbm_status, scope="unit", component=self.manager.name)
 
     def _on_s3_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3 relation broken."""

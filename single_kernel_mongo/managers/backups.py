@@ -459,6 +459,8 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return []
             case BackupState.MISSING_CONFIG:
                 return [BackupStatuses.PBM_MISSING_CONF.value]
+            case BackupState.CANT_CONFIGURE:
+                return [BackupStatuses.CANT_CONFIGURE.value]
             case BackupState.WAITING_PBM_START:
                 return [BackupStatuses.WAITING_FOR_PBM_START.value]
             case BackupState.INCORRECT_CREDS:
@@ -499,6 +501,15 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """Returns the first status of the list."""
         pbm_statuses = self.get_statuses(scope="unit", recompute=True)
         return next(iter(pbm_statuses), None)
+
+    def set_certificate(self, credentials: dict) -> None:
+        """Sets the certificate on the file system if needed."""
+        # Add certificate to trust store
+        if cert_chain_list := credentials.get("tls-ca-chain", None):
+            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
+            self.share_certificate_with_shards(cert_chain_list)
+            # Restart after setting all configurations
+            self.configure_and_restart(force=True)
 
     def resync_config_options(self):  # pragma: nocover
         """Attempts to resync config options and sets status in case of failure."""
@@ -572,13 +583,6 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         Args:
             credentials: A dictionary provided by backup event handler.
         """
-        # Add certificate to trust store
-        if cert_chain_list := credentials.get("tls-ca-chain", None):
-            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
-            self.share_certificate_with_shards(cert_chain_list)
-            # Restart after setting all configurations
-            self.configure_and_restart(force=True)
-
         # First check if we ever had received a config
         with MongoConnection(self.state.backup_config) as conn:
             has_config = conn.client.admin["pbmConfig"].find_one()
@@ -605,7 +609,10 @@ class BackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         except WorkloadExecError as err:
             # In case of resync in progress, raise a ResyncError that will set a waiting status.
             if "resync" in err.stderr.lower():
-                logger.error("Waiting for resync to finish before setting configuration: %s", err)
+                logger.error(
+                    "Waiting for resync to finish before setting configuration: %s",
+                    {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
+                )
                 raise ResyncError
             # Don't log the credentials that are part of the cmd]
             logger.error(
