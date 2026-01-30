@@ -63,7 +63,9 @@ async def test_deploy_charms(
     # deploy the s3 integrator charm
     await ops_test.model.deploy(S3_APP_NAME, channel="edge")
 
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(
+        apps=[base_app_name], timeout=DEPLOYMENT_TIMEOUT, status="active"
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -147,11 +149,12 @@ async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs) -> None
     """Tests that we can create a backup, and that it is listed in the backups."""
     db_app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
-    await set_credentials(ops_test, cloud_configs, cloud="AWS")
+
     # verify backup list works
     logger.info("!!!!! test_create_and_list_backups >>>  %s", leader_unit)
     action = await leader_unit.run_action(action_name="list-backups")
     list_result = await action.wait()
+
     logger.info("!!!!! test_create_and_list_backups >>>  %s", list_result.results)
     backups = list_result.results["backups"]
     assert backups, "backups not outputted"

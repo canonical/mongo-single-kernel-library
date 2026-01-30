@@ -149,9 +149,9 @@ class BackupEventsHandler(Object):
             self.manager.set_certificate(credentials=credentials)
             if not self.charm.unit.is_leader():
                 return
-                # Then set the config options on PBM.
-                self.manager.set_config_options(credentials=credentials)
-                # Finally, resync the configuration.
+            # Then set the config options on PBM.
+            self.manager.set_config_options(credentials=credentials)
+            # Finally, resync the configuration.
             self.manager.resync_config_options()
             backup_state = BackupState.ACTIVE
         except InvalidS3CredentialsError:
