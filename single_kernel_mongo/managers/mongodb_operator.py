@@ -351,13 +351,16 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
-        if self.state.s3_relation or self.state.gcs_relation:
-            relation = self.backup_events.current_relation
-            credentials = self.backup_events.credentials_for(relation)
-            self.backup_events.manager_for(relation.name).set_certificate(credentials)
-            self.backup_events.manager_for(relation.name).set_config_options(credentials)
+        backup_relation = self.backup_events.current_relation
+        if not backup_relation:
+            return
+        manager = self.backup_events.manager_for(backup_relation.name)
+        credentials = self.backup_events.credentials_for(backup_relation)
+        if not credentials or not manager:
+            return
 
-        return
+        manager.set_certificate(credentials)
+        manager.set_config_options(credentials)
 
     @property
     @override

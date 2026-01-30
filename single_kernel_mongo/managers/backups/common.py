@@ -182,9 +182,11 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         ):
             with attempt:
                 match self.backup_state():
-                    case BackupState.BACKUP_RUNNING | BackupState.RESTORE_RUNNING:
-                        raise PBMBusyError
-                    case BackupState.WAITING_TO_SYNC:
+                    case (
+                        BackupState.BACKUP_RUNNING
+                        | BackupState.RESTORE_RUNNING
+                        | BackupState.WAITING_TO_SYNC
+                    ):
                         raise PBMBusyError
                     case _:
                         continue
@@ -442,7 +444,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
                 return [BackupStatuses.pbm_waiting_to_sync(self.backend)]
             case BackupState.FAILED_TO_CREATE_BUCKET:
                 return [BackupStatuses.failed_to_create_bucket(self.backend)]
-            case BackupState.CANT_CONFIGURE:
+            case BackupState.CANNOT_CONFIGURE:
                 return [BackupStatuses.cant_configure(self.backend)]
             case BackupState.BACKUP_RUNNING:
                 if operation_result := self._get_backup_restore_operation_result(state):

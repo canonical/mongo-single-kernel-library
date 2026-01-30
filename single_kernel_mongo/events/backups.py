@@ -102,21 +102,21 @@ class BackupEventsHandler(Object):
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
     @property
-    def current_relation(self) -> Relation:
+    def current_relation(self) -> Relation | None:
         """Returns current relation."""
         if self.state.s3_relation:
             return self.state.s3_relation
         if self.state.gcs_relation:
             return self.state.gcs_relation
-        raise InvalidStorageRelationError
+        return None
 
-    def manager_for(self, relation_name: str) -> CommonBackupManager:
+    def manager_for(self, relation_name: str) -> CommonBackupManager | None:
         """The manager that maps to this relation."""
         if relation_name == self.s3_relation_name.value:
             return self.s3_manager
         if relation_name == self.gcs_relation_name.value:
             return self.gcs_manager
-        raise InvalidStorageRelationError
+        return None
 
     def credentials_for(self, relation: Relation) -> dict[str, str]:
         """This is the credentials."""
@@ -129,11 +129,18 @@ class BackupEventsHandler(Object):
             # Flatten the dict to make the mapping easy.
             # It's guaranteed that the secret-key field exists here, but let's not trust it though.
             return initial_creds | secret_dict
-        raise InvalidStorageRelationError
+        return {}
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Checks for valid integration for backup storage integrations."""
         manager = self.manager_for(event.relation.name)
+
+        if not manager:
+            logger.error(
+                "Credentials changed event but no matching manager. This should not happen."
+            )
+            # This is a big no no, let's raise an error for once.
+            raise InvalidStorageRelationError(f"No matching manager for {event.relation.name}")
 
         if self.dependent.refresh_in_progress:
             logger.warning(
@@ -167,6 +174,17 @@ class BackupEventsHandler(Object):
         action = "configure-pbm"
         manager = self.manager_for(event.relation.name)
         credentials = self.credentials_for(event.relation)
+
+        if not manager:
+            logger.error(
+                "Credentials changed event but no matching manager. This should not happen."
+            )
+            # This is a big no no, let's raise an error for once.
+            raise InvalidStorageRelationError(f"No matching manager for {event.relation.name}")
+
+        if not credentials:
+            logger.info("Still waiting for credentials")
+            return
 
         if self.dependent.refresh_in_progress:
             logger.warning(
@@ -239,7 +257,7 @@ class BackupEventsHandler(Object):
             backup_state = BackupState.FAILED_TO_CREATE_BUCKET
             event.defer()
         except SetPBMConfigError:
-            backup_state = BackupState.CANT_CONFIGURE
+            backup_state = BackupState.CANNOT_CONFIGURE
             event.defer()
         except WorkloadServiceError:
             backup_state = BackupState.WAITING_PBM_START
@@ -249,10 +267,8 @@ class BackupEventsHandler(Object):
                 logger, event, action, "Sync-ing configurations needs more time."
             )
         except WorkloadExecError as e:
-            if status := self.s3_manager.process_pbm_error_as_status(e.stdout):
-                self.s3_manager.state.statuses.add(
-                    status, scope="unit", component=self.s3_manager.name
-                )
+            if status := manager.process_pbm_error_as_status(e.stdout):
+                manager.state.statuses.add(status, scope="unit", component=manager.name)
             return
 
         pbm_status = manager.map_backup_state_to_status(backup_state)[0]
@@ -260,11 +276,10 @@ class BackupEventsHandler(Object):
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Proceed on s3/gcs relation broken."""
-        try:
-            manager = self.manager_for(event.relation.name)
-        except InvalidStorageRelationError:
+        if not (manager := self.manager_for(event.relation.name)):
             logger.warning("Two relations combined, exiting early.")
             return
+
         manager.cleanup_certs_and_restart(event.relation)
         manager.state.statuses.clear(scope="unit", component=manager.name)
 
@@ -277,12 +292,18 @@ class BackupEventsHandler(Object):
             )
             return
 
-        # Get the credentials from S3 connection
-        try:
-            manager = self.manager_for(self.current_relation.name)
-            credentials = self.credentials_for(self.current_relation)
-        except InvalidStorageRelationError:
-            event.fail("The two object storage relations are mutually exclusive.")
+        # Get the credentials from S3/GCS integration
+        if not (relation := self.current_relation):
+            event.fail("Missing valid relation for backups.")
+            return
+        manager = self.manager_for(relation.name)
+        credentials = self.credentials_for(relation)
+
+        if not manager:
+            event.fail("Manager only existing for s3/gcs-credentials relation.")
+            return
+        if not credentials:
+            event.fail("Missing valid credentials in relation.")
             return
 
         try:
@@ -311,10 +332,13 @@ class BackupEventsHandler(Object):
 
     def _on_list_backups_action(self, event: ActionEvent) -> None:
         action = "list-backups"
-        try:
-            manager = self.manager_for(self.current_relation.name)
-        except InvalidStorageRelationError:
-            event.fail("The two object storage relations are mutually exclusive.")
+        if not (relation := self.current_relation):
+            event.fail("Missing valid integration for backups.")
+            return
+
+        manager = self.manager_for(relation.name)
+        if not manager:
+            event.fail("Manager only existing for s3/gcs-credentials relation.")
             return
 
         try:
@@ -336,11 +360,16 @@ class BackupEventsHandler(Object):
         backup_id = str(event.params.get("backup-id", ""))
         remapping_pattern = str(event.params.get("remap-pattern", ""))
 
-        try:
-            manager = self.manager_for(self.current_relation.name)
-        except InvalidStorageRelationError:
+        if not (relation := self.current_relation):
             fail_action_with_error_log(
                 logger, event, action, "No valid relation to restore backup from."
+            )
+            return
+
+        manager = self.manager_for(relation.name)
+        if not manager:
+            fail_action_with_error_log(
+                logger, event, action, "Manager only existing for s3/gcs-credentials relation."
             )
             return
 
