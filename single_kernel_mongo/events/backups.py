@@ -314,7 +314,7 @@ class BackupEventsHandler(Object):
         try:
             manager = self.manager_for(self.current_relation.name)
         except InvalidStorageRelationError:
-            event.fail("Relations are mutually exclusive")
+            event.fail("The two object storage relations are mutually exclusive.")
             return
 
         try:
