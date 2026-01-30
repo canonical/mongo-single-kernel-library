@@ -53,7 +53,7 @@ jobs:
         id: get-tag
         run: |
           git fetch --tags
-          PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
+          PREV_TAG=$(git describe --tags --abbrev=0 --exclude="${VERSION}" "${VERSION}")
           VERSION_CONTENT=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..${VERSION}" | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
 
           {
