@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 @final
 class GCSBackupManager(CommonBackupManager):
-    """Manager for the S3 integrator and backups."""
+    """Manager for the GCS integrator and backups."""
 
-    invalid_integration_status = MongoDBStatuses.INVALID_S3_REL.value
+    invalid_integration_status = MongoDBStatuses.INVALID_GCS_REL.value
     CONFIG_MAP = {
         "bucket": "storage.gcs.bucket",
         "path": "storage.gcs.prefix",
@@ -208,7 +208,6 @@ class GCSBackupManager(CommonBackupManager):
 
         credentials = self.dependent.backup_events.credentials_for(self.relation)
 
-        # Check on the origin dictionary so that we don't need to discriminate between gcs and s3
         if not credentials.get("client_email"):
             logger.info("Missing GCS credentials: clientEmail")
             return False

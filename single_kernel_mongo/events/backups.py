@@ -132,7 +132,7 @@ class BackupEventsHandler(Object):
         raise InvalidStorageRelationError
 
     def _on_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Checks for valid integration for s3-integrations."""
+        """Checks for valid integration for backup storage integrations."""
         manager = self.manager_for(event.relation.name)
 
         if self.dependent.refresh_in_progress:
@@ -153,7 +153,7 @@ class BackupEventsHandler(Object):
 
         if not manager.is_valid_integration():
             logger.info(
-                "Shard does not support S3 relations. Please relate s3-integrator to config-server only."
+                "Shard does not support S3/GCS integration. Please relate s3/gcs-integrator to config-server only."
             )
             manager.state.statuses.add(
                 manager.invalid_integration_status,
@@ -170,7 +170,7 @@ class BackupEventsHandler(Object):
 
         if self.dependent.refresh_in_progress:
             logger.warning(
-                "Changing s3-credentials is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
+                "Changing backup storage credentials is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
             )
             event.defer()
             return
@@ -186,7 +186,7 @@ class BackupEventsHandler(Object):
 
         if not manager.is_valid_integration():
             logger.debug(
-                "Shard does not support s3 relations, please relate s3-integrator to config-server only."
+                "Shard does not support S3/GCS integration, please relate s3/gcs-integrator to config-server only."
             )
             manager.state.statuses.add(
                 manager.invalid_integration_status,
@@ -259,7 +259,7 @@ class BackupEventsHandler(Object):
         manager.state.statuses.add(pbm_status, scope="unit", component=manager.name)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
-        """Proceed on s3 relation broken."""
+        """Proceed on s3/gcs relation broken."""
         try:
             manager = self.manager_for(event.relation.name)
         except InvalidStorageRelationError:

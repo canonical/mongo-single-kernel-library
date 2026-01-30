@@ -83,11 +83,11 @@ class InvalidStorageRelationError(Exception):
 
 
 class InvalidStorageCredentialsError(Exception):
-    """Raised when list backup operation is failed."""
+    """Raised when the backup storage credentials are invalid."""
 
 
 class FailedToCreateBucketError(Exception):
-    """Raised when list backup operation is failed."""
+    """Raised when bucket creation fails."""
 
 
 class FailedToFindNodePortError(Exception):

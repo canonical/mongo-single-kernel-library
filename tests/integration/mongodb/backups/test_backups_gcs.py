@@ -64,7 +64,7 @@ async def test_deploy_charms(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    # deploy the s3 integrator charm
+    # deploy the GCS integrator charm
     await ops_test.model.deploy(GCS_APP_NAME, channel="1/edge")
 
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
@@ -102,9 +102,9 @@ async def test_blocked_incorrect_creds(
     substrate: Substrate,
     cloud_configs: CloudConfigs,
 ) -> None:
-    """Verifies that the charm goes into blocked status when s3 creds are incorrect."""
+    """Verifies that the charm goes into blocked status when GCS creds are incorrect."""
     db_app_name = await get_app_name(ops_test)
-    # set incorrect s3 credentials
+    # set incorrect GCS credentials
     configuration_parameters, _ = cloud_configs["GCS"]
 
     await configure_gcs(
@@ -121,7 +121,7 @@ async def test_blocked_incorrect_creds(
 
 @pytest.mark.abort_on_fail
 async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs) -> None:
-    """Verifies charm goes into active status when s3 config and creds options are correct."""
+    """Verifies charm goes into active status when GCS config and creds options are correct."""
     db_app_name = await get_app_name(ops_test)
 
     configuration_parameters, credentials = cloud_configs["GCS"]
