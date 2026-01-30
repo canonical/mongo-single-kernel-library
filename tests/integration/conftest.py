@@ -13,12 +13,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
-from tests.integration.helpers.common import deploy_application, get_app_name
-
+from .helpers.architecture import architecture as _architecture
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
     clear_continous_writes,
+    deploy_application,
+    get_app_name,
     get_direct_mongo_client,
     mongodb_uri,
     relate_mongodb_and_application,
@@ -41,38 +42,43 @@ from .helpers.types import Substrate
 logger = getLogger(__name__)
 
 
+@pytest.fixture(scope="session")
+def architecture() -> str:
+    return _architecture
+
+
 @pytest.fixture
-def application_path() -> str:
+def application_path(architecture: str) -> str:
     """The test application path."""
-    return "./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/continuous_write_charm/continuous-write_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def client_relation_charm_path() -> str:
+def client_relation_charm_path(architecture: str) -> str:
     """The test application path."""
-    return "./tests/integration/applications/client_relations_charm/application_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/client_relations_charm/application_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongos_client_application_path() -> str:
+def mongos_client_application_path(architecture: str) -> str:
     """The mongos test application path."""
-    return "./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@24.04-amd64.charm"
+    return f"./tests/integration/applications/mongos_client_charm/test-routing-application_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongodb_charm(substrate, mongod_base_path) -> str:
+def mongodb_charm(substrate, mongod_base_path, architecture: str) -> str:
     """The MongoDB charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-amd64.charm"
-    return f"./{mongod_base_path}/mongodb_ubuntu@24.04-amd64.charm"
+        return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-{architecture}.charm"
+    return f"./{mongod_base_path}/mongodb_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture
-def mongos_charm(substrate, mongos_base_path) -> str:
+def mongos_charm(substrate, mongos_base_path, architecture: str) -> str:
     """The Mongos charm path, to deploy charms, according to the substrate."""
     if substrate == "microk8s":
-        return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-amd64.charm"
-    return f"./{mongos_base_path}/mongos_ubuntu@24.04-amd64.charm"
+        return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-{architecture}.charm"
+    return f"./{mongos_base_path}/mongos_ubuntu@24.04-{architecture}.charm"
 
 
 @pytest.fixture

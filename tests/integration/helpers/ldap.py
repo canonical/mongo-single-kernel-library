@@ -9,6 +9,8 @@ from urllib.parse import quote_plus
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.helpers.architecture import architecture
+
 from ..helpers.common import (
     MONGOD_PORT,
     MONGOS_PORT,
@@ -26,6 +28,7 @@ LDAP_UTILS_APP_NAME = "glauth-utils"
 TRAEFIK_CHARM = "traefik-k8s"
 LDAP_OFFER = "ldap-integration"
 LDAP_CERT_OFFER = "ldap-cert-integration"
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,9 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     Then it offers the two relations provided by glauth.
     """
     with ops_test.model_context("secondary"):
+        # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+        await kubernetes_model.set_constraints({"arch": architecture})
+        await kubernetes_model.set_config({"image-stream": "daily"})
         await kubernetes_model.deploy(
             POSTGRESQL_K8S,
             channel="14/stable",

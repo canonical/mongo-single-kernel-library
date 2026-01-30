@@ -42,9 +42,11 @@ async def test_build_and_deploy(
     ops_test: OpsTest,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource,
+    mongod_resource: dict[str, str],
 ) -> None:
     """Build and deploy one unit of MongoDB."""
+    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+    await ops_test.model.set_config({"image-stream": "daily"})
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     await deploy_cluster_components(
@@ -59,7 +61,8 @@ async def test_build_and_deploy(
         },
     )
 
-    await ops_test.model.deploy(S3_APP_NAME, channel="edge")
+    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
+
     await ops_test.model.wait_for_idle(
         apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
         idle_period=20,

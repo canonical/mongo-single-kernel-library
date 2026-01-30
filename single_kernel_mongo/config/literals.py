@@ -5,6 +5,7 @@
 This module should contain the literals used in the charms (paths, enums, etc).
 """
 
+import platform
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from pathlib import Path
@@ -71,7 +72,9 @@ class Snap:
     revision: str = "148"
 
 
-SNAP = Snap(channel="8-transition/edge", revision="148")
+SNAP_REVISIONS = {"x86_64": "152", "aarch64": "151"}
+
+SNAP = Snap(channel="8-transition/edge", revision=SNAP_REVISIONS.get(platform.machine(), "x86_64"))
 
 T = TypeVar("T", bound=str | int)
 

@@ -6,8 +6,6 @@ concurrency:
 
 on:
   pull_request:
-  schedule:
-    - cron: "53 0 * * *" # Daily at 00:53 UTC
   workflow_dispatch:
   workflow_call:
 
@@ -128,9 +126,6 @@ jobs:
         run: tox run -e unit-${{ matrix.env }}
 
   build:
-    name: Build test charms
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
     strategy:
       matrix:
         path:
@@ -138,57 +133,12 @@ jobs:
           - tests/charms/mongodb_k8s_test_charm
           - tests/charms/mongos_test_charm
           - tests/charms/mongos_k8s_test_charm
-    steps:
-      - name: Install CLI
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Install tox & poetry
-        shell: bash
-        run: |
-          pipx install tox poetry
-          pipx inject poetry poetry-plugin-export
-      - name: Set up environment
-        run: |
-          sudo snap install lxd
-          # shellcheck disable=SC2078
-          # (shellcheck sees it as constant, but GitHub Actions expression is not constant between workflow runs)
-          sudo adduser "$USER" lxd
-          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
-          # Workaround for Docker & LXD on same machine
-          sudo iptables -F FORWARD
-          sudo iptables -P FORWARD ACCEPT
-
-          sudo snap install charmcraft --classic
-          pipx install charmcraftcache
-          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
-      - name: Set up python environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: 'poetry'
-      - name: Update lib and build charm
-        shell: bash
-        run: |
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh ${{ matrix.path }}
-        env:
-          CI_CACHE: true
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Compute path in artifact
-        id: path-in-artifact
-        run: compute-path-in-artifact '${{ matrix.path }}'
-      - name: Upload charm
-        uses: actions/upload-artifact@v4
-        with:
-          name: packed-charm-${{ steps.path-in-artifact.outputs.path }}
-          path: |
-            ${{ matrix.path }}/*.charm
-            .empty
-          if-no-files-found: error
+    name: Build Test charm | ${{ matrix.path }}
+    uses: ./.github/workflows/build_test_charms.yaml
+    with:
+      path-to-charm-directory: ${{ matrix.path }}
+      artifact-prefix: packed-charm
+      cache: false
 
   build-helpers:
     strategy:
@@ -198,10 +148,11 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v40.0.2
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: true
+      artifact-prefix: packed-charm
+      cache: false
 
   integration-test:
     name: Integration test charm
@@ -212,7 +163,7 @@ jobs:
       - build-helpers
     uses: ./.github/workflows/integration_test.yaml
     with:
-      artifact-prefix: packed-charm
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets: inherit
     permissions:
-      contents: write  # Needed for Allure Report
+      contents: write # Needed for Allure Report

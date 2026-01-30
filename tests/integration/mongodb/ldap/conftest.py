@@ -16,9 +16,7 @@ logger = getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-async def kubernetes_model(
-    ops_test: OpsTest,
-) -> AsyncGenerator[Model, Any]:
+async def kubernetes_model(ops_test: OpsTest, architecture: str) -> AsyncGenerator[Model, Any]:
     try:
         k8s_cloud = await ops_test.add_k8s(skip_storage=False)
         logger.warning(f"created cloud {k8s_cloud}")
