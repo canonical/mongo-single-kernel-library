@@ -35,7 +35,7 @@ jobs:
           import os
           import subprocess
           event_name = "${{ github.event_name }}"
-          if event_name == 'schedule':
+          if event_name == 'workflow_dispatch':
             pattern = "github-ci"
           else:
             # Selects only amd64 jobs.
@@ -75,12 +75,12 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as file:
               file.write(output)
       - name: Generate Allure default test results
-        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.run_attempt == '1' }}
         run: tox run -e integration -- tests/integration --allure-default-dir=allure-default-results
       - name: Upload Allure default results
         # Default test results in case the integration tests time out or runner set up fails
         # (So that Allure report will show "unknown"/"failed" test result, instead of omitting the test)
-        if: ${{ github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-default-results-integration-test
@@ -137,7 +137,7 @@ jobs:
         # Only upload results from one spread system & one spread variant
         # Allure can only process one result per pytest test ID. If parameterization is done via
         # spread instead of pytest, there will be overlapping pytest test IDs.
-        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && contains(matrix.job.spread_job, 'amd64') && github.event_name == 'schedule' && github.run_attempt == '1' }}
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) && startsWith(matrix.job.spread_job, 'github-ci:') && contains(matrix.job.spread_job, 'amd64') && github.event_name == 'workflow_dispatch' && github.run_attempt == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-integration-test-${{ matrix.job.name_in_artifact }}
@@ -187,7 +187,7 @@ jobs:
   allure-report:
     # TODO future improvement: use concurrency group for job
     name: Publish Allure report
-    if: ${{ !cancelled() && github.event_name == 'schedule' && github.run_attempt == '1' }}
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && github.run_attempt == '1' }}
     needs:
       - integration-test
     runs-on: ubuntu-latest
