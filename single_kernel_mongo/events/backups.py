@@ -93,7 +93,7 @@ class BackupEventsHandler(Object):
             self.manager.state.statuses.add(
                 MongoDBStatuses.INVALID_S3_REL.value,
                 scope="unit",
-                component=self.manager.name,
+                component=self.dependent.name,
             )
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:  # noqa: C901
