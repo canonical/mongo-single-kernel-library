@@ -77,7 +77,7 @@ def test_invalid_s3_integration(
         relation=relation
     )
     statuses = backup_manager.state.statuses.get(
-        scope=Scope.UNIT, component=backup_manager.name
+        scope=Scope.UNIT, component=harness.charm.operator.name
     ).root
 
     assert MongoDBStatuses.INVALID_S3_REL.value in statuses
