@@ -1,0 +1,66 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m root:test_upgrade.py:61 Upgrade is blocked due to incompatibility
+[32mINFO    [0m root:test_upgrade.py:63 Continue refresh on unit mongos/1
+[32mINFO    [0m root:test_upgrade.py:64 Running `force-refresh-start` action with check-compatibility=false
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m root:test_upgrade.py:79 Continue refresh on all other units with `resume-refresh` action
+[32mINFO    [0m root:test_upgrade.py:80 Calling resume refresh
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:22:47Z
+
+App                       Version  Status  Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             8.0.10   active      1  mongodb                              0  no       
+mongos                    8.0.10   active      2  mongos                               0  no       
+shard-one                 8.0.10   active      1  mongodb                              1  no       
+test-routing-application           active      2  test-routing-application             0  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports            Message
+config-server/0*             active    idle       0        10.193.123.8    27017-27018/tcp  Primary.
+shard-one/0*                 active    idle       1        10.193.123.186  27017/tcp        Primary.
+test-routing-application/0*  active    idle       2        10.193.123.162                   
+  mongos/1                   active    executing           10.193.123.162                   
+test-routing-application/1   active    idle       3        10.193.123.93                    
+  mongos/0*                  active    executing           10.193.123.93                    
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.193.123.8    juju-d61115-0  ubuntu@24.04  github-runner  Running
+1        started  10.193.123.186  juju-d61115-1  ubuntu@24.04  github-runner  Running
+2        started  10.193.123.162  juju-d61115-2  ubuntu@24.04  github-runner  Running
+3        started  10.193.123.93   juju-d61115-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:11:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:11:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:11:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:11:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:11:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:11:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:12:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:12:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:12:49 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:12:49 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:12:50 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:13:03 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:13:03 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:13:04 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongos-1: 02:16:00 ERROR unit.mongos/1.juju-log refresh-v-three:10: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-1: 02:16:06 ERROR unit.mongos/1.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-1: 02:16:12 ERROR unit.mongos/1.juju-log refresh-v-three:10: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-1: 02:16:19 ERROR unit.mongos/1.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-1: 02:16:34 ERROR unit.mongos/1.juju-log router-peers:11: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-1: 02:16:36 ERROR unit.mongos/1.juju-log router-peers:11: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
