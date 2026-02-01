@@ -1,0 +1,26 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:55:37Z
+
+App            Version  Status   Scale  Charm          Channel      Rev  Address         Exposed  Message
+config-server  6.0.24   waiting      2  mongodb-k8s                   0  10.152.183.163  no       installing agent
+s3-integrator           active       1  s3-integrator  latest/edge  255  10.152.183.217  no       
+shard-one      6.0.24   active       2  mongodb-k8s                   1  10.152.183.144  no       
+shard-two      6.0.24   active       1  mongodb-k8s                   2  10.152.183.181  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0   blocked   idle   10.1.53.13         Incorrect S3 credentials.
+config-server/1*  blocked   idle   10.1.53.14         Incorrect S3 credentials.
+s3-integrator/0*  active    idle   10.1.53.28         
+shard-one/0*      active    idle   10.1.53.21         Primary.
+shard-one/1       active    idle   10.1.53.23         
+shard-two/0*      active    idle   10.1.53.27         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 01:41:13 ERROR unit.shard-one/0.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 697eaf38a4d32297295a97b4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0021695650000310707>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.004916965000006712>]>
+unit-shard-one-0: 01:41:17 ERROR unit.shard-one/0.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 697eaf3ca4d32297295a97b5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001011016000006748>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013340920000928236>]>
+unit-shard-one-0: 01:41:49 ERROR unit.shard-one/0.juju-log database-peers:5: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 697eaf5cfa7adeb46b8b814f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0011082529999839608>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001302012999985891>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
