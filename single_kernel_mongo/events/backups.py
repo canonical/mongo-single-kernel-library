@@ -296,13 +296,11 @@ class BackupEventsHandler(Object):
         if not (relation := self.current_relation):
             event.fail("Missing valid relation for backups.")
             return
-        manager = self.manager_for(relation.name)
-        credentials = self.credentials_for(relation)
 
-        if not manager:
+        if not (manager := self.manager_for(relation.name)):
             event.fail("Manager only existing for s3/gcs-credentials relation.")
             return
-        if not credentials:
+        if not (credentials := self.credentials_for(relation)):
             event.fail("Missing valid credentials in relation.")
             return
 
@@ -336,8 +334,7 @@ class BackupEventsHandler(Object):
             event.fail("Missing valid integration for backups.")
             return
 
-        manager = self.manager_for(relation.name)
-        if not manager:
+        if not (manager := self.manager_for(relation.name)):
             event.fail("Manager only existing for s3/gcs-credentials relation.")
             return
 
@@ -366,8 +363,7 @@ class BackupEventsHandler(Object):
             )
             return
 
-        manager = self.manager_for(relation.name)
-        if not manager:
+        if not (manager := self.manager_for(relation.name)):
             fail_action_with_error_log(
                 logger, event, action, "Manager only existing for s3/gcs-credentials relation."
             )

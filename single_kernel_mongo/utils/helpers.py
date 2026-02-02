@@ -7,6 +7,7 @@
 import base64
 import binascii
 import json
+import re
 from functools import partial
 from logging import getLogger
 
@@ -114,3 +115,25 @@ def json_or_b64_to_dict(content: str) -> dict[str, str]:
         return json.loads(decoded_text)
     except (binascii.Error, ValueError, UnicodeDecodeError, json.JSONDecodeError) as e:
         raise ValueError("content is not valid JSON (raw or base64-encoded)") from e
+
+
+CREDENTIALS_HOLDERS: tuple[str, ...] = (
+    "hmacAccessKey",
+    "hmacSecret",
+    "clientEmail",
+    "privateKey",
+    "access-key-id",
+    "secret-access-key",
+    "pass",
+)
+
+
+def mask_sensitive_information(cmd: str | list[str]) -> str:
+    """Replace passwords or secrets by 'xxx' and return the masked str."""
+    formatted = "|".join(CREDENTIALS_HOLDERS)
+    if isinstance(cmd, list):
+        cmd = " ".join(cmd)
+
+    pattern = re.compile(rf"({formatted})(:|=| )(\S+)")
+
+    return re.sub(pattern, r"\1\2" + "xxx", cmd)

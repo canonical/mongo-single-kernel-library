@@ -351,8 +351,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
-        backup_relation = self.backup_events.current_relation
-        if not backup_relation:
+        if not (backup_relation := self.backup_events.current_relation):
             return
         manager = self.backup_events.manager_for(backup_relation.name)
         credentials = self.backup_events.credentials_for(backup_relation)
