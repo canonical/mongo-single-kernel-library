@@ -25,4 +25,4 @@ def test_parse_tls_file_raw():
 
 
 def test_mask_cmd():
-    assert mask_sensitive_information("hmacSecretKey=deadbeef") == "hmacSecretKey=xxx"
+    assert mask_sensitive_information("hmacSecret=deadbeef") == "hmacSecret=xxx"
