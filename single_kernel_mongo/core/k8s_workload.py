@@ -16,6 +16,7 @@ from single_kernel_mongo.config.literals import KubernetesUser
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
+from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
 logger = getLogger(__name__)
 
@@ -144,9 +145,10 @@ class KubernetesWorkload(WorkloadBase):
             output, _ = process.wait_output()
             return output
         except ExecError as e:
-            logger.debug(e)
+            masked_cmd = mask_sensitive_information(command)
+            logger.error(f"cmd failed - cmd={masked_cmd}, stdout={e.stdout}, stderr={e.stderr}")
             raise WorkloadExecError(
-                e.command,
+                masked_cmd,
                 e.exit_code,
                 e.stdout,
                 e.stderr,
