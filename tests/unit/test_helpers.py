@@ -3,7 +3,11 @@
 
 import base64
 
-from single_kernel_mongo.utils.helpers import hostname_from_hostport, parse_tls_file
+from single_kernel_mongo.utils.helpers import (
+    hostname_from_hostport,
+    mask_sensitive_information,
+    parse_tls_file,
+)
 
 
 def test_hostname_from_hostport():
@@ -18,3 +22,7 @@ def test_parse_tls_file_raw():
     decoded = parse_tls_file(certificate)
     assert decoded == certificate.encode("utf-8")
     assert decoded == parse_tls_file(certificate_b64)
+
+
+def test_mask_cmd():
+    assert mask_sensitive_information("hmacSecret=deadbeef") == "hmacSecret=xxx"

@@ -119,3 +119,22 @@ def charm_kind_only(func, charm_kind: CharmKind):
 
 mongodb_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOD)
 mongos_only = partial(charm_kind_only, charm_kind=CharmKind.MONGOS)
+
+CREDENTIALS_HOLDERS: tuple[str, ...] = (
+    "hmacAccessKey",
+    "hmacSecret",
+    "access-key-id",
+    "secret-access-key",
+    "pass",
+)
+
+
+def mask_sensitive_information(cmd: str | list[str]) -> str:
+    """Replace passwords or secrets by 'xxx' and return the masked str."""
+    formatted = "|".join(CREDENTIALS_HOLDERS)
+    if isinstance(cmd, list):
+        cmd = " ".join(cmd)
+
+    pattern = re.compile(rf"({formatted})(:|=| )(\S+)")
+
+    return re.sub(pattern, r"\1\2" + "xxx", cmd)
