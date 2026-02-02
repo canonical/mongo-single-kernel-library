@@ -1,0 +1,113 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] blocked: TLS is mandatory for LDAP transport.
+  mongodb/1 [idle] blocked: TLS is mandatory for LDAP transport.
+  mongodb/2 [idle] blocked: TLS is mandatory for LDAP transport.
+[32mINFO    [0m integration.helpers.ldap:ldap.py:135 Removing ldap offer
+[32mINFO    [0m integration.helpers.ldap:ldap.py:141 Removing ldap cert offer
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-ge1p  concierge-lxd  test-ldap-k8s-cloud-m4rt/default  3.6.14   unsupported  02:49:57Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.146  no       
+glauth-utils                       active      1  glauth-utils              latest/edge     50  10.152.183.155  no       
+postgresql-k8s            14.15    active      1  postgresql-k8s            14/stable      495  10.152.183.142  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.253  no       
+traefik-k8s               2.11.0   active      1  traefik-k8s               latest/stable  263  10.152.183.137  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address     Ports  Message
+glauth-k8s/0*                active    idle   10.1.53.20         
+glauth-utils/0*              active    idle   10.1.53.17         
+postgresql-k8s/0*            active    idle   10.1.53.13         Primary
+self-signed-certificates/0*  active    idle   10.1.53.14         
+traefik-k8s/0*               active    idle   10.1.53.16         Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 02:41:25 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 02:41:28 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-traefik-k8s-0: 02:42:45 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:42:45 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:42:46 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:42:47 ERROR unit.traefik-k8s/0.juju-log ingress-per-unit:4: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:42:47 ERROR unit.traefik-k8s/0.juju-log ingress-per-unit:4: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:42:47 ERROR unit.traefik-k8s/0.juju-log ingress-per-unit:4: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:00 ERROR unit.traefik-k8s/0.juju-log failed processing the ingress relation <ops.model.Relation ingress-per-unit:4>: 'provider is not ready: ingress for <ops.model.Relation ingress-per-unit:4> wiped.'
+unit-traefik-k8s-0: 02:43:00 ERROR unit.traefik-k8s/0.juju-log The setup of some ingress relation failed, see previous logs
+unit-traefik-k8s-0: 02:43:07 ERROR unit.traefik-k8s/0.juju-log failed processing the ingress relation <ops.model.Relation ingress-per-unit:4>: 'provider is not ready: ingress for <ops.model.Relation ingress-per-unit:4> wiped.'
+unit-traefik-k8s-0: 02:43:07 ERROR unit.traefik-k8s/0.juju-log The setup of some ingress relation failed, see previous logs
+unit-traefik-k8s-0: 02:43:08 ERROR unit.traefik-k8s/0.juju-log failed processing the ingress relation <ops.model.Relation ingress-per-unit:4>: 'provider is not ready: ingress for <ops.model.Relation ingress-per-unit:4> wiped.'
+unit-traefik-k8s-0: 02:43:08 ERROR unit.traefik-k8s/0.juju-log The setup of some ingress relation failed, see previous logs
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-ge1p...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Reset test-ldap-ge1p completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-ge1p to die...
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-9886' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "d9b50eb9-5183-4e02-843e-a1618e467856"')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "d9b50eb9-5183-4e02-843e-a1618e467856"
+[1m[31mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-m4rt...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:51:50Z
+
+App      Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+mongodb  7.0.28   active      3  mongodb             0  no       
+
+Unit        Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0*  active    idle   0        10.86.162.191   27017/tcp  Primary.
+mongodb/1   active    idle   1        10.86.162.137   27017/tcp  
+mongodb/2   active    idle   2        10.86.162.228   27017/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.86.162.191  juju-79373d-0  ubuntu@24.04  github-runner  Running
+1        started  10.86.162.137  juju-79373d-1  ubuntu@24.04  github-runner  Running
+2        started  10.86.162.228  juju-79373d-2  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:39:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:39:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:39:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:39:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:39:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:39:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-2: 02:40:30 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:40:30 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:40:32 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:40:32 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:40:41 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:40:41 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:40:41 ERROR unit.mongodb/2.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-2: 02:40:43 ERROR unit.mongodb/2.juju-log upgrade-version-a:0: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-1: 02:40:43 ERROR unit.mongodb/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-2: 02:40:45 ERROR unit.mongodb/2.juju-log status-peers:1: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-1: 02:40:45 ERROR unit.mongodb/1.juju-log upgrade-version-a:0: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-2: 02:40:46 ERROR unit.mongodb/2.juju-log database-peers:3: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-1: 02:40:47 ERROR unit.mongodb/1.juju-log status-peers:1: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-2: 02:40:48 ERROR unit.mongodb/2.juju-log ldap-peers:2: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-1: 02:40:48 ERROR unit.mongodb/1.juju-log upgrade-version-a:0: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongodb-0: 02:49:35 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "d1b6dee0-42a4-4386-8b22-272ffe79373d:r#6#ldap-integration": settings d1b6dee0-42a4-4386-8b22-272ffe79373d:r#6#ldap-integration not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

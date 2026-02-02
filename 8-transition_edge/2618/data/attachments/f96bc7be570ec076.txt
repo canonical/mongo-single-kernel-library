@@ -1,0 +1,61 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  03:04:32Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Exposed  Message
+config-server  7.0.28   active      2  mongodb                   0  no       
+s3-integrator           active      1  s3-integrator  1/edge   255  no       
+shard-one      7.0.28   active      2  mongodb                   1  no       
+shard-two      7.0.28   active      1  mongodb                   2  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*  blocked   idle   0        10.86.84.250    27017-27018/tcp  Incorrect S3 credentials.
+config-server/1   blocked   idle   1        10.86.84.85     27017-27018/tcp  Incorrect S3 credentials.
+s3-integrator/0*  active    idle   5        10.86.84.107                     
+shard-one/0       active    idle   2        10.86.84.23     27017/tcp        Primary.
+shard-one/1*      active    idle   3        10.86.84.73     27017/tcp        
+shard-two/0*      active    idle   4        10.86.84.177    27017/tcp        Primary.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.86.84.250  juju-30d899-0  ubuntu@24.04  github-runner  Running
+1        started  10.86.84.85   juju-30d899-1  ubuntu@24.04  github-runner  Running
+2        started  10.86.84.23   juju-30d899-2  ubuntu@24.04  github-runner  Running
+3        started  10.86.84.73   juju-30d899-3  ubuntu@24.04  github-runner  Running
+4        started  10.86.84.177  juju-30d899-4  ubuntu@24.04  github-runner  Running
+5        started  10.86.84.107  juju-30d899-5  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:44:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:44:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:45:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:45:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:45:21 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:45:21 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:45:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:45:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:45:35 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:45:35 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:46:03 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:46:03 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-4: 02:46:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:46:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:46:12 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:46:12 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:46:15 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:46:15 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:47:07 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:47:07 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-5: 02:48:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:48:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-1: 02:49:46 ERROR unit.config-server/1.juju-log s3-credentials:13: Incorrect S3 credentials
+unit-config-server-0: 02:49:49 ERROR unit.config-server/0.juju-log s3-credentials:13: Incorrect S3 credentials
+unit-config-server-1: 02:49:50 ERROR unit.config-server/1.juju-log s3-credentials:13: Incorrect S3 credentials
+unit-config-server-0: 02:49:52 ERROR unit.config-server/0.juju-log s3-credentials:13: Incorrect S3 credentials
+unit-shard-one-1: 02:50:11 ERROR unit.shard-one/1.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698010e2ab74f1f01df78594, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.86.84.23', 27017) server_type: RSSecondary, rtt: 0.0005943119999756163>, <ServerDescription ('10.86.84.73', 27017) server_type: RSSecondary, rtt: 0.0005145220000031259>]>
+unit-shard-one-1: 02:50:15 ERROR unit.shard-one/1.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698010e6ab74f1f01df78595, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.86.84.23', 27017) server_type: RSSecondary, rtt: 0.0005636060000142606>, <ServerDescription ('10.86.84.73', 27017) server_type: RSSecondary, rtt: 0.0005135399999289803>]>
+unit-shard-one-1: 02:51:01 ERROR unit.shard-one/1.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69801114990b5e43fa83fcd3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.86.84.23', 27017) server_type: RSSecondary, rtt: 0.0005553129999498196>, <ServerDescription ('10.86.84.73', 27017) server_type: RSSecondary, rtt: 0.0006428440000263436>]>
+unit-shard-one-1: 02:51:05 ERROR unit.shard-one/1.juju-log sharding:14: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69801118990b5e43fa83fcd4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.86.84.23', 27017) server_type: RSSecondary, rtt: 0.0005789389999790728>, <ServerDescription ('10.86.84.73', 27017) server_type: RSSecondary, rtt: 0.0006233850000398888>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
