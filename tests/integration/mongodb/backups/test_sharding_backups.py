@@ -76,7 +76,7 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_set_credentials_in_cluster(ops_test: OpsTest, cloud_configs) -> None:
     """Tests that sharded cluster can be configured for s3 configurations."""
-    await set_credentials(ops_test, cloud_configs, cloud="AWS")
+    await set_credentials(ops_test, cloud_configs, app_name=S3_APP_NAME, cloud="AWS")
 
     configuration_parameters, _ = cloud_configs["AWS"]
 

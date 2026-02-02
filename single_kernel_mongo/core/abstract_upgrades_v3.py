@@ -134,12 +134,12 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
                 raise charm_refresh.PrecheckFailed("mongos is not able to read/write")
             return
 
-        backup_state = self.dependent.backup_manager.backup_state()
-
-        if backup_state == BackupState.BACKUP_RUNNING:
-            raise charm_refresh.PrecheckFailed("Backup in progress.")
-        if backup_state == BackupState.RESTORE_RUNNING:
-            raise charm_refresh.PrecheckFailed("Restore in progress.")
+        for manager in (self.dependent.s3_backup_manager, self.dependent.gcs_backup_manager):
+            backup_state = manager.backup_state()
+            if backup_state == BackupState.BACKUP_RUNNING:
+                raise charm_refresh.PrecheckFailed("Backup in progress.")
+            if backup_state == BackupState.RESTORE_RUNNING:
+                raise charm_refresh.PrecheckFailed("Restore in progress.")
 
         self._mongodb_checks()
 

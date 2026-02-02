@@ -196,7 +196,7 @@ def get_user_from_username(username: str) -> MongoDBUser:
     raise ValueError(f"Unknown user: {username}")
 
 
-def validate_charm_user_password_config(user_passwords: dict) -> None:
+def validate_charm_user_password_config(user_passwords: dict[str, str]) -> None:
     """Validate a mapping of charm usernames to passwords.
 
     Rules:

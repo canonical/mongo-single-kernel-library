@@ -16,6 +16,7 @@ from single_kernel_mongo.config.literals import KubernetesUser
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
+from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
 logger = getLogger(__name__)
 
@@ -139,6 +140,7 @@ class KubernetesWorkload(WorkloadBase):
         working_dir: str | None = None,
         input: str | None = None,
     ) -> str:
+        masked_cmd = mask_sensitive_information(command)
         try:
             process = self.container.exec(
                 command=command,
@@ -150,28 +152,28 @@ class KubernetesWorkload(WorkloadBase):
             output, _ = process.wait_output()
             return output
         except ExecError as e:
-            logger.debug(e)
+            logger.error(f"cmd failed - cmd={masked_cmd}, stdout={e.stdout}, stderr={e.stderr}")
             raise WorkloadExecError(
-                e.command,
+                masked_cmd,
                 e.exit_code,
                 e.stdout,
                 e.stderr,
             ) from e
         except APIError as e:
-            logger.debug(e)
+            logger.error(f"cmd failed - cmd={masked_cmd}, {e.status}: {e.message}")
             raise WorkloadExecError(
-                command,
+                masked_cmd,
                 e.code,
                 f"{e.status}: {e.message}",
             ) from e
         except ConnectionError as e:
-            logger.debug(e)
+            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client can't connect to socket.")
             raise WorkloadExecError(
-                command, -1, "Pebble client can't connect to the socket."
+                masked_cmd, -1, "Pebble client can't connect to the socket."
             ) from e
         except TimeoutError as e:
-            logger.debug(e)
-            raise WorkloadExecError(command, -1, "Pebble client polling timeout.") from e
+            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client polling timeout.")
+            raise WorkloadExecError(masked_cmd, -1, "Pebble client polling timeout.") from e
 
     @override
     def run_bin_command(

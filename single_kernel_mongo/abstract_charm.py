@@ -14,7 +14,6 @@ class MyCharm(AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
     substrate = Substrates.VM
     peer_rel_name = PeerRelationNames.PEERS
     name = "mongodb-test"
-
 ```
 
 This defines a charm that has the `MongoDBCharmConfig` configuration model,
