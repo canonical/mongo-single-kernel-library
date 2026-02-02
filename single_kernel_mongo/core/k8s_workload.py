@@ -9,7 +9,7 @@ from logging import getLogger
 from pathlib import Path
 
 from ops import Container
-from ops.pebble import ChangeError, ExecError
+from ops.pebble import APIError, ChangeError, ExecError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import KubernetesUser
@@ -134,6 +134,7 @@ class KubernetesWorkload(WorkloadBase):
         working_dir: str | None = None,
         input: str | None = None,
     ) -> str:
+        masked_cmd = mask_sensitive_information(command)
         try:
             process = self.container.exec(
                 command=command,
@@ -153,6 +154,22 @@ class KubernetesWorkload(WorkloadBase):
                 e.stdout,
                 e.stderr,
             ) from e
+        except APIError as e:
+            logger.error(f"cmd failed - cmd={masked_cmd}, {e.status}: {e.message}")
+            raise WorkloadExecError(
+                masked_cmd,
+                e.code,
+                "",
+                f"{e.status}: {e.message}",
+            ) from e
+        except ConnectionError as e:
+            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client can't connect to socket.")
+            raise WorkloadExecError(
+                masked_cmd, -1, "", "Pebble client can't connect to the socket."
+            ) from e
+        except TimeoutError as e:
+            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client polling timeout.")
+            raise WorkloadExecError(masked_cmd, -1, "", "Pebble client polling timeout.") from e
 
     @override
     def run_bin_command(

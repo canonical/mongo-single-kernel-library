@@ -207,12 +207,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """
         self.assert_pass_sanity_hook_checks()
 
-        pbm_status = self.dependent.backup_manager.backup_state()
+        for manager in (self.dependent.s3_backup_manager, self.dependent.gcs_backup_manager):
+            pbm_status = manager.backup_state()
 
-        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
-            raise DeferrableFailedHookChecksError(
-                "Cannot add/remove shards while a backup/restore is in progress."
-            )
+            if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
+                raise DeferrableFailedHookChecksError(
+                    "Cannot add/remove shards while a backup/restore is in progress."
+                )
 
         if self.state.upgrade_in_progress:
             logger.warning(
@@ -600,7 +601,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.debug("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
             # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
+            self.dependent.s3_backup_manager.configure_and_restart(force=True)
         elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
             TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         ):
@@ -609,7 +610,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
+            self.dependent.s3_backup_manager.configure_and_restart(force=True)
 
         if not self.charm.unit.is_leader():
             return
@@ -664,7 +665,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.debug("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
             # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
+            self.dependent.s3_backup_manager.configure_and_restart(force=True)
         elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
             TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         ):
@@ -673,7 +674,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             # We updated the configuration, so we restart PBM.
-            self.dependent.backup_manager.configure_and_restart(force=True)
+            self.dependent.s3_backup_manager.configure_and_restart(force=True)
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""
@@ -748,7 +749,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise FailedToUpdateCredentialsError
         try:
             # after updating the password of the backup user, restart pbm with correct password
-            self.dependent.backup_manager.configure_and_restart()
+            self.dependent.s3_backup_manager.configure_and_restart()
         except NotPrimaryError:
             logger.info("Will retry to start pbm later.")
 
