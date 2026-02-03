@@ -250,14 +250,14 @@ async def faulty_mongodb_upgrade_charm(mongod_base_path: Path, mongodb_charm: st
             file_data = literals_file.read().decode().split("\n")
 
     # What is the revision N of the snap that we're supposed to install if we're a VM charm
-    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+    regex = re.compile(r"SNAP.*\(.*, revision=(.*)\)$")
 
     # Update the read content of the file with a computed value for the snap revision (N - 1)
     for index, line in enumerate(file_data):
         if entry := regex.findall(line):
             current_rev = entry[0]
-            new_rev = int(current_rev) - 1
-            new_line = line.replace(current_rev, str(new_rev))
+            new_rev = f"str(int({current_rev})-1)"
+            new_line = line.replace(current_rev, new_rev)
             file_data[index] = new_line
             break
 
@@ -292,14 +292,14 @@ async def faulty_mongos_upgrade_charm(mongos_base_path: Path, mongos_charm: str,
             file_data = literals_file.read().decode().split("\n")
 
     # What is the revision N of the snap that we're supposed to install if we're a VM charm
-    regex = re.compile(r"SNAP.*\(.*, revision=\"([0-9]+)\"\)")
+    regex = re.compile(r"SNAP.*\(.*, revision=(.*)\)$")
 
     # Update the read content of the file with a computed value for the snap revision (N - 1)
     for index, line in enumerate(file_data):
         if entry := regex.findall(line):
             current_rev = entry[0]
-            new_rev = int(current_rev) - 1
-            new_line = line.replace(current_rev, str(new_rev))
+            new_rev = f"str(int({current_rev})-1)"
+            new_line = line.replace(current_rev, new_rev)
             file_data[index] = new_line
             break
 
