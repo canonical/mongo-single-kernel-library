@@ -166,8 +166,11 @@ jobs:
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
       - name: Dump pods and their logs
+        id: dump
         shell: bash
         run: |
+          echo "PATH = ${PATH}"
+          microk8s -h
           # shellcheck disable=SC2162
           # shellcheck disable=SC2086
           sudo microk8s.kubectl get pods \
@@ -181,6 +184,9 @@ jobs:
                       --all-containers=true \
                       --tail=100; \
                done
+      - name: Tmate
+        if: ${{ failure() && steps.spread.outcome == 'failure' && steps.dump.outcome == 'failure'}}
+        uses: canonical/action-tmate@main
       - name: Dump deployments
         run: |
           sudo microk8s.kubectl describe deployments -A | tee ~/logs/kubectl-deployments.txt
