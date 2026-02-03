@@ -78,7 +78,8 @@ from single_kernel_mongo.exceptions import (
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
-from single_kernel_mongo.managers.backups import BackupManager
+from single_kernel_mongo.managers.backups.gcs import GCSBackupManager
+from single_kernel_mongo.managers.backups.s3 import S3BackupManager
 from single_kernel_mongo.managers.cluster import ClusterProvider
 from single_kernel_mongo.managers.config import (
     LogRotateConfigManager,
@@ -129,7 +130,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def __init__(self, charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
         super(OperatorProtocol, self).__init__(charm, self.name)
-        self.charm = charm
+        self.charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator] = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = ROLES[self.substrate][self.name]
         self.state = CharmState(
@@ -160,7 +161,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.cluster_version_checker = VersionChecker(self)
 
         # Managers
-        self.backup_manager = BackupManager(
+        self.s3_backup_manager = S3BackupManager(
+            self,
+            self.role,
+            self.substrate,
+            self.state,
+            container,
+        )
+        self.gcs_backup_manager = GCSBackupManager(
             self,
             self.role,
             self.substrate,
@@ -343,11 +351,15 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
-        if self.state.s3_relation:
-            credentials = self.backup_events.s3_client.get_s3_connection_info()
-            self.backup_manager.set_config_options(credentials)
+        if not (backup_relation := self.backup_events.current_relation):
+            return
+        manager = self.backup_events.manager_for(backup_relation.name)
+        credentials = self.backup_events.credentials_for(backup_relation)
+        if not credentials or not manager:
+            return
 
-        return
+        manager.set_certificate(credentials)
+        manager.set_config_options(credentials)
 
     @property
     @override
@@ -404,7 +416,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.tls_manager,
             self.shard_manager,
             self.config_server_manager,
-            self.backup_manager,
+            self.s3_backup_manager,
+            self.gcs_backup_manager,
             self.ldap_manager,
         )
 
@@ -735,7 +748,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # continue to work.
         if self.state.db_initialised and self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
-            self.backup_manager.configure_and_restart()
+            # We can use either manager, what matters is the BackupConfigManager below
+            self.s3_backup_manager.configure_and_restart()
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
@@ -792,7 +806,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # the configuration is updated and will still work afterwards.
         if self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
-            self.backup_manager.configure_and_restart()
+            # We can use either manager, what matters is the BackupConfigManager below
+            self.s3_backup_manager.configure_and_restart()
 
         # Always process the statuses.
 
@@ -929,8 +944,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Set password in Mongod and restart the appropriate services."""
         self.mongo_manager.set_user_password(user, new_password)
         if user == CharmedBackupUser:
-            # Update and restart PBM Agent.
-            self.backup_manager.configure_and_restart()
+            # We can use either manager, what matters is the BackupConfigManager below
+            self.s3_backup_manager.configure_and_restart()
         if user == CharmedStatsUser:
             # Update and restart mongodb exporter.
             self.mongodb_exporter_config_manager.configure_and_restart()
@@ -957,7 +972,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # All nodes should restart PBM and MongoDBExporter if it's not running
         if self.workload.active():
             self.mongodb_exporter_config_manager.configure_and_restart()
-            self.backup_manager.configure_and_restart()
+            # We can use either manager, what matters is the BackupConfigManager below
+            self.s3_backup_manager.configure_and_restart()
 
         if not self.charm.unit.is_leader():
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
@@ -1089,7 +1105,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise
 
         try:
-            self.backup_manager.configure_and_restart()
+            # We can use either manager, what matters is the BackupConfigManager below
+            self.s3_backup_manager.configure_and_restart()
         except WorkloadServiceError:
             self.state.statuses.add(
                 BackupStatuses.WAITING_FOR_PBM_START.value,
@@ -1209,9 +1226,11 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""
-        statuses = []
-        if not self.backup_manager.is_valid_s3_integration():
+        statuses: list[StatusObject] = []
+        if not self.s3_backup_manager.is_valid_integration():
             statuses.append(MongoDBStatuses.INVALID_S3_REL.value)
+        if not self.gcs_backup_manager.is_valid_integration():
+            statuses.append(MongoDBStatuses.INVALID_GCS_REL.value)
         # Add valid statuses for all invalid integrated relations
         for relation_name in [
             RelationNames.DATABASE,
@@ -1285,7 +1304,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         # PBM does not start until the shard is integrated with a config-server
         # So if we're everything BUT a shard or not added to cluster, let's check PBM as well
         if not self.state.is_role(MongoDBRoles.SHARD) or self.state.is_shard_added_to_cluster():
-            if not self.backup_manager.workload.active():
+            # We can use either backup manager, what matters is the workload.
+            if not self.s3_backup_manager.workload.active():
                 charm_statuses.append(BackupStatuses.WAITING_FOR_PBM_START.value)
 
         return charm_statuses
@@ -1311,12 +1331,15 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Cannot update passwords while an upgrade is in progress.",
             )
 
-        pbm_status = self.backup_manager.backup_state()
-        if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
-            return PasswordManagementContext(
-                PasswordManagementState.BACKUP_RUNNING,
-                "Cannot update passwords while a backup/restore is in progress.",
-            )
+        # We check for each backup state as each one will fail to reach the restore state if some
+        # steps before are invalid.
+        for manager in (self.s3_backup_manager, self.gcs_backup_manager):
+            pbm_status = manager.backup_state()
+            if pbm_status in (BackupState.BACKUP_RUNNING, BackupState.RESTORE_RUNNING):
+                return PasswordManagementContext(
+                    PasswordManagementState.BACKUP_RUNNING,
+                    "Cannot update passwords while a backup/restore is in progress.",
+                )
 
         try:
             system_users = self.charm.state.get_secret_from_id(system_users_secret_id)

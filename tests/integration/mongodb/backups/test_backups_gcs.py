@@ -10,14 +10,15 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.backups import (
+    GCS_APP_NAME,
+    GCS_ENDPOINT,
     NEW_CLUSTER,
-    S3_APP_NAME,
-    S3_ENDPOINT,
+    CloudConfigs,
+    configure_gcs,
     count_failed_backups,
     count_logical_backups,
     create_and_verify_backup,
     insert_unwanted_data,
-    set_credentials,
 )
 from tests.integration.helpers.common import (
     CHARMED_BACKUP_USERNAME,
@@ -50,9 +51,6 @@ async def test_deploy_charms(
     mongod_resource: dict[str, str],
     base_app_name: str,
 ):
-    # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
-    await ops_test.model.set_config({"image-stream": "daily"})
-
     app_name = await get_app_name(ops_test)
     if app_name:
         await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
@@ -66,8 +64,8 @@ async def test_deploy_charms(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    # deploy the s3 integrator charm
-    await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
+    # deploy the GCS integrator charm
+    await ops_test.model.deploy(GCS_APP_NAME, channel="1/edge")
 
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
 
@@ -76,9 +74,9 @@ async def test_deploy_charms(
 async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test that when charm is missing pbm information that it reports that."""
     db_app_name = await get_app_name(ops_test)
-    await ops_test.model.integrate(S3_APP_NAME, db_app_name)
+    await ops_test.model.integrate(GCS_APP_NAME, db_app_name)
     await ops_test.model.block_until(
-        lambda: is_relation_joined(ops_test, S3_ENDPOINT, S3_ENDPOINT) is True,
+        lambda: is_relation_joined(ops_test, GCS_ENDPOINT, GCS_ENDPOINT) is True,
         timeout=TIMEOUT,
     )
 
@@ -86,7 +84,7 @@ async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         substrate,
         db_app_name,
-        status="Missing configurations in the s3-credentials relation.",
+        status="Missing configurations in the gcs-credentials relation.",
         timeout=300,
     )
 
@@ -94,66 +92,53 @@ async def test_blocked_missing_config(ops_test: OpsTest, substrate: Substrate) -
         ops_test,
         db_app_name,
         status="blocked",
-        message="Missing configurations in the s3-credentials relation.",
+        message="Missing configurations in the gcs-credentials relation.",
     )
 
 
 @pytest.mark.abort_on_fail
 async def test_blocked_incorrect_creds(
-    ops_test: OpsTest, substrate: Substrate, cloud_configs
+    ops_test: OpsTest,
+    substrate: Substrate,
+    cloud_configs: CloudConfigs,
 ) -> None:
-    """Verifies that the charm goes into blocked status when s3 creds are incorrect."""
+    """Verifies that the charm goes into blocked status when GCS creds are incorrect."""
     db_app_name = await get_app_name(ops_test)
-    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
+    # set incorrect GCS credentials
+    configuration_parameters, _ = cloud_configs["GCS"]
 
-    # set incorrect s3 credentials
-    configuration_parameters, _ = cloud_configs["AWS"]
+    await configure_gcs(
+        ops_test,
+        configuration_parameters,
+        {"secret-key": '{"client_email": "invalid", "private_key": "invalid"}'},
+    )
 
     # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-
-    # Set invalid credentials
-    parameters = {"access-key": "user", "secret-key": "doesnt-exist"}
-    action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **parameters)
-    await action.wait()
-
-    # verify that Charmed MongoDB is blocked and reports incorrect credentials
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active")
-
     await wait_for_mongodb_units_blocked(
-        ops_test, substrate, db_app_name, status="Incorrect S3 credentials.", timeout=300
-    )
-    await check_status_detail(
-        ops_test,
-        db_app_name,
-        status="blocked",
-        message="Incorrect S3 credentials.",
+        ops_test, substrate, db_app_name, status="Incorrect GCS credentials.", timeout=300
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs) -> None:
-    """Verifies charm goes into active status when s3 config and creds options are correct."""
+async def test_ready_correct_conf(ops_test: OpsTest, cloud_configs: CloudConfigs) -> None:
+    """Verifies charm goes into active status when GCS config and creds options are correct."""
     db_app_name = await get_app_name(ops_test)
-    s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
 
-    _, credentials = cloud_configs["AWS"]
-    action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **credentials)
-    await action.wait()
+    configuration_parameters, credentials = cloud_configs["GCS"]
+    await configure_gcs(ops_test, configuration_parameters, credentials)
 
     # after applying correct config options and creds the applications should both be active
-    await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active", timeout=TIMEOUT)
+    await ops_test.model.wait_for_idle(apps=[GCS_APP_NAME], status="active", timeout=TIMEOUT)
     await ops_test.model.wait_for_idle(
         apps=[db_app_name], status="active", timeout=TIMEOUT, idle_period=60
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs) -> None:
+async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs: CloudConfigs) -> None:
     """Tests that we can create a backup, and that it is listed in the backups."""
     db_app_name = await get_app_name(ops_test)
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
-    await set_credentials(ops_test, cloud_configs, cloud="AWS")
     # verify backup list works
     logger.info("!!!!! test_create_and_list_backups >>>  %s", leader_unit)
     action = await leader_unit.run_action(action_name="list-backups")
@@ -182,82 +167,9 @@ async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs) -> None
 
 
 @pytest.mark.abort_on_fail
-async def test_multi_backup(ops_test: OpsTest, continuous_writes_to_db, cloud_configs) -> None:
-    """With writes in the DB test creating a backup while another one is running.
-
-    Note that before creating the second backup we change the bucket and change the s3 storage
-    from AWS to GCP. This test verifies that the first backup in AWS is made, the second backup
-    in GCP is made, and that before the second backup is made that pbm correctly resyncs.
-    """
-    db_app_name = await get_app_name(ops_test)
-
-    leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
-
-    # create first backup once ready
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
-
-    action = await leader_unit.run_action(action_name="create-backup")
-    first_backup = await action.wait()
-    assert first_backup.status == "completed", "First backup not started."
-
-    # while first backup is running change access key, secret keys, and bucket name
-    # for GCP
-    await set_credentials(ops_test, cloud_configs, cloud="GCP")
-
-    # change to GCP configs and wait for PBM to resync
-    configuration_parameters, _ = cloud_configs["GCP"]
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
-
-    # create a backup as soon as possible. might not be immediately possible since only one backup
-    # can happen at a time.
-    try:
-        for attempt in Retrying(stop=stop_after_delay(40), wait=wait_fixed(5)):
-            with attempt:
-                action = await leader_unit.run_action(action_name="create-backup")
-                second_backup = await action.wait()
-                assert second_backup.status == "completed"
-    except RetryError:
-        assert second_backup.status == "completed", "Second backup not started."
-
-    # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
-    # backup can take a lot of time so this function returns once the command was successfully
-    # sent to pbm. Therefore before checking, wait for Charmed MongoDB to finish creating the
-    # backup
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15)
-
-    # verify that backups was made in GCP bucket
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
-            with attempt:
-                backups = await count_logical_backups(leader_unit)
-                assert backups == 1, "Backup not created in bucket on GCP."
-    except RetryError:
-        assert backups == 1, "Backup not created in first bucket on GCP."
-
-    # set AWS credentials, set configs for s3 storage, and wait to resync
-    await set_credentials(ops_test, cloud_configs, cloud="AWS")
-    configuration_parameters, _ = cloud_configs["AWS"]
-
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
-    )
-
-    # verify that backups was made on the AWS bucket
-    try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
-            with attempt:
-                backups = await count_logical_backups(leader_unit)
-                assert backups == 2, "Backup not created in bucket on AWS."
-    except RetryError:
-        assert backups == 2, "Backup not created in bucket on AWS."
-
-
-@pytest.mark.abort_on_fail
 async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate) -> None:
     """Simple backup tests that verifies that writes are correctly restored."""
+    number_writes_restored = -1
     db_app_name = await get_app_name(ops_test)
     # create a backup in the AWS bucket
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
@@ -278,6 +190,10 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
                 assert backups == prev_backups + 1, "Backup not created."
     except RetryError:
         assert backups == prev_backups + 1, "Backup not created."
+
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
+    )
 
     # add writes to be cleared after restoring the backup. Note these are written to the same
     # collection that was backed up.
@@ -312,29 +228,19 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
         assert number_writes == number_writes_restored, "writes not correctly restored"
 
 
-@pytest.mark.parametrize("cloud_provider", ["AWS", "GCP"])
 async def test_restore_new_cluster(
     ops_test: OpsTest,
     substrate: Substrate,
-    cloud_configs,
     mongodb_charm: str,
-    mongod_resource,
-    cloud_provider,
+    mongod_resource: dict[str, str],
     add_writes_to_db,
 ):
     # configure test for the cloud provider
     db_app_name = await get_app_name(ops_test)
-    new_cluster_app_name = f"{NEW_CLUSTER}-{cloud_provider.lower()}"
-
     leader_unit = await find_unit(ops_test, leader=True, app_name=db_app_name)
-
-    await set_credentials(ops_test, cloud_configs, cloud=cloud_provider)
-
-    configuration_parameters, _ = cloud_configs[cloud_provider]
-
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
+    new_cluster_app_name = f"{NEW_CLUSTER}-gcs"
     await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[S3_APP_NAME], status="active"),
+        ops_test.model.wait_for_idle(apps=[GCS_APP_NAME], status="active"),
         ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=15),
     )
 
@@ -360,13 +266,11 @@ async def test_restore_new_cluster(
         num_units=len(UNIT_IDS),
     )
 
-    await asyncio.gather(
-        ops_test.model.wait_for_idle(
-            apps=[new_cluster_app_name],
-            status="active",
-            idle_period=15,
-            timeout=DEPLOYMENT_TIMEOUT,
-        ),
+    await ops_test.model.wait_for_idle(
+        apps=[new_cluster_app_name],
+        status="active",
+        idle_period=15,
+        timeout=DEPLOYMENT_TIMEOUT,
     )
 
     await set_password(
@@ -379,10 +283,10 @@ async def test_restore_new_cluster(
         apps=[new_cluster_app_name], status="active", timeout=TIMEOUT
     )
 
-    # relate to s3 - s3 has the necessary configurations
-    await ops_test.model.integrate(S3_APP_NAME, new_cluster_app_name)
+    # relate to GCS - GCS has the necessary configurations
+    await ops_test.model.integrate(GCS_APP_NAME, new_cluster_app_name)
     await ops_test.model.block_until(
-        lambda: is_relation_joined(ops_test, S3_ENDPOINT, S3_ENDPOINT) is True,
+        lambda: is_relation_joined(ops_test, GCS_ENDPOINT, GCS_ENDPOINT) is True,
         timeout=TIMEOUT,
     )
 
@@ -401,6 +305,8 @@ async def test_restore_new_cluster(
     list_result = list_result.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
     backup_id = most_recent_backup.split()[0]
+
+    # Restore the backup
     action = await db_unit.run_action(action_name="restore", **{"backup-id": backup_id})
     restore = await action.wait()
     logger.info(f"Restore backup result {restore.results=}")

@@ -38,7 +38,9 @@ dependencies = [
     "boto3 (~=1.37.12)",
     "mypy-boto3-s3 (~=1.37.0)",
     "python-ldap",
-    "charm-refresh (>=3.1.0.2,<4.0.0.0)"
+    "charm-refresh (>=3.1.0.2,<4.0.0.0)",
+    "google-cloud-storage (~=2.16.0)",
+    "google-api-core (~=2.17.0)"
 ]
 
 [project.urls]
@@ -152,7 +154,7 @@ ignore = ["E501", "D107", "D417"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.pycodestyle]
-max-doc-length = 99
+max-doc-length = 100
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -170,6 +172,8 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.per-file-ignores]
 # D100, D101, D102, D103: Ignore missing docstrings in tests
@@ -205,7 +209,6 @@ exclude = [
     "./venv/",
     "venv/*",
     "./__pypackages__/",
-    "^single_kernel_mongo/lib/*",
     "tests/charms/*",
     "tests/integration/*",
     "tests/unit/*",
@@ -215,6 +218,19 @@ exclude = [
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = "single_kernel_mongo.lib.*"
+ignore_errors = true
+
 [tool.codespell]
 ignore-words=".codespellignore"
 skip="*single_kernel_mongo/lib/*,*single_kernel_mongo/observability_rules/*,*.lock,*tests/integration/applications/**/lib/*"
+
+
+[tool.basedpyright]
+reportAny = false
+reportUnusedCallResult = false
+reportUnsafeMultipleInheritance = false
+allowedUntypedLibraries = ["google"]
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
