@@ -167,20 +167,21 @@ jobs:
         run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
       - name: Dump pods and their logs
         id: dump
+        if: ${{ failure() && steps.spread.outcome == 'failure' }}
         shell: bash
         run: |
           echo "PATH = ${PATH}"
           microk8s -h
           # shellcheck disable=SC2162
           # shellcheck disable=SC2086
-          sudo microk8s.kubectl get pods \
+          microk8s.kubectl get pods \
               -A \
               -o=jsonpath='{range.items[*]}{.metadata.namespace} {.metadata.name}{"\n"}' \
               --sort-by=.metadata.namespace \
               | grep -v "^\s*$" \
               | while read namespace pod; do \
-                   sudo microk8s.kubectl -n $namespace describe pod $pod; \
-                   sudo microk8s.kubectl -n $namespace logs $pod \
+                   microk8s.kubectl -n $namespace describe pod $pod; \
+                   microk8s.kubectl -n $namespace logs $pod \
                       --all-containers=true \
                       --tail=100; \
                done
