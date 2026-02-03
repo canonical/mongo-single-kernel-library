@@ -21,9 +21,9 @@ from tests.integration.helpers.backups import (
     insert_unwanted_data,
 )
 from tests.integration.helpers.common import (
-    CHARMED_BACKUP_USERNAME,
-    CHARMED_OPERATOR_USERNAME,
+    BACKUP_USERNAME,
     DEPLOYMENT_TIMEOUT,
+    OPERATOR_USERNAME,
     TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
@@ -252,9 +252,7 @@ async def test_restore_new_cluster(
     await create_and_verify_backup(ops_test, db_app_name)
 
     # save old password, since after restoring we will need this password to authenticate.
-    old_password = await get_password(
-        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=db_app_name
-    )
+    old_password = await get_password(ops_test, username=OPERATOR_USERNAME, app_name=db_app_name)
 
     # deploy a new cluster with a different name
     await deploy_charm(
@@ -275,7 +273,7 @@ async def test_restore_new_cluster(
 
     await set_password(
         ops_test,
-        username=CHARMED_OPERATOR_USERNAME,
+        username=OPERATOR_USERNAME,
         password=old_password,
         app_name=new_cluster_app_name,
     )
@@ -344,7 +342,7 @@ async def test_update_backup_password(
     )
 
     await set_password(
-        ops_test, username=CHARMED_BACKUP_USERNAME, password="new-password", app_name=db_app_name
+        ops_test, username=BACKUP_USERNAME, password="new-password", app_name=db_app_name
     )
 
     # wait for charm to be idle after setting password
