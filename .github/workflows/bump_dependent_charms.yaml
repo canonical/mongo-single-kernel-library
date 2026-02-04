@@ -48,12 +48,16 @@ jobs:
     steps:
       - name: Checkout mongo-single-kernel repo
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 20
+          fetch-tags: true
 
       - name: Get new tag content
         id: get-tag
         run: |
           git fetch --tags
-          PREV_TAG=$(git describe --tags --abbrev=0 --exclude="${VERSION}" "${VERSION}")
+          SERIES="${VERSION%.*}.*" # -> v1.8.*
+          PREV_TAG="$(git describe --tags --abbrev=0 --match "${SERIES}" "${VERSION}^")"
           VERSION_CONTENT=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..${VERSION}" | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
 
           {
