@@ -47,6 +47,8 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
     Then it offers the two relations provided by glauth.
     """
     with ops_test.model_context("secondary"):
+        # workaround for https://bugs.launchpad.net/snapd/+bug/2127244
+        await kubernetes_model.set_config({"image-stream": "daily"})
         await kubernetes_model.deploy(
             POSTGRESQL_K8S,
             channel="14/stable",
