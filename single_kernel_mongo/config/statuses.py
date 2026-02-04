@@ -66,6 +66,13 @@ class MongoDBStatuses(Enum):
         check="Relation validation.",
         action="Remove the s3-credentials relation (s3 interface) from this application.",
     )
+    INVALID_GCS_REL = StatusObject(
+        status="blocked",
+        message="The gcs-credentials relation can only be used by config servers or replica sets.",
+        short_message="Invalid gcs-credentials relation.",
+        check="Relation validation.",
+        action="Remove the gcs-credentials relation (GCS interface) from this application.",
+    )
     INVALID_DB_REL = StatusObject(
         status="blocked",
         message="The database relation cannot be used by sharding components (shards or config servers).",
@@ -216,52 +223,88 @@ class BackupStatuses(Enum):
     """Backup manager related statuses."""
 
     ACTIVE_IDLE = StatusObject(status="active", message="")
+    MUTUALLY_EXCLUSIVE = StatusObject(
+        status="blocked",
+        message="Only one storage relation allowed.",
+        action="Remove one of the relations gcs-credentials or s3-credentials.",
+        check="Check that gcs and s3 relations are mutually exclusive.",
+    )
     # note unlike other daemons (exporter and mongod) this status belongs to the backup manager
     # since certain configurations are required for pbm to be active and running.
     WAITING_FOR_PBM_START = StatusObject(status="waiting", message="Waiting for PBM to start...")
-    PBM_MISSING_CONF = StatusObject(
-        status="blocked",
-        message="Missing configurations in the s3-credentials relation.",
-        short_message="Missing S3 configurations.",
-        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
-        check="S3 configuration validation failed.",
-    )
-    PBM_INCOMPATIBLE_CONF = StatusObject(
-        status="blocked",
-        message="Incompatible S3 config options.",
-        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
-        check="S3 configuration validation failed.",
-    )
-    PBM_INCORRECT_CREDS = StatusObject(
-        status="blocked",
-        message="Incorrect S3 credentials.",
-        action="Check the configuration in the s3-credentials relation (s3 interface).",
-        check="S3 configuration validation failed.",
-    )
-    PBM_UNKNOWN_ERROR = StatusObject(
-        status="blocked",
-        message="Unknown PBM error, check logs.",
-        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
-        check="PBM error found.",
-    )
-    CANT_CONFIGURE = StatusObject(
-        status="blocked",
-        message="Failed to configure S3 backup options.",
-        short_message="Invalid S3 configuration.",
-        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
-        check="S3 configuration validation failed.",
-    )
-    FAILED_TO_CREATE_BUCKET = StatusObject(
-        status="blocked",
-        message="Failed to create S3 bucket.",
-        action="Check the logs and verify the configuration in the s3-credentials relation (s3 interface).",
-        check="S3 bucket creation failed.",
-    )
+
+    @staticmethod
+    def pbm_missing_conf(storage: str) -> StatusObject:
+        """Returns the status templated for when some configuration is missing."""
+        return StatusObject(
+            status="blocked",
+            message=f"Missing configurations in the {storage}-credentials relation.",
+            short_message=f"Missing {storage.upper()} configurations.",
+            action=f"Check the logs and verify the configuration in the {storage.upper()}-credentials relation ({storage} interface).",
+            check=f"{storage.upper()} configuration validation failed.",
+        )
+
+    @staticmethod
+    def pbm_incompatible_conf(storage: str) -> StatusObject:
+        """Returns the status templated for when some configuration is invalid."""
+        return StatusObject(
+            status="blocked",
+            message=f"Incompatible {storage.upper()} config options.",
+            action=f"Check the logs and verify the configuration in the {storage}-credentials relation ({storage} interface).",
+            check=f"{storage.upper()} configuration validation failed.",
+        )
+
+    @staticmethod
+    def pbm_incorrect_creds(storage: str) -> StatusObject:
+        """Returns the status templated for when the credentials are invalid."""
+        return StatusObject(
+            status="blocked",
+            message=f"Incorrect {storage.upper()} credentials.",
+            action=f"Check the configuration in the {storage}-credentials relation ({storage} interface).",
+            check=f"{storage.upper()} configuration validation failed.",
+        )
+
+    @staticmethod
+    def pbm_unknown_error(storage: str) -> StatusObject:
+        """Returns the status templated for when an unknown PBM error happens."""
+        return StatusObject(
+            status="blocked",
+            message="Unknown PBM error, check logs.",
+            action=f"Check the logs and verify the configuration in the {storage}-credentials relation ({storage} interface).",
+            check="PBM error found.",
+        )
+
+    @staticmethod
+    def cant_configure(storage: str) -> StatusObject:
+        """Returns the status templated for when PBM fails to configure."""
+        return StatusObject(
+            status="blocked",
+            message=f"Failed to configure {storage.upper()} backup options.",
+            short_message=f"Invalid {storage.upper()} configuration.",
+            action=f"Check the logs and verify the configuration in the {storage}-credentials relation ({storage.upper()} interface).",
+            check=f"{storage.upper()} configuration validation failed.",
+        )
+
+    @staticmethod
+    def failed_to_create_bucket(storage: str) -> StatusObject:
+        """Returns the status templated for when PBM fails to create the bucket."""
+        return StatusObject(
+            status="blocked",
+            message=f"Failed to create {storage.upper()} bucket.",
+            action=f"Check the logs and verify the configuration in the {storage}-credentials relation ({storage} interface).",
+            check=f"{storage.upper()} bucket creation failed.",
+        )
 
     # Running status
-    PBM_WAITING_TO_SYNC = StatusObject(
-        status="waiting", message="Waiting to sync S3 configurations...", running="async"
-    )
+    @staticmethod
+    def pbm_waiting_to_sync(storage: str) -> StatusObject:
+        """Returns the status templated for when PBM is waiting to sync the configuration."""
+        return StatusObject(
+            status="waiting",
+            message=f"Waiting to sync {storage.upper()} configurations...",
+            running="async",
+        )
+
     ACTION_RUNNING = StatusObject(
         status="waiting",
         message="Waiting for backup/restore to finish before removing the relation",
