@@ -1,0 +1,69 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m integration.helpers.common:common.py:490 Setting the system-users config to secret:d620ibprseit9mh9jptg backup=new-password
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:364 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-02-05T03:11:23Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  03:11:28Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+continuous-write           active      1  continuous-write             0  no       
+mongodb           7.0.28   active      3  mongodb                      0  no       
+s3-integrator              active      1  s3-integrator     1/edge   255  no       
+
+Unit                 Workload     Agent      Machine  Public address  Ports      Message
+continuous-write/0*  active       idle       4        10.42.60.158               
+mongodb/0*           maintenance  idle       0        10.42.60.56     27017/tcp  Backup started/running, backup id: '2026-02-05T03:11:23Z'
+mongodb/1            active       executing  1        10.42.60.157    27017/tcp  
+mongodb/2            active       executing  2        10.42.60.50     27017/tcp  
+s3-integrator/0*     active       idle       3        10.42.60.154               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.42.60.56   juju-7b0f15-0  ubuntu@24.04  github-runner  Running
+1        started  10.42.60.157  juju-7b0f15-1  ubuntu@24.04  github-runner  Running
+2        started  10.42.60.50   juju-7b0f15-2  ubuntu@24.04  github-runner  Running
+3        started  10.42.60.154  juju-7b0f15-3  ubuntu@22.04  github-runner  Running
+4        started  10.42.60.158  juju-7b0f15-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-3: 02:39:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:39:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:39:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:39:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:39:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:39:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:40:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:40:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-1: 02:40:58 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:40:58 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:40:58 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:40:58 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:41:13 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:41:13 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:46:44 ERROR unit.mongodb/0.juju-log s3-credentials:5: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/69840493136c471223efd281 [mongodb/10.42.60.50:27017]
+
+machine-4: 02:49:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:49:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:03:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:03:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:04:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:04:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:04:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:04:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-new-mongodb-aws-0: 03:04:42 ERROR unit.new-mongodb-aws/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-0: 03:04:42 ERROR unit.new-mongodb-aws/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-2: 03:04:54 ERROR unit.new-mongodb-aws/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-2: 03:04:54 ERROR unit.new-mongodb-aws/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-1: 03:04:59 ERROR unit.new-mongodb-aws/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-1: 03:04:59 ERROR unit.new-mongodb-aws/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-0: 03:06:52 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/6984094b5a29d9f3c4906250 [new-mongodb-aws/10.42.60.169:27017]
+
+unit-new-mongodb-aws-0: 03:06:57 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=data-charms-testing --set storage.s3.endpointUrl=https://s3.amazonaws.com --set storage.s3.prefix=mongodb-vm/5651610b-903c-44a2-bd74-be2830a90dc2 --set storage.s3.region=us-east-1 --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/6984094b5a29d9f3c4906250 [new-mongodb-aws/10.42.60.169:27017]
+
+unit-new-mongodb-aws-0: 03:06:57 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/6984094b5a29d9f3c4906250 [new-mongodb-aws/10.42.60.169:27017]\n'}
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
