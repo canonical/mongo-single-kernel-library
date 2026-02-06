@@ -103,8 +103,22 @@ jobs:
         run: |
           poetry remove "${DEP_NAME}"
           VERSION_NUMBER="${VERSION#v}"
-          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group main
-          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group integration
+
+          for i in {1..30}; do
+            echo "Attempt $i: adding ${DEP_NAME}==${VERSION_NUMBER}"
+
+            if poetry add "${DEP_NAME}==${VERSION_NUMBER}" --group main && \
+               poetry add "${DEP_NAME}==${VERSION_NUMBER}" --group integration; then
+              echo "Dependency added successfully"
+              exit 0
+            fi
+
+            echo "Not resolvable yet, sleeping..."
+            sleep 60
+          done
+
+          echo "Poetry could not resolve ${DEP_NAME}==${VERSION_NUMBER}"
+          exit 1
 
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
