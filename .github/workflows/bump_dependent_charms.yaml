@@ -159,9 +159,12 @@ jobs:
             ### What's Changed
             ${{ steps.get-tag.outputs.VERSION_CONTENT }}"
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "${BODY}" \
             --base ${{ env.BASE_BRANCH }}  \
             --head "${PR_BRANCH}" \
             --reviewer "${{ steps.get-reviewers.outputs.REVIEWERS }}"
+          )
+          # shellcheck disable=SC2086
+          echo "- ${{ matrix.repo }}: ${PR_URL}" >> $GITHUB_STEP_SUMMARY
