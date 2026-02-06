@@ -101,27 +101,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
         )
-
-        # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
-        self.ldap_manager = LDAPManager(
-            self,
-            self.state,
-            self.substrate,
-            ExternalRequirerRelations.LDAP,
-            ExternalRequirerRelations.LDAP_CERT,
-        )
-        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
-
-        pod_name = self.model.unit.name.replace("/", "-")
-        self.k8s = K8sManager(pod_name, self.model.name)
-
-        self.tls_events = TLSEventsHandler(self)
-        self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
-        self.cluster_event_handlers = ClusterMongosEventHandler(self)
-        self.ldap_events = LDAPEventHandler(self)
-
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
-        upgrade_backend: charm_refresh.CharmSpecificCommon
         if self.substrate == Substrates.VM:
             upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
@@ -152,6 +132,24 @@ class MongosOperator(OperatorProtocol, Object):
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
             self, self.state, self.workload, self.refresh
         )
+
+        # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
+        self.ldap_manager = LDAPManager(
+            self,
+            self.state,
+            self.substrate,
+            ExternalRequirerRelations.LDAP,
+            ExternalRequirerRelations.LDAP_CERT,
+        )
+        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
+
+        pod_name = self.model.unit.name.replace("/", "-")
+        self.k8s = K8sManager(pod_name, self.model.name)
+
+        self.tls_events = TLSEventsHandler(self)
+        self.client_events = DatabaseEventsHandler(self, RelationNames.MONGOS_PROXY)
+        self.cluster_event_handlers = ClusterMongosEventHandler(self)
+        self.ldap_events = LDAPEventHandler(self)
 
         if self.refresh is not None and not self.refresh.next_unit_allowed_to_refresh:
             if self.refresh.in_progress:

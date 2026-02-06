@@ -209,26 +209,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             ExternalRequirerRelations.LDAP_CERT,
         )
 
-        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
-
-        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
-
-        # Event Handlers
-        self.backup_events = BackupEventsHandler(self)
-        self.tls_events = TLSEventsHandler(self)
-        self.primary_events = PrimaryActionHandler(self)
-        self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
-        self.config_server_events = ConfigServerEventHandler(self)
-        self.sharding_event_handlers = ShardEventHandler(self)
-        self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
-        self.ldap_events = LDAPEventHandler(self)
-
         # Upgrades
-        # This must be defined after all other objects are defined, otherwise all accesses to
-        # those objects will fail. This is because the logic runs in the __init__ function
-        # of the refresh objects…
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
-        upgrade_backend: charm_refresh.CharmSpecificCommon
         if self.substrate == Substrates.VM:
             upgrade_backend = MachineMongoDBRefresh(
                 dependent=self,
@@ -248,6 +230,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 oci_resource_name="mongodb-image",
             )
             refresh_class = charm_refresh.Kubernetes
+
         try:
             self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
@@ -260,6 +243,20 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
             self, state=self.state, workload=self.workload, refresh=self.refresh
         )
+
+        self.sysctl_config = sysctl.Config(name=self.charm.app.name)
+
+        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
+
+        # Event Handlers
+        self.backup_events = BackupEventsHandler(self)
+        self.tls_events = TLSEventsHandler(self)
+        self.primary_events = PrimaryActionHandler(self)
+        self.client_events = DatabaseEventsHandler(self, RelationNames.DATABASE)
+        self.config_server_events = ConfigServerEventHandler(self)
+        self.sharding_event_handlers = ShardEventHandler(self)
+        self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
+        self.ldap_events = LDAPEventHandler(self)
 
         if self.refresh is not None and not self.refresh.next_unit_allowed_to_refresh:
             if self.refresh.in_progress:
