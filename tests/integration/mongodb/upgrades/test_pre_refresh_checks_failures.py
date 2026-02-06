@@ -78,6 +78,8 @@ async def test_preflight_check_fails_during_backup(
         timeout=TIMEOUT,
     )
 
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
     # verify backup is started
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     action = await leader_unit.run_action(action_name="create-backup")
