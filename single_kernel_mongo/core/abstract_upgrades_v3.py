@@ -11,7 +11,6 @@ from tenacity import RetryError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import CharmKind
-from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import FailedToMovePrimaryError
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
@@ -135,10 +134,9 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
             return
 
         for manager in (self.dependent.s3_backup_manager, self.dependent.gcs_backup_manager):
-            backup_state = manager.backup_state()
-            if backup_state == BackupState.BACKUP_RUNNING:
+            if manager.backup_in_progress():
                 raise charm_refresh.PrecheckFailed("Backup in progress.")
-            if backup_state == BackupState.RESTORE_RUNNING:
+            if manager.restore_in_progress():
                 raise charm_refresh.PrecheckFailed("Restore in progress.")
 
         self._mongodb_checks()
