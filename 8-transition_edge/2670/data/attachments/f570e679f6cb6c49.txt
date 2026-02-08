@@ -1,0 +1,43 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:53:23Z
+
+App                       Version  Status   Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             7.0.28   active     0/1  mongodb                              0  no       
+mongos                             unknown      0  mongos                               0  no       
+shard-one                 7.0.28   error        1  mongodb                              1  no       hook failed: "leader-elected"
+test-routing-application           active     0/3  test-routing-application             0  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports  Message
+config-server/0*             unknown   lost   0        10.56.188.91           agent lost, see 'juju show-status-log config-server/0'
+shard-one/0*                 error     idle   1        10.56.188.187          hook failed: "leader-elected"
+test-routing-application/0*  unknown   lost   2        10.56.188.21           agent lost, see 'juju show-status-log test-routing-application/0'
+test-routing-application/1   unknown   lost   3        10.56.188.88           agent lost, see 'juju show-status-log test-routing-application/1'
+test-routing-application/2   unknown   lost   4        10.56.188.25           agent lost, see 'juju show-status-log test-routing-application/2'
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        down     10.56.188.91   juju-ade055-0  ubuntu@24.04  github-runner  Running
+1        started  10.56.188.187  juju-ade055-1  ubuntu@24.04  github-runner  Running
+2        down     10.56.188.21   juju-ade055-2  ubuntu@24.04  github-runner  Running
+3        down     10.56.188.88   juju-ade055-3  ubuntu@24.04  github-runner  Running
+4        down     10.56.188.25   juju-ade055-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:51:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:51:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:51:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:51:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:51:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:51:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:51:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:51:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:51:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:51:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:52:31 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:52:31 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:52:40 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:52:40 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
