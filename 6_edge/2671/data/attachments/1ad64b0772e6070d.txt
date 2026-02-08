@@ -1,0 +1,116 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-6yln  concierge-lxd  test-ldap-k8s-cloud-83nm/default  3.6.14   unsupported  01:46:14Z
+
+App             Version  Status   Scale  Charm           Channel    Rev  Address        Exposed  Message
+postgresql-k8s  14.15    waiting      1  postgresql-k8s  14/stable  495  10.152.183.42  no       awaiting for cluster to start
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  waiting   idle   10.1.53.14         awaiting for cluster to start
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.12:52246: use of closed network connection
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "logging-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+controller-0: 01:45:14 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 01:45:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:60380: use of closed network connection
+unit-postgresql-k8s-0: 01:45:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 01:45:15 ERROR unit.postgresql-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 2252, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 541, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 423, in __init__
+    self.framework = self._make_framework(self.dispatcher)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 494, in _make_framework
+    framework = ops.framework.Framework(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 649, in __init__
+    self._stored = typing.cast(StoredStateData, self.load_snapshot(stored_handle))
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 752, in load_snapshot
+    data = self._storage.load_snapshot(handle.path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 263, in load_snapshot
+    content = self._backend.get(handle_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 402, in get
+    p = _run(['state-get', key], stdout=subprocess.PIPE, check=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 48, in _run
+    return subprocess.run([cmd, *args[1:]], encoding='utf-8', **kw)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/var/lib/juju/tools/unit-postgresql-k8s-0/state-get', 'StoredStateData[_stored]']' returned non-zero exit status 1.
+unit-postgresql-k8s-0: 01:45:15 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bba93d] "model-bba93d5c-16a7-4483-8c4c-f622a0870136" cannot open api: unable to connect to API: dial tcp 10.109.117.156:17070: connect: connection refused
+unit-postgresql-k8s-0: 01:45:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bba93d] "unit-postgresql-k8s-0" cannot open api: unable to connect to API: dial tcp 10.109.117.156:17070: connect: connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-6yln...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-6yln  concierge-lxd  test-ldap-k8s-cloud-83nm/default  3.6.14   unsupported  01:46:15Z
+
+App             Version  Status   Scale  Charm           Channel    Rev  Address        Exposed  Message
+postgresql-k8s  14.15    waiting      1  postgresql-k8s  14/stable  495  10.152.183.42  no       awaiting for cluster to start
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  waiting   idle   10.1.53.14         awaiting for cluster to start
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.12:52246: use of closed network connection
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "logging-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+controller-0: 01:45:14 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 01:45:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:60380: use of closed network connection
+unit-postgresql-k8s-0: 01:45:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 01:45:15 ERROR unit.postgresql-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 2252, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 541, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 423, in __init__
+    self.framework = self._make_framework(self.dispatcher)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 494, in _make_framework
+    framework = ops.framework.Framework(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 649, in __init__
+    self._stored = typing.cast(StoredStateData, self.load_snapshot(stored_handle))
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 752, in load_snapshot
+    data = self._storage.load_snapshot(handle.path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 263, in load_snapshot
+    content = self._backend.get(handle_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 402, in get
+    p = _run(['state-get', key], stdout=subprocess.PIPE, check=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/storage.py", line 48, in _run
+    return subprocess.run([cmd, *args[1:]], encoding='utf-8', **kw)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/var/lib/juju/tools/unit-postgresql-k8s-0/state-get', 'StoredStateData[_stored]']' returned non-zero exit status 1.
+unit-postgresql-k8s-0: 01:45:15 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+model-bba93d5c-16a7-4483-8c4c-f622a0870136: 01:45:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bba93d] "model-bba93d5c-16a7-4483-8c4c-f622a0870136" cannot open api: unable to connect to API: dial tcp 10.109.117.156:17070: connect: connection refused
+unit-postgresql-k8s-0: 01:45:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bba93d] "unit-postgresql-k8s-0" cannot open api: unable to connect to API: dial tcp 10.109.117.156:17070: connect: connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-6yln...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed

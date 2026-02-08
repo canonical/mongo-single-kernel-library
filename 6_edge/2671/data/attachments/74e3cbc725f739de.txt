@@ -1,0 +1,36 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:46:37Z
+
+App      Version  Status  Scale  Charm    Channel   Rev  Exposed  Message
+mongodb  6.0.24   active    1/3  mongodb  6/stable  265  no       
+
+Unit        Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0   error     idle   0        10.86.231.172   27017/tcp  hook failed: "upgrade-version-a-relation-changed"
+mongodb/1*  unknown   lost   1        10.86.231.169   27017/tcp  agent lost, see 'juju show-status-log mongodb/1'
+mongodb/2   unknown   lost   2        10.86.231.73    27017/tcp  agent lost, see 'juju show-status-log mongodb/2'
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.86.231.172  juju-80a34e-0  ubuntu@22.04  github-runner  Running
+1        down     10.86.231.169  juju-80a34e-1  ubuntu@22.04  github-runner  Running
+2        down     10.86.231.73   juju-80a34e-2  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 01:41:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-1: 01:42:43 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-1: 01:42:43 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+machine-0: 01:43:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:43:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:43:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-2: 01:44:46 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-2: 01:44:46 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+unit-mongodb-0: 01:45:02 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-0: 01:45:02 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+machine-0: 01:46:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.86.231.172:45882: use of closed network connection
+machine-0: 01:46:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
