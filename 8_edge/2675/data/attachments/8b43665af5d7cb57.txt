@@ -1,0 +1,355 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:48:55Z
+
+App             Version  Status   Scale  Charm           Channel  Rev  Exposed  Message
+gcs-integrator           blocked      1  gcs-integrator  1/edge    10  no       Missing config(s): 'bucket', 'credentials'
+mongodb         8.0.10   active       3  mongodb                    0  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports      Message
+gcs-integrator/0  blocked   idle   3        10.157.124.43              Missing config(s): 'bucket', 'credentials'
+mongodb/0         error     idle   0        10.157.124.25   27017/tcp  hook failed: "refresh-v-three-relation-changed"
+mongodb/1         error     idle   1        10.157.124.171  27017/tcp  hook failed: "refresh-v-three-relation-changed"
+mongodb/2         error     idle   2        10.157.124.38   27017/tcp  hook failed: "database-peers-relation-changed"
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.157.124.25   juju-b29ff6-0  ubuntu@24.04  github-runner  Running
+1        started  10.157.124.171  juju-b29ff6-1  ubuntu@24.04  github-runner  Running
+2        started  10.157.124.38   juju-b29ff6-2  ubuntu@24.04  github-runner  Running
+3        started  10.157.124.43   juju-b29ff6-3  ubuntu@24.04  github-runner  Running
+
+[1m[31mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[33mWARNING [0m juju.model:__init__.py:1340 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-2751' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=InvalidMessage('did not receive a valid HTTP response')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 244, in parse
+    status_line = yield from parse_line(read_line)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 303, in parse
+    response = yield from Response.parse(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 246, in parse
+    raise EOFError("connection closed while reading HTTP status line") from exc
+EOFError: connection closed while reading HTTP status line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 333, in _open
+    await websockets.connect(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 546, in __await_impl__
+    await self.connection.handshake(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 115, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP response
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-2755' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=InvalidMessage('did not receive a valid HTTP response')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 244, in parse
+    status_line = yield from parse_line(read_line)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 303, in parse
+    response = yield from Response.parse(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/http11.py", line 246, in parse
+    raise EOFError("connection closed while reading HTTP status line") from exc
+EOFError: connection closed while reading HTTP status line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 333, in _open
+    await websockets.connect(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 546, in __await_impl__
+    await self.connection.handshake(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 115, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP response
+[1m[31mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:45:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:45:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:45:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:45:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:46:29 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:46:29 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:46:29 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 01:46:48 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:46:48 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:46:48 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-1: 01:47:18 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:47:18 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:47:19 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-0: 01:48:54 ERROR juju.worker.uniter.context cannot apply changes: checking leadership continuity: lease manager stopped
+unit-mongodb-0: 01:48:54 ERROR juju.worker.uniter.operation hook "refresh-v-three-relation-changed" (via hook dispatching script: dispatch) failed: checking leadership continuity: lease manager stopped
+unit-mongodb-2: 01:48:54 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: error while mongodb/2 waiting for mongodb leadership release: error blocking on leadership release: lease manager stopped
+unit-gcs-integrator-0: 01:48:54 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-mongodb-1: 01:48:54 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: error while mongodb/1 waiting for mongodb leadership release: error blocking on leadership release: lease manager stopped
+unit-mongodb-2: 01:48:54 ERROR unit.mongodb/2.juju-log database-peers:1: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3422, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mongodb-2/secret-get', '--label', 'database-peers.mongodb.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 253, in __init__
+    self.tls_events = TLSEventsHandler(self)
+                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/tls.py", line 57, in __init__
+    certificate_requests=[self.manager.get_certificate_request_attributes()],
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/tls.py", line 79, in get_certificate_request_attributes
+    subject_name = self.state.get_subject_name()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 558, in get_subject_name
+    if self.is_role(MongoDBRoles.REPLICATION) or self.is_role(MongoDBRoles.CONFIG_SERVER):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 376, in is_role
+    return self.app_peer_data.role == role
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/app_peer_state.py", line 81, in role
+    not (databag_role := self.relation_data.get(AppPeerDataKeys.ROLE.value))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1116, in get
+    if result := self[key]:
+                 ~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1049, in __getitem__
+    result = self.relation_data.fetch_my_relation_field(self.relation_id, key)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1779, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1768, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 664, in wrapper
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2852, in _fetch_my_specific_relation_data
+    self.component, self.local_secret_fields, relation, fields
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2474, in local_secret_fields
+    self.static_secret_fields if self.static_secret_fields else self.current_secret_fields
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2498, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2839, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1499, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 636, in wrapper
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2826, in _get_relation_secret
+    return self.secrets.get(
+           ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 981, in get
+    if secret.meta:
+       ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 804, in meta
+    self._secret_meta = self._model.get_secret(label=self.label)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 313, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3808, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3424, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR lease manager stopped
+
+unit-mongodb-1: 01:48:54 ERROR unit.mongodb/1.juju-log refresh-v-three:0: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3422, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mongodb-1/secret-get', '--label', 'database-peers.mongodb.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 253, in __init__
+    self.tls_events = TLSEventsHandler(self)
+                      ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/tls.py", line 57, in __init__
+    certificate_requests=[self.manager.get_certificate_request_attributes()],
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/tls.py", line 79, in get_certificate_request_attributes
+    subject_name = self.state.get_subject_name()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 558, in get_subject_name
+    if self.is_role(MongoDBRoles.REPLICATION) or self.is_role(MongoDBRoles.CONFIG_SERVER):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 376, in is_role
+    return self.app_peer_data.role == role
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/app_peer_state.py", line 81, in role
+    not (databag_role := self.relation_data.get(AppPeerDataKeys.ROLE.value))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1116, in get
+    if result := self[key]:
+                 ~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1049, in __getitem__
+    result = self.relation_data.fetch_my_relation_field(self.relation_id, key)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1779, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1768, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 664, in wrapper
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2852, in _fetch_my_specific_relation_data
+    self.component, self.local_secret_fields, relation, fields
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2474, in local_secret_fields
+    self.static_secret_fields if self.static_secret_fields else self.current_secret_fields
+                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2498, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2839, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1499, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 636, in wrapper
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2826, in _get_relation_secret
+    return self.secrets.get(
+           ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 981, in get
+    if secret.meta:
+       ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/data_interfaces.py", line 804, in meta
+    self._secret_meta = self._model.get_secret(label=self.label)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 313, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3808, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3424, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR lease manager stopped
+
+unit-mongodb-1: 01:48:55 ERROR juju.worker.uniter.operation hook "refresh-v-three-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-2: 01:48:55 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

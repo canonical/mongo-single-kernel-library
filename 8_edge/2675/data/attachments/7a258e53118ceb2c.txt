@@ -1,0 +1,93 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] maintenance: Disabling client TLS...
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:33:14Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+mongodb-k8s               8.0.10   active      3  mongodb-k8s                           0  10.152.183.29   no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  317  10.152.183.224  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+mongodb-k8s/0*               active    idle   10.1.53.17         
+mongodb-k8s/1                active    idle   10.1.53.25         
+mongodb-k8s/2                active    idle   10.1.53.23         
+self-signed-certificates/0*  active    idle   10.1.53.26         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-2: 02:20:28 ERROR unit.mongodb-k8s/2.juju-log database-peers:2: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-02-09T02:20:28Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-02-09T02:20:28Z INFO Most recent service output:
+    2026-02-09T02:20:23.000+0000 E Exit: connect to PBM: create mongo connection: ping: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: RSGhost, Average RTT: 683174 }, ] }
+    2026-02-09T02:20:28.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-02-09T02:20:28Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-02-09T02:20:28Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-02-09T02:20:28Z INFO Most recent service output:
+    2026-02-09T02:20:23.000+0000 E Exit: connect to PBM: create mongo connection: ping: server selection error: server selection timeout, current topology: { Type: Unknown, Servers: [{ Addr: localhost:27017, Type: RSGhost, Average RTT: 683174 }, ] }
+    2026-02-09T02:20:28.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-02-09T02:20:28Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-2: 02:20:28 ERROR unit.mongodb-k8s/2.juju-log database-peers:2: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-self-signed-certificates-0: 02:21:48 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:50 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:53 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:55 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:57 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:21:59 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:22:02 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:22 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:23 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:25 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:26 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:28 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:25:30 ERROR unit.self-signed-certificates/0.juju-log certificates:5: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:27:07 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-mongodb-k8s-1: 02:28:44 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-1: 02:28:44 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.tls:Invalid peer private key provided, cannot update TLS certificates.
+unit-mongodb-k8s-2: 02:28:44 ERROR unit.mongodb-k8s/2.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-2: 02:28:44 ERROR unit.mongodb-k8s/2.juju-log single_kernel_mongo.managers.tls:Invalid peer private key provided, cannot update TLS certificates.
+unit-mongodb-k8s-0: 02:28:44 ERROR unit.mongodb-k8s/0.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-0: 02:28:44 ERROR unit.mongodb-k8s/0.juju-log single_kernel_mongo.managers.tls:Invalid peer private key provided, cannot update TLS certificates.
+unit-mongodb-k8s-2: 02:29:16 ERROR unit.mongodb-k8s/2.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-2: 02:29:16 ERROR unit.mongodb-k8s/2.juju-log single_kernel_mongo.managers.tls:Invalid client private key provided, cannot update TLS certificates.
+unit-mongodb-k8s-1: 02:29:16 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-1: 02:29:16 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.tls:Invalid client private key provided, cannot update TLS certificates.
+unit-mongodb-k8s-0: 02:29:16 ERROR unit.mongodb-k8s/0.juju-log single_kernel_mongo.managers.tls:base64 decoding error, invalid key.
+unit-mongodb-k8s-0: 02:29:16 ERROR unit.mongodb-k8s/0.juju-log single_kernel_mongo.managers.tls:Invalid client private key provided, cannot update TLS certificates.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
