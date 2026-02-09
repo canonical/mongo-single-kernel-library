@@ -1,0 +1,126 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:31:17Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Exposed  Message
+config-server  7.0.28   active      2  mongodb                   0  no       
+s3-integrator           active      1  s3-integrator  1/edge   255  no       
+shard-one      7.0.28   active      2  mongodb                   1  no       
+shard-two      7.0.28   active      1  mongodb                   2  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*  active    idle   0        10.80.117.11    27017-27018/tcp  Primary.
+config-server/1   active    idle   1        10.80.117.140   27017-27018/tcp  
+s3-integrator/0*  active    idle   5        10.80.117.85                     
+shard-one/0*      active    idle   2        10.80.117.103   27017/tcp        
+shard-one/1       active    idle   3        10.80.117.189   27017/tcp        Primary.
+shard-two/0*      active    idle   4        10.80.117.89    27017/tcp        Primary.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.80.117.11   juju-043d52-0  ubuntu@24.04  github-runner  Running
+1        started  10.80.117.140  juju-043d52-1  ubuntu@24.04  github-runner  Running
+2        started  10.80.117.103  juju-043d52-2  ubuntu@24.04  github-runner  Running
+3        started  10.80.117.189  juju-043d52-3  ubuntu@24.04  github-runner  Running
+4        started  10.80.117.89   juju-043d52-4  ubuntu@24.04  github-runner  Running
+5        started  10.80.117.85   juju-043d52-5  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:23:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:23:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:24:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:24:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:24:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:24:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:24:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:24:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:24:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:24:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:24:29 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:24:29 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:25:00 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:25:00 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:25:02 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:25:02 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:25:03 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:25:03 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:25:03 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:25:03 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:26:37 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698945db2630e6cd6c0d9bd4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.001166911000041182>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0018612530000154948>]>
+unit-shard-one-0: 02:26:41 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698945e02630e6cd6c0d9bd5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.0005010520000041652>, <ServerDescription ('10.80.117.189', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698945dbbefa24ce0941fedd'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12405}")>]>
+unit-shard-one-0: 02:26:45 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698945e42630e6cd6c0d9bd6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.00044540800001868774>, <ServerDescription ('10.80.117.189', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698945dbbefa24ce0941fedd'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8335}")>]>
+unit-shard-one-0: 02:26:49 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698945e82630e6cd6c0d9bd7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.00042463699992367765>, <ServerDescription ('10.80.117.189', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698945dbbefa24ce0941fedd'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4258}")>]>
+unit-shard-one-0: 02:26:53 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698945ec2630e6cd6c0d9bd8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.0008581970000705041>, <ServerDescription ('10.80.117.189', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698945dbbefa24ce0941fedd'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 170}")>]>
+machine-5: 02:26:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:26:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:27:22 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698946094ecbf288ed921a65, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.0005650979999245465>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0004317780000064886>]>
+unit-shard-one-0: 02:27:54 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698946292c1b2970471ae8cb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.00046764199998960976>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0005499149999650399>]>
+unit-shard-one-0: 02:27:58 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6989462d2c1b2970471ae8cc, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.0005934499999966647>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0004098749999457141>]>
+unit-shard-one-0: 02:28:02 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698946312c1b2970471ae8cd, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.0008054479999373143>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.00032552799996210524>]>
+unit-shard-one-0: 02:28:26 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69894649ae9ad4e056ec09f1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.00030531799995969777>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0005240159999857497>]>
+unit-shard-one-0: 02:28:30 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6989464dae9ad4e056ec09f2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.80.117.103', 27017) server_type: RSSecondary, rtt: 0.00034890400002041133>, <ServerDescription ('10.80.117.189', 27017) server_type: RSSecondary, rtt: 0.0004061790000378096>]>
+unit-config-server-0: 02:29:58 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/698946a6b2010c9146407994 [config-server/10.80.117.140:27017]
+
+unit-config-server-0: 02:30:09 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.119:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/698946a6b2010c9146407994 [config-server/10.80.117.140:27017]
+
+unit-config-server-0: 02:30:09 ERROR unit.config-server/0.juju-log s3-credentials:15: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/698946a6b2010c9146407994 [config-server/10.80.117.140:27017]\n'}
+machine-5: 02:30:17 ERROR juju.worker.dependency "fan-configurer" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "ssh-authkeys-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "reboot-executor" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:30:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.85:54598: use of closed network connection
+machine-5: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:30:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.140:44986: use of closed network connection
+machine-2: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:30:17 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:30:17 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:30:17 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 02:30:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.189:56290: use of closed network connection
+machine-3: 02:30:17 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 02:30:17 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:30:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-5: 02:30:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-5" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+machine-2: 02:30:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-2" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+machine-3: 02:30:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-3" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+machine-1: 02:30:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-1" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+machine-4: 02:30:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-4" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+unit-config-server-1: 02:30:50 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-shard-two-0: 02:30:50 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-config-server-0: 02:30:50 ERROR juju.worker.uniter resolver loop error: preparing operation "run secret-remove (secret:d64kbi3983ft9mietem0/1) hook" for config-server/0: lease manager stopped
+unit-config-server-0: 02:30:50 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-shard-one-1: 02:30:50 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-shard-one-0: 02:30:50 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-s3-integrator-0: 02:30:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: lease manager stopped
+machine-2: 02:30:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.103:52482: use of closed network connection
+machine-2: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:30:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.189:60726: use of closed network connection
+machine-3: 02:30:51 ERROR juju.worker.dependency "fan-configurer" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:51 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:51 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:51 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:51 ERROR juju.worker.dependency "deployer" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 02:30:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.89:51410: use of closed network connection
+machine-4: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-5: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 02:30:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.80.117.11:41098: use of closed network connection
+machine-0: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:30:51 ERROR juju.worker.dependency "api-address-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:30:51 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:30:51 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 02:30:54 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [6250eb] "machine-0" cannot open api: unable to connect to API: dial tcp 10.80.117.205:17070: connect: connection refused
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
