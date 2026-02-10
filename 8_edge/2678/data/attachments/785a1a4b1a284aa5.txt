@@ -1,0 +1,25 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  local-shard/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:48:43Z
+
+App                   Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+local-config-server   8.0.10   waiting      1  mongodb-k8s             0  10.152.183.228  no       Waiting for shards to upgrade/downgrade to revision test/0.0.0+dirty-locally built.
+local-shard           8.0.10   blocked      1  mongodb-k8s             1  10.152.183.141  no       Charm revision (test/0.0.0+dirty-locally built) is not up-to date with config-server (137).
+remote-config-server  8.0.10   waiting      1  mongodb-k8s  8/edge   137  10.152.183.175  no       Waiting for shards to upgrade/downgrade to revision 137.
+remote-shard          8.0.10   blocked      1  mongodb-k8s  8/edge   137  10.152.183.160  no       Charm revision (137) is not up-to date with config-server (test/0.0.0+dirty-locally built).
+
+Unit                     Workload     Agent  Address     Ports  Message
+local-config-server/0*   active       idle   10.1.53.27         
+local-shard/0*           maintenance  idle   10.1.53.32         Adding shard to config-server
+remote-config-server/0*  active       idle   10.1.53.14         
+remote-shard/0*          maintenance  idle   10.1.53.22         Adding shard to config-server
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-remote-config-server-0: 02:46:16 ERROR unit.remote-config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError remote-config-server-0.remote-config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 698a9bf7c31c6036e15289a8, topology_type: Unknown, servers: [<ServerDescription ('remote-config-server-0.remote-config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('remote-config-server-0.remote-config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-local-config-server-0: 02:46:44 ERROR unit.local-config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError local-config-server-0.local-config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 698a9c13936173f11449cf6b, topology_type: Unknown, servers: [<ServerDescription ('local-config-server-0.local-config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('local-config-server-0.local-config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

@@ -1,0 +1,323 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [allocating] waiting: agent initialising
+  shard-one/0 [allocating] waiting: waiting for machine
+  shard-one/1 [allocating] waiting: waiting for machine
+  shard-two/0 [allocating] waiting: waiting for machine
+  shard-two/1 [allocating] waiting: waiting for machine
+  shard-tree/0 [allocating] waiting: waiting for machine
+  shard-tree/1 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: agent initialising
+  shard-one/0 [allocating] waiting: agent initialising
+  shard-one/1 [allocating] waiting: waiting for machine
+  shard-two/0 [allocating] waiting: waiting for machine
+  shard-two/1 [allocating] waiting: waiting for machine
+  shard-tree/0 [allocating] waiting: waiting for machine
+  shard-tree/1 [allocating] waiting: waiting for machine
+[31m[1mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:__init__.py:1340 Watcher: watcher stopped, restarting
+[31m[1mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: connection is shut down
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/overrides.py", line 112, in rpc
+    result = await client.WatchAll()
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/_client8.py", line 67, in WatchAll
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/facade.py", line 680, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: connection is shut down
+[31m[1mERROR   [0m juju.model:__init__.py:1388 Error in watcher
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/model/__init__.py", line 1326, in _all_watcher
+    results = await utils.run_with_interrupt(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/utils.py", line 212, in run_with_interrupt
+    return task.result()  # may raise exception
+           ^^^^^^^^^^^^^
+juju.errors.JujuAPIError: connection is shut down
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-1589' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=InvalidStatus(Response(status_code=503, reason_phrase='Service Unavailable', headers=Headers([('Content-Type', 'text/plain; charset=utf-8'), ('X-Content-Type-Options', 'nosniff'), ('Date', 'Tue, 10 Feb 2026 02:34:35 GMT'), ('Content-Length', '31')]), body=bytearray(b'apiserver shutdown in progress\n'), _exception=InvalidStatus(...)))>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 333, in _open
+    await websockets.connect(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 546, in __await_impl__
+    await self.connection.handshake(
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/asyncio/client.py", line 115, in handshake
+    raise self.protocol.handshake_exc
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 327, in parse
+    self.process_response(response)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/websockets/client.py", line 144, in process_response
+    raise InvalidStatus(response)
+websockets.exceptions.InvalidStatus: server rejected WebSocket connection: HTTP 503
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-1591' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuConnectionError('Unable to connect to any endpoint: 10.26.34.198:17070')>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 756, in _connect
+    raise errors.JujuConnectionError(
+juju.errors.JujuConnectionError: Unable to connect to any endpoint: 10.26.34.198:17070
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:35:36Z
+
+App            Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+config-server  8.0.10   active      1  mongodb             0  no       
+shard-one      8.0.10   active      2  mongodb             1  no       
+shard-tree     8.0.10   active      2  mongodb             3  no       
+shard-two      8.0.10   active      2  mongodb             2  no       
+
+Unit              Workload     Agent      Machine  Public address  Ports  Message
+config-server/0*  active       executing  0        10.26.34.53            
+shard-one/0*      maintenance  executing  1        10.26.34.224           Adding shard to config-server
+shard-one/1       maintenance  executing  2        10.26.34.167           Adding shard to config-server
+shard-tree/0*     active       executing  5        10.26.34.190           
+shard-tree/1      maintenance  executing  6        10.26.34.45            (install) Installing MongoDB...
+shard-two/0*      maintenance  executing  3        10.26.34.205           Adding shard to config-server
+shard-two/1       maintenance  executing  4        10.26.34.254           Adding shard to config-server
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.26.34.53   juju-a08787-0  ubuntu@24.04  github-runner  Running
+1        started  10.26.34.224  juju-a08787-1  ubuntu@24.04  github-runner  Running
+2        started  10.26.34.167  juju-a08787-2  ubuntu@24.04  github-runner  Running
+3        started  10.26.34.205  juju-a08787-3  ubuntu@24.04  github-runner  Running
+4        started  10.26.34.254  juju-a08787-4  ubuntu@24.04  github-runner  Running
+5        started  10.26.34.190  juju-a08787-5  ubuntu@24.04  github-runner  Running
+6        started  10.26.34.45   juju-a08787-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:32:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:32:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:33:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:33:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:33:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:33:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:33:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:34:03 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:34:03 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:34:03 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-5: 02:34:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:34:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:34:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:34:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:34:24 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:34:24 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:34:24 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-1: 02:34:34 ERROR unit.shard-one/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:34:34 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:34:35 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-6: 02:34:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.45:33598: use of closed network connection
+machine-6: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-6: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:34:35 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "api-address-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.53:38340: use of closed network connection
+machine-0: 02:34:35 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-3: 02:34:35 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-3: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.224:51504: use of closed network connection
+machine-3: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-1: 02:34:35 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-5: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:34:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 02:34:38 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [e211ee] "machine-2" cannot open api: unable to connect to API: dial tcp 10.26.34.198:17070: connect: connection refused
+machine-3: 02:34:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [e211ee] "machine-3" cannot open api: unable to connect to API: dial tcp 10.26.34.198:17070: connect: connection refused
+machine-1: 02:34:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [e211ee] "machine-1" cannot open api: unable to connect to API: dial tcp 10.26.34.198:17070: connect: connection refused
+machine-0: 02:34:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [e211ee] "machine-0" cannot open api: unable to connect to API: dial tcp 10.26.34.198:17070: connect: connection refused
+unit-shard-two-0: 02:34:49 ERROR unit.shard-two/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:34:49 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:34:50 ERROR unit.shard-one/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:34:50 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:34:50 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-1: 02:34:50 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-two-1: 02:34:51 ERROR unit.shard-two/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 02:34:51 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 02:34:51 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 02:35:08 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:35:08 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:35:09 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-3: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:35:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.224:37674: use of closed network connection
+machine-6: 02:35:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.45:57222: use of closed network connection
+machine-6: 02:35:13 ERROR juju.worker.dependency "logging-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-6: 02:35:13 ERROR juju.worker.dependency "instance-mutater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-6: 02:35:13 ERROR juju.worker.dependency "upgrade-series" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-6: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-2: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-4: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.worker.dependency "migration-minion" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.26.34.53:48922: use of closed network connection
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-0: 02:35:13 ERROR juju.worker.dependency "proxy-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "state-converter" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "machine-action-runner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "machiner" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "api-address-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "valid-credential-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+machine-0: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+machine-5: 02:35:13 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
