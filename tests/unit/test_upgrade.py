@@ -78,7 +78,7 @@ def test_pre_refresh_check_after_1_unit_refreshed_fails(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
         return_value=backup_state,
     )
     refresh = MongoDBRefresh.__new__(MongoDBRefresh)
@@ -102,7 +102,7 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
         return_value=BackupState.ACTIVE,
     )
     mocker.patch(
@@ -160,7 +160,7 @@ def test_pre_refresh_check_before_any_unit_refreshed_boolean_fail(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
         return_value=BackupState.ACTIVE,
     )
     mocker.patch(
@@ -231,7 +231,7 @@ def test_pre_refresh_check_before_any_unit_refreshed_raises(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
         return_value=BackupState.ACTIVE,
     )
     mocker.patch(

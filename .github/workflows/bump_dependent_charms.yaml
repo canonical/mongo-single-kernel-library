@@ -48,12 +48,16 @@ jobs:
     steps:
       - name: Checkout mongo-single-kernel repo
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 20
+          fetch-tags: true
 
       - name: Get new tag content
         id: get-tag
         run: |
           git fetch --tags
-          PREV_TAG=$(git describe --tags --abbrev=0 "${VERSION}"^)
+          SERIES="${VERSION%.*}.*" # -> v1.8.*
+          PREV_TAG="$(git describe --tags --abbrev=0 --match "${SERIES}" "${VERSION}^")"
           VERSION_CONTENT=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..${VERSION}" | sed -E 's/\(#([0-9]+)\)/[#\1](https:\/\/github.com\/canonical\/mongo-single-kernel-library\/pull\/\1)/')
 
           {
@@ -99,8 +103,22 @@ jobs:
         run: |
           poetry remove "${DEP_NAME}"
           VERSION_NUMBER="${VERSION#v}"
-          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group main
-          poetry add "${DEP_NAME}"=="${VERSION_NUMBER}" --group integration
+
+          for i in {1..30}; do
+            echo "Attempt $i: adding ${DEP_NAME}==${VERSION_NUMBER}"
+
+            if poetry add "${DEP_NAME}==${VERSION_NUMBER}" --group main && \
+               poetry add "${DEP_NAME}==${VERSION_NUMBER}" --group integration; then
+              echo "Dependency added successfully"
+              exit 0
+            fi
+
+            echo "Not resolvable yet, sleeping..."
+            sleep 60
+          done
+
+          echo "Poetry could not resolve ${DEP_NAME}==${VERSION_NUMBER}"
+          exit 1
 
       - name: Poetry update
         run: poetry update "${DEP_NAME}"
@@ -141,9 +159,12 @@ jobs:
             ### What's Changed
             ${{ steps.get-tag.outputs.VERSION_CONTENT }}"
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "${BODY}" \
             --base ${{ env.BASE_BRANCH }}  \
             --head "${PR_BRANCH}" \
             --reviewer "${{ steps.get-reviewers.outputs.REVIEWERS }}"
+          )
+          # shellcheck disable=SC2086
+          echo "- ${{ matrix.repo }}: ${PR_URL}" >> $GITHUB_STEP_SUMMARY

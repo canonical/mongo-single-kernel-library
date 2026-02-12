@@ -126,7 +126,7 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
     harness.charm.operator.state.db_initialised = True
 
     mocker.patch(
-        "single_kernel_mongo.managers.backups.BackupManager.backup_state",
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
         return_value=BackupState.BACKUP_RUNNING,
     )
 

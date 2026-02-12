@@ -227,6 +227,11 @@ class CharmState(Object, StatusesStateProtocol):
         return self.model.get_relation(ExternalRequirerRelations.S3_CREDENTIALS.value)
 
     @property
+    def gcs_relation(self) -> Relation | None:
+        """The S3 relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.GCS_CREDENTIALS.value)
+
+    @property
     def ldap_relation(self) -> Relation | None:
         """The LDAP relation if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.LDAP.value)

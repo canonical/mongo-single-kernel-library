@@ -100,13 +100,13 @@ async def deploy_charm(
     ops_test: OpsTest,
     charm: str,
     substrate: Substrate,
-    mongod_resource: dict,
+    mongod_resource: dict[str, str],
     app_name: str,
     num_units: int = 3,
     channel: str | None = None,
-    config: dict | None = None,
+    config: dict[str, str] | None = None,
     subordinate: bool = False,
-    storage: dict | None = None,
+    storage: dict[str, str] | None = None,
     series: str | None = None,
 ):
     if substrate == "microk8s":
@@ -499,6 +499,38 @@ async def set_password(
     await ops_test.model.applications[app_name].set_config(
         {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
     )
+
+
+async def add_juju_secret(
+    ops_test: OpsTest, app_name: str, secret_label: str, data: dict[str, str]
+) -> str:
+    """Add a new juju secret."""
+    logger.info(f"Data keys to insert: {data.keys()}")
+
+    # pass arguments as list
+    kv_args = [f"{k}={v}" for k, v in data.items()]
+
+    return_code, stdout, stderr = await ops_test.juju("add-secret", secret_label, *kv_args)
+    logger.info(f"Add secret return code={return_code} stdout={stdout} stderr={stderr}")
+    if return_code != 0:
+        raise AssertionError(
+            f"juju add-secret failed rc={return_code} stderr={stderr} stdout={stdout}"
+        )
+
+    secret_uri = (stdout or "").strip()
+    logger.info(f"Secret uri: {secret_uri}")
+    if not secret_uri:
+        raise AssertionError("juju add-secret returned empty secret URI")
+
+    # grant using the secret URI
+    return_code, stdout, stderr = await ops_test.juju("grant-secret", secret_uri, app_name)
+    logger.info(f"Grant secret return code={return_code} stdout={stdout} stderr={stderr}")
+    if return_code != 0:
+        raise AssertionError(
+            f"juju grant-secret failed rc={return_code} stderr={stderr} stdout={stdout}"
+        )
+
+    return secret_uri
 
 
 async def get_application_relation_data(
