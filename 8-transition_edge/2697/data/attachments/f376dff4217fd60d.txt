@@ -1,0 +1,260 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-2mzj  concierge-lxd  test-ldap-k8s-cloud-2t2z/default  3.6.14   unsupported  02:22:19Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         maintenance    0/1  glauth-k8s                latest/edge     56  10.152.183.238  no       Configuring resources
+glauth-utils                       blocked          1  glauth-utils              latest/edge     50  10.152.183.252  no       Waiting for the required auxiliary integration.
+postgresql-k8s            14.15    active           1  postgresql-k8s            14/stable      495  10.152.183.154  no       Primary
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  10.152.183.36   no       
+traefik-k8s               2.11.0   waiting          1  traefik-k8s               latest/stable  266  10.152.183.68   no       installing agent
+
+Unit                         Workload  Agent      Address     Ports  Message
+glauth-k8s/0*                unknown   lost                          agent lost, see 'juju show-status-log glauth-k8s/0'
+glauth-utils/0*              blocked   idle       10.1.53.12         Waiting for the required auxiliary integration.
+postgresql-k8s/0*            active    executing  10.1.53.11         Primary
+self-signed-certificates/0*  active    idle                          
+traefik-k8s/0*               active    executing  10.1.53.16         (config-changed) Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-k8s-0: 02:21:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:51408: use of closed network connection
+unit-glauth-k8s-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-utils-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:18 ERROR unit.postgresql-k8s/0.juju-log database-peers:2: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3320, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-0/status-set', '--application=True', 'active', '')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 2252, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 543, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 134, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 857, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 947, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 637, in _on_peer_relation_changed
+    self.async_replication.handle_read_only_mode()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 418, in handle_read_only_mode
+    self._set_app_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 683, in _set_app_status
+    self.charm.app.status = ActiveStatus()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 444, in status
+    self._backend.status_set(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3529, in status_set
+    self._run('status-set', f'--application={is_app}', status, message)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3322, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR lease manager stopped
+
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "glauth-utils": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "glauth-k8s": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "self-signed-certificates": watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 02:21:19 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+controller-0: 02:21:19 ERROR juju.worker.caasapplicationprovisioner.runner exited "traefik-k8s": watcher has been stopped (stopped)
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "model-95b474d4-161d-49e0-82f7-c4e6dd316254" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-glauth-utils-0: 02:21:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-glauth-utils-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-traefik-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-glauth-utils-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.17:57222: use of closed network connection
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-utils-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-traefik-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:55308: use of closed network connection
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "logging-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-traefik-k8s-0: 02:21:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-traefik-k8s-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-postgresql-k8s-0: 02:21:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-postgresql-k8s-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-self-signed-certificates-0: 02:21:56 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-self-signed-certificates-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-glauth-k8s-0: 02:21:58 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-2mzj...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-2mzj  concierge-lxd  test-ldap-k8s-cloud-2t2z/default  3.6.14   unsupported  02:22:20Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         maintenance    0/1  glauth-k8s                latest/edge     56  10.152.183.238  no       Configuring resources
+glauth-utils                       blocked          1  glauth-utils              latest/edge     50  10.152.183.252  no       Waiting for the required auxiliary integration.
+postgresql-k8s            14.15    active           1  postgresql-k8s            14/stable      495  10.152.183.154  no       Primary
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  10.152.183.36   no       
+traefik-k8s               2.11.0   waiting          1  traefik-k8s               latest/stable  266  10.152.183.68   no       installing agent
+
+Unit                         Workload  Agent      Address     Ports  Message
+glauth-k8s/0*                unknown   lost                          agent lost, see 'juju show-status-log glauth-k8s/0'
+glauth-utils/0*              blocked   idle       10.1.53.12         Waiting for the required auxiliary integration.
+postgresql-k8s/0*            active    executing  10.1.53.11         Primary
+self-signed-certificates/0*  active    idle                          
+traefik-k8s/0*               active    executing  10.1.53.16         (config-changed) Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-k8s-0: 02:21:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:51408: use of closed network connection
+unit-glauth-k8s-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-utils-0: 02:21:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:18 ERROR unit.postgresql-k8s/0.juju-log database-peers:2: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3320, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-0/status-set', '--application=True', 'active', '')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 2252, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 543, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 134, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 857, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 947, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 637, in _on_peer_relation_changed
+    self.async_replication.handle_read_only_mode()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 418, in handle_read_only_mode
+    self._set_app_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 683, in _set_app_status
+    self.charm.app.status = ActiveStatus()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 444, in status
+    self._backend.status_set(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3529, in status_set
+    self._run('status-set', f'--application={is_app}', status, message)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3322, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR lease manager stopped
+
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "glauth-utils": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "glauth-k8s": watcher has been stopped (stopped)
+controller-0: 02:21:18 ERROR juju.worker.caasapplicationprovisioner.runner exited "self-signed-certificates": watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 02:21:19 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+controller-0: 02:21:19 ERROR juju.worker.caasapplicationprovisioner.runner exited "traefik-k8s": watcher has been stopped (stopped)
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "model-95b474d4-161d-49e0-82f7-c4e6dd316254" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-glauth-utils-0: 02:21:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-glauth-utils-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-traefik-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-glauth-utils-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "leadership-tracker" manifold worker returned unexpected error: leadership failure: lease manager stopped
+model-95b474d4-161d-49e0-82f7-c4e6dd316254: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.17:57222: use of closed network connection
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-postgresql-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-utils-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-traefik-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1006 (abnormal closure): unexpected EOF: set tcp 10.1.53.14:55308: use of closed network connection
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "logging-config-updater" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "not-dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.api.watcher error trying to stop watcher: websocket: close sent
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "migration-inactive-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-glauth-k8s-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "upgrader" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "dead-flag" manifold worker returned unexpected error: watcher has been stopped (stopped)
+unit-self-signed-certificates-0: 02:21:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-traefik-k8s-0: 02:21:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-traefik-k8s-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-postgresql-k8s-0: 02:21:55 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-postgresql-k8s-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-self-signed-certificates-0: 02:21:56 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [95b474] "unit-self-signed-certificates-0" cannot open api: unable to connect to API: dial tcp 10.138.113.162:17070: connect: connection refused
+unit-glauth-k8s-0: 02:21:58 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:22:00 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-2mzj...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
