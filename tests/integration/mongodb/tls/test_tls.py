@@ -2,14 +2,19 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import re
+
 import pytest
+from cryptography import x509
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import (
+    DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
     deploy_charm,
+    find_unit,
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
@@ -32,6 +37,8 @@ from tests.integration.helpers.tls import (
     time_process_started,
 )
 from tests.integration.helpers.types import Substrate
+
+REGEX_TLS = re.compile("(-+(BEGIN|END) [A-Z ]+-+)")
 
 
 @pytest.mark.abort_on_fail
@@ -68,6 +75,12 @@ async def test_build_and_deploy(
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT
     )
+    await ops_test.model.deploy(
+        DATA_INTEGRATOR_APP_NAME,
+        channel="latest/stable",
+        series="noble",
+        config={"database-name": "test-database"},
+    )
 
 
 async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
@@ -77,7 +90,9 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
 
     await integrate_apps_with_tls(ops_test, applications=[app_name])
 
-    await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=60)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name, TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000, idle_period=60
+    )
 
     # Wait for all units enabling TLS.
     for unit in ops_test.model.applications[app_name].units:
@@ -88,6 +103,35 @@ async def test_enable_tls(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await cannot_connect_without_tls(
             ops_test, substrate, unit, app_name=app_name
         ), f"Client can still connect without TLS on unit {unit.name}"
+
+
+async def test_integrate_client_access_tls(ops_test: OpsTest, substrate: Substrate):
+    """Tests that an integration with a client application sends the certificate as expected."""
+    app_name = await get_app_name(ops_test)
+
+    await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, app_name)
+    await ops_test.model.wait_for_idle(
+        apps=[app_name, DATA_INTEGRATOR_APP_NAME],
+        status="active",
+    )
+
+    leader = await find_unit(ops_test, leader=True, app_name=DATA_INTEGRATOR_APP_NAME)
+
+    action = await leader.run_action("get-credentials")
+    action = await action.wait()
+    result = action.results.get(app_name)
+
+    tls_field: str = result.get("tls")
+    tls_certificate: str = result.get("tls-ca", "")
+
+    assert tls_field == "True", "TLS flag is not set to True"
+    assert REGEX_TLS.match(tls_certificate)
+
+    parsed_cert = x509.load_pem_x509_certificate(data=tls_certificate.encode())
+    _common_name = parsed_cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
+    common_name = str(_common_name[0].value) if _common_name else ""
+
+    assert common_name == "Test CA"
 
 
 async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
