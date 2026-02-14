@@ -1,0 +1,89 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:48:14Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     7.0.28   active       2  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+s3-integrator              active       1  s3-integrator     1/edge   330  no       
+shard-one         7.0.28   active       2  mongodb                      1  no       
+shard-two         7.0.28   active       1  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.5.211.16     27017-27018/tcp  Primary.
+config-server/1      active    idle   1        10.5.211.227    27017-27018/tcp  
+continuous-write/0*  waiting   idle   6        10.5.211.239                     
+s3-integrator/0*     active    idle   5        10.5.211.128                     
+shard-one/0*         active    idle   2        10.5.211.6      27017/tcp        
+shard-one/1          active    idle   3        10.5.211.59     27017/tcp        Primary.
+shard-two/0*         active    idle   4        10.5.211.199    27017/tcp        Primary.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.5.211.16   juju-e43153-0  ubuntu@24.04  github-runner  Running
+1        started  10.5.211.227  juju-e43153-1  ubuntu@24.04  github-runner  Running
+2        started  10.5.211.6    juju-e43153-2  ubuntu@24.04  github-runner  Running
+3        started  10.5.211.59   juju-e43153-3  ubuntu@24.04  github-runner  Running
+4        started  10.5.211.199  juju-e43153-4  ubuntu@24.04  github-runner  Running
+5        started  10.5.211.128  juju-e43153-5  ubuntu@22.04  github-runner  Running
+6        started  10.5.211.239  juju-e43153-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:25:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:25:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:25:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:25:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:26:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:26:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:26:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:26:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:26:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:26:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:26:31 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:26:31 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:26:34 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:26:34 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:26:55 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:26:55 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:27:00 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:27:00 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:27:09 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:27:09 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:28:36 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fddd31ff71a25bc34c043, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698fddcec7aa522b8fb16a4d'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12380}")>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.000682033999964915>]>
+unit-shard-one-0: 02:28:40 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fddd71ff71a25bc34c044, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698fddcec7aa522b8fb16a4d'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8282}")>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.00048225400007595454>]>
+unit-shard-one-0: 02:28:44 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fdddb1ff71a25bc34c045, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698fddcec7aa522b8fb16a4d'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4178}")>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0004587979999541858>]>
+unit-shard-one-0: 02:28:49 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fdddf1ff71a25bc34c046, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('698fddcec7aa522b8fb16a4d'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 65}")>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0028332110000519606>]>
+unit-shard-one-0: 02:28:53 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fdde41ff71a25bc34c047, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.0007499749999624328>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0004318979999879957>]>
+machine-5: 02:28:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:28:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:29:21 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fde00bc958eee37ae7725, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.0012281130000246776>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.00039680500003669295>]>
+unit-shard-one-0: 02:29:55 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fde22de859b69e3236c08, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.000580040000045301>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0005540710000104809>]>
+unit-shard-one-0: 02:29:59 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fde26de859b69e3236c09, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.0004813719999674504>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0005453679999618544>]>
+unit-shard-one-0: 02:30:03 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fde2ade859b69e3236c0a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.0005423229999905743>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0004930499999318272>]>
+unit-shard-one-0: 02:30:31 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 698fde468f8f519678f554ec, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.5.211.59', 27017) server_type: RSSecondary, rtt: 0.000434021000046414>, <ServerDescription ('10.5.211.6', 27017) server_type: RSSecondary, rtt: 0.0005575469999712368>]>
+unit-config-server-0: 02:31:13 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/698fde70dd64e6d93319393f [config-server/10.5.211.227:27017]
+
+unit-config-server-0: 02:31:25 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.240:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/698fde70dd64e6d93319393f [config-server/10.5.211.227:27017]
+
+unit-config-server-0: 02:31:25 ERROR unit.config-server/0.juju-log s3-credentials:15: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/698fde70dd64e6d93319393f [config-server/10.5.211.227:27017]\n'}
+unit-config-server-0: 02:31:35 ERROR unit.config-server/0.juju-log cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.240:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/698fde70dd64e6d93319393f [config-server/10.5.211.227:27017]
+
+unit-config-server-0: 02:31:35 ERROR unit.config-server/0.juju-log Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/698fde70dd64e6d93319393f [config-server/10.5.211.227:27017]\n'}
+machine-6: 02:33:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:33:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-1: 02:47:27 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "1a9c4b7c-eee4-4557-8006-ea64fbe43153:r#15#s3-integrator": settings 1a9c4b7c-eee4-4557-8006-ea64fbe43153:r#15#s3-integrator not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
