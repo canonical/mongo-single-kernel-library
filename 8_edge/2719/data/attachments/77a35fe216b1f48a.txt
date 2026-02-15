@@ -1,0 +1,126 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [executing] blocked: The sharding interface cannot be used by replica sets.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [idle] blocked: Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:06:14Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active       1  application                                0  no       
+config-server             8.0.10   active       1  mongodb                                    0  no       
+config-server-two         8.0.10   active       1  mongodb                                    1  no       
+data-integrator                    blocked      1  data-integrator           latest/stable  180  no       Please specify either topic, index, database name, or prefix
+mongos                    8.0.10   blocked      1  mongos                                     0  no       The cluster relation with the config-server is missing.
+replication               8.0.10   blocked      1  mongodb                                    3  no       The sharding interface cannot be used by replica sets.
+s3-integrator                      blocked      1  s3-integrator             latest/edge    330  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  1/stable       317  no       
+shard-one                 8.0.10   blocked      1  mongodb                                    2  no       The s3-credentials relation can only be used by config servers or replica sets.
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+application/0*               active    idle   7        10.219.11.101                    
+config-server-two/0*         blocked   idle   1        10.219.11.166   27017-27018/tcp  Missing relation to shard(s).
+config-server/0*             blocked   idle   0        10.219.11.236   27017-27018/tcp  Missing relation to shard(s).
+data-integrator/0*           blocked   idle   5        10.219.11.189                    Please specify either topic, index, database name, or prefix
+  mongos/0*                  blocked   idle            10.219.11.189   27018/tcp        The cluster relation with the config-server is missing.
+replication/0*               blocked   idle   6        10.219.11.201   27017/tcp        Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+s3-integrator/0*             blocked   idle   4        10.219.11.190                    Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   3        10.219.11.159                    
+shard-one/0*                 blocked   idle   2        10.219.11.145   27017/tcp        Invalid s3-credentials relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.219.11.236  juju-b190bf-0  ubuntu@24.04  github-runner  Running
+1        started  10.219.11.166  juju-b190bf-1  ubuntu@24.04  github-runner  Running
+2        started  10.219.11.145  juju-b190bf-2  ubuntu@24.04  github-runner  Running
+3        started  10.219.11.159  juju-b190bf-3  ubuntu@24.04  github-runner  Running
+4        started  10.219.11.190  juju-b190bf-4  ubuntu@22.04  github-runner  Running
+5        started  10.219.11.189  juju-b190bf-5  ubuntu@24.04  github-runner  Running
+6        started  10.219.11.201  juju-b190bf-6  ubuntu@24.04  github-runner  Running
+7        started  10.219.11.101  juju-b190bf-7  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:39:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:39:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:40:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:40:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:41:06 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:41:06 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:41:08 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-3: 01:41:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:41:39 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:41:39 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-two-0: 01:41:51 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 01:41:51 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 01:41:51 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-4: 01:42:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:42:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:42:09 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:42:09 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:42:10 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-6: 01:42:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:42:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:42:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:42:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-replication-0: 01:43:14 ERROR unit.replication/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-replication-0: 01:43:14 ERROR unit.replication/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-replication-0: 01:43:15 ERROR unit.replication/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-self-signed-certificates-0: 01:45:51 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-config-server-0: 01:48:09 ERROR juju.worker.uniter resolver loop error: permission denied
+unit-shard-one-0: 01:48:09 ERROR juju.worker.uniter resolver loop error: permission denied
+unit-config-server-0: 01:48:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: permission denied
+unit-shard-one-0: 01:48:09 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: permission denied
+unit-config-server-0: 01:48:36 ERROR unit.config-server/0.juju-log database:25: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:48:36 ERROR unit.config-server/0.juju-log database:25: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:48:36 ERROR unit.shard-one/0.juju-log database:24: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:48:36 ERROR unit.shard-one/0.juju-log database:24: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:48:41 ERROR unit.config-server/0.juju-log database:25: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:48:42 ERROR unit.shard-one/0.juju-log database:24: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-self-signed-certificates-0: 01:49:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-config-server-0: 01:49:35 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:49:35 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:49:35 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:49:35 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:49:36 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:49:36 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:49:36 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Cannot operate as a config-server when deployed as a bare replica set
+unit-shard-one-0: 01:49:36 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:
+unit-shard-one-0: 01:49:49 ERROR unit.shard-one/0.juju-log database:24: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:49:49 ERROR unit.config-server/0.juju-log database:25: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:54:26 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:replication shard does not have the same auth as the config server.
+unit-self-signed-certificates-0: 01:54:48 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-replication-0: 01:55:22 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:22 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:22 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:22 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-shard-one-0: 01:55:36 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cd68e058-9e34-47be-874e-6b9d2cb190bf:r#27#replication": settings cd68e058-9e34-47be-874e-6b9d2cb190bf:r#27#replication not found (not found)
+unit-self-signed-certificates-0: 01:57:05 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-replication-0: 01:57:07 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:57:07 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:57:07 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-mongos-0: 01:57:38 ERROR unit.mongos/0.juju-log cluster:28: root:Can't delete secret for relation 22
+unit-replication-0: 01:57:47 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cd68e058-9e34-47be-874e-6b9d2cb190bf:r#28#mongos": settings cd68e058-9e34-47be-874e-6b9d2cb190bf:r#28#mongos not found (not found)
+unit-shard-one-0: 01:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-mongos-0: 01:59:53 ERROR unit.mongos/0.juju-log cluster:29: root:Can't delete secret for relation 22
+unit-self-signed-certificates-0: 02:00:18 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:41 ERROR unit.self-signed-certificates/0.juju-log certificates:31: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:43 ERROR unit.self-signed-certificates/0.juju-log certificates:31: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:44 ERROR unit.self-signed-certificates/0.juju-log certificates:32: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:00:44 ERROR unit.self-signed-certificates/0.juju-log certificates:32: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-replication-0: 02:00:50 ERROR unit.replication/0.juju-log peer-certificates:31: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:00:57 ERROR unit.replication/0.juju-log client-certificates:32: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-self-signed-certificates-0: 02:05:16 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-replication-0: 02:05:25 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:05:25 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:05:25 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:05:26 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:05:38 ERROR unit.replication/0.juju-log peer-certificates:31: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:05:47 ERROR unit.replication/0.juju-log client-certificates:32: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
