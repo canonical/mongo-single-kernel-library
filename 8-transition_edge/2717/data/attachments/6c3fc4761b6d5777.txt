@@ -1,0 +1,144 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.ha:ha.py:87 Calling network loss on ns=testing and pod=shard-two-1
+[32mINFO    [0m integration.helpers.ha:ha.py:114 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [executing] maintenance: Starting MongoDB.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  03:06:02Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     7.0.28   active       3  mongodb-k8s                  0  10.152.183.136  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.128  no       
+shard-one         7.0.28   active       3  mongodb-k8s                  1  10.152.183.237  no       
+shard-two         7.0.28   active       3  mongodb-k8s                  2  10.152.183.254  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.41         Primary.
+config-server/1      active    idle   10.1.53.40         
+config-server/2      active    idle   10.1.53.39         
+continuous-write/0*  waiting   idle   10.1.53.38         
+shard-one/0*         active    idle   10.1.53.44         Primary.
+shard-one/1          active    idle   10.1.53.43         
+shard-one/2          active    idle   10.1.53.42         
+shard-two/0*         active    idle   10.1.53.47         Primary.
+shard-two/1          active    idle   10.1.53.46         
+shard-two/2          active    idle   10.1.53.45         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:24:00 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e3e4c81f1f9c3acfac7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007634849999931248>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-1.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000901773000009598>]>
+unit-shard-one-0: 02:24:04 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e434c81f1f9c3acfac8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.00046419699992839014>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69912e3ee5504d55f2a208b6'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 15000, '$clusterTime': {'clusterTime': Timestamp(1771122239, 6), 'signature': {'hash': b'K\\x8e\\xfd\\xf9\\xb2m6#\\x8eL\\xbb3\\xe6O0\\x9d\\xd4\\xb7\\x10,', 'keyId': 7606911127355654159}}, 'operationTime': Timestamp(1771122231, 2)}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69912e2ff2a8ef65110bed10'), 'counter': 6}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13732, '$clusterTime': {'clusterTime': Timestamp(1771122239, 6), 'signature': {'hash': b'K\\x8e\\xfd\\xf9\\xb2m6#\\x8eL\\xbb3\\xe6O0\\x9d\\xd4\\xb7\\x10,', 'keyId': 7606911127355654159}}, 'operationTime': Timestamp(1771122231, 2)}")>]>
+unit-shard-one-0: 02:24:08 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e474c81f1f9c3acfac9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007462400000122216>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69912e3ee5504d55f2a208b6'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11237, '$clusterTime': {'clusterTime': Timestamp(1771122246, 1), 'signature': {'hash': b'dY\\x92\\x02\\x96\\xfa\\xdbx-Z;\\x8d\\x05\\xd5\\x17\\xc3\\x8cp4\\x0c', 'keyId': 7606911127355654159}}, 'operationTime': Timestamp(1771122231, 2)}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-2.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-two-0: 02:24:09 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e480f18b8469e06cc4f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010063299999956143>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0015750530000104845>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005103160000317075>]>
+unit-shard-one-0: 02:24:13 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e4b4c81f1f9c3acfaca, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004926889999978812>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016114680000782755>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006148520000124336>]>
+unit-shard-two-0: 02:24:14 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e4c0f18b8469e06cc50, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0030025250000562664>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.001018277999946804>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0011061390000577376>]>
+unit-shard-one-0: 02:24:17 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e504c81f1f9c3acfacb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006077620000723982>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69912e49f0c9cb8b6f61a9fc'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14300, '$clusterTime': {'clusterTime': Timestamp(1771122256, 1), 'signature': {'hash': b'\\xf4\\xaf\\xe8XW\\x92\\xe2\\xe14\\x1a\\x80\\x1cD,\\x82e\\xc7\\x0f%\\x11', 'keyId': 7606911127355654159}}, 'operationTime': Timestamp(1771122231, 2)}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69912e47d0d1adfe897d6b42'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13547, '$clusterTime': {'clusterTime': Timestamp(1771122256, 1), 'signature': {'hash': b'\\xf4\\xaf\\xe8XW\\x92\\xe2\\xe14\\x1a\\x80\\x1cD,\\x82e\\xc7\\x0f%\\x11', 'keyId': 7606911127355654159}}, 'operationTime': Timestamp(1771122231, 2)}")>]>
+unit-shard-one-0: 02:24:22 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e544c81f1f9c3acfacc, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009063699999387609>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-1.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-2.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-one-0: 02:24:26 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e594c81f1f9c3acfacd, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010069209999983286>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010239559999263292>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0020639259998915804>]>
+unit-shard-two-0: 02:24:51 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e725bd09c152349e08b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004938609999953769>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004128290000835477>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.00149873899999875>]>
+unit-shard-two-0: 02:24:55 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e765bd09c152349e08c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010554630000569887>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0018857000000025437>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005453480000596755>]>
+unit-shard-two-0: 02:24:59 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69912e7a5bd09c152349e08d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.000469353999960731>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004906560000108584>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005872010000302907>]>
+unit-shard-two-0: 02:32:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:32:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:32:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:33:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:33:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:33:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:33:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:33:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:33:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 02:36:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:36:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:36:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:36:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:36:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:36:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:36:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:36:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:36:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:37:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:37:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:37:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:37:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:38:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:38:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:39:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:40:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:40:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:41:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:41:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:43:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:43:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:43:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:44:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:44:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:44:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:45:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:45:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:46:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:46:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:46:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:46:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:49:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:49:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:49:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:50:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:50:07 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:50:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:50:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:50:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:50:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:50:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:51:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:51:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:51:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:55:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:56:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:56:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:57:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:57:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:57:27 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:57:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:00:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:00:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 03:00:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 03:01:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:01:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:02:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 03:03:53 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [83021d] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-shard-two-1: 03:04:00 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [83021d] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-shard-two-1: 03:04:07 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [83021d] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-shard-two-1: 03:04:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [83021d] "unit-shard-two-1" cannot open api: try was stopped
+unit-shard-two-1: 03:04:25 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [83021d] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-config-server-1: 03:04:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:05:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

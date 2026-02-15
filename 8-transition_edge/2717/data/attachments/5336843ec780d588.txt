@@ -1,0 +1,86 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] maintenance: Starting MongoDB.
+  shard-one/0 [idle] waiting: agent initialising
+  shard-one/1 [idle] waiting: agent initialising
+  shard-two/0 [allocating] waiting: installing agent
+  shard-two/1 [allocating] waiting: installing agent
+  shard-tree/0 [allocating] waiting: installing agent
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  shard-one/0 [executing] maintenance: Adding shard to config-server
+  shard-one/1 [executing] maintenance: Starting MongoDB.
+  shard-two/0 [executing] maintenance: installing charm software
+  shard-two/1 [executing] maintenance: Adding shard to config-server
+  shard-tree/0 [allocating] waiting: installing agent
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+v1.7.16-dirty-locally built.
+  shard-one/0 [executing] maintenance: Adding shard to config-server
+  shard-one/1 [executing] maintenance: Adding shard to config-server
+  shard-two/0 [executing] maintenance: Adding shard to config-server
+  shard-two/1 [executing] maintenance: Starting MongoDB.
+  shard-tree/0 [executing] maintenance: installing charm software
+  shard-tree/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Adding shard shard-two to config-server...
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [executing] active: 
+  shard-tree/0 [executing] maintenance: Adding shard to config-server
+  shard-tree/1 [executing] maintenance: Starting MongoDB.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Adding shard shard-two to config-server...
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [executing] active: 
+  shard-two/1 [idle] active: 
+  shard-tree/0 [executing] active: 
+  shard-tree/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Adding shard shard-tree to config-server...
+  shard-one/0 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-tree/0 [idle] active: 
+  shard-tree/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-tree/1 [idle] active: 
+[32mINFO    [0m integration.helpers.sharding:sharding.py:163 Expecting ['shard-one', 'shard-two', 'shard-tree'], got {'shard-two', 'shard-tree', 'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:42:18Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  7.0.28   active      1  mongodb-k8s             0  10.152.183.97   no       
+shard-one      7.0.28   active      2  mongodb-k8s             1  10.152.183.163  no       
+shard-tree     7.0.28   active      2  mongodb-k8s             3  10.152.183.184  no       
+shard-two      7.0.28   active      2  mongodb-k8s             2  10.152.183.32   no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.12         Primary.
+shard-one/0*      active    idle   10.1.53.17         
+shard-one/1       active    idle   10.1.53.18         
+shard-tree/0      active    idle   10.1.53.29         
+shard-tree/1*     active    idle   10.1.53.30         
+shard-two/0*      active    idle   10.1.53.23         Primary.
+shard-two/1       active    idle   10.1.53.24         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:40:21 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 699132146e2a6143b46eba91, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016285019999031647>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005508159999862983>]>
+unit-shard-one-0: 02:40:25 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 699132186e2a6143b46eba92, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005509960000154024>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005050080000046364>]>
+unit-config-server-0: 02:40:35 ERROR unit.config-server/0.juju-log config-server:17: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1771123235, 1), \'signature\': {\'hash\': b\'\\x8f\\xd0F\\xa8\\xac\\x98\\x87\\xdf\\x87\\x9b\\x06!3xp\\xbe\\xae\\xdaqs\', \'keyId\': 7606915937719025687}}, \'operationTime\': Timestamp(1771123235, 1)}')
+unit-config-server-0: 02:40:55 ERROR unit.config-server/0.juju-log config-server:16: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1771123254, 1), \'signature\': {\'hash\': b\'\\\'E%\\xfb\\xba8\\xda`\\xc3d\\xc9R\\xf0"Rmt\\xf8\\xb4\\xa9\', \'keyId\': 7606915937719025687}}, \'operationTime\': Timestamp(1771123254, 1)}')
+unit-shard-one-0: 02:41:08 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69913243d9805fb87b603173, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006992280000304163>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005304249999653621>]>
+unit-shard-one-0: 02:41:12 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69913247d9805fb87b603174, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005165149999584173>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005324490000475635>]>
+unit-shard-one-0: 02:41:16 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6991324bd9805fb87b603175, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000604797000050894>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006313559999853169>]>
+unit-shard-tree-1: 02:41:28 ERROR unit.shard-tree/1.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69913257b8f5670bec335368, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006841460000259758>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.00036674000000402884>]>
+unit-shard-tree-1: 02:41:32 ERROR unit.shard-tree/1.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6991325bb8f5670bec335369, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006971649999059082>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006246059999739373>]>
+unit-shard-tree-1: 02:41:36 ERROR unit.shard-tree/1.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6991325fb8f5670bec33536a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006816119999939474>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005655379999325305>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
