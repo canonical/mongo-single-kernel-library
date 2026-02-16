@@ -91,6 +91,10 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
 
     if substrate == "microk8s":
@@ -127,6 +131,10 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
     harness.add_relation("router-peers", "router-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
     if substrate == "microk8s":
         container = harness.model.unit.get_container("mongos")
@@ -242,12 +250,12 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
 @pytest.fixture
 def mongodb_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.10"
+        return "192.0.2.0"
     return "mongodb-k8s-0.mongodb-k8s-endpoints"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.11"
+        return "192.0.2.1"
     return "mongodb-k8s-1.mongodb-k8s-endpoints"

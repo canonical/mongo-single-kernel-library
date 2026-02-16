@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import json
 import logging
-from ipaddress import IPv4Address, IPv6Address
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
 from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
-from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
+from ops import Binding, ModelError, Object, Relation, SecretNotFoundError, Unit
 from pymongo.errors import (
     AutoReconnect,
     NotPrimaryError,
@@ -92,6 +91,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger()
 
 
+@final
 class CharmState(Object, StatusesStateProtocol):
     """The Charm State object.
 
@@ -381,6 +381,11 @@ class CharmState(Object, StatusesStateProtocol):
         return self.is_role(MongoDBRoles.SHARD) or self.is_role(MongoDBRoles.CONFIG_SERVER)
 
     @property
+    def is_cluster_component(self) -> bool:
+        """Is the application a cluster component?"""
+        return self.is_role(MongoDBRoles.MONGOS) or self.is_role(MongoDBRoles.CONFIG_SERVER)
+
+    @property
     def has_sharding_integration(self) -> bool:
         """Has the sharding component a sharded deployment integration?"""
         return (self.shard_relation is not None) or bool(self.config_server_relation)
@@ -395,14 +400,11 @@ class CharmState(Object, StatusesStateProtocol):
         self.app_peer_data.db_initialised = other
 
     @property
-    def bind_address(self) -> IPv4Address | IPv6Address | str:
+    def bind_address(self) -> str:
         """The network binding address from the peer relation."""
-        bind_address = None
-        if self.peer_relation:
-            if binding := self.model.get_binding(self.peer_relation):
-                bind_address = binding.network.bind_address
-
-        return bind_address or ""
+        if not self.peer_relation:
+            return ""
+        return str(self.peer_network().network.bind_address)
 
     def get_user_password(self, user: MongoDBUser) -> str:
         """Returns the user password for a system user."""
@@ -669,7 +671,7 @@ class CharmState(Object, StatusesStateProtocol):
     def mongodb_config_for_user(
         self,
         user: MongoDBUser,
-        hosts: set[str] = set(),
+        hosts: set[str] | None = None,
         replset: str | None = None,
         standalone: bool = False,
     ) -> MongoConfiguration:
@@ -683,6 +685,8 @@ class CharmState(Object, StatusesStateProtocol):
         Raises:
             Exception if neither user.hosts nor hosts is non empty.
         """
+        if not hosts:
+            hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
         return MongoConfiguration(
@@ -702,7 +706,7 @@ class CharmState(Object, StatusesStateProtocol):
     def mongos_config_for_user(
         self,
         user: MongoDBUser,
-        hosts: set[str] = set(),
+        hosts: set[str] | None = None,
     ) -> MongoConfiguration:
         """Returns a mongos-specific MongoConfiguration object for the provided user.
 
@@ -714,6 +718,8 @@ class CharmState(Object, StatusesStateProtocol):
         Raises:
             Exception if neither user.hosts nor hosts is non empty.
         """
+        if not hosts:
+            hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
         return MongoConfiguration(
@@ -812,3 +818,44 @@ class CharmState(Object, StatusesStateProtocol):
             raise
 
         return secret_content
+
+    # BEGIN: Addresses accessors
+    def client_network(self) -> Binding:
+        """Listening IP for that unit on the client relation."""
+        if self.is_role(MongoDBRoles.MONGOS):
+            return self.model.get_binding(RelationNames.MONGOS_PROXY.value)  # type: ignore[return-value]
+        return self.model.get_binding(RelationNames.DATABASE.value)  # type: ignore[return-value]
+
+    def peer_network(self) -> Binding:
+        """Listening IP for that unit on the peer relation."""
+        return self.model.get_binding(PeerRelationNames.PEERS.value)  # type: ignore[return-value]
+
+    def sharding_network(self) -> Binding:
+        """Listening IP for that unit on the sharding relation."""
+        return self.model.get_binding(RelationNames.SHARDING.value)  # type: ignore[return-value]
+
+    def config_server_network(self) -> Binding:
+        """Listening IP for that unit on the config-server relation."""
+        return self.model.get_binding(RelationNames.CONFIG_SERVER.value)  # type: ignore[return-value]
+
+    def cluster_network(self) -> Binding:
+        """Listening IP for that unit on the sharding relation."""
+        return self.model.get_binding(RelationNames.CLUSTER.value)  # type: ignore[return-value]
+
+    def listen_ips(self) -> set[str]:
+        """All the IPs to listen to."""
+        ip_list = [
+            self.client_network().network.bind_address,
+            self.peer_network().network.bind_address,
+        ]
+        if self.is_sharding_component:
+            ip_list.append(self.sharding_network().network.bind_address)
+            ip_list.append(
+                self.config_server_network().network.bind_address,
+            )
+        if self.is_cluster_component:
+            ip_list.append(self.config_server_network().network.bind_address)
+
+        ip_list.append("127.0.0.1")
+
+        return {str(ip) for ip in ip_list if ip}
