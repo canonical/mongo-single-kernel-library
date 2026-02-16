@@ -1,0 +1,81 @@
+[32mINFO    [0m integration.mongos.test_rollback:test_rollback.py:69 Wait for upgrade to fail
+[32mINFO    [0m integration.mongos.test_rollback:test_rollback.py:80 Re-refresh the charm
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] active: 
+  mongos/2 [executing] active: 
+  mongos/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/2 [idle] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m integration.mongos.test_rollback:test_rollback.py:101 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/2 [idle] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  acknowledged: true,
+  insertedId: ObjectId('69927ba35ccc287164331dc8')
+}
+, stderr: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  acknowledged: true,
+  insertedId: ObjectId('69927ba601f276d79f331dc8')
+}
+, stderr: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  acknowledged: true,
+  insertedId: ObjectId('69927baa143010e6d3331dc8')
+}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:06:34Z
+
+App                       Version  Status  Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             8.0.10   active      1  mongodb                              0  no       
+mongos                    8.0.10   active      3  mongos                               2  no       
+shard-one                 8.0.10   active      1  mongodb                              1  no       
+test-routing-application           active      3  test-routing-application             0  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*             active    idle   0        10.208.73.126   27017-27018/tcp  
+shard-one/0*                 active    idle   1        10.208.73.209   27017/tcp        Primary.
+test-routing-application/0*  active    idle   2        10.208.73.132                    
+  mongos/2                   active    idle            10.208.73.132                    
+test-routing-application/1   active    idle   3        10.208.73.97                     
+  mongos/1                   active    idle            10.208.73.97                     
+test-routing-application/2   active    idle   4        10.208.73.66                     
+  mongos/0*                  active    idle            10.208.73.66                     
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.208.73.126  juju-cea2b5-0  ubuntu@24.04  github-runner  Running
+1        started  10.208.73.209  juju-cea2b5-1  ubuntu@24.04  github-runner  Running
+2        started  10.208.73.132  juju-cea2b5-2  ubuntu@24.04  github-runner  Running
+3        started  10.208.73.97   juju-cea2b5-3  ubuntu@24.04  github-runner  Running
+4        started  10.208.73.66   juju-cea2b5-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:58:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:58:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:59:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:59:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:59:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:59:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:59:48 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:59:48 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:59:48 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:00:04 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:00:04 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:00:04 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
