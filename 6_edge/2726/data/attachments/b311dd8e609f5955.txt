@@ -1,0 +1,41 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:52:22Z
+
+App                       Version  Status   Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             6.0.24   active       1  mongodb                              0  no       
+mongos                    6.0.24   waiting      2  mongos                    6/edge    95  no       Connecting to config-server...
+shard-one                 6.0.24   active       1  mongodb                              1  no       
+test-routing-application           active       2  test-routing-application             0  no       
+
+Unit                         Workload  Agent      Machine  Public address  Ports            Message
+config-server/0*             error     idle       0        10.248.30.49    27017-27018/tcp  hook failed: "cluster-relation-changed"
+shard-one/0*                 active    idle       1        10.248.30.219   27017/tcp        
+test-routing-application/0   active    idle       2        10.248.30.199                    
+  mongos/0*                  waiting   executing           10.248.30.199                    Connecting to config-server...
+test-routing-application/1*  active    idle       3        10.248.30.91                     
+  mongos/1                   waiting   executing           10.248.30.91                     Connecting to config-server...
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.248.30.49   juju-cf7828-0  ubuntu@22.04  github-runner  Running
+1        started  10.248.30.219  juju-cf7828-1  ubuntu@22.04  github-runner  Running
+2        started  10.248.30.199  juju-cf7828-2  ubuntu@22.04  github-runner  Running
+3        started  10.248.30.91   juju-cf7828-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:49:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:49:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:49:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:49:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:50:14 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:50:14 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:50:15 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:50:15 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
