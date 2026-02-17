@@ -1,0 +1,248 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:45:58Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+continuous-write           active      1  continuous-write             0  no       
+gcs-integrator             active      1  gcs-integrator    1/edge    10  no       
+mongodb           7.0.28   active      3  mongodb                      0  no       
+
+Unit                 Workload  Agent      Machine  Public address  Ports      Message
+continuous-write/0*  active    idle       4        10.14.130.18               
+gcs-integrator/0*    active    idle       3        10.14.130.125              
+mongodb/0*           active    executing  0        10.14.130.22    27017/tcp  (list-backups) Primary.
+mongodb/1            active    idle       1        10.14.130.70    27017/tcp  
+mongodb/2            active    idle       2        10.14.130.170   27017/tcp  
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.14.130.22   juju-f218f0-0  ubuntu@24.04  github-runner  Running
+1        started  10.14.130.70   juju-f218f0-1  ubuntu@24.04  github-runner  Running
+2        started  10.14.130.170  juju-f218f0-2  ubuntu@24.04  github-runner  Running
+3        started  10.14.130.125  juju-f218f0-3  ubuntu@24.04  github-runner  Running
+4        started  10.14.130.18   juju-f218f0-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:29:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:29:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:29:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:29:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:29:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:29:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:29:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:29:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 02:30:06 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:30:06 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:30:24 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:30:24 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:30:26 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:30:26 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-gcs-integrator-0: 02:31:53 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:54 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:55 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:57 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:57 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:58 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:31:59 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:33:57 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:33:57 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:33:57 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:35:10 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:35:10 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:35:10 ERROR unit.gcs-integrator/0.juju-log Could not decode secret 'None'.
+unit-mongodb-1: 02:35:41 ERROR unit.mongodb/1.juju-log gcs-credentials:5: GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-mongodb-0: 02:35:41 ERROR unit.mongodb/0.juju-log gcs-credentials:5: GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-mongodb-2: 02:35:41 ERROR unit.mongodb/2.juju-log gcs-credentials:5: GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-2/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-mongodb-0: 02:36:12 ERROR unit.mongodb/0.juju-log cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/6993d418778eadaf36b9f2ee [mongodb/10.14.130.22:27017]
+
+machine-4: 02:38:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:38:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 02:45:55 ERROR unit.mongodb/0.juju-log GCS credential validation failed: Timeout of 120.0s exceeded, last exception: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 796, in connect
+    sock_and_verified = _ssl_wrap_socket_and_match_hostname(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connection.py", line 975, in _ssl_wrap_socket_and_match_hostname
+    ssl_sock = ssl_wrap_socket(
+               ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 483, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls, server_hostname)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 527, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 1042, in _create
+    self.do_handshake()
+  File "/usr/lib/python3.12/ssl.py", line 1320, in do_handshake
+    self._sslobj.do_handshake()
+ssl.SSLEOFError: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+urllib3.exceptions.SSLError: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/requests/adapters.py", line 644, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 535, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/transport/requests.py", line 188, in __call__
+    response = self.session.request(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/requests/adapters.py", line 675, in send
+    raise SSLError(e, request=request)
+requests.exceptions.SSLError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 144, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/_http/__init__.py", line 482, in api_request
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/_http/__init__.py", line 341, in _make_request
+    return self._do_request(
+           ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/_http/__init__.py", line 379, in _do_request
+    return self.http.request(
+           ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/transport/requests.py", line 538, in request
+    self.credentials.before_request(auth_request, method, url, request_headers)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/credentials.py", line 230, in before_request
+    self._blocking_refresh(request)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/credentials.py", line 193, in _blocking_refresh
+    self.refresh(request)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/credentials.py", line 367, in refresh
+    self._perform_refresh_token(request)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 457, in _perform_refresh_token
+    access_token, expiry, _ = _client.jwt_grant(
+                              ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/oauth2/_client.py", line 303, in jwt_grant
+    response_data = _token_endpoint_request(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/oauth2/_client.py", line 263, in _token_endpoint_request
+    ) = _token_endpoint_request_no_throw(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/oauth2/_client.py", line 192, in _token_endpoint_request_no_throw
+    response = request(
+               ^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/auth/transport/requests.py", line 195, in __call__
+    raise new_exc from caught_exc
+google.auth.exceptions.TransportError: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 147, in create_bucket
+    exists = bucket.exists()
+             ^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/storage/bucket.py", line 899, in exists
+    client._get_resource(
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/storage/client.py", line 462, in _get_resource
+    return self._connection.api_request(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/cloud/storage/_http.py", line 78, in api_request
+    return call()
+           ^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 293, in retry_wrapped_func
+    return retry_target(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/api_core/retry/retry_unary.py", line 153, in retry_target
+    _retry_error_helper(
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/google/api_core/retry/retry_base.py", line 221, in _retry_error_helper
+    raise final_exc from source_exc
+google.api_core.exceptions.RetryError: Timeout of 120.0s exceeded, last exception: HTTPSConnectionPool(host='oauth2.googleapis.com', port=443): Max retries exceeded with url: /token (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)')))
+unit-mongodb-0: 02:45:55 ERROR unit.mongodb/0.juju-log List-backups failed: status='blocked' message='Incorrect GCS credentials.' short_message=None check='GCS configuration validation failed.' action='Check the configuration in the gcs-credentials relation (gcs interface).' running=None approved_critical_component=False
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
