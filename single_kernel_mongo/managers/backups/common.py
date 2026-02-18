@@ -393,9 +393,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             running_status_only=True,
             running_status_type="async",
         )
-        if any(status.message.startswith("Backup started") for status in statuses):
-            return True
-        return False
+        return any(status.message.startswith("Backup started") for status in statuses)
 
     def restore_in_progress(self) -> bool:
         """Checks if a restore is in progress using the backup statuses objects."""
@@ -405,9 +403,7 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
             running_status_only=True,
             running_status_type="async",
         )
-        if any(status.message.startswith("Restore started") for status in statuses):
-            return True
-        return False
+        return any(status.message.startswith("Restore started") for status in statuses)
 
     def backup_state(self) -> BackupState:  # noqa:C901
         """Gets the backup state that can be mapped to a status."""
