@@ -77,7 +77,12 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
     )
 
     mock_create_role.assert_called_with(role_name=user.mongodb_role, privileges=user.privileges)
-    mock_create_user.assert_called_with(config.username, config.password, config.supported_roles)
+    mock_create_user.assert_called_with(
+        config.username,
+        config.password,
+        config.supported_roles,
+        auth_restrictions=[{"clientSource": ["10.0.0.1/24"], "serverAddress": ["127.0.0.1"]}],
+    )
 
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
 

@@ -6,6 +6,7 @@
 
 import json
 from enum import Enum
+from typing import final
 
 from ops import Application
 from ops.model import Relation, Unit
@@ -18,17 +19,20 @@ class AppShardingComponentKeys(str, Enum):
     """Config Server State Model for the application."""
 
     DATABASE = "database"
-    OPERATOR_PASSWORD = "charmed-operator-password"
-    BACKUP_PASSWORD = "charmed-backup-password"
+    OPERATOR_PASSWORD = "charmed-operator-password"  # nosec B105
+    BACKUP_PASSWORD = "charmed-backup-password"  # nosec B105
     HOST = "host"
     KEY_FILE = "key-file"
-    INT_CA_SECRET = "int-ca-secret"
-    EXT_CA_SECRET = "ext-ca-secret"
-    BACKUP_CA_SECRET = "backup-ca-secret"
+    INT_CA_SECRET = "int-ca-secret"  # nosec B105
+    EXT_CA_SECRET = "ext-ca-secret"  # nosec B105
+    BACKUP_CA_SECRET = "backup-ca-secret"  # nosec B105
+    MONGOS_CIDRS = "mongos-cidrs"
+    RS_HOSTS = "rs-hosts"
+    AUTH_UPDATED = "auth-updated"
 
     # We don't use those except to check if we've received credentials
     USERNAME = "username"
-    PASSWORD = "password"
+    PASSWORD = "password"  # nosec B105
 
 
 SECRETS_FIELDS = [
@@ -41,6 +45,7 @@ SECRETS_FIELDS = [
 ]
 
 
+@final
 class AppShardingComponentState(AbstractRelationState[Data]):
     """The stored state for the ConfigServer Relation."""
 
@@ -113,6 +118,39 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         return json.loads(
             self.relation_data.get(AppShardingComponentKeys.BACKUP_CA_SECRET.value, "null")
         )
+
+    @property
+    def mongos_cidrs(self) -> list[str]:
+        """The list of CIDRs for mongos apps."""
+        if not self.relation:
+            return []
+        return json.loads(self.relation_data.get(AppShardingComponentKeys.MONGOS_CIDRS.value, "[]"))
+
+    @property
+    def rs_hosts(self) -> list[str]:
+        """The shard resplicaset hosts in the relation."""
+        if not self.relation:
+            return []
+        return json.loads(self.relation_data.get(AppShardingComponentKeys.RS_HOSTS.value, "[]"))
+
+    @rs_hosts.setter
+    def rs_hosts(self, value: list[str]):
+        """Sets the rs_hosts key."""
+        self.update({AppShardingComponentKeys.RS_HOSTS.value: json.dumps(sorted(value))})
+
+    @property
+    def auth_updated(self) -> bool:
+        """Has the shard updated its host?."""
+        if not self.relation:
+            return False
+        return json.loads(
+            self.relation_data.get(AppShardingComponentKeys.AUTH_UPDATED.value, "false")
+        )
+
+    @auth_updated.setter
+    def auth_updated(self, value: bool):
+        """Sets the auth-updated field."""
+        self.update({AppShardingComponentKeys.AUTH_UPDATED.value: json.dumps(value)})
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):

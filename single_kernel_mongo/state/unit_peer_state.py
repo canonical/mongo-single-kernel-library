@@ -25,6 +25,12 @@ class UnitPeerRelationKeys(str, Enum):
     DRAINED = "drained"
     CURRENT_REVISION = "current_revision"
 
+    # IPs of the relations
+    DATABASE_ADDRESS = "database-address"
+    CONFIG_SERVER_ADDRESS = "config-server-address"
+    CLUSTER_ADDRESS = "cluster-address"
+    MONGOS_PROXY_ADDRESS = "mongos_proxy-address"
+
 
 class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     """State collection for unit data."""
@@ -122,3 +128,46 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     @current_revision.setter
     def current_revision(self, value: str):
         self.update({UnitPeerRelationKeys.CURRENT_REVISION.value: value})
+
+    @property
+    def database_address(self) -> str:
+        """The address of that unit on the database interface."""
+        return self.relation_data.get(UnitPeerRelationKeys.DATABASE_ADDRESS, "")
+
+    @database_address.setter
+    def database_address(self, value: str):
+        self.update({UnitPeerRelationKeys.DATABASE_ADDRESS.value: value})
+
+    @property
+    def config_server_address(self) -> str:
+        """The address of that unit on the config_server interface."""
+        return self.relation_data.get(UnitPeerRelationKeys.CONFIG_SERVER_ADDRESS, "")
+
+    @config_server_address.setter
+    def config_server_address(self, value: str):
+        self.update({UnitPeerRelationKeys.CONFIG_SERVER_ADDRESS.value: value})
+
+    @property
+    def cluster_address(self) -> str:
+        """The address of that unit on the cluster interface."""
+        return self.relation_data.get(UnitPeerRelationKeys.CLUSTER_ADDRESS, "")
+
+    @cluster_address.setter
+    def cluster_address(self, value: str):
+        self.update({UnitPeerRelationKeys.CLUSTER_ADDRESS.value: value})
+
+    @property
+    def mongos_proxy_address(self) -> str:
+        """The address of that unit on the mongos_proxy interface."""
+        return self.relation_data.get(UnitPeerRelationKeys.MONGOS_PROXY_ADDRESS, "")
+
+    @mongos_proxy_address.setter
+    def mongos_proxy_address(self, value: str):
+        self.update({UnitPeerRelationKeys.MONGOS_PROXY_ADDRESS.value: value})
+
+    def address_for(self, relation_name: str):
+        """Address for the correct relation."""
+        if self.substrate == Substrates.VM:
+            return self.relation_data.get(f"{relation_name}-address", "")
+        # K8s Case.
+        return f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"

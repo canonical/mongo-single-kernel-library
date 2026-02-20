@@ -52,12 +52,14 @@ from single_kernel_mongo.utils.mongo_config import (
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
+    AuthRestrictions,
     CharmedBackupUser,
     CharmedLogRotateUser,
     CharmedOperatorUser,
     CharmedStatsUser,
     MongoDBUser,
 )
+from single_kernel_mongo.utils.network_helpers import cidrs, network_for_relation
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
@@ -182,11 +184,14 @@ class MongoManager(Object, ManagerStatusProtocol):
                 privileges=user.privileges,
             )
             logger.info(f"Creating the {user.username} user...")
-            config = self.state.mongodb_config_for_user(user)
+            config = self.state.mongodb_config_for_user(
+                user, auth_restrictions=self.state.local_auth_restrictions
+            )
             mongo.create_user(
                 config.username,
                 config.password,
                 config.supported_roles,
+                auth_restrictions=config.auth_restrictions,
             )
 
         self.state.app_peer_data.set_user_created(user.username)
@@ -247,6 +252,10 @@ class MongoManager(Object, ManagerStatusProtocol):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
+        external_connectivity: bool = json.loads(
+            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            or "false"
+        )
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
 
@@ -254,16 +263,25 @@ class MongoManager(Object, ManagerStatusProtocol):
         if has_user:
             return
 
+        auth_restrictions = self._compute_auth_restrictions(
+            relation, external_connectivity=external_connectivity
+        )
+
         with MongoConnection(self.state.mongo_config) as mongo:
             config = self.get_config(
                 username,
                 None,  # We are creating the user, which means we don't have password for it yet
                 data_interface,
-                relation.id,
+                relation,
             )
             logger.info("Create relation user: %s on %s", config.username, config.database)
 
-            mongo.create_user(config.username, config.password, config.supported_roles)
+            mongo.create_user(
+                config.username,
+                config.password,
+                config.supported_roles,
+                auth_restrictions=auth_restrictions,
+            )
             managed_users.add(username)
             data_interface.set_database(relation.id, config.database)
             data_interface.set_credentials(relation.id, config.username, config.password)
@@ -303,7 +321,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 username,
                 password,
                 data_interface,
-                relation.id,
+                relation,
             )
 
             logger.info("Update relation user: %s on %s", config.username, config.database)
@@ -375,7 +393,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             username,
             password,
             data_interface,
-            relation.id,
+            relation,
         )
         self.update_app_relation_data_for_config(relation, config)
 
@@ -415,20 +433,21 @@ class MongoManager(Object, ManagerStatusProtocol):
         username: str,
         password: str | None,
         data_inteface: DatabaseProviderData,
-        relation_id: int,
+        relation: Relation,
     ) -> MongoConfiguration:
         """."""
         if not password:
             password = self.workload.generate_password()
-        database_name = data_inteface.fetch_relation_field(relation_id, "database")
-        roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles") or "default"
+        database_name = data_inteface.fetch_relation_field(relation.id, "database")
+        roles = data_inteface.fetch_relation_field(relation.id, "extra-user-roles") or "default"
         if not database_name or not roles:
             raise Exception("Missing database name or roles.")
+
         mongo_args = {
             "database": database_name,
             "username": username,
             "password": password,
-            "hosts": self.state.app_hosts,
+            "hosts": self.state.hosts_for(relation),
             "roles": set(roles.split(",")),
             "tls_enabled": False,
             "port": self.state.host_port,
@@ -597,3 +616,29 @@ class MongoManager(Object, ManagerStatusProtocol):
                 new_primary = self.dependent.primary_unit_name  # type: ignore
                 if new_primary == old_primary:
                     raise FailedToElectNewPrimaryError()
+
+    def _compute_auth_restrictions(
+        self, relation: Relation, external_connectivity: bool
+    ) -> list[AuthRestrictions]:
+        """Compute the correct auth restriction rules."""
+        # No juju spaces support on K8S.
+        if self.substrate == Substrates.K8S:
+            return []
+        # No restriction on external connectivity for now.
+        if external_connectivity:
+            return []
+        # We can't enforce rules on sharded deployments due to
+        # - No support for socket connection
+        # - Otherwise it's external connectivity, hence already handled.
+        if self.state.is_cluster_component:
+            return []
+        return [
+            AuthRestrictions(
+                clientSource=cidrs(network_for_relation(relation).bind_addresses),
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
+            AuthRestrictions(
+                clientSource=cidrs(self.state.peer_network().bind_addresses),
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
+        ]

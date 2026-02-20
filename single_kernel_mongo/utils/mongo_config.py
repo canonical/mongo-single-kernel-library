@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """Code for interactions with MongoDB."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
 from urllib.parse import quote_plus, urlencode
@@ -11,6 +11,7 @@ from single_kernel_mongo.config.literals import MongoPorts
 from single_kernel_mongo.exceptions import AmbiguousConfigError
 from single_kernel_mongo.utils.mongodb_users import (
     REGULAR_ROLES,
+    AuthRestrictions,
     DBPrivilege,
     UserRole,
 )
@@ -42,6 +43,7 @@ class MongoConfiguration:
     port: int | None = None
     replset: str | None = None
     standalone: bool = False
+    auth_restrictions: list[AuthRestrictions] = field(default_factory=list)
 
     @property
     def formatted_hosts(self) -> set[str]:

@@ -198,7 +198,13 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
     harness.update_relation_data(
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
-    harness.update_relation_data(rel_id, "shard0/0", {"private-address": "2.2.2.2"})
+    # harness.update_relation_data(rel_id, "shard0/0", {"private-address": "2.2.2.2"})
+    if substrate == "lxd":
+        harness.update_relation_data(rel_id, "shard0", {"rs-hosts": '["2.2.2.2"]'})
+    else:
+        harness.update_relation_data(
+            rel_id, "shard0", {"rs-hosts": '["shard0-0.shard0-endpoints"]'}
+        )
 
     manager.add_shard(relation)
 

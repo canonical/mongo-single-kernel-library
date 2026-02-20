@@ -26,7 +26,7 @@ def test_app_hosts(
     harness.update_relation_data(rel_id, f"{mongodb_name}/1", PEER_ADDR[substrate])
     resulting_ips = harness.charm.operator.state.app_hosts
     if substrate == "lxd":
-        expected_ips = {"10.0.0.10", "127.4.5.6"}
+        expected_ips = {"10.0.0.1", "127.4.5.6"}
     else:
         expected_ips = {
             "mongodb-k8s-1.mongodb-k8s-endpoints",

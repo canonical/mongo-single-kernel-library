@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import time
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
@@ -61,6 +61,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedOperatorUser,
     MongoDBUser,
 )
+from single_kernel_mongo.utils.network_helpers import cidrs
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 
 if TYPE_CHECKING:
@@ -69,6 +70,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
+@final
 class ConfigServerManager(Object, ManagerStatusProtocol):
     """Manage relations between the config server and the shard, on the config-server's side."""
 
@@ -110,6 +112,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             ),
             AppShardingComponentKeys.KEY_FILE.value: self.state.get_keyfile(),
             AppShardingComponentKeys.HOST.value: json.dumps(sorted(self.state.internal_hosts)),
+            AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
+                sorted(cidrs(self.state.cluster_network().bind_addresses))
+            ),
         }
 
         if self.state.s3_relation:
@@ -242,7 +247,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 {
                     AppShardingComponentKeys.HOST.value: json.dumps(
                         sorted(self.state.internal_hosts)
-                    )
+                    ),
+                    AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
+                        sorted(cidrs(self.state.cluster_network().bind_addresses))
+                    ),
                 },
             )
 
@@ -336,10 +344,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         """Adds a shard to the cluster."""
         shard_name = relation.app.name
 
-        hosts = []
-        for unit in relation.units:
-            unit_state = self.state.unit_peer_data_for(unit, relation)
-            hosts.append(unit_state.internal_address)
+        hosts: list[str] = json.loads(
+            self.data_interface.fetch_relation_field(
+                relation.id, AppShardingComponentKeys.RS_HOSTS.value
+            )
+            or "[]"
+        )
         if not len(hosts):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
@@ -606,8 +616,13 @@ class ShardManager(Object, ManagerStatusProtocol):
         if not self.charm.unit.is_leader():
             return
 
+        # Let's send the IPs of our replicaset.
+        self.state.shard_state.rs_hosts = list(self.state.internal_hosts)
+
         # We have updated our auth, config-server can add the shard.
-        self.data_requirer.update_relation_data(relation.id, {"auth-updated": "true"})
+        self.state.shard_state.auth_updated = True
+
+        # Store the mongos hosts on this side of the relation.
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
@@ -731,6 +746,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Updates the hosts for mongos on the relation data."""
         if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
             self.state.app_peer_data.mongos_hosts = hosts
+        self.state.shard_state.rs_hosts = self.state.internal_hosts
 
     def sync_cluster_passwords(self, operator_password: str, backup_password: str) -> None:
         """Update shared cluster passwords."""

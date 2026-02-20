@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
 from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
-from ops import Binding, ModelError, Object, Relation, SecretNotFoundError, Unit
+from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
+from ops.hookcmds import Network, network_get
 from pymongo.errors import (
     AutoReconnect,
     NotPrimaryError,
@@ -21,6 +22,8 @@ from pymongo.errors import (
 )
 
 from single_kernel_mongo.config.literals import (
+    JUJU_INFO,
+    LOCALHOST,
     SECRETS_UNIT,
     CharmKind,
     MongoPorts,
@@ -72,6 +75,7 @@ from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
+    AuthRestrictions,
     CharmedBackupUser,
     CharmedLogRotateUser,
     CharmedOperatorUser,
@@ -80,6 +84,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     RoleNames,
 )
+from single_kernel_mongo.utils.network_helpers import cidrs, ip_addresses
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -156,6 +161,13 @@ class CharmState(Object, StatusesStateProtocol):
 
     # BEGIN: Relations
     @property
+    def client_relation_name(self) -> str:
+        """The correct client relation name."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return RelationNames.MONGOS_PROXY.value
+        return RelationNames.DATABASE.value
+
+    @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
         return self.model.get_relation(self.peer_relation_name)
@@ -187,9 +199,7 @@ class CharmState(Object, StatusesStateProtocol):
         which is exposed for mongos charms, and one for replication which is
         exposed for mongodb charms.
         """
-        if self.charm_role.name == CharmKind.MONGOS:
-            return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
-        return set(self.model.relations[RelationNames.DATABASE.value])
+        return set(self.model.relations[self.client_relation_name])
 
     @property
     def mongos_cluster_relation(self) -> Relation | None:
@@ -404,7 +414,7 @@ class CharmState(Object, StatusesStateProtocol):
         """The network binding address from the peer relation."""
         if not self.peer_relation:
             return ""
-        return str(self.peer_network().network.bind_address)
+        return str(self.peer_network().bind_addresses[0].addresses[0].value)
 
     def get_user_password(self, user: MongoDBUser) -> str:
         """Returns the user password for a system user."""
@@ -464,6 +474,13 @@ class CharmState(Object, StatusesStateProtocol):
             if self.config.expose_external == ExposeExternal.NODEPORT:
                 return {f"{unit.node_ip}" for unit in self.units}
         return self.internal_hosts
+
+    def hosts_for(self, relation: Relation) -> set[str]:
+        """Retrieve the hosts associated with MongoDB application."""
+        if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
+            if self.config.expose_external == ExposeExternal.NODEPORT:
+                return {f"{unit.node_ip}" for unit in self.units}
+        return {unit.address_for(relation.name) for unit in self.units}
 
     @property
     def unit_host(self) -> str | None:
@@ -563,10 +580,12 @@ class CharmState(Object, StatusesStateProtocol):
         # subject name
         return self.config_server_name or self.model.app.name
 
-    def generate_config_server_db(self) -> str:
+    def generate_config_server_db(self, relation: Relation) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
-        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT.value}" for host in self.internal_hosts)
+        hosts = sorted(
+            f"{host}:{MongoPorts.MONGODB_PORT.value}" for host in self.hosts_for(relation)
+        )
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
@@ -659,6 +678,14 @@ class CharmState(Object, StatusesStateProtocol):
         return self.app_peer_data.replica_set in members
 
     # BEGIN: Configuration accessors
+    @property
+    def local_auth_restrictions(self) -> list[AuthRestrictions]:
+        """Return auth restrictions for local users."""
+        return [
+            AuthRestrictions(
+                clientSource=cidrs(self.peer_network().bind_addresses), serverAddress=[LOCALHOST]
+            )
+        ]
 
     def has_credentials(self) -> bool:
         """Checks if we have received credentials or not."""
@@ -674,6 +701,7 @@ class CharmState(Object, StatusesStateProtocol):
         hosts: set[str] | None = None,
         replset: str | None = None,
         standalone: bool = False,
+        auth_restrictions: list[AuthRestrictions] | None = None,
     ) -> MongoConfiguration:
         """Returns a mongodb-specific MongoConfiguration object for the provided user.
 
@@ -689,6 +717,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
+        if not auth_restrictions:
+            auth_restrictions = []
         return MongoConfiguration(
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
@@ -701,6 +731,7 @@ class CharmState(Object, StatusesStateProtocol):
             tls_external_keyfile=self.paths.ext_pem_file,
             tls_external_ca=self.paths.ext_ca_file,
             standalone=standalone,
+            auth_restrictions=auth_restrictions,
         )
 
     def mongos_config_for_user(
@@ -737,17 +768,23 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def backup_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-backup user."""
-        return self.mongodb_config_for_user(CharmedBackupUser, standalone=True)
+        return self.mongodb_config_for_user(
+            CharmedBackupUser, standalone=True, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def stats_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-stats user."""
-        return self.mongodb_config_for_user(CharmedStatsUser)
+        return self.mongodb_config_for_user(
+            CharmedStatsUser, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def logrotate_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-logrotate user."""
-        return self.mongodb_config_for_user(CharmedLogRotateUser, standalone=True)
+        return self.mongodb_config_for_user(
+            CharmedLogRotateUser, standalone=True, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def operator_config(self) -> MongoConfiguration:
@@ -820,42 +857,54 @@ class CharmState(Object, StatusesStateProtocol):
         return secret_content
 
     # BEGIN: Addresses accessors
-    def client_network(self) -> Binding:
+    def juju_info_network(self) -> Network:
+        """The special binding `juju-info`."""
+        return network_get(JUJU_INFO)
+
+    def client_network(self) -> Network:
         """Listening IP for that unit on the client relation."""
-        if self.is_role(MongoDBRoles.MONGOS):
-            return self.model.get_binding(RelationNames.MONGOS_PROXY.value)  # type: ignore[return-value]
-        return self.model.get_binding(RelationNames.DATABASE.value)  # type: ignore[return-value]
+        return network_get(self.client_relation_name)
 
-    def peer_network(self) -> Binding:
+    def peer_network(self) -> Network:
         """Listening IP for that unit on the peer relation."""
-        return self.model.get_binding(PeerRelationNames.PEERS.value)  # type: ignore[return-value]
+        return network_get(self.peer_relation_name)
 
-    def sharding_network(self) -> Binding:
+    def sharding_network(self) -> Network:
         """Listening IP for that unit on the sharding relation."""
-        return self.model.get_binding(RelationNames.SHARDING.value)  # type: ignore[return-value]
+        return network_get(RelationNames.SHARDING.value)
 
-    def config_server_network(self) -> Binding:
+    def config_server_network(self) -> Network:
         """Listening IP for that unit on the config-server relation."""
-        return self.model.get_binding(RelationNames.CONFIG_SERVER.value)  # type: ignore[return-value]
+        return network_get(RelationNames.CONFIG_SERVER.value)
 
-    def cluster_network(self) -> Binding:
+    def cluster_network(self) -> Network:
         """Listening IP for that unit on the sharding relation."""
-        return self.model.get_binding(RelationNames.CLUSTER.value)  # type: ignore[return-value]
+        return network_get(RelationNames.CLUSTER.value)
 
     def listen_ips(self) -> set[str]:
         """All the IPs to listen to."""
-        ip_list = [
-            self.client_network().network.bind_address,
-            self.peer_network().network.bind_address,
+        if self.substrate == Substrates.K8S:
+            return {
+                self.unit_peer_data.internal_address,
+                "127.0.0.1",
+                *ip_addresses(self.juju_info_network().bind_addresses),
+            }
+        ip_list: list[str] = [
+            *ip_addresses(self.client_network().bind_addresses),
+            *ip_addresses(self.peer_network().bind_addresses),
         ]
         if self.is_sharding_component:
-            ip_list.append(self.sharding_network().network.bind_address)
-            ip_list.append(
-                self.config_server_network().network.bind_address,
+            ip_list.extend(ip_addresses(self.sharding_network().bind_addresses))
+            ip_list.extend(
+                ip_addresses(self.config_server_network().bind_addresses),
             )
         if self.is_cluster_component:
-            ip_list.append(self.config_server_network().network.bind_address)
+            ip_list.extend(ip_addresses(self.cluster_network().bind_addresses))
 
+        # Localhost
         ip_list.append("127.0.0.1")
+
+        # Public IPs of the unit.
+        ip_list.extend(ip_addresses(self.sharding_network().bind_addresses))
 
         return {str(ip) for ip in ip_list if ip}

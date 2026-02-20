@@ -5,6 +5,7 @@ from platform import platform
 import pytest
 import tomllib
 import yaml
+from ops.hookcmds import Network
 from ops.testing import Harness
 
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
@@ -44,6 +45,28 @@ class _MockRefreshVM:
 
     def unit_status_lower_priority(self, *, workload_is_running=True):
         return None
+
+
+@pytest.fixture(autouse=True)
+def mock_network_get(mocker):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.network_get",
+        return_value=Network._from_dict(
+            {
+                "bind-addresses": [
+                    {
+                        "mac-address": "aa:bb",
+                        "interface-name": "eth0",
+                        "addresses": [
+                            {"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}
+                        ],
+                    }
+                ],
+                "egress-subnets": ["127.0.0.0/24"],
+                "ingress-addresses": ["10.0.0.1"],
+            }
+        ),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -250,12 +273,12 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
 @pytest.fixture
 def mongodb_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "192.0.2.0"
+        return "10.0.0.1"
     return "mongodb-k8s-0.mongodb-k8s-endpoints"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "192.0.2.1"
+        return "10.0.0.2"
     return "mongodb-k8s-1.mongodb-k8s-endpoints"
