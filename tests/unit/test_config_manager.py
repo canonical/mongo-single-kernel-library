@@ -60,7 +60,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "ingress-addresses": ["10.0.0.1"],
         }
     )
-    mock_state.listen_ips = lambda: ["10.0.0.1", "127.0.0.1"]
+    mock_state.listens_on = lambda: ["10.0.0.1", "127.0.0.1"]
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
