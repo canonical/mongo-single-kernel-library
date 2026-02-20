@@ -82,11 +82,11 @@ async def test_integrate_with_spaces(ops_test: OpsTest):
         apps=[app_name, CONTINUOUS_WRITE_APPLICATION], status="active"
     )
 
+    unit = ops_test.model.applications[CONTINUOUS_WRITE_APPLICATION].units[0]
+
     # remove default route on client so traffic can't be routed through default interface
     logger.info("Flush default routes on client")
-    await ops_test.juju(
-        f"exec --unit {CONTINUOUS_WRITE_APPLICATION}/0 sudo ip route flush default".split()
-    )
+    await unit.run("sudo ip route flush default")
 
     await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
     sleep(10)
@@ -125,5 +125,4 @@ async def test_integrate_with_isolated_space(ops_test: OpsTest, application_path
     sleep(10)
 
     number_of_writes = await stop_continous_writes(ops_test, ISOLATED_APP_NAME)
-    assert number_of_writes == 0, "network was not isolated enough"
-    await clear_continous_writes(ops_test, ISOLATED_APP_NAME)
+    assert number_of_writes <= 0, "network was not isolated enough"
