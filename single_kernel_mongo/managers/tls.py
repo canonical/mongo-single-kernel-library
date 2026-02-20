@@ -100,7 +100,7 @@ class TLSManager(ManagerStatusProtocol):
                 "localhost",
                 f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
             ],
-            sans_ips=[str(self.state.bind_address)],
+            sans_ips=sorted(self.state.listen_ips()),
         )
 
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.is_external_client:
