@@ -637,7 +637,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_valid_system_users_password_is_updated(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -667,7 +667,9 @@ def test_on_config_changed_valid_system_users_password_is_updated(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongodb_name, role):
+def test_on_config_changed_system_users_invalid_passwords(
+    harness, mocker, mongodb_name, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -689,7 +691,7 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_password_did_not_changed(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -717,7 +719,9 @@ def test_on_config_changed_system_users_password_did_not_changed(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_one_password_changed(harness, mocker, mongodb_name, role):
+def test_on_config_changed_system_users_one_password_changed(
+    harness, mocker, mongodb_name, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -746,7 +750,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
 
 
 def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
-    harness, mocker, mongodb_name: str
+    harness, mocker, mongodb_name: str, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -768,7 +772,9 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, role):
+def test_on_config_changed_system_users_secret_does_not_exist(
+    harness, mocker, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -791,7 +797,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, r
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_fail_to_update_password(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     defer = mocker.patch("ops.framework.EventBase.defer")
     set_user_password_mock = mocker.patch(
