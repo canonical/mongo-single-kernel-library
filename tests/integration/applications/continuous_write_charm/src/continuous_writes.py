@@ -31,14 +31,20 @@ def continous_writes(
 
     # First, create a unique index to avoid duplicate writes on upsert
     # https://www.mongodb.com/docs/manual/reference/method/db.collection.update/#upsert-with-duplicate-values
-    client = MongoClient(
-        connection_string,
-        socketTimeoutMS=5000,
-    )
-    db = client[db_name]
-    test_collection = db[coll_name]
-    test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
-    client.close()
+    try:
+        client = MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+        )
+        db = client[db_name]
+        test_collection = db[coll_name]
+        test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
+        client.close()
+    except:
+        with open(f"last_written_value-{db_name}-{coll_name}", "w") as fd:
+            fd.write(str(0))
+        return
+
 
     while run:
         client = MongoClient(
