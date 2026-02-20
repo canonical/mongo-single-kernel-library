@@ -115,9 +115,11 @@ async def test_integrate_with_isolated_space(ops_test: OpsTest, application_path
 
     await ops_test.model.wait_for_idle(apps=[app_name, ISOLATED_APP_NAME], status="active")
 
+    unit = ops_test.model.applications[ISOLATED_APP_NAME].units[0]
+
     # remove default route on client so traffic can't be routed through default interface
     logger.info("Flush default routes on client")
-    await ops_test.juju(f"exec --unit {ISOLATED_APP_NAME}/0 sudo ip route flush default".split())
+    await unit.run("sudo ip route flush default")
 
     await start_continous_writes(ops_test, ISOLATED_APP_NAME)
     sleep(10)

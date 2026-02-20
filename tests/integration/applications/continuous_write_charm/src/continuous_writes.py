@@ -42,7 +42,7 @@ def continous_writes(
         client.close()
     except:
         with open(f"last_written_value-{db_name}-{coll_name}", "w") as fd:
-            fd.write(str(0))
+            fd.write(str(-1))
         return
 
 
