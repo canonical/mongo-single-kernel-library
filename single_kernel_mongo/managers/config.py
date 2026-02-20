@@ -314,7 +314,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                     },
                 },
             }
-        return {"net": {"bindIp": ",".join(self.state.listen_ips())}}
+        return {"net": {"bindIp": ",".join(self.state.listens_on())}}
 
     @property
     def log_options(self) -> dict[str, Any]:

@@ -881,11 +881,16 @@ class CharmState(Object, StatusesStateProtocol):
         """Listening IP for that unit on the sharding relation."""
         return network_get(RelationNames.CLUSTER.value)
 
+    def listen_hosts(self) -> set[str]:
+        """All the hosts to listen to."""
+        if self.substrate == Substrates.VM:
+            return set()
+        return {self.unit_peer_data.internal_address}
+
     def listen_ips(self) -> set[str]:
         """All the IPs to listen to."""
         if self.substrate == Substrates.K8S:
             return {
-                self.unit_peer_data.internal_address,
                 "127.0.0.1",
                 *ip_addresses(self.juju_info_network().bind_addresses),
             }
@@ -908,3 +913,7 @@ class CharmState(Object, StatusesStateProtocol):
         ip_list.extend(ip_addresses(self.sharding_network().bind_addresses))
 
         return {str(ip) for ip in ip_list if ip}
+
+    def listens_on(self):
+        """Everything we should listen on."""
+        return {*self.listen_ips(), *self.listen_hosts()}
