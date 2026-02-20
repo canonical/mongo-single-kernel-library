@@ -916,6 +916,6 @@ class CharmState(Object, StatusesStateProtocol):
 
         return {str(ip) for ip in ip_list if ip}
 
-    def listens_on(self):
+    def listens_on(self) -> set[str]:
         """Everything we should listen on."""
         return {*self.listen_ips(), *self.listen_hosts()}

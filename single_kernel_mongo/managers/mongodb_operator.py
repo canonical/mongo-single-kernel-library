@@ -602,6 +602,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise ShardingMigrationError(
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
+
+        # If we had an IP change, we must restart.
+        self.restart_charm_services()
+
         if not self.charm.unit.is_leader():
             return
         self._handle_ldap_config_changes()
