@@ -1,0 +1,64 @@
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555124,"i":4}},"signature":{"hash":{"$binary":{"base64":"63bP6jCR6HtmmNNhSRx74Cvn/mc=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555124,"i":4}}}
+, stderr: 
+[32mINFO    [0m integration.mongodb.test_major_upgrades:test_major_upgrades.py:265 Restore backup result restore.results={'restore-status': 'restore started', 'return-code': 0}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-eight/0 [idle] maintenance: Restore started/running, backup id: '2026-02-20T02:29:23Z'
+  mongodb-eight/1 [executing] active: 
+  mongodb-eight/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-eight/0 [idle] maintenance: Restore started/running, backup id: '2026-02-20T02:29:23Z'
+  mongodb-eight/1 [idle] active: 
+  mongodb-eight/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-eight/0 [idle] active: Primary.
+  mongodb-eight/1 [idle] active: 
+  mongodb-eight/2 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555208,"i":2}},"signature":{"hash":{"$binary":{"base64":"4J1Cx1olp1gXZ9v5sbBTofiwR7o=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555208,"i":2}}}
+, stderr: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555217,"i":1}},"signature":{"hash":{"$binary":{"base64":"lOKBlqSAobdb/Kd/oMkIBiOS98E=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555217,"i":1}}}
+, stderr: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555218,"i":2}},"signature":{"hash":{"$binary":{"base64":"7imI4LstTzDYdZlS0mDexU1FpNc=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555218,"i":2}}}
+, stderr: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555220,"i":1}},"signature":{"hash":{"$binary":{"base64":"owcsf1szdpYFdywhal8R40m93XQ=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555220,"i":1}}}
+, stderr: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1771555221,"i":1}},"signature":{"hash":{"$binary":{"base64":"Zf3n+BpveV869RUOlPTTFvR8gfY=","subType":"00"}},"keyId":7608769486690189000}},"operationTime":{"$timestamp":{"t":1771555221,"i":1}}}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:40:22Z
+
+App            Version  Status  Scale  Charm             Channel            Rev  Address         Exposed  Message
+application             active      1  continuous-write                       0  10.152.183.206  no       
+mongodb-eight  8.0.10   active      3  mongodb-k8s                            0  10.152.183.152  no       
+mongodb-seven  7.0.28   active      3  mongodb-k8s       8-transition/edge  138  10.152.183.64   no       
+mongodb-six    6.0.24   active      3  mongodb-k8s       6/edge             136  10.152.183.149  no       
+s3-integrator           active      1  s3-integrator     latest/edge        330  10.152.183.46   no       
+
+Unit              Workload  Agent  Address     Ports  Message
+application/0*    active    idle   10.1.53.21         
+mongodb-eight/0*  active    idle   10.1.53.38         Primary.
+mongodb-eight/1   active    idle   10.1.53.47         
+mongodb-eight/2   active    idle   10.1.53.49         
+mongodb-seven/0*  active    idle   10.1.53.26         Primary.
+mongodb-seven/1   active    idle   10.1.53.31         
+mongodb-seven/2   active    idle   10.1.53.29         
+mongodb-six/0     active    idle   10.1.53.16         
+mongodb-six/1     active    idle   10.1.53.20         
+mongodb-six/2*    active    idle   10.1.53.18         Primary.
+s3-integrator/0*  active    idle   10.1.53.14         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-six-2: 02:16:21 ERROR unit.mongodb-six/2.juju-log s3-credentials:7: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/6997c3f22b98fd49145e15d8 [mongodb-six/mongodb-six-2.mongodb-six-endpoints:27017]
+, stderr=None
+unit-mongodb-six-2: 02:16:34 ERROR unit.mongodb-six/2.juju-log s3-credentials:7: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.180:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/6997c3f22b98fd49145e15d8 [mongodb-six/mongodb-six-2.mongodb-six-endpoints:27017]
+, stderr=None
+unit-mongodb-six-2: 02:16:34 ERROR unit.mongodb-six/2.juju-log s3-credentials:7: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/6997c3f22b98fd49145e15d8 [mongodb-six/mongodb-six-2.mongodb-six-endpoints:27017]\n', 'stderr': ''}
+unit-mongodb-six-2: 02:16:48 ERROR unit.mongodb-six/2.juju-log status-peers:3: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.180:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/6997c3f22b98fd49145e15d8 [mongodb-six/mongodb-six-2.mongodb-six-endpoints:27017]
+, stderr=None
+unit-mongodb-six-2: 02:16:48 ERROR unit.mongodb-six/2.juju-log status-peers:3: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/6997c3f22b98fd49145e15d8 [mongodb-six/mongodb-six-2.mongodb-six-endpoints:27017]\n', 'stderr': ''}
+unit-mongodb-seven-2: 02:24:07 ERROR unit.mongodb-seven/2.juju-log cmd failed - cmd=/usr/bin//pbm status -o json, stdout={"Error":"connect to mongodb: create mongo connection: ping: connection() error occurred during connection handshake: auth error: unable to authenticate using mechanism \"SCRAM-SHA-256\": (AuthenticationFailed) Authentication failed."}
+, stderr=None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

@@ -1,0 +1,67 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:496 Setting the system-users config in mongodb-k8s to secret:d6bsm87mp25c7bmjn430 charmed-backup=new-password
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:373 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-02-20T02:47:32Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:47:38Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write             0  10.152.183.178  no       
+mongodb-k8s       8.0.10   active      3  mongodb-k8s                  0  10.152.183.211  no       
+s3-integrator              active      1  s3-integrator     1/edge   330  10.152.183.133  no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.25         
+mongodb-k8s/0*       maintenance  idle       10.1.53.16         Backup started/running, backup id: '2026-02-20T02:47:32Z'
+mongodb-k8s/1        active       executing  10.1.53.24         
+mongodb-k8s/2        active       executing  10.1.53.23         
+s3-integrator/0*     active       idle       10.1.53.20         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 02:17:19 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-02-20T02:17:19Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-02-20T02:17:19Z INFO Most recent service output:
+    2026-02-20T02:17:19.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-02-20T02:17:19Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-02-20T02:17:19Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-02-20T02:17:19Z INFO Most recent service output:
+    2026-02-20T02:17:19.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-02-20T02:17:19Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-1: 02:17:19 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-mongodb-k8s-1: 02:17:19 ERROR unit.mongodb-k8s/1.juju-log single_kernel_mongo.managers.mongodb_operator:Could not restart the related services.
+unit-new-mongodb-aws-2: 02:45:05 ERROR unit.new-mongodb-aws/2.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6997cab0ea3b1f22eaaa80bc, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-2.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0013444680002976384>]>
+unit-new-mongodb-aws-1: 02:45:05 ERROR unit.new-mongodb-aws/1.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6997cab00b27ee0e6509f0fc, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0005070409997642855>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
