@@ -17,7 +17,14 @@ def ip_addresses(bind_addresses: Sequence[BindAddress]) -> Sequence[str]:
 
 def cidrs(bind_addresses: Sequence[BindAddress]) -> list[str]:
     """Returns all ip addresses for a sequence of bindaddress."""
-    return [address.cidr for bind_address in bind_addresses for address in bind_address.addresses]
+    result: set[str] = set()
+    for bind_address in bind_addresses:
+        for address in bind_address.addresses:
+            if address.cidr:
+                result.add(address.cidr)
+            else:
+                result.add(f"{address.value}/24")
+    return sorted(result)
 
 
 def network_for_relation(relation: Relation) -> Network:
