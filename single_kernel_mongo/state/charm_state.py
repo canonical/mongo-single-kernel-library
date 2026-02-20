@@ -682,9 +682,11 @@ class CharmState(Object, StatusesStateProtocol):
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
         return [
+            AuthRestrictions(clientSource=[LOCALHOST], serverAddress=[LOCALHOST]),
             AuthRestrictions(
-                clientSource=cidrs(self.peer_network().bind_addresses), serverAddress=[LOCALHOST]
-            )
+                clientSource=cidrs(self.peer_network().bind_addresses),
+                serverAddress=cidrs(self.peer_network().bind_addresses),
+            ),
         ]
 
     def has_credentials(self) -> bool:

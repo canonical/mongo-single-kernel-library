@@ -81,7 +81,10 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
         config.username,
         config.password,
         config.supported_roles,
-        auth_restrictions=[{"clientSource": ["10.0.0.1/24"], "serverAddress": ["127.0.0.1"]}],
+        auth_restrictions=[
+            {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+            {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
+        ],
     )
 
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
