@@ -1,0 +1,95 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-317
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Disabling client TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:47:43Z
+
+App                                Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+config-server                      8.0.10   active       1  mongodb                               0  no       
+mongos                             8.0.10   blocked      1  mongos                                0  no       Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+self-signed-certificates                    active       1  self-signed-certificates  1/stable  317  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  1/stable  317  no       
+shard-one                          8.0.10   active       1  mongodb                               1  no       
+test-routing-application                    active       1  test-routing-application              0  no       
+
+Unit                                  Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*                      active    idle   0        10.118.87.102   27017-27018/tcp  Primary.
+self-signed-certificates-separate/0*  active    idle   4        10.118.87.55                     
+self-signed-certificates/0*           active    idle   3        10.118.87.95                     
+shard-one/0*                          active    idle   1        10.118.87.83    27017/tcp        Primary.
+test-routing-application/0*           active    idle   2        10.118.87.167                    
+  mongos/0*                           blocked   idle            10.118.87.167                    Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.118.87.102  juju-9a466e-0  ubuntu@24.04  github-runner  Running
+1        started  10.118.87.83   juju-9a466e-1  ubuntu@24.04  github-runner  Running
+2        started  10.118.87.167  juju-9a466e-2  ubuntu@24.04  github-runner  Running
+3        started  10.118.87.95   juju-9a466e-3  ubuntu@24.04  github-runner  Running
+4        started  10.118.87.55   juju-9a466e-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:22:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:22:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:22:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:22:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:23:06 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:23:06 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:23:06 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:23:14 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:23:14 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:23:14 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongos-0: 02:27:13 ERROR unit.mongos/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 02:27:23 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 02:27:34 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 02:27:45 ERROR unit.mongos/0.juju-log mongos_proxy:12: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 02:27:56 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 02:28:06 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+machine-3: 02:29:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:29:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-0: 02:29:57 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:29:58 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:30:00 ERROR unit.self-signed-certificates/0.juju-log certificates:16: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:30:28 ERROR unit.self-signed-certificates/0.juju-log certificates:17: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:30:30 ERROR unit.self-signed-certificates/0.juju-log certificates:18: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:30:33 ERROR unit.self-signed-certificates/0.juju-log certificates:19: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:30:34 ERROR unit.self-signed-certificates/0.juju-log certificates:20: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:34:42 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:36:25 ERROR unit.self-signed-certificates/0.juju-log certificates:16: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:36:27 ERROR unit.self-signed-certificates/0.juju-log certificates:15: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:39:05 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:39:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "eea7a8e6-5571-4224-80bf-8c3a869a466e:r#16#mongos": settings eea7a8e6-5571-4224-80bf-8c3a869a466e:r#16#mongos not found (not found)
+unit-self-signed-certificates-0: 02:40:59 ERROR unit.self-signed-certificates/0.juju-log certificates:21: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:41:01 ERROR unit.self-signed-certificates/0.juju-log certificates:22: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 02:44:27 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "eea7a8e6-5571-4224-80bf-8c3a869a466e:r#21#mongos": settings eea7a8e6-5571-4224-80bf-8c3a869a466e:r#21#mongos not found (not found)
+machine-4: 02:44:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:44:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-self-signed-certificates-separate-0: 02:46:27 ERROR unit.self-signed-certificates-separate/0.juju-log certificates:23: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-separate-0: 02:46:28 ERROR unit.self-signed-certificates-separate/0.juju-log certificates:24: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-separate-0: 02:46:29 ERROR unit.self-signed-certificates-separate/0.juju-log certificates:24: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-mongos-0: 02:46:45 ERROR unit.mongos/0.juju-log peer-certificates:23: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:46:45 ERROR unit.mongos/0.juju-log peer-certificates:23: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:47:06 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:47:06 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:47:06 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:47:06 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
