@@ -1,0 +1,74 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:57:39Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+config-server                      7.0.28   active       1  mongodb                                    0  no       
+mongos                             7.0.28   blocked      1  mongos                                     0  no       The mongos CA and Config-Server CA don't match.
+self-signed-certificates                    active       1  self-signed-certificates  latest/stable  264  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  264  no       
+shard-one                          7.0.28   active       1  mongodb                                    1  no       
+test-routing-application                    active       1  test-routing-application                   0  no       
+
+Unit                                  Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*                      active    idle   0        10.24.199.175   27017-27018/tcp  Primary.
+self-signed-certificates-separate/0*  active    idle   4        10.24.199.138                    
+self-signed-certificates/0*           active    idle   3        10.24.199.197                    
+shard-one/0*                          active    idle   1        10.24.199.17    27017/tcp        Primary.
+test-routing-application/0*           active    idle   2        10.24.199.223                    
+  mongos/0*                           blocked   idle            10.24.199.223                    The mongos CA and Config-Server CA don't match.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.24.199.175  juju-51ce54-0  ubuntu@24.04  github-runner  Running
+1        started  10.24.199.17   juju-51ce54-1  ubuntu@24.04  github-runner  Running
+2        started  10.24.199.223  juju-51ce54-2  ubuntu@24.04  github-runner  Running
+3        started  10.24.199.197  juju-51ce54-3  ubuntu@22.04  github-runner  Running
+4        started  10.24.199.138  juju-51ce54-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:35:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:35:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:35:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:35:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:36:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:36:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:36:23 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:36:23 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:36:29 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:36:29 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 02:40:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:40:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 02:40:54 ERROR unit.mongos/0.juju-log certificates:15: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:40:55 ERROR unit.mongos/0.juju-log certificates:15: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:42:51 ERROR unit.config-server/0.juju-log certificates:16: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:42:51 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:42:51 ERROR unit.config-server/0.juju-log certificates:16: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:42:51 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:53:01 ERROR unit.mongos/0.juju-log certificates:18: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:53:01 ERROR unit.mongos/0.juju-log certificates:18: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+machine-4: 02:54:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:54:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 02:55:51 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:55:51 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:57:34 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:57:34 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:57:34 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
