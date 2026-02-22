@@ -1,0 +1,95 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:20:33Z
+
+App               Version  Status   Scale  Charm             Channel   Rev  Address        Exposed  Message
+config-server     6.0.24   waiting      3  mongodb-k8s                   0  10.152.183.19  no       Waiting for shards to upgrade/downgrade to revision 1+30e6911-dirty-locally built.
+continuous-write           waiting      1  continuous-write              0  10.152.183.70  no       
+shard-one         6.0.24   blocked      3  mongodb-k8s                   1  10.152.183.32  no       Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision.
+shard-two         6.0.24   blocked      3  mongodb-k8s       6/stable  117  10.152.183.58  no       Charm revision (117) is not up-to date with config-server (1+30e6911-dirty-locally built).
+
+Unit                 Workload  Agent      Address     Ports  Message
+config-server/0      waiting   idle       10.1.53.42         Waiting for shards to upgrade/downgrade to revision 1+30e6911-dirty-locally built.
+config-server/1      waiting   idle       10.1.53.41         Waiting for shards to upgrade/downgrade to revision 1+30e6911-dirty-locally built.
+config-server/2*     waiting   idle       10.1.53.40         Waiting for shards to upgrade/downgrade to revision 1+30e6911-dirty-locally built.
+continuous-write/0*  waiting   idle       10.1.53.39         
+shard-one/0          active    executing  10.1.53.45         (leader-settings-changed) 
+shard-one/1*         active    executing  10.1.53.44         MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+shard-one/2          active    executing  10.1.53.43         MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+shard-two/0*         blocked   idle       10.1.53.32         Charm revision (117) is not up-to date with config-server (1+30e6911-dirty-locally built).
+shard-two/1          blocked   idle       10.1.53.38         Charm revision (117) is not up-to date with config-server (1+30e6911-dirty-locally built).
+shard-two/2          blocked   idle       10.1.53.36         Charm revision (117) is not up-to date with config-server (1+30e6911-dirty-locally built).
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-two-0: 01:45:05 ERROR unit.shard-two/0.juju-log cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 0 -----
+2026-02-22T01:45:04Z INFO Service "logrotate" has never been started.
+----- Logs from task 1 -----
+2026-02-22T01:45:05Z INFO Most recent service output:
+    
+2026-02-22T01:45:05Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 68, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 0 -----
+2026-02-22T01:45:04Z INFO Service "logrotate" has never been started.
+----- Logs from task 1 -----
+2026-02-22T01:45:05Z INFO Most recent service output:
+    
+2026-02-22T01:45:05Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+unit-shard-two-0: 01:45:05 ERROR unit.shard-two/0.juju-log Failed to restart logrotate: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+unit-shard-two-0: 01:45:05 ERROR unit.shard-two/0.juju-log Could not restart the related services.
+unit-shard-one-1: 01:51:20 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 699a6116c678e26cd3abadde, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.005245993000016824>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0029947460000130377>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.006996786999934557>]>
+unit-shard-two-0: 01:53:13 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 699a61886101f5299355c980, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009218170000622194>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.00769491799997013>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.03584316899991791>]>
+unit-shard-two-1: 02:03:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:03:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:03:27 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:03:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:03:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:03:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:03:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:03:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 02:03:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:04:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:04:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:05:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:05:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:05:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:05:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:05:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:05:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:06:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:06:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:07:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:07:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:07:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:09:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:09:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:09:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:09:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:10:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:10:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:11:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:11:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:11:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:12:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:13:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:16:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:17:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:19:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
