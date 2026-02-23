@@ -119,7 +119,8 @@ async def test_integrate_client_access_tls(ops_test: OpsTest, substrate: Substra
 
     action = await leader.run_action("get-credentials")
     action = await action.wait()
-    result = action.results.get(app_name)
+    # `mongodb` here is the name of the relation that we're looking for.
+    result = action.results.get("mongodb")
 
     tls_field: str = result.get("tls")
     tls_certificate: str = result.get("tls-ca", "")
