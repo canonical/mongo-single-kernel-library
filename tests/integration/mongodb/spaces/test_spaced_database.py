@@ -17,7 +17,9 @@ from tests.integration.helpers.common import (
     clear_continous_writes,
     deploy_application,
     deploy_charm,
+    get_address_of_unit,
     get_app_name,
+    get_unit_id,
     start_continous_writes,
 )
 from tests.integration.helpers.types import Substrate
@@ -72,7 +74,7 @@ async def test_build_and_deploy(
 
 @pytest.mark.skip_if_substrate("microk8s")
 @pytest.mark.abort_on_fail
-async def test_integrate_with_spaces(ops_test: OpsTest):
+async def test_integrate_with_spaces(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     await ops_test.model.integrate(
         f"{app_name}:database", f"{CONTINUOUS_WRITE_APPLICATION}:database"
@@ -87,6 +89,15 @@ async def test_integrate_with_spaces(ops_test: OpsTest):
     # remove default route on client so traffic can't be routed through default interface
     logger.info("Flush default routes on client")
     await unit.run("sudo ip route flush default")
+
+    # Get IP on database interface:
+    unit_address = await get_address_of_unit(
+        ops_test, substrate, get_unit_id(unit.name), CONTINUOUS_WRITE_APPLICATION
+    )
+
+    # Add a route to access all nodes in the replica set
+    logger.info("Add a route to contact all nodes on the replicaset")
+    await unit.run(f"sudo ip route add 10.10.10.0/24 via {unit_address}")
 
     await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
     sleep(10)
