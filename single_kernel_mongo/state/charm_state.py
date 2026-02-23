@@ -607,12 +607,12 @@ class CharmState(Object, StatusesStateProtocol):
         if not self.is_role(MongoDBRoles.REPLICATION):
             return
         for relation in self.client_relations:
-            if new_ca is None:
-                self.client_data_interface.set_tls(relation.id, "False")
-                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
-            else:
+            if new_ca:
                 self.client_data_interface.set_tls(relation.id, "True")
                 self.client_data_interface.set_tls_ca(relation.id, new_ca)
+            else:
+                self.client_data_interface.set_tls(relation.id, "False")
+                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
 
     def update_peer_ca_secrets(self, new_ca: str | None) -> None:
         """Updates the peer CA secret in the cluster and config-server relations."""
