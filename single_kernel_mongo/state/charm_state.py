@@ -414,7 +414,10 @@ class CharmState(Object, StatusesStateProtocol):
         """The network binding address from the peer relation."""
         if not self.peer_relation:
             return ""
-        return str(self.peer_network().bind_addresses[0].addresses[0].value)
+        try:
+            return str(self.peer_network().bind_addresses[0].addresses[0].value)
+        except IndexError:
+            return ""
 
     def get_user_password(self, user: MongoDBUser) -> str:
         """Returns the user password for a system user."""
