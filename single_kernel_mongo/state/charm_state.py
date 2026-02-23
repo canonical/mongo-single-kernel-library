@@ -912,7 +912,7 @@ class CharmState(Object, StatusesStateProtocol):
         ip_list.append("127.0.0.1")
 
         # Public IPs of the unit.
-        ip_list.extend(ip_addresses(self.sharding_network().bind_addresses))
+        ip_list.extend(ip_addresses(self.juju_info_network().bind_addresses))
 
         return {str(ip) for ip in ip_list if ip}
 
