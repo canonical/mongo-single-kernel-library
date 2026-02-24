@@ -4,6 +4,8 @@
 
 """Helpers for network interfaces."""
 
+import os
+import subprocess  # nosec: B404
 from collections.abc import Sequence
 
 from ops import Relation
@@ -30,3 +32,20 @@ def cidrs(bind_addresses: Sequence[BindAddress]) -> list[str]:
 def network_for_relation(relation: Relation) -> Network:
     """Return network for a specific relation."""
     return network_get(binding_name=relation.name, relation_id=relation.id)
+
+
+def get_host_public_ip() -> set[str]:
+    """Fetches the Public IP address of the current unit."""
+    cmd = "unit-get public-address".split()
+    output = subprocess.run(  # nosec: B603
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=25,
+        env=os.environ,
+    )
+    if output.returncode != 0:
+        return set()
+
+    return {output.stdout.strip()}

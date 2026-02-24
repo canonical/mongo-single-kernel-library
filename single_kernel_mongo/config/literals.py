@@ -116,7 +116,3 @@ class TrustStoreFiles(str, Enum):
 
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
-
-
-# The specific extra-binding `juju-info`
-JUJU_INFO = "juju-info"

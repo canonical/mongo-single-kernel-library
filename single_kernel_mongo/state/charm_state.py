@@ -22,7 +22,6 @@ from pymongo.errors import (
 )
 
 from single_kernel_mongo.config.literals import (
-    JUJU_INFO,
     LOCALHOST,
     SECRETS_UNIT,
     CharmKind,
@@ -84,7 +83,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     RoleNames,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, ip_addresses
+from single_kernel_mongo.utils.network_helpers import cidrs, get_host_public_ip, ip_addresses
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -862,10 +861,6 @@ class CharmState(Object, StatusesStateProtocol):
         return secret_content
 
     # BEGIN: Addresses accessors
-    def juju_info_network(self) -> Network:
-        """The special binding `juju-info`."""
-        return network_get(JUJU_INFO)
-
     def client_network(self) -> Network:
         """Listening IP for that unit on the client relation."""
         return network_get(self.client_relation_name)
@@ -894,11 +889,9 @@ class CharmState(Object, StatusesStateProtocol):
 
     def listen_ips(self) -> set[str]:
         """All the IPs to listen to."""
+        public_ip_set = get_host_public_ip()
         if self.substrate == Substrates.K8S:
-            return {
-                "127.0.0.1",
-                *ip_addresses(self.juju_info_network().bind_addresses),
-            }
+            return {"127.0.0.1", *public_ip_set}
         ip_list: list[str] = [
             *ip_addresses(self.client_network().bind_addresses),
             *ip_addresses(self.peer_network().bind_addresses),
@@ -915,7 +908,7 @@ class CharmState(Object, StatusesStateProtocol):
         ip_list.append("127.0.0.1")
 
         # Public IPs of the unit.
-        ip_list.extend(ip_addresses(self.juju_info_network().bind_addresses))
+        ip_list.extend(public_ip_set)
 
         return {str(ip) for ip in ip_list if ip}
 
