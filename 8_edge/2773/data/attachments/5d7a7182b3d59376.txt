@@ -1,0 +1,75 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/continuous-write-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+  continuous-write/0 [idle] waiting: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+  continuous-write/0 [idle] active:
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_tls:test_backups_tls.py:138 Restore backup result restore.results={'restore-status': 'restore started', 'return-code': 0}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:25:35Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write             0  10.152.183.45   no       
+mongodb-k8s       8.0.10   active      3  mongodb-k8s                  0  10.152.183.118  no       
+s3-integrator              active      1  s3-integrator     1/edge   389  10.152.183.121  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+continuous-write/0*  active    idle   10.1.53.25         
+mongodb-k8s/0*       active    idle   10.1.53.17         Primary.
+mongodb-k8s/1        active    idle   10.1.53.23         
+mongodb-k8s/2        active    idle   10.1.53.24         
+s3-integrator/0*     active    idle   10.1.53.13         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-0: 02:18:54 ERROR unit.mongodb-k8s/0.juju-log s3-credentials:5: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/699e5c0cef9f1f7b4825840d [mongodb-k8s/mongodb-k8s-1.mongodb-k8s-endpoints:27017]
+, stderr=None
+unit-mongodb-k8s-0: 02:19:05 ERROR unit.mongodb-k8s/0.juju-log s3-credentials:5: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.29:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/699e5c0cef9f1f7b4825840d [mongodb-k8s/mongodb-k8s-1.mongodb-k8s-endpoints:27017]
+, stderr=None
+unit-mongodb-k8s-0: 02:19:05 ERROR unit.mongodb-k8s/0.juju-log s3-credentials:5: single_kernel_mongo.managers.backups.common:Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/699e5c0cef9f1f7b4825840d [mongodb-k8s/mongodb-k8s-1.mongodb-k8s-endpoints:27017]\n', 'stderr': ''}
+unit-mongodb-k8s-0: 02:19:16 ERROR unit.mongodb-k8s/0.juju-log status-peers:0: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.29:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/699e5c0cef9f1f7b4825840d [mongodb-k8s/mongodb-k8s-1.mongodb-k8s-endpoints:27017]
+, stderr=None
+unit-mongodb-k8s-0: 02:19:16 ERROR unit.mongodb-k8s/0.juju-log status-peers:0: single_kernel_mongo.managers.backups.common:Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/699e5c0cef9f1f7b4825840d [mongodb-k8s/mongodb-k8s-1.mongodb-k8s-endpoints:27017]\n', 'stderr': ''}
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
