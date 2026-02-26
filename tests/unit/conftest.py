@@ -48,6 +48,13 @@ class _MockRefreshVM:
 
 
 @pytest.fixture(autouse=True)
+def mock_unit_get(mocker):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.get_host_public_ip", return_value={"10.0.0.1"}
+    )
+
+
+@pytest.fixture(autouse=True)
 def mock_network_get(mocker):
     mocker.patch(
         "single_kernel_mongo.state.charm_state.network_get",
