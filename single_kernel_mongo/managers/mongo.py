@@ -59,7 +59,10 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedStatsUser,
     MongoDBUser,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, network_for_relation
+from single_kernel_mongo.utils.network_helpers import (
+    cidrs,
+    get_cidr_for_ip_list,
+)
 
 if TYPE_CHECKING:
     from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
@@ -249,6 +252,10 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         # We do nothing if the Database Requested event has not run yet.
         if not data_interface.fetch_relation_field(relation.id, "database"):
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
+        if not relation.units:
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
@@ -632,9 +639,15 @@ class MongoManager(Object, ManagerStatusProtocol):
         # - Otherwise it's external connectivity, hence already handled.
         if self.state.is_cluster_component:
             return []
+
+        ip_list = [
+            self.state.unit_peer_data_for(unit, relation).internal_address
+            for unit in relation.units
+        ]
+
         return [
             AuthRestrictions(
-                clientSource=cidrs(network_for_relation(relation).bind_addresses),
+                clientSource=[get_cidr_for_ip_list(ip_list)],
                 serverAddress=cidrs(self.state.peer_network().bind_addresses),
             ),
             AuthRestrictions(

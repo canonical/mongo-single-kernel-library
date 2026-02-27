@@ -485,6 +485,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # allowing that event to run.
         self._configure_workloads()
 
+        # Write IPs in databag
+        self.update_ips_in_databag()
+
         logger.info("Starting MongoDB.")
         self.charm.status_handler.set_running_status(
             MongoDBStatuses.STARTING_MONGODB.value, scope="unit"
@@ -735,8 +738,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Adding replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
             )
             raise UpgradeInProgressError
-
-        self.update_ips_in_databag()
 
         if not self.charm.unit.is_leader():
             return
