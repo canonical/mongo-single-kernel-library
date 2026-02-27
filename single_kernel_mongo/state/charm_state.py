@@ -359,6 +359,14 @@ class CharmState(Object, StatusesStateProtocol):
         )
 
     @property
+    def client_data_interface(self) -> DatabaseProviderData:
+        """The client data interface."""
+        return DatabaseProviderData(
+            self.model,
+            RelationNames.DATABASE.value,
+        )
+
+    @property
     def cluster_provider_data_interface(self) -> DatabaseProviderData:
         """The Requirer Data interface for the cluster relation (config-server side)."""
         return DatabaseProviderData(
@@ -684,6 +692,21 @@ class CharmState(Object, StatusesStateProtocol):
                 self.config_server_data_interface.update_relation_data(
                     relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
                 )
+        self._update_client_ca_secrets(new_ca)
+
+    def _update_client_ca_secrets(self, new_ca: str | None) -> None:
+        """Updates the CA secret for the right values on the right fields."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.is_role(MongoDBRoles.REPLICATION):
+            return
+        for relation in self.client_relations:
+            if new_ca:
+                self.client_data_interface.set_tls(relation.id, "True")
+                self.client_data_interface.set_tls_ca(relation.id, new_ca)
+            else:
+                self.client_data_interface.set_tls(relation.id, "False")
+                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
