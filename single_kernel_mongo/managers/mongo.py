@@ -62,6 +62,7 @@ from single_kernel_mongo.utils.mongodb_users import (
 from single_kernel_mongo.utils.network_helpers import (
     cidrs,
     get_cidr_for_ip_list,
+    network_for_relation,
 )
 
 if TYPE_CHECKING:
@@ -646,6 +647,10 @@ class MongoManager(Object, ManagerStatusProtocol):
         ]
 
         return [
+            AuthRestrictions(
+                clientSource=cidrs(network_for_relation(relation).bind_addresses),
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
             AuthRestrictions(
                 clientSource=[get_cidr_for_ip_list(ip_list)],
                 serverAddress=cidrs(self.state.peer_network().bind_addresses),
