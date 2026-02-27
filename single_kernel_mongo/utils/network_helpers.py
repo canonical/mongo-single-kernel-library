@@ -7,7 +7,7 @@
 import os
 import subprocess  # nosec: B404
 from collections.abc import Sequence
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 
 from ops import Relation
 from ops.hookcmds import BindAddress, Network, network_get
@@ -76,7 +76,7 @@ def get_cidr_for_ip_list(ip_list: list[str]) -> str:
     if not all(ip_address(ip).version == version for ip in ip_list):
         raise ValueError("Invalid IP list received, not all versions matching.")
 
-    ip_list_split = [ip.split(split_sign) for ip in ip_list]
+    ip_list_split = [ip_address(ip).exploded.split(split_sign) for ip in ip_list]
     first = ip_list_split[0]
     acc = []
 
@@ -90,4 +90,4 @@ def get_cidr_for_ip_list(ip_list: list[str]) -> str:
     while len(acc) < ip_length:
         acc.append("0")
 
-    return split_sign.join(acc) + f"/{slash}"
+    return ip_network(split_sign.join(acc) + f"/{slash}").compressed
