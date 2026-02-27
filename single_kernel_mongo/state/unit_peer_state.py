@@ -165,7 +165,7 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
     def mongos_proxy_address(self, value: str):
         self.update({UnitPeerRelationKeys.MONGOS_PROXY_ADDRESS.value: value})
 
-    def address_for(self, relation_name: str):
+    def address_for(self, relation_name: str) -> str:
         """Address for the correct relation."""
         if self.substrate == Substrates.VM:
             return self.relation_data.get(f"{relation_name}-address", "")
