@@ -20,6 +20,9 @@ def sigterm_handler(_signo, _stack_frame):
     global run
     run = False
 
+def last_written_filename(db_name: str, coll_name: str) -> str:
+    return f"last_written_value-{db_name}-{coll_name}"
+
 
 def continous_writes(
     connection_string: str,
@@ -41,7 +44,7 @@ def continous_writes(
         test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
         client.close()
     except:
-        with open(f"last_written_value-{db_name}-{coll_name}", "w") as fd:
+        with open(last_written_filename(db_name, coll_name), "w") as fd:
             fd.write(str(-1))
         return
 
@@ -74,7 +77,7 @@ def continous_writes(
 
         write_value += 1
 
-    with open(f"last_written_value-{db_name}-{coll_name}", "w") as fd:
+    with open(last_written_filename(db_name, coll_name), "w") as fd:
         fd.write(str(write_value - 1))
 
 
