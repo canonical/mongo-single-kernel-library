@@ -1,0 +1,37 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:496 Setting the system-users config in mongodb-k8s to secret:d6hq3tvmp25c7bk762s0 charmed-backup=new-password
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:373 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-01T02:19:07Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:19:13Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write             0  10.152.183.201  no       
+mongodb-k8s       8.0.10   active      3  mongodb-k8s                  0  10.152.183.59   no       
+s3-integrator              active      1  s3-integrator     1/edge   420  10.152.183.115  no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.25         
+mongodb-k8s/0*       maintenance  idle       10.1.53.16         Backup started/running, backup id: '2026-03-01T02:19:07Z'
+mongodb-k8s/1        active       executing  10.1.53.23         
+mongodb-k8s/2        active       executing  10.1.53.24         
+s3-integrator/0*     active       idle       10.1.53.19         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-new-mongodb-aws-2: 02:16:28 ERROR unit.new-mongodb-aws/2.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69a3a17b08fe516d3ae4e790, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-2.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.001191156000004412>]>
+unit-new-mongodb-aws-0: 02:16:29 ERROR unit.new-mongodb-aws/0.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69a3a17c4c26c7902f35c0c2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0003990079999312002>]>
+controller-0: 02:18:13 ERROR juju.worker.caasapplicationprovisioner.runner exited "new-mongodb-aws": cannot scale dying application to 0: application "new-mongodb-aws" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
