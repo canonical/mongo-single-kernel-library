@@ -1,0 +1,75 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:496 Setting the system-users config in mongodb to secret:d6ifa8sse7aci7ahslfg charmed-backup=new-password
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:373 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-02T02:26:14Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:26:20Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+continuous-write           active      1  continuous-write             0  no       
+mongodb           8.0.10   active      3  mongodb                      0  no       
+s3-integrator              active      1  s3-integrator     1/edge   420  no       
+
+Unit                 Workload     Agent      Machine  Public address  Ports      Message
+continuous-write/0*  active       idle       4        10.154.29.103              
+mongodb/0*           maintenance  idle       0        10.154.29.151   27017/tcp  Backup started/running, backup id: '2026-03-02T02:26:14Z'
+mongodb/1            active       executing  1        10.154.29.126   27017/tcp  
+mongodb/2            active       executing  2        10.154.29.194   27017/tcp  
+s3-integrator/0*     active       idle       3        10.154.29.234              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.154.29.151  juju-8f0cb3-0  ubuntu@24.04  github-runner  Running
+1        started  10.154.29.126  juju-8f0cb3-1  ubuntu@24.04  github-runner  Running
+2        started  10.154.29.194  juju-8f0cb3-2  ubuntu@24.04  github-runner  Running
+3        started  10.154.29.234  juju-8f0cb3-3  ubuntu@22.04  github-runner  Running
+4        started  10.154.29.103  juju-8f0cb3-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:53:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:53:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:54:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:54:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:54:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:54:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:55:05 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:55:05 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:55:05 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-1: 01:55:13 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:55:13 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:55:13 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 01:55:18 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:55:18 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:55:18 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-4: 02:02:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:02:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:17:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:17:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:17:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:17:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:17:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:17:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-new-mongodb-aws-0: 02:18:25 ERROR unit.new-mongodb-aws/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-0: 02:18:25 ERROR unit.new-mongodb-aws/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-0: 02:18:25 ERROR unit.new-mongodb-aws/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-new-mongodb-aws-2: 02:18:28 ERROR unit.new-mongodb-aws/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-2: 02:18:28 ERROR unit.new-mongodb-aws/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-2: 02:18:28 ERROR unit.new-mongodb-aws/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-new-mongodb-aws-1: 02:18:29 ERROR unit.new-mongodb-aws/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-1: 02:18:29 ERROR unit.new-mongodb-aws/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-new-mongodb-aws-1: 02:18:30 ERROR unit.new-mongodb-aws/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

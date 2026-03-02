@@ -1,0 +1,44 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  application/0 [executing] active: received database credentials of the second database
+  application/1 [executing] active: received database credentials of the second database
+  another-database/0 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.common:common.py:989 ret_code: 1, stdout: , stderr: MongoServerError: Authentication failed.
+ERROR command terminated with exit code 1
+
+[1m[31mERROR   [0m integration.helpers.common:common.py:992 Failed to execute rs.status(): stderr='MongoServerError: Authentication failed.\nERROR command terminated with exit code 1\n', stdout=''
+[32mINFO    [0m integration.helpers.common:common.py:989 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1772419917,"i":4}},"signature":{"hash":{"$binary":{"base64":"8SyloujXIX1/LfKKjb5vYGiz5b0=","subType":"00"}},"keyId":7612482193859805000}},"operationTime":{"$timestamp":{"t":1772419917,"i":4}}}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:51:59Z
+
+App                  Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+another-application           active      1  application             1  10.152.183.186  no       received database credentials of the first database
+another-database     8.0.10   active      1  mongodb-k8s             0  10.152.183.59   no       
+application                   active      2  application             0  10.152.183.196  no       received database credentials of the second database
+mongodb-k8s          8.0.10   active      2  mongodb-k8s             1  10.152.183.103  no       
+
+Unit                    Workload  Agent  Address     Ports  Message
+another-application/0*  active    idle   10.1.53.36         received database credentials of the first database
+another-database/0*     active    idle   10.1.53.18         Primary.
+application/0*          active    idle   10.1.53.9          received database credentials of the second database
+application/1           active    idle   10.1.53.10         received database credentials of the second database
+mongodb-k8s/0*          active    idle   10.1.53.23         Primary.
+mongodb-k8s/1           active    idle   10.1.53.25         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-3: 02:45:52 ERROR unit.mongodb-k8s/3.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69a4f9dfd4c5771c62552250, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-3.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.000484756999981073>]>
+unit-another-database-0: 02:48:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 02:48:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-1: 02:48:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-0: 02:48:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-application-1: 02:49:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 02:49:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:50:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 02:51:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
