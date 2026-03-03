@@ -1,0 +1,1546 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:78 Wait for refresh to fail
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:54:15Z
+
+App          Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+mongodb-k8s  ...      waiting      3  mongodb-k8s             0  10.152.183.119  no       installing agent
+
+Unit            Workload  Agent  Address     Ports  Message
+mongodb-k8s/0*  active    idle   10.1.53.17         
+mongodb-k8s/1   active    idle   10.1.53.23         
+mongodb-k8s/2   error     idle   10.1.53.25         hook failed: "stop"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-0: 02:40:10 ERROR unit.mongodb-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 211, in __getitem__
+    return _load(parent=self, parent_key=key, data=json.loads(self._databag[key]))
+                                                              ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-0: 02:40:10 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-0: 02:40:16 ERROR unit.mongodb-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 211, in __getitem__
+    return _load(parent=self, parent_key=key, data=json.loads(self._databag[key]))
+                                                              ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-0: 02:40:17 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-0: 02:40:28 ERROR unit.mongodb-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 211, in __getitem__
+    return _load(parent=self, parent_key=key, data=json.loads(self._databag[key]))
+                                                              ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-0: 02:40:29 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:32 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: terminated
+unit-mongodb-k8s-1: 02:40:33 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-1: 02:40:34 ERROR juju.worker.uniter.operation hook "mongod-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:34 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: hook failed
+unit-mongodb-k8s-2: 02:40:34 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:34 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:35 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-1: 02:40:35 ERROR juju.worker.uniter.operation hook "mongod-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:35 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: hook failed
+unit-mongodb-k8s-2: 02:40:35 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:37 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:38 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:40 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:40 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-1: 02:40:40 ERROR juju.worker.uniter.operation hook "mongod-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:40 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: hook failed
+unit-mongodb-k8s-2: 02:40:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:42 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:43 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:44 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:45 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:45 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-1: 02:40:45 ERROR juju.worker.uniter.operation hook "mongod-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:45 ERROR juju.worker.uniter pebble poll failed for container "mongod": failed to send pebble-ready event: hook failed
+unit-mongodb-k8s-2: 02:40:45 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:46 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:47 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:48 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:48 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:49 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-1: 02:40:50 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:50 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-0: 02:40:50 ERROR unit.mongodb-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 211, in __getitem__
+    return _load(parent=self, parent_key=key, data=json.loads(self._databag[key]))
+                                                              ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-0: 02:40:51 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:51 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:53 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:54 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:54 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:55 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:56 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-1: 02:40:57 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:40:57 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-1: 02:40:57 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:58 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:40:59 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:40:59 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:41:00 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:41:00 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:41:01 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 179, in __init__
+    self.mongo_manager = MongoManager(
+                         ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 89, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 02:41:36 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:41:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:41:48 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:41:49 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:42:10 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:42:10 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:42:51 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:42:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:44:11 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:44:11 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:46:49 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:46:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:51:51 ERROR unit.mongodb-k8s/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 502, in from_app_databag
+    workload=databag["original_workload_version"],
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_json/_main.py", line 61, in __getitem__
+    return self._freeze(json.loads(self._databag[key]))
+                                   ~~~~~~~~~~~~~^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_/_main.py", line 117, in __getitem__
+    raise KeyError(key)
+KeyError: 'original_workload_version'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1803, in __init__
+    original_versions = _OriginalVersions.from_app_databag(self._relation.my_app_ro)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 512, in from_app_databag
+    raise ValueError(
+ValueError: Refresh failed. Automatic recovery not possible. Original versions in app databag are missing or invalid
+unit-mongodb-k8s-2: 02:51:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
