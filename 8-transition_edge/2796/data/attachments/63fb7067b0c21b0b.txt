@@ -1,0 +1,27 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  03:40:52Z
+
+App                       Version  Status       Scale  Charm                     Channel  Rev  Address         Exposed  Message
+config-server             7.0.28   maintenance      1  mongodb-k8s                          0  10.152.183.145  no       Starting MongoDB.
+mongos                             error          0/3  mongos-k8s                           0  10.152.183.104  no       container error: 
+shard-one                 7.0.28   maintenance      1  mongodb-k8s                          1  10.152.183.216  no       Starting MongoDB.
+test-routing-application           waiting        0/3  test-routing-application             0  10.152.183.161  no       installing agent
+
+Unit                        Workload     Agent       Address     Ports  Message
+config-server/0*            maintenance  idle        10.1.53.11         Starting MongoDB.
+mongos/0                    error        lost        10.1.53.16         container error: 
+mongos/1                    error        lost        10.1.53.17         container error: 
+mongos/2                    error        lost        10.1.53.15         container error: 
+shard-one/0*                maintenance  executing   10.1.53.14         Starting MongoDB.
+test-routing-application/0  waiting      allocating                     installing agent
+test-routing-application/1  waiting      allocating                     installing agent
+test-routing-application/2  waiting      allocating                     installing agent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 03:40:27 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d5da62] "unit-shard-one-0" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-config-server-0: 03:40:48 ERROR unit.config-server/0.juju-log Cannot initialize replica set. error=OperationFailure("No host described in new configuration with {version: 1, term: 0} for replica set config-server maps to this node, full error: {'ok': 0.0, 'errmsg': 'No host described in new configuration with {version: 1, term: 0} for replica set config-server maps to this node', 'code': 93, 'codeName': 'InvalidReplicaSetConfig'}")
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
