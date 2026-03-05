@@ -1,0 +1,112 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  test-routing-application/1 [allocating] waiting: waiting for machine
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  test-routing-application/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [idle] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772680237, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('qnJXIM+A7eqx8gK80Z0OZ6sD/xY=', 0),
+      keyId: Long('7613600938351132695')
+    }
+  },
+  operationTime: Timestamp({ t: 1772680237, i: 1 })
+}
+, stderr: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772680241, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('mXFGY2QDzjEo9/XQakTUpQL1v9o=', 0),
+      keyId: Long('7613600938351132695')
+    }
+  },
+  operationTime: Timestamp({ t: 1772680241, i: 1 })
+}
+, stderr: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  test-routing-application/1 [idle] active: 
+  mongos/0 [executing] active: 
+  mongos/1 [idle] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: Warning: Could not access file: EACCES: permission denied, mkdir '/root/snap/charmed-mongodb/145/.mongodb/mongosh'
+{
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772680271, i: 2 }),
+    signature: {
+      hash: Binary.createFromBase64('HOfnSRrUjAFgnC1vcOX5ZROY4PA=', 0),
+      keyId: Long('7613600938351132695')
+    }
+  },
+  operationTime: Timestamp({ t: 1772680271, i: 2 })
+}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  03:11:12Z
+
+App                       Version  Status  Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             8.0.10   active      1  mongodb                              0  no       
+mongos                    8.0.10   active      1  mongos                               0  no       
+shard-one                 8.0.10   active      1  mongodb                              1  no       
+test-routing-application           active      1  test-routing-application             0  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+config-server/1*             active    idle   3        10.104.224.73   27017-27018/tcp  Primary.
+shard-one/0*                 active    idle   1        10.104.224.24   27017/tcp        
+test-routing-application/1*  active    idle   4        10.104.224.209                   
+  mongos/1*                  active    idle            10.104.224.209                   
+
+Machine  State    Address         Inst id        Base          AZ             Message
+1        started  10.104.224.24   juju-782301-1  ubuntu@24.04  github-runner  Running
+3        started  10.104.224.73   juju-782301-3  ubuntu@24.04  github-runner  Running
+4        started  10.104.224.209  juju-782301-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:57:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:57:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:58:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:58:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:58:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:58:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:58:48 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:58:48 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:58:49 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:59:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongos-0: 03:03:17 ERROR unit.mongos/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 03:03:28 ERROR unit.mongos/0.juju-log mongos_proxy:12: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 03:03:39 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 03:03:50 ERROR unit.mongos/0.juju-log mongos_proxy:12: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 03:04:00 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+machine-3: 03:05:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:05:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-1: 03:06:04 ERROR unit.config-server/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 03:06:04 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 03:06:04 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-4: 03:09:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:09:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 03:09:58 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 03:09:58 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-test-routing-application-0: 03:10:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+machine-2: 03:10:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
