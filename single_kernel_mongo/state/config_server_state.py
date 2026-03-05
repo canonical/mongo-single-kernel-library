@@ -117,12 +117,17 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     @property
     def shard_integrated(self) -> bool:
-        """Returns the backup ca secret."""
+        """Returns the shard integrated flag."""
         if not self.relation:
             return False
         return json.loads(
             self.relation_data.get(AppShardingComponentKeys.SHARD_INTEGRATED.value, "false")
         )
+
+    @shard_integrated.setter
+    def shard_integrated(self, value: bool) -> None:
+        """Sets the shard integrated flag."""
+        self.update({AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(value)})
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):
