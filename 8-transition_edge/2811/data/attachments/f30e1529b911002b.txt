@@ -1,0 +1,62 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.helpers.common:common.py:490 Setting the system-users config to secret:d6l48gnmp25c7bjjcq6g backup=new-password
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:364 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-06T03:09:12Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  03:09:18Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Address        Exposed  Message
+continuous-write           active      1  continuous-write             0  10.152.183.55  no       
+mongodb-k8s       7.0.28   active      3  mongodb-k8s                  0  10.152.183.31  no       
+s3-integrator              active      1  s3-integrator     1/edge   446  10.152.183.33  no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.21         
+mongodb-k8s/0*       maintenance  idle       10.1.53.15         Backup started/running, backup id: '2026-03-06T03:09:12Z'
+mongodb-k8s/1        active       executing  10.1.53.20         
+mongodb-k8s/2        active       executing  10.1.53.19         
+s3-integrator/0*     active       idle       10.1.53.14         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 02:41:11 ERROR unit.mongodb-k8s/1.juju-log database-peers:3: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-03-06T02:41:11Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-03-06T02:41:11Z INFO Most recent service output:
+    2026-03-06T02:41:11.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-03-06T02:41:11Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-03-06T02:41:11Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-03-06T02:41:11Z INFO Most recent service output:
+    2026-03-06T02:41:11.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-03-06T02:41:11Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-1: 02:41:11 ERROR unit.mongodb-k8s/1.juju-log database-peers:3: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-new-mongodb-aws-0: 03:05:04 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=data-charms-testing --set storage.s3.endpointUrl=https://s3.amazonaws.com --set storage.s3.prefix=mongodb-k8s/40c5e5d2-cbbf-4c4f-8516-148b043e8047 --set storage.s3.region=us-east-1 --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69aa44607783781917c869d6 [new-mongodb-aws/new-mongodb-aws-2.new-mongodb-aws-endpoints:27017]
+, stderr=None
+unit-new-mongodb-aws-0: 03:05:04 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69aa44607783781917c869d6 [new-mongodb-aws/new-mongodb-aws-2.new-mongodb-aws-endpoints:27017]\n', 'stderr': ''}
+unit-new-mongodb-aws-1: 03:07:20 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa44e704cc2c8d97958bcf, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0005985880000025645>]>
+unit-new-mongodb-aws-2: 03:07:20 ERROR unit.new-mongodb-aws/2.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa44e7a377b34bbade21d2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-2.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0004842360001475754>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
