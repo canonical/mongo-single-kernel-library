@@ -1,0 +1,75 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [executing] active: 
+  mongos/1 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [executing] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772763781, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('MII5ILm9MtCHAErdeLXjWr1WkWo=', 0),
+      keyId: Long('7613960564552761368')
+    }
+  },
+  operationTime: Timestamp({ t: 1772763781, i: 1 })
+}
+, stderr: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772763781, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('MII5ILm9MtCHAErdeLXjWr1WkWo=', 0),
+      keyId: Long('7613960564552761368')
+    }
+  },
+  operationTime: Timestamp({ t: 1772763781, i: 1 })
+}
+, stderr: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [idle] active: 
+  mongos/1 [executing] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:265 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1772763812, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('TtDSFJHRZe2Ee+ybLHw7TCTf5j4=', 0),
+      keyId: Long('7613960564552761368')
+    }
+  },
+  operationTime: Timestamp({ t: 1772763812, i: 1 })
+}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:23:32Z
+
+App                       Version  Status  Scale  Charm                     Channel  Rev  Address        Exposed  Message
+config-server             8.0.10   active      1  mongodb-k8s                          0  10.152.183.97  no       
+mongos                    8.0.10   active      1  mongos-k8s                           0  10.152.183.49  no       
+shard-one                 8.0.10   active      1  mongodb-k8s                          1  10.152.183.65  no       
+test-routing-application           active      1  test-routing-application             0  10.152.183.98  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+config-server/0*             active    idle   10.1.53.13         Primary.
+mongos/0*                    active    idle   10.1.53.20         
+shard-one/0*                 active    idle   10.1.53.18         Primary.
+test-routing-application/0*  active    idle   10.1.53.19         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:15:41 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa38cc20de4f85a26afbeb, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-config-server-1: 02:20:51 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa3a022d9be181c13b7f89, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('config-server-1.config-server-endpoints', 27017) server_type: RSGhost, rtt: 0.00045244800003274577>]>
+unit-config-server-0: 02:21:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-test-routing-application-0: 02:21:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongos-0: 02:21:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
