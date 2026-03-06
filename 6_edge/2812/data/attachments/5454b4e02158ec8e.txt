@@ -1,0 +1,51 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] active: Primary.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups:test_backups.py:441 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-06T02:35:06Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:35:14Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.51   no       
+mongodb-k8s       6.0.24   active      3  mongodb-k8s                      0  10.152.183.179  no       
+s3-integrator              active      1  s3-integrator     latest/edge  446  10.152.183.97   no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.21         
+mongodb-k8s/0*       maintenance  idle       10.1.53.14         Backup started/running, backup id: '2026-03-06T02:35:06Z'
+mongodb-k8s/1        active       executing  10.1.53.20         
+mongodb-k8s/2        active       executing  10.1.53.18         
+s3-integrator/0*     active       idle       10.1.53.17         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-0: 01:59:29 ERROR unit.mongodb-k8s/0.juju-log s3-credentials:5: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/69aa3500cafd50305b8469b8 [mongodb-k8s/mongodb-k8s-0.mongodb-k8s-endpoints:27017]
+, stderr=None
+unit-new-mongodb-aws-0: 02:23:11 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=data-charms-testing --set storage.s3.endpointUrl=https://s3.amazonaws.com --set storage.s3.prefix=mongodb-k8s/d854ff60-7010-4c18-94cd-e55a36062ca8 --set storage.s3.region=us-east-1 --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69aa3a8fe820b069ea3ba222 [new-mongodb-aws/new-mongodb-aws-0.new-mongodb-aws-endpoints:27017]
+, stderr=None
+unit-new-mongodb-aws-0: 02:23:11 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69aa3a8fe820b069ea3ba222 [new-mongodb-aws/new-mongodb-aws-0.new-mongodb-aws-endpoints:27017]\n', 'stderr': ''}
+unit-new-mongodb-aws-1: 02:24:59 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa3afafc35ec1c4413615f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0014557750000676606>]>
+unit-new-mongodb-aws-0: 02:24:59 ERROR unit.new-mongodb-aws/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa3afa2ceb70972e357cb5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0008638959998279461>]>
+unit-mongodb-k8s-2: 02:26:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-1: 02:26:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 02:26:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 02:30:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-0: 02:30:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-1: 02:30:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-2: 02:30:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 02:30:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 02:31:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-2: 02:32:15 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-1: 02:32:15 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-0: 02:32:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-mongodb-gcp-2: 02:33:15 ERROR unit.new-mongodb-gcp/2.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa3ceace7ec65a2ad105fe, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-2.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.0007936410002002958>]>
+unit-new-mongodb-gcp-0: 02:33:16 ERROR unit.new-mongodb-gcp/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69aa3cea4c8a2479fe4b04b0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-0.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.0007403709996651742>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
