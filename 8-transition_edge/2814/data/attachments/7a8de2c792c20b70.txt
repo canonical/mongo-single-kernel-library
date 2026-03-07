@@ -1,0 +1,58 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  shard-one/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] blocked: The cluster relation with the config-server is missing.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Starting mongos.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  03:08:38Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+config-server             7.0.28   active      1  mongodb                                    0  no       
+mongos                    7.0.28   active      1  mongos                                     0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+shard-one                 7.0.28   active      1  mongodb                                    1  no       
+test-routing-application           active      1  test-routing-application                   0  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*             active    idle   0        10.76.108.64    27017-27018/tcp  
+self-signed-certificates/0*  active    idle   3        10.76.108.100                    
+shard-one/0*                 active    idle   1        10.76.108.218   27017/tcp        
+test-routing-application/0*  active    idle   2        10.76.108.161                    
+  mongos/0*                  active    idle            10.76.108.161                    
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.76.108.64   juju-e95284-0  ubuntu@24.04  github-runner  Running
+1        started  10.76.108.218  juju-e95284-1  ubuntu@24.04  github-runner  Running
+2        started  10.76.108.161  juju-e95284-2  ubuntu@24.04  github-runner  Running
+3        started  10.76.108.100  juju-e95284-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 03:02:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:02:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:03:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:03:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:03:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:03:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 03:03:46 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 03:03:46 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 03:04:13 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 03:04:13 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 03:07:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:07:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 03:07:32 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-mongos-0: 03:07:32 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 03:07:33 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-0: 03:07:33 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 03:07:33 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 03:07:33 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
