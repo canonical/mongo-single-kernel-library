@@ -1,0 +1,50 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:04:11Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Exposed  Message
+config-server             8.0.10   active       1  mongodb                               0  no       
+mongos                    8.0.10   waiting      1  mongos                                0  no       Waiting for mongos to start...
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  no       
+shard-one                 8.0.10   active       1  mongodb                               1  no       
+test-routing-application           active       1  test-routing-application              0  no       
+
+Unit                         Workload     Agent      Machine  Public address  Ports            Message
+config-server/0*             active       idle       0        10.194.245.31   27017-27018/tcp  Primary.
+self-signed-certificates/0*  active       idle       3        10.194.245.114                   
+shard-one/0*                 active       idle       1        10.194.245.124  27017/tcp        Primary.
+test-routing-application/0*  active       idle       2        10.194.245.93                    
+  mongos/0*                  maintenance  executing           10.194.245.93                    Enabling TLS...
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.194.245.31   juju-a5b38f-0  ubuntu@24.04  github-runner  Running
+1        started  10.194.245.124  juju-a5b38f-1  ubuntu@24.04  github-runner  Running
+2        started  10.194.245.93   juju-a5b38f-2  ubuntu@24.04  github-runner  Running
+3        started  10.194.245.114  juju-a5b38f-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:40:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:40:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:42:20 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:42:20 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:42:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 01:42:45 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:42:45 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:42:46 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongos-0: 01:47:03 ERROR unit.mongos/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:47:14 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:47:26 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:47:37 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:47:48 ERROR unit.mongos/0.juju-log mongos_proxy:12: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:48:00 ERROR unit.mongos/0.juju-log mongos_proxy:12: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-mongos-0: 01:48:12 ERROR unit.mongos/0.juju-log cluster:14: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+machine-3: 01:49:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:49:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
