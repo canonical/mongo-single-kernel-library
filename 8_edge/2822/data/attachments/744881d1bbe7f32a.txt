@@ -1,0 +1,79 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  shard-one/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  shard-one/0 [executing] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] blocked: Client TLS must be disabled in shard, since it is disabled in the related config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] blocked: The cluster relation with the config-server is missing.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:51:32Z
+
+App                       Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server             8.0.10   active       1  mongodb-k8s                           0  10.152.183.216  no       
+mongos                    8.0.10   blocked      1  mongos-k8s                            0  10.152.183.195  no       Invalid peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+self-signed-certificates           active       1  self-signed-certificates  1/stable  586  10.152.183.85   no       
+shard-one                 8.0.10   active       1  mongodb-k8s                           1  10.152.183.177  no       
+test-routing-application           active       1  test-routing-application              0  10.152.183.163  no       
+
+Unit                         Workload  Agent      Address     Ports  Message
+config-server/0*             active    executing  10.1.53.14         Primary.
+mongos/0*                    error     idle       10.1.53.21         hook failed: "peer-certificates-relation-changed"
+self-signed-certificates/0*  active    idle       10.1.53.23         
+shard-one/0*                 active    idle       10.1.53.20         Primary.
+test-routing-application/0*  active    idle       10.1.53.22         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:44:05 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ae33f4b9f4eca961480dbc, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-mongos-0: 02:51:31 ERROR unit.mongos/0.juju-log peer-certificates:18: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongos-0/charm/src/charm.py", line 24, in <module>
+    main(MongosKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/cluster.py", line 164, in _on_relation_changed
+    self.manager.update_mongos_and_restart()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/cluster.py", line 351, in update_mongos_and_restart
+    self.update_users_for_k8s_routers()
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/cluster.py", line 390, in update_users_for_k8s_routers
+    self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 214, in reconcile_mongo_users_and_dbs
+    self.add_user(relation)
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongo.py", line 251, in add_user
+    with MongoConnection(self.state.mongo_config) as mongo:
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 815, in mongo_config
+    return self.mongos_config
+           ^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongos-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/state/charm_state.py", line 795, in mongos_config
+    raise MissingCredentialsError("Missing credentials.")
+single_kernel_mongo.exceptions.MissingCredentialsError: Missing credentials.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

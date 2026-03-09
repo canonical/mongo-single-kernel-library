@@ -1,0 +1,93 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.common:common.py:496 Setting the system-users config in mongodb-k8s to secret:d6n36r7mp25c7b9ap2b0 charmed-backup=new-password
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_gcs:test_backups_gcs.py:356 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-09T02:42:29Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:42:37Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write             0  10.152.183.174  no       
+gcs-integrator             active      1  gcs-integrator    1/edge   155  10.152.183.204  no       
+mongodb-k8s       8.0.10   active      3  mongodb-k8s                  0  10.152.183.128  no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.27         
+gcs-integrator/0*    active       idle       10.1.53.13         
+mongodb-k8s/0*       maintenance  idle       10.1.53.17         Backup started/running, backup id: '2026-03-09T02:42:29Z'
+mongodb-k8s/1        active       executing  10.1.53.26         
+mongodb-k8s/2        active       executing  10.1.53.25         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-gcs-integrator-0: 02:04:11 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:04:12 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:04:13 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:04:14 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-gcs-integrator-0: 02:04:15 ERROR unit.gcs-integrator/0.juju-log gcs-credentials:5: Could not decode secret 'None'.
+unit-mongodb-k8s-2: 02:09:04 ERROR unit.mongodb-k8s/2.juju-log gcs-credentials:5: single_kernel_mongo.managers.backups.gcs:GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-mongodb-k8s-1: 02:09:04 ERROR unit.mongodb-k8s/1.juju-log gcs-credentials:5: single_kernel_mongo.managers.backups.gcs:GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-mongodb-k8s-0: 02:09:04 ERROR unit.mongodb-k8s/0.juju-log gcs-credentials:5: single_kernel_mongo.managers.backups.gcs:GCS credential validation failed: invalid credentials: Service account info was not in the expected format, missing fields token_uri.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 142, in create_bucket
+    client = self.get_gcs_client(service_account)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/gcs.py", line 87, in get_gcs_client
+    return storage.Client.from_service_account_info(service_account, **client_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/google/cloud/client/__init__.py", line 84, in from_service_account_info
+    credentials = service_account.Credentials.from_service_account_info(info)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/google/oauth2/service_account.py", line 245, in from_service_account_info
+    signer = _service_account_info.from_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.12/site-packages/google/auth/_service_account_info.py", line 50, in from_dict
+    raise exceptions.MalformedError(
+google.auth.exceptions.MalformedError: Service account info was not in the expected format, missing fields token_uri.
+unit-new-mongodb-gcs-2: 02:39:55 ERROR unit.new-mongodb-gcs/2.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ae32fa5fae5ee9ef35a0fb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcs-2.new-mongodb-gcs-endpoints', 27017) server_type: RSGhost, rtt: 0.0005558839998229814>]>
+unit-new-mongodb-gcs-0: 02:39:57 ERROR unit.new-mongodb-gcs/0.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ae32fc27c862ffd4b2d818, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcs-0.new-mongodb-gcs-endpoints', 27017) server_type: RSGhost, rtt: 0.00045489200010706554>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

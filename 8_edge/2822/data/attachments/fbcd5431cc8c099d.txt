@@ -1,0 +1,49 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Missing peer-certificates relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] blocked: Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:35:32Z
+
+App                                Version  Status   Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server                      8.0.10   active       1  mongodb-k8s                           0  10.152.183.45   no       
+mongos                             8.0.10   blocked      1  mongos-k8s                            0  10.152.183.106  no       Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+self-signed-certificates                    active       1  self-signed-certificates  1/stable  586  10.152.183.209  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  1/stable  586  10.152.183.73   no       
+shard-one                          8.0.10   active       1  mongodb-k8s                           1  10.152.183.90   no       
+test-routing-application                    active       1  test-routing-application              0  10.152.183.238  no       
+
+Unit                                  Workload  Agent  Address     Ports  Message
+config-server/0*                      active    idle   10.1.53.14         Primary.
+mongos/0*                             blocked   idle   10.1.53.20         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+self-signed-certificates-separate/0*  active    idle   10.1.53.23         
+self-signed-certificates/0*           active    idle   10.1.53.22         
+shard-one/0*                          active    idle   10.1.53.19         Primary.
+test-routing-application/0*           active    idle   10.1.53.21         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:11:39 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ae2c5a1068f2c7804a3069, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-mongos-0: 02:34:38 ERROR unit.mongos/0.juju-log peer-certificates:23: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:34:38 ERROR unit.mongos/0.juju-log peer-certificates:23: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:34:56 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:34:56 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:34:56 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:34:56 ERROR unit.mongos/0.juju-log client-certificates:24: single_kernel_mongo.managers.cluster:Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
