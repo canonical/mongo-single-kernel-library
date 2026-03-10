@@ -202,12 +202,16 @@ class MongoManager(Object, ManagerStatusProtocol):
         Raises:
             PyMongoError
         """
-        self.add_user(relation)
-        self.update_user(relation)
-        if relation_departing:
-            self.remove_user(relation)
-        if relation_changed:
-            self.update_diff(relation)
+        match (relation_departing, relation_changed):
+            case (False, False):
+                self.add_user(relation)
+                self.update_user(relation)
+            case (True, False):
+                self.remove_user(relation)
+            case (False, True):
+                self.update_diff(relation)
+            case (True, True):
+                raise ValueError("This case should never happen")
 
     def update_diff(self, relation: Relation):
         """Update the relation databag with the diff of data.
