@@ -1,0 +1,71 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:67 Wait for refresh to fail
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:79 Re-refresh the charm
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:90 Running resume-refresh on the leader unit
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:95 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [executing] maintenance: stopping charm software
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] maintenance: 
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [executing] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] maintenance: 
+  mongodb-k8s/1 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] maintenance: Starting MongoDB.
+  mongodb-k8s/1 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:47:13Z
+
+App          Version  Status  Scale  Charm        Channel  Rev  Address        Exposed  Message
+mongodb-k8s  6.0.24   active      3  mongodb-k8s             1  10.152.183.18  no       
+
+Unit            Workload  Agent  Address     Ports  Message
+mongodb-k8s/0*  active    idle   10.1.53.21         
+mongodb-k8s/1   active    idle   10.1.53.20         MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+mongodb-k8s/2   active    idle   10.1.53.19         MongoDB 6.0.24 running;  Charm revision 1+30e6911-dirty.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-2: 01:42:17 ERROR unit.mongodb-k8s/2.juju-log cannot perform the following tasks:
+- Start service "mongod" (cannot start service while terminating)
+----- Logs from task 0 -----
+2026-03-10T01:42:17Z INFO Service "mongod" already stopping.
+----- Logs from task 1 -----
+2026-03-10T01:42:17Z ERROR cannot start service while terminating
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (cannot start service while terminating)
+----- Logs from task 0 -----
+2026-03-10T01:42:17Z INFO Service "mongod" already stopping.
+----- Logs from task 1 -----
+2026-03-10T01:42:17Z ERROR cannot start service while terminating
+-----
+unit-mongodb-k8s-2: 01:42:37 ERROR unit.mongodb-k8s/2.juju-log Deferring because of ConnectionError Could not connect to Pebble: socket not found at '/charm/containers/mongod/pebble.socket' (container restarted?)
+unit-mongodb-k8s-0: 01:44:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongodb-k8s-0: 01:45:30 ERROR unit.mongodb-k8s/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69af77b97e7315a3685b0a72, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69af75e186f1e2b545db3b41'), 'counter': 14}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11957, '$clusterTime': {'clusterTime': Timestamp(1773107127, 2), 'signature': {'hash': b'\\x90o\\xd3\\n\\x12\\xab\\x17\\x1f\\xa1\\xbe\\x034\\xa9\\xe4\\xca\\xc7\\xb3\\xb5\\xe2\\xa8', 'keyId': 7615435026825478151}}, 'operationTime': Timestamp(1773107127, 2)}")>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69af77a8c986d00af8b3b8c1'), 'counter': 9}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13469, '$clusterTime': {'clusterTime': Timestamp(1773107127, 2), 'signature': {'hash': b'\\x90o\\xd3\\n\\x12\\xab\\x17\\x1f\\xa1\\xbe\\x034\\xa9\\xe4\\xca\\xc7\\xb3\\xb5\\xe2\\xa8', 'keyId': 7615435026825478151}}, 'operationTime': Timestamp(1773107127, 2)}")>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009063090000154261>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
