@@ -8,7 +8,6 @@ from charm_refresh import PrecheckFailed
 from ops.testing import Harness
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 
-from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.core.abstract_upgrades_v3 import MongoDBRefresh
 from single_kernel_mongo.exceptions import FailedToMovePrimaryError
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
@@ -62,14 +61,14 @@ def test_is_workload_compatible(old_version, new_version, expected: bool) -> Non
 
 
 @pytest.mark.parametrize(
-    ("backup_state", "pre_check_result"),
+    ("backup_in_progress", "restore_in_progress", "pre_check_result"),
     (
-        (BackupState.BACKUP_RUNNING, "Backup in progress."),
-        (BackupState.RESTORE_RUNNING, "Restore in progress."),
+        (True, False, "Backup in progress."),
+        (False, True, "Restore in progress."),
     ),
 )
 def test_pre_refresh_check_after_1_unit_refreshed_fails(
-    harness, mocker, backup_state, pre_check_result
+    harness, mocker, backup_in_progress: bool, restore_in_progress: bool, pre_check_result: str
 ):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -78,8 +77,12 @@ def test_pre_refresh_check_after_1_unit_refreshed_fails(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
-        return_value=backup_state,
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_in_progress",
+        return_value=backup_in_progress,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.restore_in_progress",
+        return_value=restore_in_progress,
     )
     refresh = MongoDBRefresh.__new__(MongoDBRefresh)
     refresh.charm = harness.charm
@@ -102,8 +105,12 @@ def test_pre_refresh_check_after_1_unit_refreshed_success(harness, mocker):
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
-        return_value=BackupState.ACTIVE,
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_in_progress",
+        return_value=False,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.restore_in_progress",
+        return_value=False,
     )
     mocker.patch(
         "single_kernel_mongo.managers.upgrade_v3.MongoDBUpgradesManager.wait_for_cluster_healthy"
@@ -160,8 +167,12 @@ def test_pre_refresh_check_before_any_unit_refreshed_boolean_fail(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
-        return_value=BackupState.ACTIVE,
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_in_progress",
+        return_value=False,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.restore_in_progress",
+        return_value=False,
     )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
@@ -231,8 +242,12 @@ def test_pre_refresh_check_before_any_unit_refreshed_raises(
         return_value=None,
     )
     mocker.patch(
-        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
-        return_value=BackupState.ACTIVE,
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_in_progress",
+        return_value=False,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.restore_in_progress",
+        return_value=False,
     )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
