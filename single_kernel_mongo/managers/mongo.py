@@ -45,6 +45,7 @@ from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import
 )
 from single_kernel_mongo.managers.k8s import K8sManager
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_config import (
     EMPTY_CONFIGURATION,
     MongoConfiguration,
@@ -306,6 +307,10 @@ class MongoManager(Object, ManagerStatusProtocol):
             data_interface.set_endpoints(relation.id, ",".join(sorted(config.hosts)))
             data_interface.set_uris(relation.id, config.uri_without_tls)
 
+            if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
+                data_interface.set_tls(relation.id, "True")
+                data_interface.set_tls_ca(relation.id, ext_tls_ca)
+
             if not self.state.is_role(MongoDBRoles.MONGOS):
                 data_interface.set_replset(
                     relation.id, config.replset or self.state.app_peer_data.replica_set
@@ -439,6 +444,10 @@ class MongoManager(Object, ManagerStatusProtocol):
                 relation.id,
                 config.database,
             )
+
+        if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
+            data_interface.set_tls(relation.id, "True")
+            data_interface.set_tls_ca(relation.id, ext_tls_ca)
 
     def get_config(
         self,
