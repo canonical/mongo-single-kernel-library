@@ -1,0 +1,67 @@
+[32mINFO    [0m integration.helpers.ha:ha.py:87 Calling network loss on ns=testing and pod=mongodb-k8s-2
+[32mINFO    [0m integration.helpers.ha:ha.py:114 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m integration.mongodb.upgrades.test_pre_refresh_checks_failures:test_pre_refresh_checks_failures.py:112 Calling pre-refresh-check
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:48:45Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Address         Exposed  Message
+mongodb-k8s    8.0.10   active      3  mongodb-k8s    8/edge   141  10.152.183.53   no       
+s3-integrator           active      1  s3-integrator  1/edge   494  10.152.183.195  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+mongodb-k8s/0     active    idle   10.1.53.26         Primary.
+mongodb-k8s/1*    active    idle   10.1.53.21         
+mongodb-k8s/2     active    idle   10.1.53.23         
+s3-integrator/0*  active    idle   10.1.53.9          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 01:43:28 ERROR unit.mongodb-k8s/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 1831, in __init__
+    self._charm_specific.run_pre_refresh_checks_before_any_units_refreshed()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/abstract_upgrades_v3.py", line 157, in run_pre_refresh_checks_before_any_units_refreshed
+    self.run_pre_refresh_checks_after_1_unit_refreshed()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/abstract_upgrades_v3.py", line 138, in run_pre_refresh_checks_after_1_unit_refreshed
+    backup_state = manager.backup_state()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/common.py", line 397, in backup_state
+    if not self.validate_config():
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/s3.py", line 179, in validate_config
+    credentials = self.dependent.backup_events.credentials_for(self.relation)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MongoDBOperator' object has no attribute 'backup_events'
+unit-mongodb-k8s-2: 01:47:16 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [df3e83] "unit-mongodb-k8s-2" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-mongodb-k8s-2: 01:47:23 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [df3e83] "unit-mongodb-k8s-2" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-mongodb-k8s-2: 01:47:30 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [df3e83] "unit-mongodb-k8s-2" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+unit-mongodb-k8s-2: 01:47:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [df3e83] "unit-mongodb-k8s-2" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
