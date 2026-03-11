@@ -83,7 +83,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     RoleNames,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, get_host_public_ip, ip_addresses
+from single_kernel_mongo.utils.network_helpers import cidrs, ip_addresses
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -912,9 +912,8 @@ class CharmState(Object, StatusesStateProtocol):
 
     def listen_ips(self) -> set[str]:
         """All the IPs to listen to."""
-        public_ip_set = get_host_public_ip()
         if self.substrate == Substrates.K8S:
-            return {"127.0.0.1", *public_ip_set}
+            return {"127.0.0.1"}
         ip_list: list[str] = [
             *ip_addresses(self.client_network().bind_addresses),
             *ip_addresses(self.peer_network().bind_addresses),
@@ -929,9 +928,6 @@ class CharmState(Object, StatusesStateProtocol):
 
         # Localhost
         ip_list.append("127.0.0.1")
-
-        # Public IPs of the unit.
-        ip_list.extend(public_ip_set)
 
         return {str(ip) for ip in ip_list if ip}
 
