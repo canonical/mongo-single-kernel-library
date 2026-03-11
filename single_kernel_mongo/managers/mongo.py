@@ -332,6 +332,17 @@ class MongoManager(Object, ManagerStatusProtocol):
         if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
             return
 
+        # Nothing to do if it's not a user we're managing.
+        if username not in managed_users:
+            return
+
+        with MongoConnection(self.state.mongo_config) as mongo:
+            has_user = mongo.user_exists(username)
+
+        # Don't remove a user that doesn't exist
+        if not has_user:
+            return
+
         # Dropping the admin-user for mongos-k8s-router is done by mongos-k8s charm.
         if self.substrate == Substrates.K8S and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             logger.info("K8s routers will remove themselves.")
