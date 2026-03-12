@@ -588,10 +588,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Waiting for secrets from config-server")
             raise WaitingForSecretsError("Missing keyfile")
 
-        # Let's start by updating the passwords, before any restart so they are in sync already.
-        if self.charm.unit.is_leader():
-            self.sync_cluster_passwords(operator_password, backup_password)
-
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
         self.update_pbm_certificate_in_trust_store()
@@ -599,6 +595,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
             raise NotReadyError
+
+        # Let's start by updating the passwords, before any restart so they are in sync already.
+        if self.charm.unit.is_leader():
+            self.sync_cluster_passwords(operator_password, backup_password)
 
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
