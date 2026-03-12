@@ -1,0 +1,30 @@
+vault {
+    address = "{{ vault_url }}"
+    ca_path = "{{ ca_path }}"
+    retries {
+        num_retries = 5
+    }
+}
+
+auto_path {
+    method {
+        type = "approle"
+
+        config = {
+            role_id_file_path = "{{ role_id_path }}"
+            secret_id_file_path = "{{ role_secret_id_path }}"
+            remove_secret_id_file_after_reading = false
+        }
+    }
+
+    sink {
+        type = "file"
+        config = {
+            path = "{{ token_file_path }}"
+            mode = "600"
+        }
+    }
+}
+
+cache {
+}

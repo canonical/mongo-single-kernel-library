@@ -116,3 +116,4 @@ class TrustStoreFiles(str, Enum):
 
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
+    VAULT = "vault.crt"

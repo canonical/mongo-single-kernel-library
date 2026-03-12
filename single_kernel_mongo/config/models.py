@@ -74,6 +74,9 @@ class THPConfig:
 THP_CONFIG = THPConfig()
 
 
+VAULT_AGENT_TEMPLATE: Traversable = TEMPLATE_DIRECTORY / "vault-agent.hcl.j2"
+
+
 @dataclass(frozen=True)
 class OverrideFile:
     """Dataclass for the systemd override."""
@@ -192,6 +195,19 @@ class PasswordManagementState(Enum):
     SECRET_NOT_GRANTED = auto()
     INVALID_CONTENT = auto()
     NEED_PASSWORD_UPDATE = auto()
+
+
+class VaultConfigurationState(Enum):
+    """State that can be mapped to a status."""
+
+    INVALID_CONFIG = auto()
+    DISABLED = auto()
+    VAULT_INTEGRATED = auto()
+    VAULT_NOT_INTEGRATED = auto()
+    MISSING_DATA = auto()
+    VAULT_UNREACHABLE = auto()
+    VAULT_AGENT_FAILED = auto()
+    ACTIVE = auto()
 
 
 @dataclass

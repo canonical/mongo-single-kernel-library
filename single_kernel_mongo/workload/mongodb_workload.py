@@ -46,3 +46,16 @@ class MongoDBWorkload(WorkloadBase):
                 },
             }
         )
+
+    def mongod_command_standalone(
+        self,
+        bin_keyword: str,
+        bin_args: list[str] = [],
+    ):
+        """Executes mongod as a standalone binary."""
+        command = [
+            f"{self.paths.binaries_path}/charmed-mongodb.mongod-cli",
+            bin_keyword,
+            *bin_args,
+        ]
+        return self.exec(command=command)

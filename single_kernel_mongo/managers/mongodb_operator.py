@@ -73,6 +73,7 @@ from single_kernel_mongo.exceptions import (
     ShardingMigrationError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WaitingForVaultError,
     WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
@@ -86,6 +87,7 @@ from single_kernel_mongo.managers.config import (
     MongoDBConfigManager,
     MongoDBExporterConfigManager,
     MongosConfigManager,
+    VaultConfigManager,
 )
 from single_kernel_mongo.managers.ldap import LDAPManager
 from single_kernel_mongo.managers.mongo import MongoManager
@@ -94,6 +96,7 @@ from single_kernel_mongo.managers.sharding import ConfigServerManager, ShardMana
 from single_kernel_mongo.managers.tls import TLSManager
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
+from single_kernel_mongo.managers.vault import VaultManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import is_valid_ldap_options, is_valid_ldapusertodnmapping
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
@@ -207,6 +210,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.substrate,
             ExternalRequirerRelations.LDAP,
             ExternalRequirerRelations.LDAP_CERT,
+        )
+
+        # Vault Manager, which covers vault relation. This is used for encryption at rest.
+        self.vault_manager = VaultManager(
+            self, self.state, self.substrate, ExternalRequirerRelations.VAULT
         )
 
         # Upgrades
@@ -333,6 +341,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         logger.info("Restarting workloads")
         # always apply the current charm revision's config
         self.prepare_storage()
+        if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
+            self.vault_manager.prepare_vault_agent(data)
+
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            raise WaitingForVaultError()
         self._configure_workloads()
         self.start_charm_services()
 
@@ -397,6 +410,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             container,
         )
         self.mongodb_exporter_config_manager = MongoDBExporterConfigManager(
+            self.role,
+            self.substrate,
+            self.config,
+            self.state,
+            container,
+        )
+        self.vault_config_manager = VaultConfigManager(
             self.role,
             self.substrate,
             self.config,
@@ -479,6 +499,13 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.charm.unit.is_leader():
             self.state.statuses.clear(scope="app", component=self.name)
 
+        # If encryption at rest should be enabled, we won't start until it's ready.
+        if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
+            self.vault_manager.prepare_vault_agent(data)
+
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            raise WaitingForVaultError()
+
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
         # allowing that event to run.
@@ -489,6 +516,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             MongoDBStatuses.STARTING_MONGODB.value, scope="unit"
         )
 
+        self.start_and_initialise_mongodb()
+
+    def start_and_initialise_mongodb(self) -> None:
+        """Starts and initialize MongoDB for the first time.
+
+        This creates the replica set and the charm users.
+        """
         for attempt in Retrying(
             stop=stop_after_attempt(5),
             wait=wait_fixed(5),
@@ -912,6 +946,10 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def update_status(self) -> None:
         """Status update Handler."""
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.info("Early return, still waiting for vault.")
+            return
+
         if self.basic_statuses():
             logger.info("Early return invalid statuses.")
             return

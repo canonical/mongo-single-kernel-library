@@ -156,6 +156,9 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
+        except DeferrableError:
+            logger.info("Waiting for vault to be integrated.")
+            event.defer()
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(

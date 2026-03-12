@@ -10,6 +10,7 @@ from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 from single_kernel_mongo.workload.monitor_workload import MongoDBExporterWorkload
+from single_kernel_mongo.workload.vault_agent_workload import VaultAgentWorkload
 
 
 class VMMongoDBWorkload(MongoDBWorkload, VMWorkload):
@@ -36,6 +37,12 @@ class VMLogRotateDBWorkload(LogRotateWorkload, VMWorkload):
     ...
 
 
+class VMVaultAgentWorkload(VaultAgentWorkload, VMWorkload):
+    """VM vault agentWorkload implementation."""
+
+    ...
+
+
 class VMMongoDBExporterWorkload(MongoDBExporterWorkload, VMWorkload):
     """VM mongodb exporter Workload implementation."""
 
@@ -56,6 +63,12 @@ class KubernetesMongosWorkload(MongosWorkload, KubernetesWorkload):
 
 class KubernetesPBMWorkload(PBMWorkload, KubernetesWorkload):
     """Kubernetes PBM Workload implementation."""
+
+    ...
+
+
+class KubernetesVaultAgentWorkload(VaultAgentWorkload, VMWorkload):
+    """VM vault agent Workload implementation."""
 
     ...
 
@@ -107,3 +120,12 @@ def get_mongodb_exporter_workload_for_substrate(
     if substrate == Substrates.K8S:
         return KubernetesMongoDBExporterWorkload
     return VMMongoDBExporterWorkload
+
+
+def get_vault_agent_workload_for_substrate(
+    substrate: Substrates,
+) -> type[VaultAgentWorkload]:
+    """Return substrate appropriate workload."""
+    if substrate == Substrates.K8S:
+        return KubernetesVaultAgentWorkload
+    return VMVaultAgentWorkload

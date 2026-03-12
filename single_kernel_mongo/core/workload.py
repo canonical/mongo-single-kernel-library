@@ -129,6 +129,21 @@ class MongoPaths:
         """The LDAP certificates file path."""
         return Path(f"{self.ldap_certificates_dir}/ldap.crt")
 
+    @property
+    def vault_config(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.etc_path}/vault/vault-agent.hcl")
+
+    @property
+    def vault_cert(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.etc_path}/vault/vault-cert.pem")
+
+    @property
+    def vault_token_file_path(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.conf_path}/vaultTokenFile")
+
 
 class WorkloadBase(ABC):  # pragma: nocover
     """The protocol for workloads.

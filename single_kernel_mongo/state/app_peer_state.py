@@ -25,6 +25,7 @@ class AppPeerDataKeys(str, Enum):
     KEYFILE = "keyfile"
     EXTERNAL_CONNECTIVITY = "external-connectivity"
     MONGOS_HOSTS = "mongos_hosts"
+    ENABLE_ENCRYPTION_AT_REST = "enable-encryption-at-rest"
 
     # Shared
     ROLE = "role"
@@ -35,7 +36,7 @@ class AppPeerDataKeys(str, Enum):
     EXTRA_USER_ROLES = "extra-user-roles"
     EXPOSE_EXTERNAL = "expose-external"
     USERNAME = "username"
-    PASSWORD = "password"
+    PASSWORD = "password"  # nosec: B105
 
 
 class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
@@ -101,12 +102,20 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @db_initialised.setter
     def db_initialised(self, value: bool):
-        if isinstance(value, bool):
-            self.update({AppPeerDataKeys.DB_INITIALISED.value: json.dumps(value)})
-        else:
-            raise ValueError(
-                f"'db_initialised' must be a boolean value. Provided: {value} is of type {type(value)}"
-            )
+        self.update({AppPeerDataKeys.DB_INITIALISED.value: json.dumps(value)})
+
+    @property
+    def enable_encryption_at_rest(self) -> bool | None:
+        """Whether the db is initialised or not yet."""
+        if not self.relation:
+            return None
+        return json.loads(
+            self.relation_data.get(AppPeerDataKeys.ENABLE_ENCRYPTION_AT_REST.value, "null")
+        )
+
+    @enable_encryption_at_rest.setter
+    def enable_encryption_at_rest(self, value: bool):
+        self.update({AppPeerDataKeys.ENABLE_ENCRYPTION_AT_REST.value: json.dumps(value)})
 
     @property
     def managed_users(self) -> set[str]:
