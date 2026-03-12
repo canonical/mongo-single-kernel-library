@@ -73,7 +73,8 @@ async def count_logical_backups(db_unit: JujuUnit) -> int:
     list_result = list_result.split("\n")
     backups = 0
     for res in list_result:
-        backups += 1 if "logical" in res else 0
+        if "logical" in res and "in progress" not in res:
+            backups += 1
 
     return backups
 
