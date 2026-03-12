@@ -174,7 +174,7 @@ async def test_create_and_list_backups(ops_test: OpsTest, cloud_configs: CloudCo
     # backup can take a lot of time so this function returns once the command was successfully
     # sent to pbm. Therefore we should retry listing the backup several times
     try:
-        for attempt in Retrying(stop=stop_after_delay(20), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
             with attempt:
                 backups = await count_logical_backups(leader_unit)
                 assert backups == 1
@@ -199,7 +199,7 @@ async def test_restore(ops_test: OpsTest, add_writes_to_db, substrate: Substrate
 
     # verify that backup was made on the bucket
     try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
             with attempt:
                 backups = await count_logical_backups(leader_unit)
                 assert backups == prev_backups + 1, "Backup not created."

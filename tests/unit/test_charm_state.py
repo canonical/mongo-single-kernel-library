@@ -115,3 +115,43 @@ def test_mongodb_status_user(harness: Harness[MongoTestCharm]):
     assert state.stats_config.uri.startswith(
         f"mongodb://charmed-stats:{password}@127.0.0.1:27017/admin?"
     )
+
+
+def test_is_shard_added_to_cluster_fail(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name: str
+):
+    """Tests that the shard cannot be considered added to cluster if shard_integrated is False."""
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.add_relation("sharding", "config-server")
+    harness.set_leader(True)
+    mock_get_shard_members = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members"
+    )
+    state = harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
+    state.shard_state.shard_integrated = False
+
+    assert not state.is_shard_added_to_cluster()
+    mock_get_shard_members.assert_not_called()
+
+
+def test_is_shard_added_to_cluster_success(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name: str
+):
+    """Tests that the shard can be considered added to cluster if shard_integrated is True."""
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.add_relation("sharding", "config-server")
+    harness.set_leader(True)
+    mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_shard_members",
+        return_value=[mongodb_name, "another-replica-set"],
+    )
+    state = harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
+    state.shard_state.shard_integrated = True
+
+    assert state.is_shard_added_to_cluster()
