@@ -197,7 +197,7 @@ async def test_rotate_backup_password(ops_test: OpsTest) -> None:
     # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
     # backup can take a lot of time so this function returns once the command was successfully
     # sent to pbm. Therefore we should retry listing the backup several times
-    for attempt in Retrying(stop=stop_after_delay(20), wait=wait_fixed(3), reraise=True):
+    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
         with attempt:
             backups = await count_logical_backups(leader_unit)
             assert backups == 2, "Backup not created after password rotation."
@@ -235,7 +235,7 @@ async def test_restore_backup(ops_test: OpsTest, substrate: Substrate, add_write
     assert first_backup.status == "completed", "First backup not started."
 
     # verify that backup was made on the bucket
-    for attempt in Retrying(stop=stop_after_delay(4), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
         with attempt:
             backups = await count_logical_backups(leader_unit)
             assert backups == prev_backups + 1, "Backup not created."

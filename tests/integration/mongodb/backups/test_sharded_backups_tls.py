@@ -7,8 +7,9 @@ from logging import getLogger
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.backups import S3_APP_NAME, S3_ENDPOINT
+from ...helpers.backups import S3_APP_NAME, S3_ENDPOINT, count_logical_backups
 from ...helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
@@ -129,6 +130,15 @@ async def test_create_backup(ops_test: OpsTest) -> None:
     first_backup = await action.wait()
     assert first_backup.status == "completed", "First backup not started."
 
+    # verify backup is present in the list of backups
+    # the action `create-backup` only confirms that the command was sent to the `pbm`. Creating a
+    # backup can take a lot of time so this function returns once the command was successfully
+    # sent to pbm. Therefore we should retry listing the backup several times
+    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            backups = await count_logical_backups(leader_unit)
+            assert backups == 1
+
 
 @pytest.mark.abort_on_fail
 async def test_backup_restore(ops_test: OpsTest, add_writes_to_shard, substrate: Substrate) -> None:
@@ -159,13 +169,15 @@ async def test_backup_restore(ops_test: OpsTest, add_writes_to_shard, substrate:
     first_backup = await action.wait()
     assert first_backup.status == "completed", "First backup not started."
 
+    for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            backups = await count_logical_backups(leader_unit)
+            assert backups == 2
+
     action = await leader_unit.run_action(action_name="list-backups")
     list_result = await action.wait()
     list_result = list_result.results["backups"]
     most_recent_backup = list_result.split("\n")[-1]
-
-    # Wait for backup to be finished
-    await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", idle_period=20)
 
     # add writes to be cleared after restoring the backup.
     await add_and_verify_unwanted_writes(ops_test, substrate, leader_unit, cluster_writes)
