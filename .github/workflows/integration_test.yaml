@@ -35,11 +35,6 @@ jobs:
           import os
           import subprocess
           event_name = "${{ github.event_name }}"
-          if event_name == 'workflow_dispatch':
-            pattern = "github-ci"
-          else:
-            # Selects only amd64 jobs.
-            pattern = "github-ci:...amd64..."
           spread_jobs = (
               subprocess.run(
                 [pathlib.Path.home() / "go/bin/spread", "-list", pattern],
@@ -54,6 +49,9 @@ jobs:
           for job in spread_jobs:
               # Example `job`: "github-ci:ubuntu-24.04:tests/spread/mongodb/microk8s/test_charm.py"
               _, runner, task = job.split(":")
+              # Remove arm jobs in regular testing.
+              if event_name != 'workflow_dispatch' and 'arm' in job:
+                  continue
               # Example: "test_charm.py"
               task = task.removeprefix("tests/spread/")
               if "arm64" in runner:
