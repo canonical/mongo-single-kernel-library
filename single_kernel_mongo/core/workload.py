@@ -130,11 +130,6 @@ class MongoPaths:
         return Path(f"{self.ldap_certificates_dir}/ldap.crt")
 
     @property
-    def vault_config(self) -> Path:
-        """Vault configuration file path."""
-        return Path(f"{self.etc_path}/vault/vault-agent.hcl")
-
-    @property
     def vault_cert(self) -> Path:
         """Vault configuration file path."""
         return Path(f"{self.etc_path}/vault/vault-cert.pem")

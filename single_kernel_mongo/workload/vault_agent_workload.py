@@ -20,6 +20,11 @@ class VaultAgentPaths(MongoPaths):
     """Vault Agent specific paths."""
 
     @property
+    def vault_config(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.etc_path}/vault/agent-config.hcl")
+
+    @property
     def role_id(self) -> Path:
         """Vault configuration file path."""
         return Path(f"{self.etc_path}/vault/role_id")
