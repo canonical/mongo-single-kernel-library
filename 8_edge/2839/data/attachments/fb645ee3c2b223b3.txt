@@ -1,0 +1,107 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_pre_refresh_checks_failures:test_pre_refresh_checks_failures.py:112 Calling pre-refresh-check
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [executing] active: Primary.
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/1 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: 
+  mongodb/1 [idle] active: Primary.
+  mongodb/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  01:52:54Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Exposed  Message
+mongodb        8.0.10   active      3  mongodb        8/edge   283  no       
+s3-integrator           active      1  s3-integrator  1/edge   494  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0*        active    idle   0        10.203.70.225   27017/tcp  
+mongodb/1         active    idle   1        10.203.70.229   27017/tcp  Primary.
+mongodb/2         active    idle   2        10.203.70.70    27017/tcp  
+s3-integrator/0*  active    idle   3        10.203.70.230              
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.203.70.225  juju-9b3172-0  ubuntu@24.04  github-runner  Running
+1        started  10.203.70.229  juju-9b3172-1  ubuntu@24.04  github-runner  Running
+2        started  10.203.70.70   juju-9b3172-2  ubuntu@24.04  github-runner  Running
+3        started  10.203.70.230  juju-9b3172-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:41:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:41:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:41:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:41:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:41:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:42:23 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:42:23 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:42:24 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 01:42:25 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:42:25 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:42:25 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-1: 01:42:27 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:42:27 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:42:27 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-0: 01:45:43 ERROR unit.mongodb/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/src/charm.py", line 36, in <module>
+    main(MongoDBVMCharm)
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 235, in __init__
+    self.refresh = refresh_class(upgrade_backend)  # type: ignore[argument-type]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/charm_refresh/_main.py", line 3358, in __init__
+    self._charm_specific.run_pre_refresh_checks_before_any_units_refreshed()
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/abstract_upgrades_v3.py", line 157, in run_pre_refresh_checks_before_any_units_refreshed
+    self.run_pre_refresh_checks_after_1_unit_refreshed()
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/abstract_upgrades_v3.py", line 138, in run_pre_refresh_checks_after_1_unit_refreshed
+    backup_state = manager.backup_state()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/common.py", line 397, in backup_state
+    if not self.validate_config():
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-mongodb-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/backups/s3.py", line 179, in validate_config
+    credentials = self.dependent.backup_events.credentials_for(self.relation)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MongoDBOperator' object has no attribute 'backup_events'
+machine-2: 01:48:02 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:06 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:11 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:16 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:22 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:30 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+machine-2: 01:48:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3d95dc] "machine-2" cannot open api: unable to connect to API: dial tcp 10.203.70.198:17070: connect: network is unreachable
+unit-mongodb-0: 01:52:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
