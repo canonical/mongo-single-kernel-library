@@ -41,7 +41,7 @@ class ExternalRequirerRelations(str, Enum):
     GCS_CREDENTIALS = "gcs-credentials"
     LDAP = "ldap"
     LDAP_CERT = "ldap-certificate-transfer"
-    VAULT = "vault"
+    VAULT = "vault-kv"
 
 
 class ExternalProviderRelations(str, Enum):

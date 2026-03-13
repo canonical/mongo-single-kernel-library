@@ -4,24 +4,22 @@
 
 """The Vault state."""
 
+from __future__ import annotations
+
 from enum import Enum
-from typing import final
+from typing import TYPE_CHECKING, final
 from urllib.parse import urlparse
 
 from ops import Relation
 from pydantic import ValidationError
 
-from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.secrets import SecretCache
 from single_kernel_mongo.lib.charms.vault_k8s.v0.vault_kv import VaultKvProviderSchema
 
-SECRET_URL_LABEL = "vault-url"
-SECRET_CERT_LABEL = "vault-cert"
-SECRET_ROLE_ID_LABEL = "vault-role-id"
-SECRET_SECRET_ROLE_ID = "vault-secret-role-id"
-SECRET_MOUNT_POINT = "vault-secret-mount-point"
+if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
 
 
 class VaultStateKeys(str, Enum):
@@ -115,21 +113,21 @@ class VaultState:
     @role_id.setter
     def role_id(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.ROLE_ID.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.ROLE_ID.value)
             return
-        self.secrets.set(VaultStateKeys.ROLE_ID.value, value, Scope.APP)
+        self.secrets.set(VaultStateKeys.ROLE_ID.value, value, Scope.UNIT)
 
     @property
     def role_secret_id(self) -> str | None:
         """The role_secret_id point."""
-        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.ROLE_SECRET_ID.value)
+        return self.secrets.get_for_key(Scope.UNIT, VaultStateKeys.ROLE_SECRET_ID.value)
 
     @role_secret_id.setter
     def role_secret_id(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.ROLE_SECRET_ID.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.ROLE_SECRET_ID.value)
             return
-        self.secrets.set(VaultStateKeys.ROLE_SECRET_ID.value, value, Scope.APP)
+        self.secrets.set(VaultStateKeys.ROLE_SECRET_ID.value, value, Scope.UNIT)
 
     @property
     def nonce(self) -> str | None:

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
@@ -77,10 +78,12 @@ class VaultEventHandler(Object):
                 "vault_url": self.interface.get_vault_url(event.relation),
                 "mount": self.interface.get_mount(event.relation),
                 "ca_certificate": self.interface.get_ca_certificate(event.relation),
-                "credentials": {
-                    "role-id": secret_content["role-id"],
-                    "role-secret-id": secret_content["role-secret-id"],
-                },
+                "credentials": json.dumps(
+                    {
+                        "role-id": secret_content["role-id"],
+                        "role-secret-id": secret_content["role-secret-id"],
+                    }
+                ),
             }
         )
         self.manager.prepare_vault_agent(data)

@@ -56,6 +56,7 @@ from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.primary_action import PrimaryActionHandler
 from single_kernel_mongo.events.sharding import ConfigServerEventHandler, ShardEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
+from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
@@ -257,6 +258,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
 
         # Event Handlers
+        self.vault_events = VaultEventHandler(self)
         self.backup_events = BackupEventsHandler(self)
         self.tls_events = TLSEventsHandler(self)
         self.primary_events = PrimaryActionHandler(self)
@@ -431,6 +433,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """The ordered list of components for this operator."""
         return (
             self,
+            self.vault_manager,
             self.mongo_manager,
             self.upgrades_status_manager,
             self.tls_manager,
