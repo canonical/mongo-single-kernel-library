@@ -7,7 +7,7 @@ from logging import getLogger
 
 import pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.backups import S3_APP_NAME, count_logical_backups
 from tests.integration.helpers.common import (
@@ -106,7 +106,7 @@ async def test_backup_mongodb_6(ops_test: OpsTest, s3_bucket):
 
     # verify that backup was made on the bucket
     try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(5)):
             with attempt:
                 backups = await count_logical_backups(leader_unit)
                 assert backups == 1, "Backup not created."
@@ -194,7 +194,7 @@ async def test_backup_mongodb_7(
 
     # verify that backup was made on the bucket
     try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_delay(TIMEOUT), wait=wait_fixed(5)):
             with attempt:
                 backups = await count_logical_backups(leader_unit)
                 assert backups == 2, "Backup not created."
