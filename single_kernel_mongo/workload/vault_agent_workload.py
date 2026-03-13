@@ -59,7 +59,6 @@ class VaultAgentWorkload(WorkloadBase, ABC):
                 "services": {
                     self.service: {
                         "summary": "vault agent",
-                        # Pebble errors out if the command exits too fast (1s).
                         "command": "/bin/bash /bin/start-vault-agent.sh",
                         "startup": "enabled",
                         "user": self.users.user,
