@@ -18,24 +18,6 @@ PEER_ADDR = {
 }
 
 
-def test_app_hosts(
-    harness: Harness[MongoTestCharm], mocker, mongodb_name: str, substrate: Substrate
-):
-    rel_id = harness.charm.model.get_relation(PeerRelationNames.PEERS.value).id  # type: ignore
-    harness.add_relation_unit(rel_id, f"{mongodb_name}/1")
-    harness.update_relation_data(rel_id, f"{mongodb_name}/1", PEER_ADDR[substrate])
-    resulting_ips = harness.charm.operator.state.app_hosts
-    if substrate == "lxd":
-        expected_ips = {"10.0.0.1", "127.4.5.6"}
-    else:
-        expected_ips = {
-            "mongodb-k8s-1.mongodb-k8s-endpoints",
-            "mongodb-k8s-0.mongodb-k8s-endpoints",
-        }
-
-    assert expected_ips == resulting_ips
-
-
 def test_config(harness: Harness[MongoTestCharm]):
     config = harness.charm.operator.state.config
     assert config.role == "replication"

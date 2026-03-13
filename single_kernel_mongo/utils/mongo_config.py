@@ -23,13 +23,20 @@ ADMIN_AUTH_SOURCE = {"authSource": "admin"}
 class MongoConfiguration:
     """Class for Mongo configurations usable my mongos and mongodb.
 
-    — replset: name of replica set
-    — database: database name.
-    — username: username.
-    — password: password.
-    — hosts: full list of hosts to connect to, needed for the URI.
-    — tls_external: indicator for use of internal TLS connection.
-    — tls_internal: indicator for use of external TLS connection.
+    Args:
+        replset: name of replica set
+        database: database name.
+        username: username.
+        password: password.
+        hosts: full set of hosts to connect to, needed for the URI.
+        roles: set of roles for that user.
+        tls_enabled: Is TLS enabled on that configuration?
+        tls_external_keyfile: The path of the tls external certificate
+        tls_external_ca: The path of the tls external CA certificate
+        port: The port used to connect
+        replset: The replica set we connect to
+        standalone: Should that be a standalone connection ?
+        auth_restrictions: The list of authentication restrictions for that user
     """
 
     database: str

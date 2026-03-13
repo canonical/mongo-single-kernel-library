@@ -265,10 +265,6 @@ class MongoManager(Object, ManagerStatusProtocol):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
-        external_connectivity: bool = json.loads(
-            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
-            or "false"
-        )
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
 
@@ -276,9 +272,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         if has_user:
             return
 
-        auth_restrictions = self._compute_auth_restrictions(
-            relation, external_connectivity=external_connectivity
-        )
+        auth_restrictions = self._compute_auth_restrictions(relation, data_interface)
 
         with MongoConnection(self.state.mongo_config) as mongo:
             config = self.get_config(
@@ -650,12 +644,17 @@ class MongoManager(Object, ManagerStatusProtocol):
                     raise FailedToElectNewPrimaryError()
 
     def _compute_auth_restrictions(
-        self, relation: Relation, external_connectivity: bool
+        self, relation: Relation, data_interface: DatabaseProviderData
     ) -> list[AuthRestrictions]:
         """Compute the correct auth restriction rules."""
         # No juju spaces support on K8S.
         if self.substrate == Substrates.K8S:
             return []
+
+        external_connectivity: bool = json.loads(
+            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            or "false"
+        )
         # No restriction on external connectivity for now.
         if external_connectivity:
             return []

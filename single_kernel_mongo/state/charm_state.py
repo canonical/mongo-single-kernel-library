@@ -477,14 +477,6 @@ class CharmState(Object, StatusesStateProtocol):
         """
         return quote(f"{self.paths.socket_path}", safe="")
 
-    @property
-    def app_hosts(self) -> set[str]:
-        """Retrieve the hosts associated with MongoDB application."""
-        if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
-            if self.config.expose_external == ExposeExternal.NODEPORT:
-                return {f"{unit.node_ip}" for unit in self.units}
-        return self.internal_hosts
-
     def hosts_for(self, relation: Relation) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
         if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
