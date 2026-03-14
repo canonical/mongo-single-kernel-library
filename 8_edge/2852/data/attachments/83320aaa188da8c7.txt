@@ -1,0 +1,68 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_pre_refresh_checks_failures:test_pre_refresh_checks_failures.py:112 Calling pre-refresh-check
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: 
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [executing] active: 
+  mongodb/1 [idle] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: 
+  mongodb/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.14   unsupported  02:58:27Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Exposed  Message
+mongodb        8.0.10   active      3  mongodb        8/edge   290  no       
+s3-integrator           active      1  s3-integrator  1/edge   494  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0         active    idle   0        10.148.225.23   27017/tcp  
+mongodb/1         active    idle   1        10.148.225.233  27017/tcp  
+mongodb/2*        active    idle   2        10.148.225.43   27017/tcp  
+s3-integrator/0*  active    idle   3        10.148.225.239             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.148.225.23   juju-58a59f-0  ubuntu@24.04  github-runner  Running
+1        started  10.148.225.233  juju-58a59f-1  ubuntu@24.04  github-runner  Running
+2        started  10.148.225.43   juju-58a59f-2  ubuntu@24.04  github-runner  Running
+3        started  10.148.225.239  juju-58a59f-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-2: 02:48:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:48:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:49:03 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:49:03 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:49:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:49:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:49:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:49:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-2: 02:49:53 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:49:53 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:49:53 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-1: 02:49:56 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:49:56 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:49:57 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-0: 02:50:15 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:50:15 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:50:16 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-1: 02:54:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-1: 02:54:46 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:54:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:54:54 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:54:59 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:55:06 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:55:14 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:55:23 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:55:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:55:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:56:02 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:56:20 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:56:44 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+machine-1: 02:57:12 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [43202f] "machine-1" cannot open api: unable to connect to API: dial tcp 10.148.225.111:17070: connect: network is unreachable
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
