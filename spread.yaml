@@ -89,7 +89,12 @@ backends:
       sudo systemctl daemon-reload
       sudo systemctl start ssh
 
-      sudo passwd -d ubuntu
+      if [[ $SPREAD_SYSTEM == "self-hosted"* ]]
+      then
+        sudo passwd -d ubuntu
+      else
+        sudo passwd -d runner
+      fi
 
       ADDRESS localhost
     # HACK: spread does not pass environment variables set on runner
@@ -105,6 +110,10 @@ backends:
       CONCIERGE_MICROK8S_CHANNEL: 1.34-strict/stable
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
+      - ubuntu-24.04:
+          username: runner
+      - ubuntu-24.04-arm:
+          username: runner
       - self-hosted-linux-amd64-noble-medium:
           username: ubuntu
       - self-hosted-linux-amd64-noble-large:
