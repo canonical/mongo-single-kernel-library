@@ -146,9 +146,9 @@ class VaultState:
         """Returns the tuple combining the servername and port."""
         vault_url = self.vault_url
         if not vault_url:
-            return "", ""
+            return ("", "")
         parsed_url = urlparse(vault_url)
-        return parsed_url.hostname or "", f"{parsed_url.port or 8200}"
+        return (parsed_url.hostname or "", f"{parsed_url.port or 8200}")
 
     @property
     def vault_secret_path(self) -> str:

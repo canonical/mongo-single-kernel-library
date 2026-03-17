@@ -508,8 +508,8 @@ class MongoDBConfigManager(MongoConfigManager):
     @property
     @override
     def vault_parameters(self) -> dict[str, Any]:
-        server_name, port = self.state.vault_state.vault_url_tuple
         if self.state.enable_encryption_at_rest and self.state.vault_relation:
+            server_name, port = self.state.vault_state.vault_url_tuple
             return {
                 "security": {
                     "enableEncryption": True,
