@@ -10,7 +10,13 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
-from ops import ConfigChangedEvent, InstallEvent, LeaderElectedEvent, Object
+from ops import (
+    ConfigChangedEvent,
+    InstallEvent,
+    LeaderElectedEvent,
+    Object,
+    UpdateStatusEvent,
+)
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import VaultStatuses
@@ -48,6 +54,7 @@ class VaultEventHandler(Object):
         self.framework.observe(self.charm.on.install, self._generate_nonce)
         self.framework.observe(self.charm.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.charm.on.update_status, self._on_update_status)
 
     def _generate_nonce(self, event: InstallEvent):
         """Generates a nonce for that unit and store it."""
@@ -103,17 +110,29 @@ class VaultEventHandler(Object):
             self.manager.set_status(VaultStatuses.INVALID_CONFIG.value, scope="both")
             return
 
-    def _on_gone_away(self, event: vault_kv.VaultKvReadyEvent) -> None:
+    def _on_gone_away(self, event: vault_kv.VaultKvGoneAwayEvent) -> None:
+        """Handler for the relation broken event."""
         if self.manager.assert_should_integrate():
-            self.manager.state.statuses.set(
-                VaultStatuses.VAULT_NOT_INTEGRATED.value, component=self.manager.name, scope="unit"
-            )
-            self.manager.state.statuses.set(
-                VaultStatuses.VAULT_NOT_INTEGRATED.value, component=self.manager.name, scope="app"
-            )
+            self.manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
+            return
         logger.info(
             f"[{event}]] Nothing to remove, we should not have integrated vault in the first place."
         )
         self.manager.state.statuses.clear(component=self.manager.name, scope="unit")
         if self.model.unit.is_leader():
             self.manager.state.statuses.clear(component=self.manager.name, scope="app")
+
+    def _on_update_status(self, event: UpdateStatusEvent) -> None:
+        """Handler for on connected event that requests for approle."""
+        if not self.manager.assert_should_integrate():
+            # No need for a status here, it will all be recomputed anyway.
+            return
+        if not self.manager.state.vault_relation:
+            return
+        egress_subnets = self.manager.get_subnets()
+        nonce = self.manager.get_nonce()
+        self.interface.request_credentials(
+            self.manager.state.vault_relation,
+            egress_subnet=egress_subnets,
+            nonce=nonce,
+        )

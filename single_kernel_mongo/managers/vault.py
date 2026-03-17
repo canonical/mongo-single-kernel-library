@@ -92,14 +92,14 @@ class VaultManager(Object, ManagerStatusProtocol):
         self.state.vault_state.nonce = secrets.token_hex(16)
 
     def get_subnets(self) -> list[str]:
-        """Gets the subnet for that specific relation."""
+        """Gets the ordered list of subnets for that specific relation."""
         if not self.state.vault_relation:
             return []
         if not (bindings := self.model.get_binding(self.state.vault_relation)):
             return []
         egress_subnets = [str(subnet) for subnet in bindings.network.egress_subnets[0].subnets()]
         egress_subnets.append(str(bindings.network.interfaces[0].subnet))
-        return egress_subnets
+        return sorted(egress_subnets)
 
     def get_nonce(self) -> str:
         """Gets the nonce for that unit."""
