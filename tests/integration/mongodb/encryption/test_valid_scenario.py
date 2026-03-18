@@ -2,6 +2,8 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
+
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import (
@@ -30,16 +32,17 @@ async def test_deploy_charms(
     base_app_name: str,
     vault_charm_name: str,
 ):
-    await deploy_vault(ops_test, substrate, vault_charm_name)
-
-    await deploy_charm(
-        ops_test=ops_test,
-        charm=mongodb_charm,
-        substrate=substrate,
-        mongod_resource=mongod_resource,
-        app_name=base_app_name,
-        num_units=len(UNIT_IDS),
-        config={"enable-encryption-at-rest": True},
+    await asyncio.gather(
+        deploy_vault(ops_test, substrate, vault_charm_name),
+        deploy_charm(
+            ops_test=ops_test,
+            charm=mongodb_charm,
+            substrate=substrate,
+            mongod_resource=mongod_resource,
+            app_name=base_app_name,
+            num_units=len(UNIT_IDS),
+            config={"enable-encryption-at-rest": True},
+        ),
     )
     await ops_test.model.wait_for_idle(apps=[base_app_name], status="blocked", timeout=TIMEOUT)
 

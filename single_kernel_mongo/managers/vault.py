@@ -91,10 +91,6 @@ class VaultManager(Object, ManagerStatusProtocol):
             return
         self.state.vault_state.nonce = secrets.token_hex(16)
 
-    def prepare_vault_agent_config(self):
-        """Setup required to ensure that the files are ready."""
-        self.workload.write(self.workload.paths.vault_config, "")
-
     def get_subnets(self) -> list[str]:
         """Gets the ordered list of subnets for that specific relation."""
         if not self.state.vault_relation:

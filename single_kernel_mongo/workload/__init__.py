@@ -67,7 +67,7 @@ class KubernetesPBMWorkload(PBMWorkload, KubernetesWorkload):
     ...
 
 
-class KubernetesVaultAgentWorkload(VaultAgentWorkload, VMWorkload):
+class KubernetesVaultAgentWorkload(VaultAgentWorkload, KubernetesWorkload):
     """VM vault agent Workload implementation."""
 
     ...

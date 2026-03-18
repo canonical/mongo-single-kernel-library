@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from enum import Enum
 from typing import TYPE_CHECKING, final
 from urllib.parse import urlparse
@@ -63,7 +64,9 @@ class VaultState:
                     "vault_url": self.vault_url,
                     "mount": self.mount_point,
                     "ca_certificate": self.ca_certificate,
-                    "credentials": {"role-id": self.role_id, "role-secret-id": self.role_secret_id},
+                    "credentials": json.dumps(
+                        {"role-id": self.role_id, "role-secret-id": self.role_secret_id}
+                    ),
                 }
             )
         except ValidationError:

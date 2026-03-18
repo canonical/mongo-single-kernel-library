@@ -137,7 +137,7 @@ class MongoPaths:
     @property
     def vault_token_file_path(self) -> Path:
         """Vault configuration file path."""
-        return Path(f"{self.conf_path}/vaultTokenFile")
+        return Path(f"{self.etc_path}/vault/vaultTokenFile")
 
 
 class WorkloadBase(ABC):  # pragma: nocover

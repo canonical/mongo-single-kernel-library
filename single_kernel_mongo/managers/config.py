@@ -518,9 +518,9 @@ class MongoDBConfigManager(MongoConfigManager):
                     "vault": {
                         "serverName": server_name,
                         "port": port,
-                        "tokenFile": self.workload.paths.vault_token_file_path,
-                        "serverCAFile": self.workload.paths.vault_cert,
-                        "secret": self.state.vault_state.vault_secret_path,
+                        "tokenFile": f"{self.workload.paths.vault_token_file_path}",
+                        "serverCAFile": f"{self.workload.paths.vault_cert}",
+                        "secret": f"{self.state.vault_state.vault_secret_path}",
                     },
                 },
             }

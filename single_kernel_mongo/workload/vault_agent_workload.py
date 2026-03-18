@@ -58,6 +58,7 @@ class VaultAgentWorkload(WorkloadBase, ABC):
                 "description": "Pebble config layer for vault agent",
                 "services": {
                     self.service: {
+                        "override": "replace",
                         "summary": "vault agent",
                         "command": "/bin/bash /bin/start-vault-agent.sh",
                         "startup": "enabled",

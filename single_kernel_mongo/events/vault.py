@@ -59,7 +59,6 @@ class VaultEventHandler(Object):
     def _generate_nonce(self, event: InstallEvent):
         """Generates a nonce for that unit and store it."""
         self.manager.generate_nonce()
-        self.manager.prepare_vault_agent_config()
 
     def _on_connected(self, event: vault_kv.VaultKvConnectedEvent) -> None:
         """Handler for on connected event that requests for approle."""
