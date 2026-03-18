@@ -1,0 +1,32 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m integration.helpers.common:common.py:490 Setting the system-users config to secret:d6t1av7mp25c7bmpr1m0 backup=new-password
+[32mINFO    [0m integration.mongodb.backups.test_backups_s3:test_backups_s3.py:364 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-03-18T03:05:47Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  03:05:53Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+continuous-write           active       1  continuous-write             0  10.152.183.51   no       
+mongodb-k8s       7.0.28   waiting      3  mongodb-k8s                  0  10.152.183.196  no       installing agent
+s3-integrator              active       1  s3-integrator     1/edge   515  10.152.183.60   no       
+
+Unit                 Workload     Agent      Address     Ports  Message
+continuous-write/0*  active       idle       10.1.53.19         
+mongodb-k8s/0*       maintenance  idle       10.1.53.15         Backup started/running, backup id: '2026-03-18T03:05:47Z'
+mongodb-k8s/1        active       executing  10.1.53.18         
+mongodb-k8s/2        active       executing  10.1.53.17         
+s3-integrator/0*     active       idle       10.1.53.13         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-new-mongodb-aws-0: 03:01:46 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=data-charms-testing --set storage.s3.endpointUrl=https://s3.amazonaws.com --set storage.s3.prefix=mongodb-k8s/489f4c41-a836-4f8c-b3d4-963b9fe6b702 --set storage.s3.region=us-east-1 --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69ba159ac79a87d9d945fd11 [new-mongodb-aws/new-mongodb-aws-2.new-mongodb-aws-endpoints:27017]
+, stderr=None
+unit-new-mongodb-aws-0: 03:01:46 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69ba159ac79a87d9d945fd11 [new-mongodb-aws/new-mongodb-aws-2.new-mongodb-aws-endpoints:27017]\n', 'stderr': ''}
+unit-new-mongodb-aws-1: 03:04:04 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ba162323b468597e4e6f7a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0009858690000328352>]>
+unit-new-mongodb-aws-0: 03:04:04 ERROR unit.new-mongodb-aws/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69ba16237f7a2f9476fd3200, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0004555929999696673>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
