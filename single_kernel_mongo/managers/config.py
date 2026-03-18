@@ -286,7 +286,9 @@ class VaultConfigManager(FileBasedConfigManager):
     @override
     def set_environment(self):
         """Write update parameters in the file."""
-        current_config = hcl2.loads(f"{self.file}")
+        current_config = {}
+        if self.file.exists():
+            current_config = hcl2.loads(self.file.read_text())
         rendered_template = self._render_template()
         new_config = hcl2.loads(rendered_template)
 

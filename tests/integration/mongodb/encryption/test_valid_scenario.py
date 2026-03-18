@@ -41,6 +41,7 @@ async def test_deploy_charms(
         num_units=len(UNIT_IDS),
         config={"enable-encryption-at-rest": True},
     )
+    await ops_test.model.wait_for_idle(apps=[base_app_name], status="blocked", timeout=TIMEOUT)
 
 
 async def test_no_integration_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
@@ -70,7 +71,7 @@ async def test_integration_goes_to_active(
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
     for unit in ops_test.model.applications[app_name].units:
-        for filename in ("roleid", "rolesecretid", "vault-cert.pem"):
+        for filename in ("role_id", "role_secret_id", "vault-cert.pem"):
             assert await has_file(ops_test, substrate, unit, vault_base_path(substrate), "roleid")
         assert await has_file(
             ops_test, substrate, unit, mongodb_base_path(substrate), "vauktTokenFile"

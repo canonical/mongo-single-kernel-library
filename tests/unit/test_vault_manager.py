@@ -237,11 +237,10 @@ def test_vault_manager_ready(
     set_environment.assert_called()
 
     unit_secret = state_out.get_secret(label=f"vault-kv.{mongodb_name}.unit")
-    app_secret = state_out.get_secret(label=f"vault-kv.{mongodb_name}.app")
 
-    assert app_secret.latest_content.get("vault-url") == "https://192.168.1.1:8200"
-    assert app_secret.latest_content.get("vault-secret-mount-point") == "mongodb-mongodb"
-    assert app_secret.latest_content.get("vault-cert") == "BBBBBBBBB"
+    assert unit_secret.latest_content.get("vault-url") == "https://192.168.1.1:8200"
+    assert unit_secret.latest_content.get("vault-secret-mount-point") == "mongodb-mongodb"
+    assert unit_secret.latest_content.get("vault-cert") == "BBBBBBBBB"
     assert unit_secret.latest_content.get("vault-role-id") == "roleid"
     assert unit_secret.latest_content.get("vault-role-secret-id") == "rolesecretid"
 

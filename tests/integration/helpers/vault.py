@@ -3,12 +3,13 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import time
 from logging import getLogger
 from os.path import abspath
 from typing import Any, final
 
 import hvac
-import pytest
+import requests
 from juju.application import Application
 from juju.errors import JujuError
 from juju.model import Model
@@ -21,7 +22,6 @@ from tests.integration.helpers.common import (
     get_juju_secret,
     get_model_secret_id,
     get_unit_app,
-    get_unit_id,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -37,11 +37,6 @@ VAULT_STATUS_ACTIVE = 200
 VAULT_STATUS_NOT_INITIALIZED = 501
 
 logger = getLogger(__name__)
-
-
-@pytest.fixture
-def vault_charm_name(substrate: Substrate) -> str:
-    return VAULT if substrate == "lxd" else VAULT_K8S
 
 
 @final
@@ -97,6 +92,26 @@ class Vault:
         self.client.sys.submit_unseal_key(unseal_key)
         logger.info("Unsealed vault unit: %s.", self.url)
 
+    async def wait_for_node_to_be_unsealed(self) -> None:
+        """Wait for the vault unit to be unsealed.
+
+        Args:
+            endpoint (str): The endpoint of the vault unit
+            ca_file_location (str): The path to the CA file
+        """
+        timeout = 300
+        t0 = time.time()
+        while time.time() < t0 + timeout:
+            await asyncio.sleep(5)
+            try:
+                if not self.is_sealed():
+                    logger.info("Vault unit is unsealed.")
+                    return
+            except requests.exceptions.ConnectionError:
+                logger.debug("Vault is not yet available. Waiting...")
+                continue
+        raise TimeoutError("Timed out waiting for vault to be unsealed.")
+
 
 async def get_vault_client(
     ops_test: OpsTest,
@@ -106,12 +121,13 @@ async def get_vault_client(
     ca_file_name: str | None = None,
 ) -> Vault:
     """Get a Vault client for the given application."""
-    unit_id, unit_name = get_unit_app(unit_name)
-    address = await get_address_of_unit(ops_test, substrate, unit_id, unit_name)
+    unit_id, app_name = get_unit_app(unit_name)
+    address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
     return Vault(url=f"https://{address}:8200", token=token, ca_file_location=ca_file_name)
 
 
 async def deploy_vault(ops_test: OpsTest, substrate: Substrate, vault_charm_name: str):
+    assert ops_test.model
     await ops_test.model.deploy(
         vault_charm_name,
         vault_charm_name,
@@ -119,9 +135,10 @@ async def deploy_vault(ops_test: OpsTest, substrate: Substrate, vault_charm_name
         channel="1.18/stable",  # TODO: keep track of this after newer versions.
         series="noble",
     )
-    await ops_test.model.wait_for_idle(
-        apps=[vault_charm_name], wait_for_at_least_units=1, status="blocked"
-    )
+    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
+        await ops_test.model.wait_for_idle(
+            apps=[vault_charm_name], wait_for_at_least_units=1, status="blocked", idle_period=5
+        )
     await initialize_unseal_authorize_vault(ops_test, substrate, vault_charm_name)
 
 
@@ -161,12 +178,8 @@ async def initialize_vault_leader(
     assert ops_test.model
 
     leader = await find_unit(ops_test, leader=True, app_name=vault_charm_name)
-    address = await get_address_of_unit(
-        ops_test,
-        substrate,
-        get_unit_id(leader.name),
-        app_name=leader.name,
-    )
+    unit_id, app_name = get_unit_app(leader.name)
+    address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
 
     vault_url = f"https://{address}:8200"
 
@@ -187,7 +200,12 @@ async def initialize_vault_leader(
 
 
 async def unseal_all_vault_units(
-    ops_test: OpsTest, app_name: str, unseal_key: str, token: str, ca_file_name: str | None = None
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    unseal_key: str,
+    token: str,
+    ca_file_name: str | None = None,
 ) -> None:
     """Unseal all the vault units."""
     assert ops_test.model
@@ -195,13 +213,13 @@ async def unseal_all_vault_units(
 
     # We need to unseal the leader first, since this is the one we initialized.
     leader = await find_unit(ops_test, leader=True, app_name=app.name)
-    vault = await get_vault_client(ops_test, leader.name, unseal_key, ca_file_name)
+    vault = await get_vault_client(ops_test, substrate, leader.name, unseal_key, ca_file_name)
     if vault.is_sealed():
         vault.unseal(unseal_key)
     await vault.wait_for_node_to_be_unsealed()
 
     for unit in app.units:
-        vault = await get_vault_client(ops_test, unit.name, token, ca_file_name)
+        vault = await get_vault_client(ops_test, substrate, unit.name, token, ca_file_name)
         vault.unseal(unseal_key)
         await vault.wait_for_node_to_be_unsealed()
 
@@ -281,7 +299,13 @@ async def initialize_unseal_authorize_vault(
     root_token, unseal_key = await initialize_vault_leader(ops_test, substrate, app_name)
 
     async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        await unseal_all_vault_units(ops_test, app_name, unseal_key, root_token)
+        await unseal_all_vault_units(
+            ops_test,
+            substrate=substrate,
+            app_name=app_name,
+            unseal_key=unseal_key,
+            token=root_token,
+        )
         await authorize_charm_and_wait(ops_test, app_name, root_token)
     return root_token, unseal_key
 

@@ -72,43 +72,43 @@ class VaultState:
     @property
     def ca_certificate(self) -> str | None:
         """The CA certificate."""
-        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.CERT.value)
+        return self.secrets.get_for_key(Scope.UNIT, VaultStateKeys.CERT.value)
 
     @ca_certificate.setter
     def ca_certificate(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.CERT.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.CERT.value)
             return
-        self.secrets.set(VaultStateKeys.CERT.value, value, Scope.APP)
+        self.secrets.set(VaultStateKeys.CERT.value, value, Scope.UNIT)
 
     @property
     def vault_url(self) -> str | None:
         """The vault url."""
-        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.VAULT_URL.value)
+        return self.secrets.get_for_key(Scope.UNIT, VaultStateKeys.VAULT_URL.value)
 
     @vault_url.setter
     def vault_url(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.VAULT_URL.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.VAULT_URL.value)
             return
-        self.secrets.set(VaultStateKeys.VAULT_URL.value, value, Scope.APP)
+        self.secrets.set(VaultStateKeys.VAULT_URL.value, value, Scope.UNIT)
 
     @property
     def mount_point(self) -> str | None:
         """The mount point."""
-        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.MOUNT_POINT.value)
+        return self.secrets.get_for_key(Scope.UNIT, VaultStateKeys.MOUNT_POINT.value)
 
     @mount_point.setter
     def mount_point(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.MOUNT_POINT.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.MOUNT_POINT.value)
             return
-        self.secrets.set(VaultStateKeys.MOUNT_POINT.value, value, Scope.APP)
+        self.secrets.set(VaultStateKeys.MOUNT_POINT.value, value, Scope.UNIT)
 
     @property
     def role_id(self) -> str | None:
         """The role_id point."""
-        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.ROLE_ID.value)
+        return self.secrets.get_for_key(Scope.UNIT, VaultStateKeys.ROLE_ID.value)
 
     @role_id.setter
     def role_id(self, value: str | None) -> None:
@@ -137,7 +137,7 @@ class VaultState:
     @nonce.setter
     def nonce(self, value: str | None) -> None:
         if not value:
-            self.secrets.remove(Scope.APP, VaultStateKeys.NONCE.value)
+            self.secrets.remove(Scope.UNIT, VaultStateKeys.NONCE.value)
             return
         self.secrets.set(VaultStateKeys.NONCE.value, value, Scope.UNIT)
 

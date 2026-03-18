@@ -1137,7 +1137,7 @@ def get_app_name_from_unit(unit_name: str) -> str:
     return unit_name.split("/")[0]
 
 
-def get_unit_app(unit_name) -> tuple[int, str]:
+def get_unit_app(unit_name: str) -> tuple[int, str]:
     """Returns the unit id and app name from the unit name."""
     return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
 

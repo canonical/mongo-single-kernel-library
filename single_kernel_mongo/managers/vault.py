@@ -91,6 +91,10 @@ class VaultManager(Object, ManagerStatusProtocol):
             return
         self.state.vault_state.nonce = secrets.token_hex(16)
 
+    def prepare_vault_agent_config(self):
+        """Setup required to ensure that the files are ready."""
+        self.workload.write(self.workload.paths.vault_config, "")
+
     def get_subnets(self) -> list[str]:
         """Gets the ordered list of subnets for that specific relation."""
         if not self.state.vault_relation:
@@ -109,7 +113,8 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def prepare_vault_agent(self, data: vault_kv.VaultKvProviderSchema) -> None:
         """Prepares the vault agent with the provided configuration."""
-        self.state.vault_state.set_from(data)
+        if self.model.unit.is_leader():
+            self.state.vault_state.set_from(data)
         self.workload.write(self.workload.paths.vault_cert, data.ca_certificate)
         if not self._check_connectivity(data):
             raise ValueError("Connectivity failed.")
@@ -209,3 +214,12 @@ class VaultManager(Object, ManagerStatusProtocol):
             return
         if scope == "app" or scope == "both":
             self.state.statuses.set(status, component=self.name, scope="app")
+
+    def clear_statuses(self, scope: Literal["both"] | Scope):
+        """Sets a status for scope app or unit, or both."""
+        if scope == "unit" or scope == "both":
+            self.state.statuses.clear(component=self.name, scope="unit")
+        if not self.charm.model.unit.is_leader():
+            return
+        if scope == "app" or scope == "both":
+            self.state.statuses.clear(component=self.name, scope="app")

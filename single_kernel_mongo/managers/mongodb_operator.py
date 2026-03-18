@@ -42,6 +42,7 @@ from single_kernel_mongo.config.statuses import (
     MongodStatuses,
     PasswordManagementStatuses,
     ShardStatuses,
+    VaultStatuses,
 )
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
@@ -507,6 +508,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.vault_manager.prepare_vault_agent(data)
 
         if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
         # Configure the workload. This requires a valid role!
