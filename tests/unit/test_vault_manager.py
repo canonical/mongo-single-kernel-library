@@ -256,10 +256,10 @@ def test_vault_manager_removed(
         mongodb_ctx.on.relation_broken(relation=vault_relation), state=state_in
     )
     assert state_out.unit_status == BlockedStatus(
-        "Integrate with vault to enable encryption at rest."
+        "Must be integrated with vault to enable encryption at rest."
     )
     assert state_out.app_status == BlockedStatus(
-        "Integrate with vault to enable encryption at rest."
+        "Must be integrated with vault to enable encryption at rest."
     )
 
 
@@ -317,8 +317,8 @@ def test_update_status_should_integrate(
     state_out = mongodb_ctx.run(mongodb_ctx.on.update_status(), state=state_in)
 
     assert state_out.unit_status == BlockedStatus(
-        "Integrate with vault to enable encryption at rest."
+        "Must be integrated with vault to enable encryption at rest."
     )
     assert state_out.app_status == BlockedStatus(
-        "Integrate with vault to enable encryption at rest."
+        "Must be integrated with vault to enable encryption at rest."
     )

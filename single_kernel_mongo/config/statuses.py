@@ -743,7 +743,7 @@ class VaultStatuses(Enum):
     )
     VAULT_NOT_INTEGRATED = StatusObject(
         status="blocked",
-        message="Integrate with vault to enable encryption at rest.",
+        message="Must be integrated with vault to enable encryption at rest.",
         short_message="integrate with vault.",
         check="Missing vault relation.",
         action="Integrate with vault charm.",
