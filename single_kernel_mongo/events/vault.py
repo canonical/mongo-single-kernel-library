@@ -153,6 +153,9 @@ class VaultEventHandler(Object):
     def _on_rotate_master_key(self, event: ActionEvent):
         """Rotates the master key."""
         try:
+            self.charm.status_handler.set_running_status(
+                VaultStatuses.VAULT_ROTATE_MASTER_KEY.value, scope="unit"
+            )
             self.manager.rotate_master_key()
             event.set_results({"result": "success", "message": "OK"})
         except ImpossibleToRotateMasterKeyError as e:

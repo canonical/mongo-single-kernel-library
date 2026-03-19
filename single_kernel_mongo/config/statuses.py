@@ -770,3 +770,10 @@ class VaultStatuses(Enum):
         status="active",
         message="",
     )
+
+    ### Running status
+    VAULT_ROTATE_MASTER_KEY = StatusObject(
+        status="maintenance",
+        message="Master key rotation in progress.",
+        running="blocking",
+    )
