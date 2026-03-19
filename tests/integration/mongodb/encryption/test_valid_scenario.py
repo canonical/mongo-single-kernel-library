@@ -17,7 +17,6 @@ from tests.integration.helpers.common import (
     get_app_name,
     get_password,
     has_file,
-    mongodb_base_path,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.types import Substrate
@@ -73,29 +72,22 @@ async def test_integration_goes_to_active(
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
+    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
     for unit in ops_test.model.applications[app_name].units:
-        for filename in ("role_id", "role_secret_id", "vault-cert.pem"):
-            assert await has_file(ops_test, substrate, unit, vault_base_path(substrate), "roleid")
-        assert await has_file(
-            ops_test, substrate, unit, mongodb_base_path(substrate), "vauktTokenFile"
+        for filename in ("role_id", "role_secret_id", "vault-cert.pem", "vaultTokenFile"):
+            assert await has_file(ops_test, substrate, unit, vault_base_path(substrate), filename)
+
+        host = await get_address_of_unit(
+            ops_test, substrate, int(unit.name.split("/")[1]), app_name
         )
 
-    replica_set_hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
-    ]
-
-    hosts = ",".join(replica_set_hosts)
-    password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
-    replica_set_uri = (
-        f"mongodb://{CHARMED_OPERATOR_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
-    )
-    command = "db.serverStatus().encryptionAtRest"
-    result = await execute_on_mongod(
-        ops_test, app_name, substrate, uri=replica_set_uri, command=command
-    )
-    assert result.succeeded
-    assert result.data == "true"
+        replica_set_uri = f"mongodb://{CHARMED_OPERATOR_USERNAME}:{password}@{host}/admin"
+        command = "db.adminCommand({getCmdLineOpts: 1})"
+        result = await execute_on_mongod(
+            ops_test, app_name, substrate, uri=replica_set_uri, command=command
+        )
+        assert result.succeeded
+        assert result.data.get("parsed", {}).get("security", {}).get("enableEncryption", False)
 
 
 async def test_rotate_master_key(ops_test: OpsTest, substrate: Substrate, vault_charm_name: str):

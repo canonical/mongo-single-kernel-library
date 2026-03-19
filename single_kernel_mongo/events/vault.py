@@ -77,6 +77,7 @@ class VaultEventHandler(Object):
         if not self.manager.assert_should_integrate():
             self.manager.set_status(VaultStatuses.VAULT_INTEGRATED.value, scope="both")
             return
+        self.manager.clear_statuses(scope="both")
         # First, get the credentials from the interface
         unit_credentials = self.interface.get_unit_credentials(event.relation)
         secret = self.model.get_secret(id=unit_credentials)

@@ -109,8 +109,7 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def prepare_vault_agent(self, data: vault_kv.VaultKvProviderSchema) -> None:
         """Prepares the vault agent with the provided configuration."""
-        if self.model.unit.is_leader():
-            self.state.vault_state.set_from(data)
+        self.state.vault_state.set_from(data)
         self.workload.write(self.workload.paths.vault_cert, data.ca_certificate)
         if not self._check_connectivity(data):
             raise ValueError("Connectivity failed.")
@@ -118,6 +117,9 @@ class VaultManager(Object, ManagerStatusProtocol):
         self.workload.write(self.workload.paths.role_secret_id, data.credentials["role-secret-id"])
         self.dependent.vault_config_manager.set_environment()
         self.workload.start()
+
+        # Trigger the startup.
+        self.charm.on.start.emit()
 
     def _check_connectivity(self, data: vault_kv.VaultKvProviderSchema):
         """Checks that the connectivity to vault works."""
@@ -213,6 +215,7 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def clear_statuses(self, scope: Literal["both"] | Scope):
         """Sets a status for scope app or unit, or both."""
+        logger.info(f"Clearing statuses for {scope=}")
         if scope == "unit" or scope == "both":
             self.state.statuses.clear(component=self.name, scope="unit")
         if not self.charm.model.unit.is_leader():
