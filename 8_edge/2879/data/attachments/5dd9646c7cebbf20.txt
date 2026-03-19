@@ -1,0 +1,99 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  04:05:59Z
+
+App            Version  Status  Scale  Charm             Channel            Rev  Exposed  Message
+application             active      1  continuous-write                       0  no       
+mongodb-eight  8.0.10   active      3  mongodb                                0  no       
+mongodb-seven  7.0.28   active      3  mongodb           8-transition/edge  281  no       
+mongodb-six    6.0.24   active      3  mongodb           6/edge             286  no       
+s3-integrator           active      1  s3-integrator     latest/edge        515  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports      Message
+application/0*    active    idle   4        10.141.230.154             
+mongodb-eight/0*  active    idle   8        10.141.230.139  27017/tcp  
+mongodb-eight/1   active    idle   9        10.141.230.101  27017/tcp  
+mongodb-eight/2   active    idle   10       10.141.230.66   27017/tcp  
+mongodb-seven/0*  active    idle   5        10.141.230.45   27017/tcp  Primary.
+mongodb-seven/1   active    idle   6        10.141.230.200  27017/tcp  
+mongodb-seven/2   active    idle   7        10.141.230.151  27017/tcp  
+mongodb-six/0     active    idle   0        10.141.230.236  27017/tcp  
+mongodb-six/1*    active    idle   1        10.141.230.114  27017/tcp  Primary.
+mongodb-six/2     active    idle   2        10.141.230.203  27017/tcp  
+s3-integrator/0*  active    idle   3        10.141.230.74              
+
+Machine  State    Address         Inst id         Base          AZ             Message
+0        started  10.141.230.236  juju-194138-0   ubuntu@22.04  github-runner  Running
+1        started  10.141.230.114  juju-194138-1   ubuntu@22.04  github-runner  Running
+2        started  10.141.230.203  juju-194138-2   ubuntu@22.04  github-runner  Running
+3        started  10.141.230.74   juju-194138-3   ubuntu@22.04  github-runner  Running
+4        started  10.141.230.154  juju-194138-4   ubuntu@24.04  github-runner  Running
+5        started  10.141.230.45   juju-194138-5   ubuntu@24.04  github-runner  Running
+6        started  10.141.230.200  juju-194138-6   ubuntu@24.04  github-runner  Running
+7        started  10.141.230.151  juju-194138-7   ubuntu@24.04  github-runner  Running
+8        started  10.141.230.139  juju-194138-8   ubuntu@24.04  github-runner  Running
+9        started  10.141.230.101  juju-194138-9   ubuntu@24.04  github-runner  Running
+10       started  10.141.230.66   juju-194138-10  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 03:22:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:22:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-six-1: 03:23:40 ERROR unit.mongodb-six/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-six-1: 03:23:40 ERROR unit.mongodb-six/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-0: 03:23:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:23:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:23:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:23:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:24:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 03:24:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-six-0: 03:24:15 ERROR unit.mongodb-six/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-six-0: 03:24:15 ERROR unit.mongodb-six/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-six-2: 03:24:29 ERROR unit.mongodb-six/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-six-2: 03:24:29 ERROR unit.mongodb-six/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-4: 03:26:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 03:26:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-six-1: 03:28:27 ERROR unit.mongodb-six/1.juju-log s3-credentials:7: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]
+
+unit-mongodb-six-1: 03:28:36 ERROR unit.mongodb-six/1.juju-log s3-credentials:7: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.65:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]
+
+unit-mongodb-six-1: 03:28:36 ERROR unit.mongodb-six/1.juju-log s3-credentials:7: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]\n'}
+unit-mongodb-six-1: 03:28:46 ERROR unit.mongodb-six/1.juju-log status-peers:2: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.65:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]
+
+unit-mongodb-six-1: 03:28:46 ERROR unit.mongodb-six/1.juju-log status-peers:2: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]\n'}
+unit-mongodb-six-1: 03:28:55 ERROR unit.mongodb-six/1.juju-log status-peers:2: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.65:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]
+
+unit-mongodb-six-1: 03:28:55 ERROR unit.mongodb-six/1.juju-log status-peers:2: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bb6d5ad8ec7ebd7bca1fb5 [mongodb-six/10.141.230.203:27017]\n'}
+machine-5: 03:35:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 03:35:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:35:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 03:35:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:35:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:35:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-seven-2: 03:36:13 ERROR unit.mongodb-seven/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-2: 03:36:13 ERROR unit.mongodb-seven/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-0: 03:36:15 ERROR unit.mongodb-seven/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-0: 03:36:15 ERROR unit.mongodb-seven/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-1: 03:36:20 ERROR unit.mongodb-seven/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-1: 03:36:20 ERROR unit.mongodb-seven/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-seven-2: 03:36:24 ERROR unit.mongodb-seven/2.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+machine-0: 03:46:48 ERROR juju.worker.dependency "storage-provisioner" manifold worker returned unexpected error: getting life of filesystem 10/14: permission denied
+machine-8: 03:47:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 03:47:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 03:47:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 03:47:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-10: 03:47:52 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-10: 03:47:52 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:47:52 ERROR juju.worker.dependency "storage-provisioner" manifold worker returned unexpected error: getting life of filesystem 10/15: permission denied
+unit-mongodb-eight-2: 03:48:52 ERROR unit.mongodb-eight/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-2: 03:48:52 ERROR unit.mongodb-eight/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-2: 03:48:52 ERROR unit.mongodb-eight/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-eight-0: 03:49:01 ERROR unit.mongodb-eight/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-0: 03:49:01 ERROR unit.mongodb-eight/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-0: 03:49:02 ERROR unit.mongodb-eight/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-eight-1: 03:49:08 ERROR unit.mongodb-eight/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-1: 03:49:08 ERROR unit.mongodb-eight/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-eight-1: 03:49:09 ERROR unit.mongodb-eight/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

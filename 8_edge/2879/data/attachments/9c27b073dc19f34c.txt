@@ -1,0 +1,53 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [executing] terminated: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.sharding:sharding.py:166 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.19   unsupported  04:24:44Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  8.0.10   active      2  mongodb-k8s             0  10.152.183.228  no       
+shard-one      8.0.10   active      2  mongodb-k8s             1  10.152.183.67   no       
+shard-tree     8.0.10   active      2  mongodb-k8s             3  10.152.183.103  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.16         Primary.
+config-server/1   active    idle   10.1.53.20         
+shard-one/0*      active    idle   10.1.53.29         Primary.
+shard-one/1       active    idle   10.1.53.32         
+shard-tree/0*     active    idle   10.1.53.50         
+shard-tree/1      active    idle   10.1.53.53         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 03:40:12 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb701b9a5878452ca28d94, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-two-0: 03:56:30 ERROR unit.shard-two/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb73ed2d86a3ee9883fdae, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.00047845699987192347>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007950019999043434>]>
+unit-config-server-0: 04:02:25 ERROR unit.config-server/0.juju-log config-server:18: single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 04:02:25 ERROR unit.config-server/0.juju-log config-server:18: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 04:04:23 ERROR unit.config-server/0.juju-log single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 04:05:16 ERROR unit.shard-two/1.juju-log sharding:17: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 04:14:19 ERROR unit.shard-tree/1.juju-log sharding:18: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-1: 04:19:27 ERROR unit.shard-two/1.juju-log sharding:19: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-config-server-1: 04:19:29 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "38f83efd-2a5e-4a5f-864c-3391e0bc2c4b:r#19#shard-two": settings 38f83efd-2a5e-4a5f-864c-3391e0bc2c4b:r#19#shard-two not found (not found)
+unit-shard-two-1: 04:21:45 ERROR unit.shard-two/1.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb79d83ef6232773c3d721, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSGhost, rtt: 0.00038928399999349494>]>
+unit-config-server-0: 04:23:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 04:23:27 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 04:24:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 04:24:27 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
