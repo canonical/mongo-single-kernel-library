@@ -1,0 +1,79 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  11:01:17Z
+
+App          Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+application           active      1  continuous-write             0  no       
+mongodb               active      5  mongodb                      0  no       
+
+Unit            Workload     Agent      Machine  Public address  Ports      Message
+application/0*  active       idle       3        10.215.202.238             
+mongodb/0*      active       idle       0        10.215.202.232  27017/tcp  Primary.
+mongodb/1       active       idle       1        10.215.202.67   27017/tcp  
+mongodb/2       active       idle       2        10.215.202.219  27017/tcp  
+mongodb/3       maintenance  executing  4        10.215.202.222             (install) Installing MongoDB...
+mongodb/4       maintenance  executing  5        10.215.202.243             (install) Installing MongoDB...
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.215.202.232  juju-757b42-0  ubuntu@24.04  github-runner  Running
+1        started  10.215.202.67   juju-757b42-1  ubuntu@24.04  github-runner  Running
+2        started  10.215.202.219  juju-757b42-2  ubuntu@24.04  github-runner  Running
+3        started  10.215.202.238  juju-757b42-3  ubuntu@24.04  github-runner  Running
+4        started  10.215.202.222  juju-757b42-4  ubuntu@24.04  github-runner  Running
+5        started  10.215.202.243  juju-757b42-5  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 10:05:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 10:05:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 10:06:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 10:06:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 10:06:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 10:06:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 10:06:29 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 10:06:29 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 10:07:08 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 10:07:08 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 10:07:12 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 10:07:12 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 10:10:14 ERROR unit.mongodb/0.juju-log Invalid system-users secret content. Password for user 'monitor' cannot be empty or whitespace
+unit-mongodb-0: 10:10:53 ERROR unit.mongodb/0.juju-log Invalid system-users secret content. Password for user 'monitor' exceeds max length of 4096 characters
+machine-3: 10:16:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 10:16:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 10:45:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 10:45:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 10:45:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 10:45:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-4: 10:59:28 ERROR unit.mongodb/4.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="152"'] failed!
+Stdout:
+2026-03-19T10:57:56Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "core24" (1499) from channel "stable" (received an unexpected http response code (502) when trying to download https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/dwTAh7MZZ01zyriOZErqd1JynQLiOGvM_1499.snap?interactive=1&token=1773928800_4bd1138bb6c77f59bc2033a062043b42d13ba2c2)
+
+Latest logs:
+Mar 19 10:57:56 juju-757b42-5 snapd[1998]: daemon.go:558: done waiting for running hooks
+Mar 19 10:57:59 juju-757b42-5 snapd[1998]: overlord.go:538: Released state lock file
+Mar 19 10:57:59 juju-757b42-5 systemd[1]: snapd.service: Deactivated successfully.
+Mar 19 10:57:59 juju-757b42-5 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Mar 19 10:57:59 juju-757b42-5 systemd[1]: Starting snapd.service - Snap Daemon...
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: overlord.go:294: Acquiring state lock file
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: overlord.go:299: Acquired state lock file
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: patch.go:64: Patching system state level 6 to sublevel 1...
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: patch.go:64: Patching system state level 6 to sublevel 2...
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: patch.go:64: Patching system state level 6 to sublevel 3...
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: daemon.go:276: started snapd/2.74.1 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: daemon.go:370: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: backends.go:70: AppArmor status: apparmor is enabled and all features are available (using snapd provided apparmor_parser)
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: backend.go:141: delegating reload of snap-confine profiles to system snap security profiles setup
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: standby.go:95: will consider standby after: 5s
+Mar 19 10:58:00 juju-757b42-5 systemd[1]: Started snapd.service - Snap Daemon.
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: snapmgr.go:1659: performing periodic snap downloads cache cleanup
+Mar 19 10:58:00 juju-757b42-5 snapd[3612]: cache.go:243: removed 0 entries/    0 from downloads cache
+Mar 19 10:59:27 juju-757b42-5 snapd[3612]: taskrunner.go:304: Change 4 task (Download snap "core24" (1499) from channel "stable") failed: received an unexpected http response code (502) when trying to download https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/dwTAh7MZZ01zyriOZErqd1JynQLiOGvM_1499.snap?interactive=1&token=1773928800_4bd1138bb6c77f59bc2033a062043b42d13ba2c2
+.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
