@@ -157,6 +157,8 @@ class WorkloadBase(ABC):  # pragma: nocover
     layer_name: ClassVar[str]
     container: Container | None
     users: ClassVar[WorkloadUser]
+    # Used as a command runner for all the cases where we need the user that runs the mongodb calls
+    # This is root:root on VM and mongodb:mongodb on kubernetes
     command_user: ClassVar[WorkloadUser]
     bin_cmd: ClassVar[str]
     env_var: ClassVar[str]
