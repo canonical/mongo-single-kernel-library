@@ -132,7 +132,7 @@ class MongoPaths:
     @property
     def vault_cert(self) -> Path:
         """Vault configuration file path."""
-        return Path(f"{self.etc_path}/vault/vault-cert.pem")
+        return Path(f"{self.etc_path}/vault/vault_cert.pem")
 
     @property
     def vault_token_file_path(self) -> Path:

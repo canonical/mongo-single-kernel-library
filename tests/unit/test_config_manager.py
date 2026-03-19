@@ -212,11 +212,11 @@ def test_mongodb_encryption_at_rest_config(mocker):
     assert vault_config["vault"]["port"] == "8200"
     assert (
         vault_config["vault"]["tokenFile"]
-        == "/var/snap/charmed-mongodb/current/vault/vaultTokenFile"
+        == "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
     )
     assert (
         vault_config["vault"]["serverCAFile"]
-        == "/var/snap/charmed-mongodb/current/vault/vault_cert.pem"
+        == "/var/snap/charmed-mongodb/current/etc/vault/vault_cert.pem"
     )
     assert vault_config["vault"]["secret"] == "mongodb-mongodb/data/mongodb-0"
 

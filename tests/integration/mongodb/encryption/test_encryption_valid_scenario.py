@@ -81,7 +81,7 @@ async def test_integration_goes_to_active(
 
     password = await get_password(ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name)
     for unit in ops_test.model.applications[app_name].units:
-        for filename in ("role_id", "role_secret_id", "vault-cert.pem", "vaultTokenFile"):
+        for filename in ("role_id", "role_secret_id", "vault_cert.pem", "vaultTokenFile"):
             assert await has_file(ops_test, substrate, unit, vault_base_path(substrate), filename)
 
         host = await get_address_of_unit(
