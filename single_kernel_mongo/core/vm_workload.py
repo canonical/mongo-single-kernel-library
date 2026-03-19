@@ -131,6 +131,8 @@ class VMWorkload(WorkloadBase):
         env: Mapping[str, str] | None = None,
         working_dir: str | None = None,
         input: str | None = None,
+        user: str | None = None,
+        group: str | None = None,
     ) -> str:
         try:
             output = subprocess.check_output(
@@ -141,6 +143,8 @@ class VMWorkload(WorkloadBase):
                 env=env,
                 cwd=working_dir,
                 input=input,
+                user=user,
+                group=group,
             )
             logger.debug(f"{output=}")
             return output

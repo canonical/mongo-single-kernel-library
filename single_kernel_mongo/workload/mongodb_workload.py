@@ -8,6 +8,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
+from single_kernel_mongo.config.literals import Substrates
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 
@@ -50,12 +51,24 @@ class MongoDBWorkload(WorkloadBase):
     def mongod_command_standalone(
         self,
         bin_keyword: str,
-        bin_args: list[str] = [],
+        bin_args: list[str] | None = None,
     ):
         """Executes mongod as a standalone binary."""
+        bin_args = bin_args or []
+        if self.substrate == Substrates.VM:
+            mongo_command = "charmed-mongodb.mongod-cli"
+            user, group = "root", "root"
+        else:
+            mongo_command = "mongod"
+            user, group = self.users.user, self.users.group
         command = [
-            f"{self.paths.binaries_path}/charmed-mongodb.mongod-cli",
+            f"{self.paths.binaries_path}/{mongo_command}",
             bin_keyword,
             *bin_args,
         ]
-        return self.exec(command=command)
+        return self.exec(
+            command=command,
+            user=user,
+            group=group,
+            working_dir=f"{self.paths.etc_path}",
+        )

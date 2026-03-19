@@ -256,6 +256,8 @@ class WorkloadBase(ABC):  # pragma: nocover
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
         input: str | None = None,
+        user: str | None = None,
+        group: str | None = None,
     ) -> str:
         """Runs a command on the workload substrate."""
         ...

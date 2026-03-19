@@ -3,7 +3,9 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+from pathlib import Path
 
+import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import (
@@ -13,16 +15,19 @@ from tests.integration.helpers.common import (
     check_app_status,
     deploy_charm,
     execute_on_mongod,
+    find_unit,
     get_address_of_unit,
     get_app_name,
     get_password,
     has_file,
     wait_for_mongodb_units_blocked,
 )
+from tests.integration.helpers.tls import scp_file_preserve_ctime
 from tests.integration.helpers.types import Substrate
 from tests.integration.helpers.vault import VAULT_KV_RELATION, deploy_vault, vault_base_path
 
 
+@pytest.mark.abort_on_fail
 async def test_deploy_charms(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -46,6 +51,7 @@ async def test_deploy_charms(
     await ops_test.model.wait_for_idle(apps=[base_app_name], status="blocked", timeout=TIMEOUT)
 
 
+@pytest.mark.abort_on_fail
 async def test_no_integration_goes_to_blocked(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     await wait_for_mongodb_units_blocked(
@@ -62,6 +68,7 @@ async def test_no_integration_goes_to_blocked(ops_test: OpsTest, substrate: Subs
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_integration_goes_to_active(
     ops_test: OpsTest, substrate: Substrate, vault_charm_name: str
 ):
@@ -90,10 +97,29 @@ async def test_integration_goes_to_active(
         assert result.data.get("parsed", {}).get("security", {}).get("enableEncryption", False)
 
 
-async def test_rotate_master_key(ops_test: OpsTest, substrate: Substrate, vault_charm_name: str):
-    pass
+async def test_rotate_master_key(ops_test: OpsTest, substrate: Substrate):
+    app_name = await get_app_name(ops_test)
+    assert ops_test.model
+
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    action = await leader_unit.run_action("rotate-encryption-master-key")
+    result = await action.wait()
+
+    assert result.results["result"] == "success"
+    if substrate == "lxd":
+        log_file = "/var/snap/charmed-mongodb/common/var/log/mongodb/mongodb.log"
+    else:
+        log_file = "/var/log/mongodb/mongodb.log"
+
+    filename = Path(await scp_file_preserve_ctime(ops_test, substrate, leader_unit.name, log_file))
+
+    data = filename.read_text()
+    assert "Rotated master encryption key" in data
+
+    filename.unlink()
 
 
+@pytest.mark.abort_on_fail
 async def remove_relation_goes_to_blocked(
     ops_test: OpsTest, substrate: Substrate, vault_charm_name: str
 ):

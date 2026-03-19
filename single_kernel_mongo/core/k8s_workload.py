@@ -139,6 +139,8 @@ class KubernetesWorkload(WorkloadBase):
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
         input: str | None = None,
+        user: str | None = None,
+        group: str | None = None,
     ) -> str:
         masked_cmd = mask_sensitive_information(command)
         try:
@@ -148,6 +150,8 @@ class KubernetesWorkload(WorkloadBase):
                 working_dir=working_dir,
                 combine_stderr=True,
                 stdin=input,
+                user=user,
+                group=group,
             )
             output, _ = process.wait_output()
             return output

@@ -162,7 +162,7 @@ class VaultManager(Object, ManagerStatusProtocol):
     def rotate_master_key(self) -> None:
         """Rotates the vault master key."""
         if not (vault_state := self.vault_state()) == VaultConfigurationState.ACTIVE:
-            raise ImpossibleToRotateMasterKeyError(f"state is {vault_state}")
+            raise ImpossibleToRotateMasterKeyError(self.map_state_to_status(vault_state).message)
 
         self.dependent.workload.stop()
 
@@ -177,6 +177,24 @@ class VaultManager(Object, ManagerStatusProtocol):
             # Start anyway, we don't want to leave the service not running
             self.dependent.workload.start()
 
+    def map_state_to_status(self, state: VaultConfigurationState) -> StatusObject:
+        """Maps a state to its status."""
+        match state:
+            case VaultConfigurationState.INVALID_CONFIG:
+                return VaultStatuses.INVALID_CONFIG.value
+            case VaultConfigurationState.VAULT_INTEGRATED:
+                return VaultStatuses.VAULT_INTEGRATED.value
+            case VaultConfigurationState.VAULT_NOT_INTEGRATED:
+                return VaultStatuses.VAULT_NOT_INTEGRATED.value
+            case VaultConfigurationState.MISSING_DATA:
+                return VaultStatuses.MISSING_DATA.value
+            case VaultConfigurationState.VAULT_UNREACHABLE:
+                return VaultStatuses.VAULT_UNREACHABLE.value
+            case VaultConfigurationState.VAULT_AGENT_FAILED:
+                return VaultStatuses.VAULT_AGENT_FAILED.value
+            case VaultConfigurationState.ACTIVE | VaultConfigurationState.DISABLED:
+                return VaultStatuses.ACTIVE.value
+
     @override
     def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         charm_statuses: dict[Scope, list[StatusObject]] = {"app": [], "unit": []}
@@ -184,24 +202,19 @@ class VaultManager(Object, ManagerStatusProtocol):
             return self.state.statuses.get(scope=scope, component=self.name).root
 
         state = self.vault_state()
+        status = self.map_state_to_status(state)
         match state:
-            case VaultConfigurationState.INVALID_CONFIG:
-                charm_statuses["app"].append(VaultStatuses.INVALID_CONFIG.value)
-                charm_statuses["unit"].append(VaultStatuses.INVALID_CONFIG.value)
-            case VaultConfigurationState.VAULT_INTEGRATED:
-                charm_statuses["app"].append(VaultStatuses.VAULT_INTEGRATED.value)
-                charm_statuses["unit"].append(VaultStatuses.VAULT_INTEGRATED.value)
-            case VaultConfigurationState.VAULT_NOT_INTEGRATED:
-                charm_statuses["app"].append(VaultStatuses.VAULT_NOT_INTEGRATED.value)
-                charm_statuses["unit"].append(VaultStatuses.VAULT_NOT_INTEGRATED.value)
-            case VaultConfigurationState.MISSING_DATA:
-                charm_statuses["unit"].append(VaultStatuses.MISSING_DATA.value)
-            case VaultConfigurationState.VAULT_UNREACHABLE:
-                charm_statuses["unit"].append(VaultStatuses.VAULT_UNREACHABLE.value)
-            case VaultConfigurationState.VAULT_AGENT_FAILED:
-                charm_statuses["unit"].append(VaultStatuses.VAULT_AGENT_FAILED.value)
             case VaultConfigurationState.ACTIVE | VaultConfigurationState.DISABLED:
                 pass
+            case (
+                VaultConfigurationState.MISSING_DATA
+                | VaultConfigurationState.VAULT_UNREACHABLE
+                | VaultConfigurationState.VAULT_AGENT_FAILED
+            ):
+                charm_statuses["unit"].append(status)
+            case _:
+                charm_statuses["app"].append(status)
+                charm_statuses["unit"].append(status)
         return charm_statuses[scope]
 
     def set_status(self, status: StatusObject, scope: Literal["both"] | Scope):

@@ -11,6 +11,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, final
 
 from ops import (
+    ActionEvent,
     ConfigChangedEvent,
     InstallEvent,
     LeaderElectedEvent,
@@ -20,7 +21,11 @@ from ops import (
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import VaultStatuses
-from single_kernel_mongo.exceptions import InvalidConfigError, WaitingForLeaderError
+from single_kernel_mongo.exceptions import (
+    ImpossibleToRotateMasterKeyError,
+    InvalidConfigError,
+    WaitingForLeaderError,
+)
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
@@ -55,6 +60,12 @@ class VaultEventHandler(Object):
         self.framework.observe(self.charm.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
         self.framework.observe(self.charm.on.update_status, self._on_update_status)
+
+        # Action to rotate the master key
+        self.framework.observe(
+            getattr(self.charm.on, "rotate_encryption_master_key_action"),
+            observer=self._on_rotate_master_key,
+        )
 
     def _generate_nonce(self, event: InstallEvent):
         """Generates a nonce for that unit and store it."""
@@ -138,3 +149,11 @@ class VaultEventHandler(Object):
             egress_subnet=egress_subnets,
             nonce=nonce,
         )
+
+    def _on_rotate_master_key(self, event: ActionEvent):
+        """Rotates the master key."""
+        try:
+            self.manager.rotate_master_key()
+            event.set_results({"result": "success", "message": "OK"})
+        except ImpossibleToRotateMasterKeyError as e:
+            event.fail(f"Failed to rotate master key: {e}")
