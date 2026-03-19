@@ -414,12 +414,13 @@ class MongoDBConfigManager(MongoConfigManager):
     @override
     def cluster_ips(self) -> dict[str, Any]:
         """The allowed cluster IPs."""
-        ...
         # Always include IPs from the local peer relation
         cidrs_list = cidrs(self.state.peer_network().bind_addresses)
         # The config server should include the CIDR for the shards
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
+            # For the local mongos
+            cidrs_list.append("127.0.0.1")
         # The shards should include the CIDR for the config server
         if self.state.is_role(MongoDBRoles.SHARD):
             cidrs_list.extend(cidrs(self.state.sharding_network().bind_addresses))
@@ -428,9 +429,6 @@ class MongoDBConfigManager(MongoConfigManager):
         # All cluster components (config server, mongos) should include the CIDRs of its counterpart
         if self.state.is_cluster_component:
             cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
-
-        # Always append the localhost just in case.
-        cidrs_list.append("127.0.0.1")
 
         # Deduplicate the list
         return {"security": {"clusterIpSourceAllowlist": sorted(set(cidrs_list))}}
