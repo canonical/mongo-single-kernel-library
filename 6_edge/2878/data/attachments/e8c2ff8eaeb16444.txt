@@ -1,0 +1,134 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [executing] active: 
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/2 [idle] waiting: Waiting for primary re-election.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  02:47:22Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     6.0.24   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         6.0.24   active       3  mongodb                      1  no       
+shard-two         6.0.24   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.146.29.246   27017-27018/tcp  Primary.
+config-server/1      active    idle   1        10.146.29.36    27017-27018/tcp  
+config-server/2      active    idle   2        10.146.29.96    27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.146.29.10                     
+shard-one/0*         active    idle   3        10.146.29.208   27017/tcp        Primary.
+shard-one/1          active    idle   4        10.146.29.56    27017/tcp        
+shard-one/2          active    idle   5        10.146.29.105   27017/tcp        
+shard-two/0          active    idle   6        10.146.29.80    27017/tcp        
+shard-two/1*         active    idle   7        10.146.29.137   27017/tcp        Primary.
+shard-two/2          active    idle   8        10.146.29.115   27017/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.146.29.246  juju-580c22-0  ubuntu@22.04  github-runner  Running
+1        started  10.146.29.36   juju-580c22-1  ubuntu@22.04  github-runner  Running
+2        started  10.146.29.96   juju-580c22-2  ubuntu@22.04  github-runner  Running
+3        started  10.146.29.208  juju-580c22-3  ubuntu@22.04  github-runner  Running
+4        started  10.146.29.56   juju-580c22-4  ubuntu@22.04  github-runner  Running
+5        started  10.146.29.105  juju-580c22-5  ubuntu@22.04  github-runner  Running
+6        started  10.146.29.80   juju-580c22-6  ubuntu@22.04  github-runner  Running
+7        started  10.146.29.137  juju-580c22-7  ubuntu@22.04  github-runner  Running
+8        started  10.146.29.115  juju-580c22-8  ubuntu@22.04  github-runner  Running
+9        started  10.146.29.10   juju-580c22-9  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-2: 02:12:16 ERROR unit.shard-one/2.juju-log Unable to set params: ['vm.max_map_count']
+unit-shard-one-2: 02:12:16 ERROR unit.shard-one/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+unit-shard-one-0: 02:16:14 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5c6dc76b6b628c3fa1f3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.105', 27017) server_type: RSSecondary, rtt: 0.002224649000027057>, <ServerDescription ('10.146.29.208', 27017) server_type: RSSecondary, rtt: 0.0041273440001532435>, <ServerDescription ('10.146.29.56', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.146.29.56:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-one-0: 02:16:19 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5c72c76b6b628c3fa1f4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.105', 27017) server_type: RSSecondary, rtt: 0.0036044199998741533>, <ServerDescription ('10.146.29.208', 27017) server_type: RSSecondary, rtt: 0.0013183690000460047>, <ServerDescription ('10.146.29.56', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.146.29.56:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-one-0: 02:18:03 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5cda66c17f84f97cfc66, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.105', 27017) server_type: RSSecondary, rtt: 0.002013753000028373>, <ServerDescription ('10.146.29.208', 27017) server_type: RSSecondary, rtt: 0.005508998000095744>, <ServerDescription ('10.146.29.56', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bb5cca0d31470a36c5875e'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8837, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1773886682, 1), 'signature': {'hash': b'\\xb9G\\xd5<\\xcf\\xe6\\xf0-\\xba\\xd4\\x82\\x82X\\xffJF#\\xbdB\\xac', 'keyId': 7618782120609054722}}, 'operationTime': Timestamp(1773886656, 5)}")>]>
+unit-shard-two-1: 02:18:04 ERROR unit.shard-two/1.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5cdb02345c2b4bb76689, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0016294760000619135>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.0030362869999862596>, <ServerDescription ('10.146.29.46', 27017) server_type: RSSecondary, rtt: 0.0023315089999869087>]>
+unit-shard-one-0: 02:18:07 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5cde66c17f84f97cfc67, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.105', 27017) server_type: RSSecondary, rtt: 0.001494493000109287>, <ServerDescription ('10.146.29.208', 27017) server_type: RSSecondary, rtt: 0.0010593000001790642>, <ServerDescription ('10.146.29.56', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bb5cca0d31470a36c5875e'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4463, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1773886682, 1), 'signature': {'hash': b'\\xb9G\\xd5<\\xcf\\xe6\\xf0-\\xba\\xd4\\x82\\x82X\\xffJF#\\xbdB\\xac', 'keyId': 7618782120609054722}}, 'operationTime': Timestamp(1773886656, 5)}")>]>
+unit-shard-two-1: 02:18:08 ERROR unit.shard-two/1.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5cdf02345c2b4bb7668a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0015554340000107914>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.0008935610001117311>, <ServerDescription ('10.146.29.46', 27017) server_type: RSSecondary, rtt: 0.0009438969998427638>]>
+machine-9: 02:21:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 02:21:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:29:40 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb5f92f27ba815f822d6cf, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.105', 27017) server_type: RSSecondary, rtt: 0.0034343539996370964>, <ServerDescription ('10.146.29.208', 27017) server_type: RSSecondary, rtt: 0.001070177000201511>, <ServerDescription ('10.146.29.56', 27017) server_type: RSSecondary, rtt: 0.0017165560002467828>]>
+unit-shard-two-1: 02:33:44 ERROR unit.shard-two/1.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb60860062077bb7b38bc9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0013115990000187594>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.001172099000086746>, <ServerDescription ('10.146.29.46', 27017) server_type: RSSecondary, rtt: 0.0016066009998212394>]>
+unit-config-server-0: 02:39:04 ERROR unit.config-server/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb61c63b094d902287fc2d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.000900570999874617>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.0015008229997874878>, <ServerDescription ('10.146.29.46', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 02:39:08 ERROR unit.config-server/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb61ca3b094d902287fc33, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0014259099998525926>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.0011530100000527455>, <ServerDescription ('10.146.29.46', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 02:39:12 ERROR unit.config-server/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb61cf3b094d902287fc39, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0009095850000448991>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.000791207000020222>, <ServerDescription ('10.146.29.46', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 02:39:16 ERROR unit.config-server/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb61d33b094d902287fc3f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0011371759997018671>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.001099930999771459>, <ServerDescription ('10.146.29.46', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 02:39:20 ERROR unit.config-server/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bb61d73b094d902287fc45, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.146.29.115', 27017) server_type: RSSecondary, rtt: 0.0007105459999365848>, <ServerDescription ('10.146.29.137', 27017) server_type: RSSecondary, rtt: 0.000982374000159325>, <ServerDescription ('10.146.29.46', 27017) server_type: Unknown, rtt: None>]>
+unit-config-server-0: 02:39:58 ERROR unit.config-server/0.juju-log Cluster cannot read/write to replicas
+machine-6: 02:40:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-6: 02:40:29 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+unit-shard-one-0: 02:40:31 ERROR unit.shard-one/0.juju-log Cluster cannot read/write to replicas
+machine-6: 02:40:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:40:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:40:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:40:46 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:40:53 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:41:00 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:41:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:41:19 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:41:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:41:50 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:42:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:42:28 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:42:57 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+machine-6: 02:43:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [33bf84] "machine-6" cannot open api: unable to connect to API: dial tcp 10.146.29.143:17070: connect: network is unreachable
+unit-shard-two-1: 02:43:38 ERROR unit.shard-two/1.juju-log Cluster failed to move primary before re-election.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
