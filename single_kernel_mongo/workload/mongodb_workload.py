@@ -57,10 +57,8 @@ class MongoDBWorkload(WorkloadBase):
         bin_args = bin_args or []
         if self.substrate == Substrates.VM:
             mongo_command = "charmed-mongodb.mongod-cli"
-            user, group = "root", "root"
         else:
             mongo_command = "mongod"
-            user, group = self.users.user, self.users.group
         command = [
             f"{self.paths.binaries_path}/{mongo_command}",
             bin_keyword,
@@ -68,7 +66,7 @@ class MongoDBWorkload(WorkloadBase):
         ]
         return self.exec(
             command=command,
-            user=user,
-            group=group,
+            user=self.command_user.user,
+            group=self.command_user.group,
             working_dir=f"{self.paths.etc_path}",
         )

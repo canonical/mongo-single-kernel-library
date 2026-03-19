@@ -27,6 +27,7 @@ class KubernetesWorkload(WorkloadBase):
     substrate = "k8s"
     container: Container  # We always have a container in a Kubernetes Workload
     users = KubernetesUser()
+    command_user = KubernetesUser()
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         if not container:

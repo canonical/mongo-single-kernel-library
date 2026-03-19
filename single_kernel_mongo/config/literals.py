@@ -88,6 +88,14 @@ class VmUser(WorkloadUser[int]):
     group: int = 0
 
 
+@dataclass(frozen=True)
+class RootUser(WorkloadUser[str]):
+    """The system user for VM charms."""
+
+    user: str = "root"
+    group: str = "root"
+
+
 CRON_FILE = Path("/etc/cron.d/mongodb")
 
 SYSTEMD_MONGODB_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongod.service.d")
