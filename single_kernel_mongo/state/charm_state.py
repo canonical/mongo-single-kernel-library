@@ -683,6 +683,9 @@ class CharmState(Object, StatusesStateProtocol):
         if self.shard_state.external_ca_secret is not None and not self.tls.client_enabled:
             return False
 
+        if not self.shard_state.shard_integrated:
+            return False
+
         try:
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
