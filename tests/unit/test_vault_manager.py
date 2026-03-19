@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 import pytest
 from ops import BlockedStatus, testing
-from ops.testing import Context, PeerRelation, Relation, Secret, State
+from ops.testing import Container, Context, PeerRelation, Relation, Secret, State
 from pytest_mock import MockerFixture
 
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -19,7 +19,7 @@ VaultStateFull = tuple[PeerRelation, PeerRelation, Relation, State]
 
 
 @pytest.fixture
-def vault_state_full(mongodb_name: str) -> VaultStateFull:
+def vault_state_full(mongodb_name: str, mongodb_container: Container | None) -> VaultStateFull:
     peer_relation = testing.PeerRelation(
         id=1,
         endpoint=PeerRelationNames.PEERS.value,
@@ -53,6 +53,7 @@ def vault_state_full(mongodb_name: str) -> VaultStateFull:
     )
     state_in = testing.State(
         config={"role": "replication", "enable-encryption-at-rest": True},
+        containers=mongodb_container,
         secrets={
             Secret(
                 tracked_content={"vault-nonce": NONCE},
@@ -68,7 +69,9 @@ def vault_state_full(mongodb_name: str) -> VaultStateFull:
 
 
 @pytest.fixture
-def vault_state_flip_encryption(mongodb_name: str) -> Callable[[bool], VaultStateFull]:  # noqa: F821
+def vault_state_flip_encryption(
+    mongodb_name: str, mongodb_container: Container | None
+) -> Callable[[bool], VaultStateFull]:  # noqa: F821
     def vault_state_for(enabled: bool) -> VaultStateFull:
         status_peers_relation = testing.PeerRelation(
             id=1, endpoint=PeerRelationNames.STATUS_PEERS.value
@@ -90,6 +93,7 @@ def vault_state_flip_encryption(mongodb_name: str) -> Callable[[bool], VaultStat
             relations.add(vault_relation)
         state_in = testing.State(
             config={"role": "replication", "enable-encryption-at-rest": enabled},
+            containers=mongodb_container,
             secrets={
                 Secret(
                     tracked_content={"vault-nonce": NONCE},
@@ -120,7 +124,10 @@ def vault_state_no_encryption(
 
 
 def test_vault_create_nonce(
-    mongodb_ctx: Context[MongoTestCharm], mongodb_name: str, mocker: MockerFixture
+    mongodb_ctx: Context[MongoTestCharm],
+    mongodb_name: str,
+    mocker: MockerFixture,
+    mongodb_container: Container | None,
 ):
     peer_relation = testing.PeerRelation(
         id=1,
@@ -129,6 +136,7 @@ def test_vault_create_nonce(
     )
     state_in = testing.State(
         config={"role": "replication", "enable-encryption-at-rest": True},
+        containers=mongodb_container,
         secrets={},
         relations={peer_relation},
         leader=True,
@@ -140,7 +148,9 @@ def test_vault_create_nonce(
     assert len(secret_out.latest_content.get("vault-nonce", "")) == 32
 
 
-def test_vault_manager_request_nonce(mongodb_ctx: Context[MongoTestCharm], mongodb_name: str):
+def test_vault_manager_request_nonce(
+    mongodb_ctx: Context[MongoTestCharm], mongodb_name: str, mongodb_container: Container | None
+):
     peer_relation = testing.PeerRelation(
         id=1,
         endpoint=PeerRelationNames.PEERS.value,
@@ -155,6 +165,7 @@ def test_vault_manager_request_nonce(mongodb_ctx: Context[MongoTestCharm], mongo
     )
     state_in = testing.State(
         config={"role": "replication", "enable-encryption-at-rest": True},
+        containers=mongodb_container,
         secrets={
             Secret(
                 tracked_content={"vault-nonce": NONCE},
@@ -177,7 +188,7 @@ def test_vault_manager_request_nonce(mongodb_ctx: Context[MongoTestCharm], mongo
 
 
 def test_vault_manager_no_encryption_status(
-    mongodb_ctx: Context[MongoTestCharm], mongodb_name: str
+    mongodb_ctx: Context[MongoTestCharm], mongodb_name: str, mongodb_container: Container | None
 ):
     status_peers_relation = testing.PeerRelation(
         id=1, endpoint=PeerRelationNames.STATUS_PEERS.value
@@ -196,6 +207,7 @@ def test_vault_manager_no_encryption_status(
     )
     state_in = testing.State(
         config={"role": "replication", "enable-encryption-at-rest": False},
+        containers=mongodb_container,
         secrets={
             Secret(
                 tracked_content={"vault-nonce": NONCE},

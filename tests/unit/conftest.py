@@ -2,6 +2,7 @@ import pathlib
 from pathlib import Path
 from platform import platform
 
+import ops.testing
 import pytest
 import tomllib
 import yaml
@@ -265,7 +266,15 @@ def mongodb_ctx(substrate: Substrate):
         from tests.charms.mongodb_k8s_test_charm.src.charm import (
             MongoKubernetesTestCharm as TestCharm,
         )
+
     return Context(TestCharm)
+
+
+@pytest.fixture
+def mongodb_container(substrate: Substrate) -> set[ops.testing.Container]:
+    if substrate == "lxd":
+        return set()
+    return {ops.testing.Container(name="mongod", can_connect=True)}
 
 
 @pytest.fixture
