@@ -12,6 +12,7 @@ from tests.integration.helpers.common import (
     UNIT_IDS,
     check_app_status,
     deploy_charm,
+    find_unit,
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
@@ -68,12 +69,22 @@ async def test_integration_goes_to_blocked(
 
 
 @pytest.mark.abort_on_fail
-async def test_remove_relation_goes_to_normal(
-    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str
-):
+async def test_remove_relation_goes_to_normal(ops_test: OpsTest, vault_charm_name: str):
     app_name = await get_app_name(ops_test)
     assert ops_test.model
     await ops_test.model.applications[app_name].remove_relation(
         f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
+
+@pytest.mark.abort_on_fail
+async def test_rotation_fails_if_not_okay(ops_test: OpsTest, substrate: Substrate):
+    app_name = await get_app_name(ops_test)
+    assert ops_test.model
+    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    action = await leader_unit.run_action("rotate-encryption-master-key")
+    result = await action.wait()
+
+    assert result.status == "failed"
+    assert result.results["message"] == "Encryption at rest not enabled on this application."

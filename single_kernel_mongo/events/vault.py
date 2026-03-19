@@ -156,4 +156,5 @@ class VaultEventHandler(Object):
             self.manager.rotate_master_key()
             event.set_results({"result": "success", "message": "OK"})
         except ImpossibleToRotateMasterKeyError as e:
+            event.set_results({"result": "failed", "message": f"{e}"})
             event.fail(f"Failed to rotate master key: {e}")

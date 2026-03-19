@@ -161,8 +161,18 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def rotate_master_key(self) -> None:
         """Rotates the vault master key."""
-        if not (vault_state := self.vault_state()) == VaultConfigurationState.ACTIVE:
-            raise ImpossibleToRotateMasterKeyError(self.map_state_to_status(vault_state).message)
+        vault_state = self.vault_state()
+        match vault_state:
+            case VaultConfigurationState.ACTIVE:
+                pass
+            case VaultConfigurationState.DISABLED:
+                raise ImpossibleToRotateMasterKeyError(
+                    "Encryption at rest not enabled on this application."
+                )
+            case _:
+                raise ImpossibleToRotateMasterKeyError(
+                    self.map_state_to_status(vault_state).message
+                )
 
         self.dependent.workload.stop()
 
