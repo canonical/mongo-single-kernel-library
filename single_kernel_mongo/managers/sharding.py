@@ -596,7 +596,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         # We restart PBM only when the shard is integrated on the cluster side.
         if self.state.shard_state.shard_integrated:
-            self.dependent.s3_backup_manager.configure_and_restart()
+            self.dependent.backup_manager.configure_and_restart()
 
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
