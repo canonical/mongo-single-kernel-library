@@ -89,6 +89,7 @@ async def deploy_glauth(ops_test: OpsTest, kubernetes_model: Model) -> None:
         await kubernetes_model.integrate(
             f"{LDAP_APP_NAME}:pg-database", f"{POSTGRESQL_K8S}:database"
         )
+        await kubernetes_model.integrate(LDAP_APP_NAME, CERTIFICATES)
         await kubernetes_model.integrate(LDAP_APP_NAME, LDAP_UTILS_APP_NAME)
 
         await kubernetes_model.wait_for_idle(
