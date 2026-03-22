@@ -1,0 +1,307 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.ha:ha.py:86 Calling network loss on ns=testing and pod=shard-two-1
+[32mINFO    [0m integration.helpers.ha:ha.py:113 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [executing] maintenance: Starting MongoDB.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.19   unsupported  02:17:14Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     6.0.24   active       3  mongodb-k8s                  0  10.152.183.173  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.177  no       
+shard-one         6.0.24   active       3  mongodb-k8s                  1  10.152.183.198  no       
+shard-two         6.0.24   active       3  mongodb-k8s                  2  10.152.183.165  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.40         Primary.
+config-server/1      active    idle   10.1.53.39         
+config-server/2      active    idle   10.1.53.38         
+continuous-write/0*  waiting   idle   10.1.53.37         
+shard-one/0          active    idle   10.1.53.43         Primary.
+shard-one/1          active    idle   10.1.53.42         
+shard-one/2*         active    idle   10.1.53.41         
+shard-two/0*         active    idle   10.1.53.46         Primary.
+shard-two/1          active    idle   10.1.53.45         
+shard-two/2          active    idle   10.1.53.44         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-2: 01:45:37 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49c0ab0dad510f636366, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bf49b8160f6c4c3c5f9b1a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14026}")>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005577260000109163>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009048179999808781>]>
+unit-shard-one-2: 01:45:42 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49c5ab0dad510f636367, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-0.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bf49bac209448b5e40c7fe'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11233}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016641759999629357>]>
+unit-shard-one-2: 01:45:46 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49c9ab0dad510f636368, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.018039187999988826>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.006218657999966126>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0014146920000257523>]>
+unit-shard-one-2: 01:45:51 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49ceab0dad510f636369, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000782885000035094>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007749220000050627>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.007638508000013644>]>
+unit-shard-two-0: 01:46:07 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49de3f6e93d60be66f8a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0022954329999720358>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0017976059999682548>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005318079998914982>]>
+unit-shard-two-0: 01:46:11 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49e23f6e93d60be66f8b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0023039750000179993>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005789179999737826>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0019177070000750973>]>
+unit-shard-one-2: 01:46:13 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49e4a057d3b1ee45aea3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'69bf49d477b58e49bbdc47f8\'), \'counter\': 10}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 11886, \'lastCommittedOpTime\': Timestamp(1774143966, 1), \'$clusterTime\': {\'clusterTime\': Timestamp(1774143971, 2), \'signature\': {\'hash\': b"d\\x0c\\xb83\\x8d\\xf9\\xc8,H<\\xea\\x04\\x81\\xb0q\\xb9d\'\\xbe.", \'keyId\': 7619889367472930842}}, \'operationTime\': Timestamp(1774143966, 1)}')>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'69bf49d6da983e8ea0f062af\'), \'counter\': 6}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 13578, \'lastCommittedOpTime\': Timestamp(1774143966, 1), \'$clusterTime\': {\'clusterTime\': Timestamp(1774143971, 2), \'signature\': {\'hash\': b"d\\x0c\\xb83\\x8d\\xf9\\xc8,H<\\xea\\x04\\x81\\xb0q\\xb9d\'\\xbe.", \'keyId\': 7619889367472930842}}, \'operationTime\': Timestamp(1774143966, 1)}')>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007557330000054208>]>
+unit-shard-one-2: 01:46:18 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf49e8a057d3b1ee45aea4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013836449999189426>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-1.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004839859999492546>]>
+unit-shard-one-0: 01:50:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:50:41 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 01:50:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 01:50:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 01:50:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 01:50:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 01:50:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 01:51:12 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 01:51:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:52:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:52:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 01:53:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:53:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:53:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 01:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 01:53:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 01:53:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 01:54:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 01:54:14 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 01:54:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:54:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:54:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 01:54:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 01:54:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 01:54:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:55:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:55:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 01:55:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 01:57:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 01:57:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 01:58:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:58:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 01:58:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:00:38 ERROR unit.shard-one/0.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf4d45d0a013df70753459, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.002478256999893347>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008893540000372013>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013106260000768089>]>
+unit-shard-two-0: 02:00:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:00:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:00:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:00:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:01:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:01:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:01:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:01:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:02:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:04:15 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:04:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:04:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:05:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:06:19 ERROR unit.shard-two/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69bf4e9a1e1e239e372a6441, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bf49f83e5559ab59ed6f99'), 'counter': 11}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12900, 'lastCommittedOpTime': Timestamp(1774145177, 2), '$clusterTime': {'clusterTime': Timestamp(1774145178, 1), 'signature': {'hash': b'\\xaf\\x9d;>\\x85+\\xec\\x82\\x88N\\xa5\\xaaD\\xc7\\x08.\\xd7\\x9f\\x99\\x81', 'keyId': 7619889367472930842}}, 'operationTime': Timestamp(1774145177, 2)}")>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69bf4e90f7cee318e920aaca'), 'counter': 9}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12596, 'lastCommittedOpTime': Timestamp(1774145177, 2), '$clusterTime': {'clusterTime': Timestamp(1774145178, 1), 'signature': {'hash': b'\\xaf\\x9d;>\\x85+\\xec\\x82\\x88N\\xa5\\xaaD\\xc7\\x08.\\xd7\\x9f\\x99\\x81', 'keyId': 7619889367472930842}}, 'operationTime': Timestamp(1774145177, 2)}")>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006957339999189571>]>
+unit-shard-two-2: 02:06:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:06:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:06:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:06:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:06:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:06:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:06:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:07:07 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:07:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:07:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:07:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:07:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 02:07:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:08:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:11:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:11:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:12:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:12:58 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:13:19 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:13:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 02:13:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:13:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-1: 02:14:53 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d23f8c] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:15:00 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d23f8c] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:15:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d23f8c] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:15:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [d23f8c] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:15:49 ERROR unit.shard-two/1.juju-log cannot perform the following tasks:
+- Start service "mongod" (cannot start service while terminating)
+----- Logs from task 0 -----
+2026-03-22T02:15:49Z INFO Service "mongod" already stopping.
+----- Logs from task 1 -----
+2026-03-22T02:15:49Z ERROR cannot start service while terminating
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (cannot start service while terminating)
+----- Logs from task 0 -----
+2026-03-22T02:15:49Z INFO Service "mongod" already stopping.
+----- Logs from task 1 -----
+2026-03-22T02:15:49Z ERROR cannot start service while terminating
+-----
+unit-shard-two-1: 02:15:55 ERROR unit.shard-two/1.juju-log cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-03-22T02:15:54Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-03-22T02:15:55Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:15:55Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-03-22T02:15:54Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-03-22T02:15:55Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:15:55Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-two-1: 02:16:00 ERROR unit.shard-two/1.juju-log cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:00Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:00Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:00Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:00Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-two-1: 02:16:05 ERROR unit.shard-two/1.juju-log cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:05Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.598Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:01.663Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:02.696Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:03.814Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.130Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:05Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:05Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.598Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:01.663Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:02.696Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:03.814Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.130Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:05Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-two-1: 02:16:10 ERROR unit.shard-two/1.juju-log cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:10Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.598Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:01.663Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:02.696Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:03.814Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.130Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.680Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:06.769Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:08.816Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:10.191Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:10Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-22T02:16:10Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-22T02:15:55.011Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:55.550Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:56.574Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:15:58.649Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.073Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:00.598Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:01.663Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:02.696Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:03.814Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.130Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:05.680Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:06.769Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:08.816Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+    {"t":{"$date":"2026-03-22T02:16:10.191Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open /var/log/mongodb/mongod.log"}}}
+2026-03-22T02:16:10Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
