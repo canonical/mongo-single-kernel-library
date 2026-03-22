@@ -1,0 +1,84 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/continuous-write-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [idle] waiting: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+  continuous-write/0 [idle] waiting:
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_tls:test_backups_tls.py:138 Restore backup result restore.results={'restore-status': 'restore started', 'return-code': 0}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb/1 [executing] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  02:25:11Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+continuous-write           active      1  continuous-write             0  no       
+mongodb           7.0.28   active      3  mongodb                      0  no       
+s3-integrator              active      1  s3-integrator     1/edge   515  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports      Message
+continuous-write/0*  active    idle   4        10.138.127.9               
+mongodb/0*           active    idle   0        10.138.127.172  27017/tcp  Primary.
+mongodb/1            active    idle   1        10.138.127.231  27017/tcp  
+mongodb/2            active    idle   2        10.138.127.108  27017/tcp  
+s3-integrator/0*     active    idle   3        10.138.127.211             
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.138.127.172  juju-38c86c-0  ubuntu@24.04  github-runner  Running
+1        started  10.138.127.231  juju-38c86c-1  ubuntu@24.04  github-runner  Running
+2        started  10.138.127.108  juju-38c86c-2  ubuntu@24.04  github-runner  Running
+3        started  10.138.127.211  juju-38c86c-3  ubuntu@22.04  github-runner  Running
+4        started  10.138.127.9    juju-38c86c-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:15:06 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:15:06 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:15:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:15:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:25 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:25 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 02:16:06 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:16:06 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:16:12 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:16:12 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:16:20 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:16:20 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:18:11 ERROR unit.mongodb/0.juju-log s3-credentials:5: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]
+
+unit-mongodb-0: 02:18:21 ERROR unit.mongodb/0.juju-log s3-credentials:5: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.228:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]
+
+unit-mongodb-0: 02:18:21 ERROR unit.mongodb/0.juju-log s3-credentials:5: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]\n'}
+unit-mongodb-0: 02:18:30 ERROR unit.mongodb/0.juju-log status-peers:0: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.228:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]
+
+unit-mongodb-0: 02:18:30 ERROR unit.mongodb/0.juju-log status-peers:0: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]\n'}
+unit-mongodb-0: 02:18:39 ERROR unit.mongodb/0.juju-log status-peers:0: cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.228:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]
+
+unit-mongodb-0: 02:18:39 ERROR unit.mongodb/0.juju-log status-peers:0: Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/69bf5161f5d7ce72d3afd29f [mongodb/10.138.127.231:27017]\n'}
+machine-4: 02:20:54 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:20:54 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
