@@ -1,0 +1,111 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.19   unsupported  05:17:25Z
+
+App            Version  Status       Scale  Charm    Channel            Rev  Exposed  Message
+config-server  7.0.28   maintenance    1/3  mongodb  8-transition/edge  281  no       Installing MongoDB...
+shard-one               maintenance    1/3  mongodb  8-transition/edge  281  no       Installing MongoDB...
+shard-two               error            1  mongodb  8-transition/edge  281  no       hook failed: "install"
+
+Unit              Workload     Agent       Machine  Public address  Ports  Message
+config-server/0*  maintenance  executing   0        10.64.92.137           (install) Installing MongoDB...
+config-server/1   waiting      allocating  1        10.64.92.233           waiting for machine
+config-server/2   waiting      allocating  2        10.64.92.86            agent initialising
+shard-one/0*      maintenance  executing   3        10.64.92.125           (install) Installing MongoDB...
+shard-one/1       waiting      allocating  4        10.64.92.199           waiting for machine
+shard-one/2       waiting      allocating  5        10.64.92.54            waiting for machine
+shard-two/0*      error        idle        6        10.64.92.147           hook failed: "install"
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.64.92.137  juju-150d5b-0  ubuntu@24.04  github-runner  Running
+1        pending  10.64.92.233  juju-150d5b-1  ubuntu@24.04  github-runner  Running
+2        started  10.64.92.86   juju-150d5b-2  ubuntu@24.04  github-runner  Running
+3        started  10.64.92.125  juju-150d5b-3  ubuntu@24.04  github-runner  Running
+4        pending  10.64.92.199  juju-150d5b-4  ubuntu@24.04  github-runner  Running
+5        pending  10.64.92.54   juju-150d5b-5  ubuntu@24.04  github-runner  Running
+6        started  10.64.92.147  juju-150d5b-6  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 05:15:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 05:15:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 05:15:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 05:15:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 05:16:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 05:16:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 05:17:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 05:17:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-two-0: 05:17:23 ERROR unit.shard-two/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 935, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1012, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1060, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 961, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 887, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 947, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBVMCharm)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 72, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 159, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 254, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1014, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-0: 05:17:23 ERROR juju.worker.uniter.operation hook "install" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
