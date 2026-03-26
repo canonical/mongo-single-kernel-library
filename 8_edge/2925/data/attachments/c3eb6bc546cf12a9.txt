@@ -1,0 +1,185 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongodb-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.19   unsupported  03:36:16Z
+
+App                                Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server                      8.0.10   active      2  mongodb-k8s                           0  10.152.183.65   no       
+self-signed-certificates                    active      1  self-signed-certificates  1/stable  586  10.152.183.22   no       
+self-signed-certificates-separate           active      1  self-signed-certificates  1/stable  586  10.152.183.212  no       
+shard-one                          8.0.10   active      3  mongodb-k8s                           1  10.152.183.155  no       
+shard-tree                         8.0.10   active      1  mongodb-k8s                           3  10.152.183.70   no       
+shard-two                          8.0.10   active      1  mongodb-k8s                           2  10.152.183.121  no       
+
+Unit                                  Workload  Agent      Address     Ports  Message
+config-server/0*                      blocked   executing  10.1.53.17         Shards: shard-one, shard-two are unreachable.
+config-server/1                       blocked   idle       10.1.53.19         Shards: shard-two, shard-one are unreachable.
+self-signed-certificates-separate/0*  active    idle       10.1.53.44         
+self-signed-certificates/0*           active    idle       10.1.53.43         
+shard-one/0*                          blocked   idle       10.1.53.27         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/1                           blocked   idle       10.1.53.36         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/2                           blocked   idle       10.1.53.35         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-tree/0*                         blocked   idle       10.1.53.49         Missing relation to config-server.
+shard-two/0*                          blocked   idle       10.1.53.41         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-two-0: 03:09:28 ERROR unit.shard-two/0.juju-log peer-certificates:16: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-26T03:09:28Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-26T03:04:30.457Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:30.457Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:04:59.149Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:59.149Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:07:33.389Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:07:33.389Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:09:28.827Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:09:28.827Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-03-26T03:09:28Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-26T03:09:28Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-26T03:04:30.457Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:30.457Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:04:59.149Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:59.149Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:07:33.389Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:07:33.389Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:09:28.827Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:09:28.827Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-03-26T03:09:28Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-two-0: 03:09:28 ERROR unit.shard-two/0.juju-log peer-certificates:16: single_kernel_mongo.managers.mongodb_operator:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-shard-two-0: 03:09:28 ERROR unit.shard-two/0.juju-log peer-certificates:16: single_kernel_mongo.managers.tls:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 03:09:43 ERROR unit.config-server/0.juju-log config-server:18: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=f94a5115-c1f8-4391-a8a9-6ec1765a5c73,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=f94a5115-c1f8-4391-a8a9-6ec1765a5c73,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1774494582, 2), \'signature\': {\'hash\': b\'CL\\xf9\\xf4}Y\\xcax\\xb8\\xe3\\xa3\\xb1-MR\\xd0\\xe5\\xf1X\\x07\', \'keyId\': 7621394667610832920}}, \'operationTime\': Timestamp(1774494582, 2)}')
+unit-shard-one-2: 03:09:44 ERROR unit.shard-one/2.juju-log peer-certificates:14: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-26T03:09:44Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-26T03:04:17.961Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:17.961Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:04:40.403Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:40.403Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:07:55.789Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:07:55.789Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:08:09.829Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:08:09.829Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:09:44.796Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:09:44.797Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-03-26T03:09:44Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-03-26T03:09:44Z INFO Most recent service output:
+    {"t":{"$date":"2026-03-26T03:04:17.961Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:17.961Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:04:40.403Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:04:40.403Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:07:55.789Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:07:55.789Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:08:09.829Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:08:09.829Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-03-26T03:09:44.796Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-03-26T03:09:44.797Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-03-26T03:09:44Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-2: 03:09:44 ERROR unit.shard-one/2.juju-log peer-certificates:14: single_kernel_mongo.managers.mongodb_operator:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-shard-one-2: 03:09:44 ERROR unit.shard-one/2.juju-log peer-certificates:14: single_kernel_mongo.managers.tls:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 03:10:01 ERROR unit.config-server/0.juju-log config-server:19: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1774494600, 1), \'signature\': {\'hash\': b\'\\x86L\\x82!\\xe4T\\xfe\\x15x\\x8a]\\xd4B\\x8aO1\\xb6\\xba~\\xaf\', \'keyId\': 7621394667610832920}}, \'operationTime\': Timestamp(1774494600, 1)}')
+unit-shard-one-2: 03:32:18 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:32:19 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:32:19 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:32:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:32:24 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:32:24 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:32:24 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:32:24 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:32:28 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:32:29 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:32:30 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:32:33 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:32:55 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:32:56 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:01 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:01 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:03 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:03 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:04 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:04 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:05 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:05 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:05 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:06 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:07 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:08 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:09 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:10 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:10 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:10 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:11 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:33:12 ERROR unit.shard-one/1.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:14 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:14 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:14 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:15 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:18 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:18 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:28 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:28 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:34 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:33:35 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:51 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:51 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:58 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:33:58 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:33:59 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:34:00 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:34:04 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:34:04 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:34:06 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:34:06 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:34:10 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:34:11 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:34:13 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:34:14 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:34:14 ERROR unit.shard-one/2.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:34:14 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:34:17 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:34:17 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
