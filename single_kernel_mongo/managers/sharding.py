@@ -369,6 +369,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 logger.error(f"Failed to add {shard_name} to cluster")
                 raise e
 
+        # Say to the shard that it has been integrated
+        self.data_interface.update_relation_data(
+            relation.id,
+            {AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(True)},
+        )
+
     def remove_shards(self) -> None:
         """During update-status, remove shards until they are removed completely.
 
@@ -534,8 +540,8 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         # Edge case for DPE-4998
         # TODO: Remove this when https://github.com/canonical/operator/issues/1306 is fixed.
-        if relation.app is None:
-            raise NonDeferrableFailedHookChecksError("Missing app information in event, skipping.")
+        if relation.app is None:  # pyright: ignore[reportUnnecessaryComparison]
+            raise NonDeferrableFailedHookChecksError("Missing app information in event, skipping.")  # pyright: ignore[reportUnreachable]
 
         if is_leaving and not self.state.app_peer_data.mongos_hosts:
             raise NonDeferrableFailedHookChecksError(
@@ -587,6 +593,10 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         if not self.dependent.mongo_manager.mongod_ready():
             raise NotReadyError
+
+        # We restart PBM only when the shard is integrated on the cluster side.
+        if self.state.shard_state.shard_integrated:
+            self.dependent.backup_manager.configure_and_restart()
 
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
