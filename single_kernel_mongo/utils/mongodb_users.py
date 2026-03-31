@@ -11,6 +11,16 @@ from single_kernel_mongo.config.literals import LOCALHOST, MAX_PASSWORD_LENGTH, 
 from single_kernel_mongo.exceptions import InvalidPasswordError
 
 
+class AuthRestrictions(TypedDict, total=False):
+    """Authentication Restrictions.
+
+    See https://www.mongodb.com/docs/manual/reference/method/db.createUser/#authentication-restrictions.
+    """
+
+    clientSource: list[str]  # List of IPs / CIDRS
+    serverAddress: list[str]  # List of IPs / CIDRS
+
+
 class DBPrivilege(TypedDict, total=False):
     """A DB Privilege on db."""
 
