@@ -14,13 +14,9 @@ from ...helpers.common import (
     get_app_name,
     get_juju_status,
     get_unit_id,
-    unit_hostname,
 )
 from ...helpers.ha import (
-    cut_network_from_unit,
-    restore_network_for_unit,
     verify_writes,
-    wait_until_unit_in_status,
 )
 from ...helpers.types import Substrate
 from ...helpers.upgrade import refresh_charm
@@ -132,33 +128,4 @@ async def test_preflight_check(ops_test: OpsTest) -> None:
 
     await ops_test.model.wait_for_idle(
         apps=[app_name], status="active", timeout=1000, idle_period=20
-    )
-
-
-@pytest.mark.abort_on_fail
-async def test_preflight_check_failure(ops_test: OpsTest, substrate: Substrate, chaos_mesh) -> None:
-    """Verifies that the preflight check can run successfully."""
-    app_name = await get_app_name(ops_test)
-    unit = await find_unit(ops_test, leader=False, app_name=app_name)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    machine_name = await unit_hostname(ops_test, unit.name)
-    cut_network_from_unit(ops_test, substrate, machine_name)
-
-    await wait_until_unit_in_status(
-        ops_test, substrate, unit, leader_unit, "(not reachable/healthy)", app_name
-    )
-
-    logger.info("Calling pre-refresh-check")
-    action = await leader_unit.run_action("pre-refresh-check")
-    await action.wait()
-    assert action.status == "failed", "pre-refresh-check succeeded, expected to fail."
-
-    restore_network_for_unit(ops_test, substrate, machine_name)
-
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
     )

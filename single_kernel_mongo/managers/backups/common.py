@@ -385,6 +385,26 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
 
             raise RestoreError(fail_message)
 
+    def backup_in_progress(self) -> bool:
+        """Checks if a backup is in progress using the backup statuses objects."""
+        statuses = self.state.statuses.get(
+            scope="unit",
+            component=self.name,
+            running_status_only=True,
+            running_status_type="async",
+        )
+        return any(status.message.startswith("Backup started") for status in statuses)
+
+    def restore_in_progress(self) -> bool:
+        """Checks if a restore is in progress using the backup statuses objects."""
+        statuses = self.state.statuses.get(
+            scope="unit",
+            component=self.name,
+            running_status_only=True,
+            running_status_type="async",
+        )
+        return any(status.message.startswith("Restore started") for status in statuses)
+
     def backup_state(self) -> BackupState:  # noqa:C901
         """Gets the backup state that can be mapped to a status."""
         if not self.state.db_initialised:

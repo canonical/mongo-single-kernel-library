@@ -18,17 +18,18 @@ class AppShardingComponentKeys(str, Enum):
     """Config Server State Model for the application."""
 
     DATABASE = "database"
-    OPERATOR_PASSWORD = "charmed-operator-password"
-    BACKUP_PASSWORD = "charmed-backup-password"
+    OPERATOR_PASSWORD = "charmed-operator-password"  # nosec: B105
+    BACKUP_PASSWORD = "charmed-backup-password"  # nosec: B105
     HOST = "host"
     KEY_FILE = "key-file"
-    INT_CA_SECRET = "int-ca-secret"
-    EXT_CA_SECRET = "ext-ca-secret"
-    BACKUP_CA_SECRET = "backup-ca-secret"
+    INT_CA_SECRET = "int-ca-secret"  # nosec: B105
+    EXT_CA_SECRET = "ext-ca-secret"  # nosec: B105
+    BACKUP_CA_SECRET = "backup-ca-secret"  # nosec: B105
+    SHARD_INTEGRATED = "shard-integrated"
 
     # We don't use those except to check if we've received credentials
-    USERNAME = "username"
-    PASSWORD = "password"
+    USERNAME = "username"  # nosec: B105
+    PASSWORD = "password"  # nosec: B105
 
 
 SECRETS_FIELDS = [
@@ -113,6 +114,20 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         return json.loads(
             self.relation_data.get(AppShardingComponentKeys.BACKUP_CA_SECRET.value, "null")
         )
+
+    @property
+    def shard_integrated(self) -> bool:
+        """Returns the shard integrated flag."""
+        if not self.relation:
+            return False
+        return json.loads(
+            self.relation_data.get(AppShardingComponentKeys.SHARD_INTEGRATED.value, "false")
+        )
+
+    @shard_integrated.setter
+    def shard_integrated(self, value: bool) -> None:
+        """Sets the shard integrated flag."""
+        self.update({AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(value)})
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):
