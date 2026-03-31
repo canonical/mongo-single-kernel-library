@@ -78,6 +78,8 @@ class ClusterConfigServerEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info("Database requested has not run yet, skipping.")
 
     def _on_relation_event(self, event: RelationChangedEvent) -> None:
         """Handle relation changed events."""
@@ -87,6 +89,8 @@ class ClusterConfigServerEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info("Database requested has not run yet, skipping.")
 
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""

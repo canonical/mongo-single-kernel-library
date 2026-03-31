@@ -51,6 +51,7 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     InvalidConfigRoleError,
     InvalidLdapQueryTemplateError,
@@ -250,6 +251,10 @@ class LifecycleEventsHandler(Object):
             return
         except (NotReadyError, PyMongoError, WorkloadServiceError):
             logger.info(f"Deferring {event}: Not ready yet.")
+            event.defer()
+            return
+        except DeferrableError as e:
+            logger.info(f"Deferring {event}: {e}")
             event.defer()
             return
 
