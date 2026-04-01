@@ -39,6 +39,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedLogRotateUser,
     CharmedStatsUser,
 )
+from single_kernel_mongo.utils.network_helpers import cidrs
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
@@ -359,6 +360,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             always_merger.merge,
             [
                 self.binding_ips,
+                self.cluster_ips,
                 self.port_parameter,
                 self.auth_parameter,
                 self.client_tls_parameters,
@@ -368,6 +370,12 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 self.vault_parameters,
             ],
         )
+
+    @property
+    @abstractmethod
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        ...
 
     @property
     @abstractmethod
@@ -401,7 +409,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                     },
                 },
             }
-        return {"net": {"bindIpAll": True}}
+        return {"net": {"bindIp": ",".join(sorted(self.state.listens_on()))}}
 
     @property
     def log_options(self) -> dict[str, Any]:
@@ -496,6 +504,29 @@ class MongoDBConfigManager(MongoConfigManager):
         self.config = config
         self.file = self.workload.paths.config_file
         self.auth = True
+
+    @property
+    @override
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        # Always include IPs from the local peer relation
+        cidrs_list = cidrs(self.state.peer_network().bind_addresses)
+        # The config server should include the CIDR for the shards
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
+            # For the local mongos
+            cidrs_list.append("127.0.0.1")
+        # The shards should include the CIDR for the config server
+        if self.state.is_role(MongoDBRoles.SHARD):
+            cidrs_list.extend(cidrs(self.state.sharding_network().bind_addresses))
+            # The shard should include the cidrs of the mongos charms
+            cidrs_list.extend(self.state.shard_state.mongos_cidrs)
+        # All cluster components (config server, mongos) should include the CIDRs of its counterpart
+        if self.state.is_cluster_component:
+            cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
+
+        # Deduplicate the list
+        return {"security": {"clusterIpSourceAllowlist": sorted(set(cidrs_list))}}
 
     @property
     def db_path_argument(self) -> dict[str, Any]:
@@ -660,6 +691,12 @@ class MongosConfigManager(MongoConfigManager):
                 self.state.ldap.ldap_user_to_dn_mapping
             )
         return ldap_params
+
+    @property
+    @override
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        return {}
 
     @override
     def build_config(self) -> dict[str, Any]:

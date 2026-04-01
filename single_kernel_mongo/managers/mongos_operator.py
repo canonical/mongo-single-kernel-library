@@ -52,6 +52,7 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -412,6 +413,12 @@ class MongosOperator(OperatorProtocol, Object):
             )
             raise
 
+    def update_ips_in_databag(self) -> None:
+        """Sets all the ips in the databag to be used by the leader."""
+        self.state.unit_peer_data.database_address = ip_addresses(
+            self.state.client_network().bind_addresses
+        )[0]
+
     @override
     def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible.
@@ -424,6 +431,9 @@ class MongosOperator(OperatorProtocol, Object):
 
     def share_connection_info(self):
         """Shares the connection information of clients."""
+        # Always update ips in databag.
+        self.update_ips_in_databag()
+
         if not self.state.db_initialised:
             return
         if not self.charm.unit.is_leader():
@@ -500,6 +510,8 @@ class MongosOperator(OperatorProtocol, Object):
             if self.state.mongos_cluster_relation:
                 self.state.cluster.extra_user_roles = new_extra_user_roles
 
+        if self.state.mongos_cluster_relation:
+            self.state.cluster.external_node_connectivity = external_connectivity
         self.state.app_peer_data.external_connectivity = external_connectivity
 
         if external_connectivity:

@@ -28,14 +28,14 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
     ("replset_status", "expected_status"),
     (
         ({}, MaintenanceStatus("Adding member...")),
-        ({"10.0.0.10": "PRIMARY"}, ActiveStatus("Primary.")),
-        ({"10.0.0.10": "SECONDARY"}, ActiveStatus("")),
-        ({"10.0.0.10": "STARTUP"}, MaintenanceStatus("Syncing member...")),
-        ({"10.0.0.10": "STARTUP2"}, MaintenanceStatus("Syncing member...")),
-        ({"10.0.0.10": "ROLLBACK"}, MaintenanceStatus("Syncing member...")),
-        ({"10.0.0.10": "RECOVERING"}, MaintenanceStatus("Syncing member...")),
-        ({"10.0.0.10": "REMOVED"}, MaintenanceStatus("Removing member...")),
-        ({"10.0.0.10": "ERROR"}, BlockedStatus("ERROR")),
+        ({"10.0.0.1": "PRIMARY"}, ActiveStatus("Primary.")),
+        ({"10.0.0.1": "SECONDARY"}, ActiveStatus("")),
+        ({"10.0.0.1": "STARTUP"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.1": "STARTUP2"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.1": "ROLLBACK"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.1": "RECOVERING"}, MaintenanceStatus("Syncing member...")),
+        ({"10.0.0.1": "REMOVED"}, MaintenanceStatus("Removing member...")),
+        ({"10.0.0.1": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
 def test_mongo_get_status_no_error_lxd(

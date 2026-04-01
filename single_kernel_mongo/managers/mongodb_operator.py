@@ -112,6 +112,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     get_user_from_username,
     validate_charm_user_password_config,
 )
+from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
@@ -516,6 +517,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         # allowing that event to run.
         self._configure_workloads()
 
+        # Write IPs in databag
+        self.update_ips_in_databag()
+
         logger.info("Starting MongoDB.")
         self.charm.status_handler.set_running_status(
             MongoDBStatuses.STARTING_MONGODB.value, scope="unit"
@@ -640,6 +644,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise ShardingMigrationError(
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
+
+        # If we had an IP change, we must restart.
+        self.restart_charm_services()
+
         if not self.charm.unit.is_leader():
             return
         self._handle_ldap_config_changes()
@@ -776,6 +784,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.peer_changed()
         self.update_related_hosts()
 
+    @override
     def peer_changed(self) -> None:
         """Handle relation changed events.
 
@@ -1018,6 +1027,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             # We can use either manager, what matters is the BackupConfigManager below
             self.s3_backup_manager.configure_and_restart()
 
+        self.update_ips_in_databag()
+
         if not self.charm.unit.is_leader():
             logger.debug("Only the leader can perform reconfigurations to the replica set.")
             return
@@ -1032,6 +1043,18 @@ class MongoDBOperator(OperatorProtocol, Object):
         # necessary in the case that pre-upgrade hook fails to reset the priority of election for
         # cluster nodes.
         self.mongo_manager.set_election_priority(priority=1)
+
+    def update_ips_in_databag(self) -> None:
+        """Sets all the ips in the databag to be used by the leader."""
+        self.state.unit_peer_data.database_address = ip_addresses(
+            self.state.client_network().bind_addresses
+        )[0]
+        self.state.unit_peer_data.config_server_address = ip_addresses(
+            self.state.config_server_network().bind_addresses
+        )[0]
+        self.state.unit_peer_data.cluster_address = ip_addresses(
+            self.state.cluster_network().bind_addresses
+        )[0]
 
     def update_hosts(self) -> None:
         """Update the replica set hosts and remove any unremoved replica from the config."""
@@ -1056,6 +1079,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.config_server_manager.remove_shards()
             # Update the config server DB URI on the remote mongos
             self.cluster_manager.update_config_server_db()
+
+        if self.state.is_role(MongoDBRoles.SHARD):
+            self.shard_manager.update_mongos_hosts()
 
     def open_ports(self) -> None:
         """Open ports on the workload.

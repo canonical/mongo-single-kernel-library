@@ -95,7 +95,7 @@ class ClusterProvider(Object):
         """
         self.assert_pass_hook_checks(initial_event=initial_event)
 
-        config_server_db = self.state.generate_config_server_db()
+        config_server_db = self.state.generate_config_server_db(relation)
         self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
         relation_data = {
             ClusterStateKeys.KEYFILE.value: self.state.get_keyfile(),
@@ -159,11 +159,11 @@ class ClusterProvider(Object):
         """Updates the config server DB URI in the mongos relation."""
         self.assert_pass_hook_checks()
 
-        config_server_db = self.state.generate_config_server_db()
         for relation in self.state.cluster_relations:
             if not self.data_interface.fetch_relation_field(relation.id, "database"):
                 logger.info("Database Requested has not run yet, skipping.")
                 continue
+            config_server_db = self.state.generate_config_server_db(relation)
             self.data_interface.update_relation_data(
                 relation.id,
                 {

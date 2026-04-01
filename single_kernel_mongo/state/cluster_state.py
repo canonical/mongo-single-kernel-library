@@ -4,6 +4,7 @@
 
 """The Cluster state."""
 
+import json
 from enum import Enum
 
 from ops import Application
@@ -91,3 +92,15 @@ class ClusterState(AbstractRelationState[Data]):
     def ldap_hash(self) -> str | None:
         """Returns the ldap hash shared by the config-server."""
         return self.relation_data.get(ClusterStateKeys.LDAP_HASH.value, None)
+
+    @property
+    def external_node_connectivity(self) -> bool:
+        """Returns the external-connectivity flag."""
+        return json.loads(
+            self.relation_data.get(ClusterStateKeys.EXTERNAL_NODE_CONNECTIVITY.value, "false")
+        )
+
+    @external_node_connectivity.setter
+    def external_node_connectivity(self, value: bool) -> None:
+        """Sets the external-connectivity flag."""
+        self.update({ClusterStateKeys.EXTERNAL_NODE_CONNECTIVITY.value: json.dumps(value)})

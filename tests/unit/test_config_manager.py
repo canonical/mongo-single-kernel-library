@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from ops.hookcmds import Network
 from ops.model import Relation
 from yaml import safe_dump
 
@@ -48,6 +49,20 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_state.tls.peer_enabled = False
     mock_state.tls.client_enabled = False
     mock_state.vault_relation = None
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
+    mock_state.listens_on = lambda: ["10.0.0.1", "127.0.0.1"]
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -65,6 +80,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     audit_options = manager.audit_options
     auth_parameter = manager.auth_parameter
     client_tls_parameters = manager.client_tls_parameters
+    cluster_ips = manager.cluster_ips
 
     all_params = manager.build_config()
 
@@ -77,7 +93,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "journal": {"enabled": True},
         }
     }
-    assert binding_ips == {"net": {"bindIpAll": True}}
+    assert binding_ips == {"net": {"bindIp": "10.0.0.1,127.0.0.1"}}
     assert log_options == {
         "setParameter": {"processUmask": "037"},
         "systemLog": {
@@ -104,14 +120,16 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
         }
     }
     assert client_tls_parameters == {}
+    assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
 
     assert (
         all_params
         == {
-            "net": {"bindIpAll": True, "port": 27017},
+            "net": {"bindIp": "10.0.0.1,127.0.0.1", "port": 27017},
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
+                "clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"],
                 "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
             },
             "setParameter": {"processUmask": "037"},
@@ -236,6 +254,19 @@ def test_mongos_config_manager(mocker):
     mock_state.tls.peer_enabled = False
     mock_state.tls.client_enabled = False
     mock_state.ldap.is_ready = lambda: False
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
     workload = VMMongosWorkload(VM_MONGOS, None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
@@ -251,6 +282,7 @@ def test_mongos_config_manager(mocker):
     auth_parameter = manager.auth_parameter
     client_tls_parameters = manager.client_tls_parameters
     config_server_db_parameter = manager.config_server_db_parameter
+    cluster_ips = manager.cluster_ips
 
     all_params = manager.build_config()
 
@@ -263,6 +295,7 @@ def test_mongos_config_manager(mocker):
             },
         }
     }
+    assert cluster_ips == {}
     assert log_options == {
         "setParameter": {"processUmask": "037"},
         "systemLog": {

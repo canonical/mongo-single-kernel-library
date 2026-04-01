@@ -154,16 +154,15 @@ class ContinuousWritesApplication(CharmBase):
         # read the last written_value
         try:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
-                with attempt:
-                    with open(self.last_written_filename(db_name, collection_name)) as fd:
-                        last_written_value = int(fd.read())
+                with attempt, open(self.last_written_filename(db_name, collection_name)) as fd:
+                    last_written_value = int(fd.read())
+                    os.remove(self.last_written_filename(db_name, collection_name))
+                    logger.info(f"Stopped writing at {last_written_value=}")
+                    return last_written_value
         except RetryError as e:
             logger.exception("Unable to query the database", exc_info=e)
             return -1
 
-        os.remove(self.last_written_filename(db_name, collection_name))
-        logger.info(f"Stopped writing at {last_written_value=}")
-        return last_written_value
 
     def proc_id_key(self, db_name: str, collection_name: str) -> str:
         """Returns a process id key for the continuous writes process to a given db and coll."""

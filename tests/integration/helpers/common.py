@@ -109,6 +109,8 @@ async def deploy_charm(
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
     series: str | None = None,
+    constraints: dict[str, list[str]] | None = None,
+    bind: dict[str, str] | None = None,
 ):
     if substrate == "microk8s":
         series = series or "noble"
@@ -131,6 +133,8 @@ async def deploy_charm(
             config=config,
             channel=channel,
             storage=storage,
+            constraints=constraints,
+            bind=bind,
         )
 
 
@@ -138,6 +142,8 @@ async def deploy_application(
     ops_test: OpsTest,
     application_path: str,
     app_name: str,
+    constraints: dict[str, list[str]] | None = None,
+    bind: dict[str, str] | None = None,
 ):
     """Deploys the helpers applications with one unit and waits for idle."""
     application_name = await get_app_name(ops_test, app_name)
@@ -148,6 +154,8 @@ async def deploy_application(
         application_name=app_name,
         num_units=1,
         series="noble",
+        constraints=constraints,
+        bind=bind,
     )
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
