@@ -1,0 +1,142 @@
+(encryption-at-rest)=
+
+# How to configure encryption at rest
+
+Data at rest encryption should be used when your data is highly valuable. It should be used with data in transit encryption (TLS), and adequate policies to protect accounts.
+It helpers organizations to comply with security and privacy standards like HIPAA, PCI-DSS, GDPR and FIPS.
+
+Charmed MongoDB provides encryption at rest using Vault as a storage backend for the encryption keys.
+
+```{caution}
+This feature can only be enabled at deploy time. It requires a MongoDB instance that has never been started.
+The charm will prevent you from enabling it after it has started.
+If you remove the vault integration and MongoDB restarts, it will be unable to decrypt the databases and start.
+```
+
+## Pre-requisite
+
+````{tab-set}
+```{tab-item} VM
+:sync: vm
+
+You'll need:
+* Charmed MongoDB - Revision XXX or higher
+* (Optional) Charmed Mongos - Revision XXX or higher
+```
+
+```{tab-item} K8s
+:sync: k8s
+
+You'll need:
+* Charmed MongoDB K8s - Revision XXX or higher
+* (Optional) Charmed Mongos - Revision XXX or higher
+```
+````
+
+## Deploy and configure Vault
+
+Follow the [official Charmed Vault documentation](https://canonical-vault-charms.readthedocs-hosted.com/en/latest/tutorial/)
+until the vault is unsealed, authorised and you have removed the `one-time-token` secret.
+You don't need to create a key-value type secret, nor don't you want to destroy your environment.
+
+## Deploy MongoDB
+
+Deploy Charmed MongoDB for your substrate
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+```shell
+juju deploy mongodb --channel=8/edge --config enable-encryption-at-rest=True
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+```shell
+juju deploy mongodb-k8s vault --channel=8/edge --trust --config enable-encryption-at-rest=True
+```
+````
+`````
+
+After a few minutes it will stay in status `blocked/idle`:
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+```text
+Model       Controller  Cloud/Region         Version  SLA          Timestamp
+integ-test  overlord    localhost/localhost  3.6.20   unsupported  14:38:07+02:00
+
+App      Version  Status   Scale  Charm    Channel  Rev  Exposed  Message
+mongodb  8.0.10   blocked      1  mongodb             0  no       Must be integrated with vault to enable encryption at rest.
+
+Unit        Workload  Agent      Machine  Public address  Ports  Message
+mongodb/0*  blocked   executing  0        10.137.178.131         Must be integrated with vault to enable encryption at rest.
+
+Machine  State    Address         Inst id        Base          AZ    Message
+0        started  10.137.178.131  juju-ceaebe-0  ubuntu@24.04  vali  Running
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+```text
+Model    Controller  Cloud/Region        Version  SLA          Timestamp
+testing  36microk8s  microk8s/localhost  3.6.19   unsupported  14:44:24+02:00
+
+App          Version  Status   Scale  Charm        Channel  Rev  Address         Exposed  Message
+mongodb-k8s  8.0.10   blocked      1  mongodb-k8s             0  10.152.183.137  no       Must be integrated with vault to enable encryption at rest.
+
+Unit            Workload  Agent      Address       Ports  Message
+mongodb-k8s/0*  blocked   executing  10.1.238.194         Must be integrated with vault to enable encryption at rest.
+````
+`````
+
+Integrate your charm with Vault
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+```shell
+juju integrate mongodb:vault-kv vault:vault-kv
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+```shell
+juju integrate mongodb-k8s:vault-kv vault:vault-kv
+```
+````
+`````
+
+## Rotate the encryption key
+
+Key rotation can be used as part of compliance processes (e.g: once a year), or if you have a suspicion that it has leaked.
+
+```{caution}
+This operation is expensive. It requires to restart each MongoDB instance affected twice. One for rotating the encryption key,
+and one to resume operation.
+```
+
+If for any reason, you need to rotate the encryption key, please apply the following instructions.
+For each unit that could have leaked its key, run:
+
+`````{tab-set}
+````{tab-item} VM
+:sync: vm
+```shell
+juju run mongodb/<unit-id> rotate-encryption-master-key
+```
+````
+
+````{tab-item} K8s
+:sync: k8s
+```shell
+juju run mongodb-k8s/<unit-id> rotate-encryption-master-key
+```
+````
+`````
+
+Your key has now been rotated.
