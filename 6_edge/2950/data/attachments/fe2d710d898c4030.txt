@@ -1,0 +1,34 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.20   unsupported  01:37:20Z
+
+App                       Version  Status       Scale  Charm                     Channel  Rev  Exposed  Message
+config-server             6.0.24   maintenance      1  mongodb                              0  no       Installing MongoDB...
+mongos                             unknown          0  mongos                               0  no       
+shard-one                          waiting        0/1  mongodb                              1  no       waiting for machine
+test-routing-application           active           1  test-routing-application             0  no       
+
+Unit                         Workload     Agent       Machine  Public address  Ports  Message
+config-server/0*             maintenance  executing   0        10.103.198.170         Installing MongoDB...
+shard-one/0                  waiting      allocating  1        10.103.198.166         waiting for machine
+test-routing-application/0*  active       idle        2        10.103.198.73          
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.103.198.170  juju-109192-0  ubuntu@22.04  runnervmrg6be  Running
+1        pending  10.103.198.166  juju-109192-1  ubuntu@22.04  runnervmrg6be  Running
+2        started  10.103.198.73   juju-109192-2  ubuntu@22.04  runnervmrg6be  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+controller-0: 01:36:23 ERROR juju.worker.provisioner worker 1: shutting down pool due to error while handling a "start-instance 1" task: catacomb 0xc0008423c0 is dying
+machine-0: 01:36:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:37:14 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:37:14 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
