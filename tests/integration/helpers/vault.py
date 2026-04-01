@@ -83,8 +83,6 @@ class Vault:
         """Unseal a vault unit.
 
         Args:
-            endpoint (str): The endpoint of the vault unit
-            ca_file_location (str): The path to the CA file
             unseal_key (str): The unseal key
         """
         if not self.client.sys.is_sealed():
@@ -93,12 +91,7 @@ class Vault:
         logger.info("Unsealed vault unit: %s.", self.url)
 
     async def wait_for_node_to_be_unsealed(self) -> None:
-        """Wait for the vault unit to be unsealed.
-
-        Args:
-            endpoint (str): The endpoint of the vault unit
-            ca_file_location (str): The path to the CA file
-        """
+        """Wait for the vault unit to be unsealed."""
         timeout = 300
         t0 = time.time()
         while time.time() < t0 + timeout:

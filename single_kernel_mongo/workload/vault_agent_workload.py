@@ -26,17 +26,17 @@ class VaultAgentPaths(MongoPaths):
 
     @property
     def role_id(self) -> Path:
-        """Vault configuration file path."""
+        """Vault approle role-id file path."""
         return Path(f"{self.etc_path}/vault/role_id")
 
     @property
     def role_secret_id(self) -> Path:
-        """Vault configuration file path."""
+        """Vault approle role-secret-id file path."""
         return Path(f"{self.etc_path}/vault/role_secret_id")
 
 
 class VaultAgentWorkload(WorkloadBase, ABC):
-    """MongoDB Workload definition."""
+    """Vault Agent Workload definition."""
 
     service: ClassVar[str] = "vault-agent"
     layer_name: ClassVar[str] = "vault-agent"
