@@ -9,7 +9,7 @@
 * A GCP Service account with the minimum roles needed:
   * Read/write/List/delete objects (recommended minimum): roles/storage.objectAdmin
   * Manage buckets (if the bucket does not already exists): roles/storage.admin
-* A replicaset with at least three nodes **or** a shared cluster with a least one shard.
+* A replica set with at least three nodes **or** a shared cluster with a least one shard.
   * See {ref}`scale-replicas-and-shards`
 
 ## Configure `gcs-integrator`
