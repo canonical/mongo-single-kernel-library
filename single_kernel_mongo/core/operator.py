@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
@@ -95,7 +95,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[str]
+    name: str
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager
