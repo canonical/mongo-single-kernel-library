@@ -22,7 +22,7 @@ from data_platform_helpers.advanced_statuses.protocol import (
 )
 from ops.model import ModelError, SecretNotFoundError
 
-from single_kernel_mongo.config.literals import Substrates, TLSType
+from single_kernel_mongo.config.literals import EXT_CA_PATH, EXT_PEM_PATH, Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -227,15 +227,12 @@ class TLSManager(ManagerStatusProtocol):
             if pem:
                 self.workload.write(self.workload.paths.ext_pem_file, pem)
 
-        if self.substrate == Substrates.VM:
-            return
-
         if not internal and ca:
-            self.state.paths.ext_ca_file.write_text(ca)
-            self.state.paths.ext_ca_file.chmod(600)
+            EXT_CA_PATH.write_text(ca)
+            EXT_CA_PATH.chmod(0o600)
         if not internal and pem:
-            self.state.paths.ext_pem_file.write_text(pem)
-            self.state.paths.ext_ca_file.chmod(600)
+            EXT_PEM_PATH.write_text(pem)
+            EXT_PEM_PATH.chmod(0o600)
 
     def set_certificates(
         self,

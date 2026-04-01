@@ -4,6 +4,7 @@
 
 """Logrotate workload definition."""
 
+from pathlib import Path
 import jinja2
 from ops import Container
 from ops.pebble import Layer
@@ -45,10 +46,12 @@ class LogRotateWorkload(WorkloadBase):
             shell=self.paths.shell_path,
         )
 
-        self.write(path=LogRotateConfig.rendered_template, content=rendered_template)
+        self.write(path=self.paths.logrotate_conf_path, content=rendered_template)
         # logrotate file needs to be owned by root
-        self.exec(["chown", "root:root", f"{LogRotateConfig.rendered_template}"])
-        self.exec(["chmod", "644", f"{LogRotateConfig.rendered_template}"])
+        self.exec(
+            ["chown", f"{self.users.user}:{self.users.group}", f"{self.paths.logrotate_conf_path}"]
+        )
+        self.exec(["chmod", "644", f"{self.paths.logrotate_conf_path}"])
 
     @property
     @override
@@ -65,7 +68,7 @@ class LogRotateWorkload(WorkloadBase):
                     self.service: {
                         "summary": "log rotate",
                         # Pebble errors out if the command exits too fast (1s).
-                        "command": f"sh -c 'logrotate {LogRotateConfig.rendered_template}; sleep 1'",
+                        "command": f"sh -c 'logrotate -s {self.paths.logrotate_status_file} {self.paths.logrotate_conf_path}; sleep 1'",
                         "startup": "enabled",
                         "override": "replace",
                         "backoff-delay": "1m0s",

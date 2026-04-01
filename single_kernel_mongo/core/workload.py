@@ -32,6 +32,8 @@ class MongoPaths:
         self.shell_path = role.paths["SHELL"]
         self.licenses_path = role.paths["LICENSES"]
         self.tmp_path = role.paths["TEMP"]
+        self.logrotate_conf = role.paths["LOGROTATE"]
+        self.logrotate_status = role.paths["LOGROTATE_STATUS"]
 
     def __eq__(self, other: object) -> bool:  # noqa: D105
         if not isinstance(other, MongoPaths):
@@ -128,6 +130,16 @@ class MongoPaths:
     def ldap_certificates_file(self) -> Path:
         """The LDAP certificates file path."""
         return Path(f"{self.ldap_certificates_dir}/ldap.crt")
+
+    @property
+    def logrotate_conf_path(self) -> Path:
+        """The Logrotate configuration path."""
+        return Path(f"{self.logrotate_conf}/mongodb")
+
+    @property
+    def logrotate_status_file(self) -> Path:
+        """The Logrotate status file path."""
+        return Path(f"{self.logrotate_status}/.logrotate_state")
 
 
 class WorkloadBase(ABC):  # pragma: nocover

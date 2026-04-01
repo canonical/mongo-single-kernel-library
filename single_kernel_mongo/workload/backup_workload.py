@@ -10,6 +10,7 @@ from ops import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
+from single_kernel_mongo.config.literals import BASE_CERTS
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -22,6 +23,11 @@ class PBMPaths(MongoPaths):
     def pbm_config(self) -> Path:
         """PBM Configuration file path."""
         return Path(f"{self.etc_path}/pbm/pbm_config.yaml")
+
+    @property
+    def certs_dir(self) -> Path:
+        """PBM Configuration file path."""
+        return Path(f"{self.etc_path}/pbm/certs/")
 
 
 class PBMWorkload(WorkloadBase):
@@ -57,7 +63,9 @@ class PBMWorkload(WorkloadBase):
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
-                        "environment": {self.env_var: self._env},
+                        "environment": {
+                            self.env_var: self._env,
+                        },
                     }
                 },
             }

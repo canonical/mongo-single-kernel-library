@@ -254,7 +254,9 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         if local_cert_file.exists() and local_cert_file.is_file():
             local_cert_file.unlink()
 
-        self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+        self.dependent.remove_ca_cert_from_trust_store(
+            self.workload.paths.certs_dir, TrustStoreFiles.PBM
+        )
         self.remove_cert_from_shards()
         self.configure_and_restart(force=True)
 
@@ -500,7 +502,9 @@ class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
         """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
-            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
+            self.dependent.save_ca_cert_to_trust_store(
+                self.workload.paths.certs_dir, TrustStoreFiles.PBM, cert_chain_list
+            )
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
             self.configure_and_restart(force=True)

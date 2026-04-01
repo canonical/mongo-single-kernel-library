@@ -106,7 +106,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             if self.state.is_role(MongoDBRoles.MONGOS)
             else MongoPorts.MONGODB_PORT.value
         )
-        params = self.state.operator_config.tls_config
+        params = self.state.operator_config.local_tls_config
 
         actual_uri = uri or f"mongodb://localhost:{port}"
         actual_uri = f"{actual_uri}/?{urlencode(params)}"

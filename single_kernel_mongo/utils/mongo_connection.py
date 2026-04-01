@@ -4,7 +4,7 @@
 
 import logging
 import re
-from typing import Any
+from typing import Any, final
 
 from bson import json_util
 from pymongo import MongoClient
@@ -44,6 +44,7 @@ class NotReadyError(PyMongoError):
     ...
 
 
+@final
 class MongoConnection:
     """In this class we create connection object to Mongo[s/db].
 
@@ -67,7 +68,13 @@ class MongoConnection:
             <error handling as needed>
     """
 
-    def __init__(self, config: MongoConfiguration, uri: str | None = None, direct: bool = False):
+    def __init__(
+        self,
+        config: MongoConfiguration,
+        uri: str | None = None,
+        direct: bool = False,
+        local: bool = True,
+    ):
         """A MongoDB client interface.
 
         Args:
@@ -77,9 +84,10 @@ class MongoConnection:
                     reading replica set configuration and reconnection.
         """
         self.config = config
+        self.local = local
 
         if uri is None:
-            uri = config.uri
+            uri = config.uri_for(local=local)
 
         self.client: MongoClient = MongoClient(
             uri,

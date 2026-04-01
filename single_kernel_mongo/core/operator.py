@@ -31,10 +31,10 @@ from ops.framework import Object
 from ops.model import Relation, Unit
 
 from single_kernel_mongo.config.literals import (
+    LOCAL_USER_CERT_PATH,
     OS_REQUIREMENTS,
     SYSTEMD_MONGODB_OVERRIDE,
     SYSTEMD_MONGOS_OVERRIDE,
-    TRUST_STORE_PATH,
     Scope,
     Substrates,
     TrustStoreFiles,
@@ -44,7 +44,6 @@ from single_kernel_mongo.config.models import (
     SNAP_NAME,
     THP_CONFIG,
     CharmSpec,
-    LogRotateConfig,
 )
 from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
@@ -298,23 +297,23 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         We must also ensure that all data, log and log status directories have
         the correct permissions.
         """
-        self.workload.mkdir(LogRotateConfig.log_status_dir, make_parents=True)
-
-        for path in (
-            self.workload.paths.data_path,
-            self.workload.paths.logs_path,
-            LogRotateConfig.log_status_dir,
-        ):
-            self.workload.exec(
-                [
-                    "chown",
-                    "-R",
-                    f"{self.workload.users.user}:{self.workload.users.group}",
-                    f"{path}",
-                ]
-            )
+        if not self.workload.exists(Path(self.workload.paths.logrotate_status)):
+            self.workload.mkdir(Path(self.workload.paths.logrotate_status), make_parents=True)
 
         if self.substrate == Substrates.VM:
+            for path in (
+                self.workload.paths.data_path,
+                self.workload.paths.logs_path,
+                self.workload.paths.logrotate_status,
+            ):
+                self.workload.exec(
+                    [
+                        "chown",
+                        "-R",
+                        f"{self.workload.users.user}:{self.workload.users.group}",
+                        f"{path}",
+                    ]
+                )
             self.workload.exec(
                 [
                     "chown",
@@ -324,13 +323,15 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
                 ]
             )
 
-        for path in (
+        for _path in (
             self.workload.paths.config_file,
             self.workload.paths.mongos_config_file,
         ):
-            self.workload.exec(["chmod", "600", f"{path}"])
+            self.workload.exec(["chmod", "600", f"{_path}"])
 
-    def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: list[str]) -> None:
+    def save_ca_cert_to_trust_store(
+        self, root: Path, file: TrustStoreFiles, chain: list[str]
+    ) -> None:
         """Saves the certificate in the trust store.
 
         Raises:
@@ -339,23 +340,20 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         # Convert the list of str to a str
         chain_str = "\n".join(chain)
         # Write the file with the right permissions
-        full_path = TRUST_STORE_PATH / file.value
+        full_path = root / file.value
         self.workload.write(full_path, chain_str)
-        self.workload.exec(["chown", "root:root", f"{full_path}"])
+        self.workload.exec(
+            ["chown", f"{self.workload.users.user}:{self.workload.users.group}", f"{full_path}"]
+        )
         self.workload.exec(["chmod", "644", f"{full_path}"])
 
-        # Update ca certificates.
-        self.workload.exec(["update-ca-certificates"])
-
-    def remove_ca_cert_from_trust_store(self, file: TrustStoreFiles):
+    def remove_ca_cert_from_trust_store(self, root: Path, file: TrustStoreFiles):
         """Removes the certificate from the trust store."""
-        if not self.workload.exists(TRUST_STORE_PATH / file.value):
+        if not self.workload.exists(root / file.value):
             return
 
         # Remove the file
-        self.workload.delete(TRUST_STORE_PATH / file.value)
-        # Update CA certificates to remove the certificate from the trust store
-        self.workload.exec(["update-ca-certificates"])
+        self.workload.delete(root / file.value)
         # Restart the service
         self.restart_charm_services(force=True)
 
@@ -406,7 +404,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         if self.substrate == Substrates.VM:
             return
 
-        Path(self.state.paths.conf_path).mkdir(exist_ok=True)
+        LOCAL_USER_CERT_PATH.mkdir(exist_ok=True)
 
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""

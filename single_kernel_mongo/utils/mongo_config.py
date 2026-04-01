@@ -7,7 +7,7 @@ from itertools import chain
 from pathlib import Path
 from urllib.parse import quote_plus, urlencode
 
-from single_kernel_mongo.config.literals import MongoPorts
+from single_kernel_mongo.config.literals import EXT_CA_PATH, EXT_PEM_PATH, MongoPorts
 from single_kernel_mongo.exceptions import AmbiguousConfigError
 from single_kernel_mongo.utils.mongodb_users import (
     REGULAR_ROLES,
@@ -51,21 +51,21 @@ class MongoConfiguration:
         return self.hosts
 
     @property
-    def formatted_replset(self) -> dict:
+    def formatted_replset(self) -> dict[str, str]:
         """Formatted replicaSet parameter."""
         if self.replset:
             return {"replicaSet": quote_plus(self.replset)}
         return {}
 
     @property
-    def formatted_auth_source(self) -> dict:
+    def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
         if self.database != "admin":
             return ADMIN_AUTH_SOURCE
         return {}
 
     @property
-    def tls_config(self) -> dict:
+    def tls_config(self) -> dict[str, str]:
         """TLS Config."""
         if not self.tls_enabled:
             return {}
@@ -75,14 +75,31 @@ class MongoConfiguration:
             "tlsCaFile": f"{self.tls_external_ca}",
         }
 
-    def _uri(self, tls: bool):
+    @property
+    def local_tls_config(self) -> dict[str, str]:
+        """TLS config for local use."""
+        if not self.tls_enabled:
+            return {}
+        return {
+            "tls": "true",
+            "tlsCertificateKeyFile": f"{EXT_PEM_PATH}",
+            "tlsCaFile": f"{EXT_CA_PATH}",
+        }
+
+    def _uri(self, tls: bool, local: bool = True):
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
             raise AmbiguousConfigError("Mongos cannot support replica set")
 
         if self.standalone and not self.port:
             raise AmbiguousConfigError("Standalone connection needs a port")
 
-        tls_config = self.tls_config if tls else {}
+        match (tls, local):
+            case False, _:
+                tls_config = {}
+            case True, False:
+                tls_config = self.tls_config
+            case True, True:
+                tls_config = self.local_tls_config
         auth_source = self.formatted_auth_source
 
         if self.standalone:
@@ -105,15 +122,19 @@ class MongoConfiguration:
             f"{urlencode(parameters)}"
         )
 
+    def uri_for(self, local: bool = True):
+        """Uri for local / distant use."""
+        return self._uri(tls=True, local=local)
+
     @property
     def uri(self) -> str:
         """Return URI concatenated from fields."""
-        return self._uri(tls=True)
+        return self._uri(tls=True, local=False)
 
     @property
     def uri_without_tls(self) -> str:
         """Return URI concatenated from fields without tls params."""
-        return self._uri(tls=False)
+        return self._uri(tls=False, local=False)
 
     @property
     def supported_roles(self) -> list[DBPrivilege]:

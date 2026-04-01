@@ -665,7 +665,11 @@ class ShardManager(Object, ManagerStatusProtocol):
             backup_tls_chain := self.state.shard_state.backup_ca_secret
         ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
             logger.debug("Adding certificate for PBM")
-            self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
+            self.dependent.save_ca_cert_to_trust_store(
+                self.dependent.s3_backup_manager.workload.paths.certs_dir,
+                TrustStoreFiles.PBM,
+                backup_tls_chain,
+            )
             # We updated the configuration, so we restart PBM.
             self.dependent.s3_backup_manager.configure_and_restart(force=True)
         elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
@@ -674,7 +678,9 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.debug("Removing certificate for PBM")
             # If it is not in the databag, always remove it, it won't change a
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
-            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            self.dependent.remove_ca_cert_from_trust_store(
+                self.dependent.s3_backup_manager.workload.paths.certs_dir, TrustStoreFiles.PBM
+            )
             # We updated the configuration, so we restart PBM.
             self.dependent.s3_backup_manager.configure_and_restart(force=True)
 

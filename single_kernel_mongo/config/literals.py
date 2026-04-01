@@ -5,12 +5,15 @@
 This module should contain the literals used in the charms (paths, enums, etc).
 """
 
+import os
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Generic, TypeVar
 
 LOCALHOST = "127.0.0.1"
+
+BASE_CERTS = "/etc/ssl/certs:/etc/pki/tls/certs"  # UBUNTU + RHEL
 
 
 class Substrates(str, Enum):
@@ -92,6 +95,20 @@ CRON_FILE = Path("/etc/cron.d/mongodb")
 
 SYSTEMD_MONGODB_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongod.service.d")
 SYSTEMD_MONGOS_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongos.service.d")
+
+LOCAL_USER_CERT_PATH = (
+    Path(
+        os.environ.get(
+            "JUJU_CHARM_DIR", f"{__file__}/../../../../../.."
+        )  # Go up to the root of the venv
+    )
+    / ".certs"
+).resolve()
+
+EXT_CA_PATH = LOCAL_USER_CERT_PATH / "external-ca.crt"
+EXT_PEM_PATH = LOCAL_USER_CERT_PATH / "external-cert.pem"
+INT_CA_PATH = LOCAL_USER_CERT_PATH / "internal-ca.crt"
+INT_PEM_PATH = LOCAL_USER_CERT_PATH / "internal-cert.pem"
 
 SECRETS_UNIT: list[str] = []
 

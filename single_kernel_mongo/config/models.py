@@ -30,8 +30,6 @@ class LogRotateConfig:
     max_log_size: str = "200M"
     max_rotations_to_keep: int = 25
     log_rotate_template: Traversable = TEMPLATE_DIRECTORY / "logrotate.j2"
-    rendered_template: Path = Path("/etc/logrotate.d/mongodb")
-    log_status_dir: Path = Path("/var/lib/logrotate")
 
 
 @dataclass(frozen=True)
@@ -116,6 +114,8 @@ VM_PATH = {
         "SHELL": "/snap/bin/charmed-mongodb.mongosh",
         "LICENSES": f"/snap/{SNAP_NAME}/current/licenses",
         "TEMP": "/tmp",
+        "LOGROTATE": "/etc/logrotate.d",
+        "LOGROTATE_STATUS": "/var/lib/logrotate",
     }
 }
 K8S_PATH = {
@@ -130,6 +130,8 @@ K8S_PATH = {
         "SHELL": "/usr/bin/mongosh",
         "LICENSES": "/licenses",
         "TEMP": "/tmp",
+        "LOGROTATE": "/home/mongodb/.logrotate",
+        "LOGROTATE_STATUS": "/home/mongodb/.logrotate",
     }
 }
 

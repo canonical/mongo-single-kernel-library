@@ -198,8 +198,8 @@ class LogRotateConfigManager(CommonConfigManager):
             if self.substrate == Substrates.VM:
                 self.workload.setup_cron(
                     [
-                        f"* 1-23 * * * root logrotate {LogRotateConfig.rendered_template}\n",
-                        f"1-59 0 * * * root logrotate {LogRotateConfig.rendered_template}\n",
+                        f"* 1-23 * * * root logrotate -s {self.workload.paths.logrotate_status_file} {self.workload.paths.logrotate_conf_path}\n",
+                        f"1-59 0 * * * root logrotate -s {self.workload.paths.logrotate_status_file} {self.workload.paths.logrotate_conf_path}\n",
                     ]
                 )
             else:
