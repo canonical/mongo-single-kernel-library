@@ -49,7 +49,7 @@ class VaultState:
         return self.vault_relation is not None
 
     def set_from(self, provider_data: VaultKvProviderSchema) -> None:
-        """Sets everything from LdapProviderData."""
+        """Sets everything from VaultKvProviderSchema."""
         self.vault_url = provider_data.vault_url
         self.mount_point = provider_data.mount
         self.ca_certificate = provider_data.ca_certificate
