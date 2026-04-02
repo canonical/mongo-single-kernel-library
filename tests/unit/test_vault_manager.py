@@ -222,8 +222,12 @@ def test_vault_manager_no_encryption_status(
         mongodb_ctx.on.relation_joined(relation=vault_relation), state=state_in
     )
 
-    assert state_out.unit_status == BlockedStatus("Can't integrate with vault.")
-    assert state_out.app_status == BlockedStatus("Can't integrate with vault.")
+    assert state_out.unit_status == BlockedStatus(
+        "The vault-kv interface cannot be used with encryption at rest disabled."
+    )
+    assert state_out.app_status == BlockedStatus(
+        "The vault-kv interface cannot be used with encryption at rest disabled."
+    )
 
 
 def test_vault_manager_ready(
@@ -315,8 +319,12 @@ def test_update_status_should_not_integrate(
     ):
         state_out = mongodb_ctx.run(mongodb_ctx.on.update_status(), state=state_in)
 
-    assert state_out.unit_status == BlockedStatus("Can't integrate with vault.")
-    assert state_out.app_status == BlockedStatus("Can't integrate with vault.")
+    assert state_out.unit_status == BlockedStatus(
+        "The vault-kv interface cannot be used with encryption at rest disabled."
+    )
+    assert state_out.app_status == BlockedStatus(
+        "The vault-kv interface cannot be used with encryption at rest disabled."
+    )
 
 
 def test_update_status_should_integrate(
