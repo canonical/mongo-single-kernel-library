@@ -36,7 +36,7 @@ class VaultStateKeys(str, Enum):
 
 @final
 class VaultState:
-    """The stored state for the TLS relation."""
+    """The stored state for Vault."""
 
     def __init__(self, charm: AbstractMongoCharm, vault_relation: Relation | None):
         self.vault_relation = vault_relation
