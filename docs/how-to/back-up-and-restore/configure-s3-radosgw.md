@@ -17,12 +17,8 @@ Start by installing the microceph snap:
 sudo snap install microceph
 ```
 
-Bootstrap a cluster, and add a disk:
+Bootstrap a cluster, and add a disk. In the example below, we add 3 loop devices of 4GB each.
 
-```shell
-sudo microceph cluster bootstrap
-sudo microceph disk add loop,4G,3 # Chose the correct size accordingly
-```
 
 Create a certificate:
 

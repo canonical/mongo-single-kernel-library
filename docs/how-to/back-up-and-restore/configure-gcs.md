@@ -22,7 +22,7 @@ juju deploy gcs-integrator --channel 1/edge
 
 [Create a JSON file](https://cloud.google.com/iam/docs/keys-create-delete#creating) for your service account and download it to you local file system.
 
-Add a new secret containing the GCP service account key you just obtained to Juju, and grant its permissions to `gcs-integrator`.
+Add a new [secret](https://documentation.ubuntu.com/juju/3.6/reference/secret/#secret) containing the GCP service account key you just obtained to Juju, and grant its permissions to `gcs-integrator`:
 
 ```shell
 juju add-secret mysecret secret-key#file=service_account.json
@@ -52,7 +52,6 @@ First, determine the name of the application to pass to Juju when running back u
 * For a **replica-set deployment**, it is the name of your Charmed MongoDB application
 * For a **sharded cluster deployment**, it is the name of the Charmed MongoDB config-server application. *Never the shard applications!*
 
----
 
 To integrate your deployment with `gcs-integrator`, run:
 
