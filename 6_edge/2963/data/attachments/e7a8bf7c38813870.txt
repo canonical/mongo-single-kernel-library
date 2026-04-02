@@ -1,0 +1,85 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [idle] active: 
+  mongos/1 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+  mongos/1 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [executing] waiting: Connecting to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [executing] maintenance: Starting mongos.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/1 [idle] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:279 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1775094160, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('abJQ6z1DqY4OlxiKt5R0BiO4BbI=', 0),
+      keyId: Long('7623969156907401242')
+    }
+  },
+  operationTime: Timestamp({ t: 1775094160, i: 1 })
+}
+, stderr: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:279 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1775094162, i: 2 }),
+    signature: {
+      hash: Binary.createFromBase64('NxACRPDgJJxAzUakqESa/h8kDMY=', 0),
+      keyId: Long('7623969156907401242')
+    }
+  },
+  operationTime: Timestamp({ t: 1775094162, i: 2 })
+}
+, stderr: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-routing-application/0 [idle] active: 
+  mongos/0 [executing] active: 
+  mongos/1 [executing] active: 
+[32mINFO    [0m integration.helpers.mongos:mongos.py:279 ret_code: 0, stdout: {
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1775094192, i: 2 }),
+    signature: {
+      hash: Binary.createFromBase64('rY8ogF2Phh7QSdDNI3KaXt5bGh8=', 0),
+      keyId: Long('7623969156907401242')
+    }
+  },
+  operationTime: Timestamp({ t: 1775094192, i: 2 })
+}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:43:13Z
+
+App                       Version  Status  Scale  Charm                     Channel  Rev  Address         Exposed  Message
+config-server             6.0.24   active      1  mongodb-k8s                          0  10.152.183.164  no       
+mongos                    6.0.24   active      1  mongos-k8s                           0  10.152.183.210  no       
+shard-one                 6.0.24   active      1  mongodb-k8s                          1  10.152.183.20   no       
+test-routing-application           active      1  test-routing-application             0  10.152.183.101  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+config-server/0*             active    idle   10.1.233.13         Primary.
+mongos/0*                    active    idle   10.1.233.18         
+shard-one/0*                 active    idle   10.1.233.16         Primary.
+test-routing-application/0*  active    idle   10.1.233.17         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 01:39:01 ERROR unit.config-server/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69cdc8b4b6c7dbf9ead9f545, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('config-server-1.config-server-endpoints', 27017) server_type: RSGhost, rtt: 0.0007512500000075306>]>
+unit-config-server-0: 01:40:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 01:40:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongos-0: 01:40:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-mongos-1: 01:42:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-test-routing-application-0: 01:42:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
