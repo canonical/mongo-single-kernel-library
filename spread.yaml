@@ -190,7 +190,7 @@ prepare: |
   pipx install tox poetry
   pipx ensurepath
 
-  poetry env use $pythonLocation/bin/python
+  $(pipx environment --value PIPX_BIN_DIR)/poetry env use $pythonLocation/bin/python
 prepare-each: |
   cd "$SPREAD_PATH"
 
@@ -218,6 +218,6 @@ prepare-each: |
   juju set-model-constraints arch="$(dpkg --print-architecture)"
 
   #TODO: Remove this when we runners are fixed.
-  poetry env use $pythonLocation/bin/python
+  $(pipx environment --value PIPX_BIN_DIR)/poetry env use $pythonLocation/bin/python
 
 # Only restore on lxd backend—no need to restore on CI
