@@ -58,13 +58,13 @@ async def test_integration_goes_to_blocked(
         ops_test,
         substrate,
         app_name,
-        status="Can't integrate with vault.",
+        status="The vault-kv interface cannot be used with encryption at rest disabled.",
     )
     await check_app_status(
         ops_test,
         app_name,
         status="blocked",
-        message="Can't integrate with vault.",
+        message="The vault-kv interface cannot be used with encryption at rest disabled.",
     )
 
 

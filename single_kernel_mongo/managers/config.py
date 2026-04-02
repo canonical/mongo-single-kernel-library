@@ -320,7 +320,7 @@ class VaultConfigManager(FileBasedConfigManager):
         }
 
     def configure_and_restart(self, force: bool = False):
-        """Exposes the endpoint to mongodb_exporter."""
+        """Restarts vault agent with the correct config."""
         if not self.state.enable_encryption_at_rest:
             return
 

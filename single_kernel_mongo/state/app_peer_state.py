@@ -106,7 +106,7 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
 
     @property
     def enable_encryption_at_rest(self) -> bool | None:
-        """Whether the db is initialised or not yet."""
+        """Should encryption at rest be enabled or not."""
         if not self.relation:
             return None
         return json.loads(

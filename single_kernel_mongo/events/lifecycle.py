@@ -61,6 +61,7 @@ from single_kernel_mongo.exceptions import (
     SetPasswordError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WaitingForVaultError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
@@ -156,9 +157,10 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
-        except DeferrableError:
+        except WaitingForVaultError:
             logger.info("Waiting for vault to be integrated.")
             event.defer()
+            return
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(

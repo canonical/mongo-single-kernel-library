@@ -737,7 +737,8 @@ class VaultStatuses(Enum):
     )
     VAULT_INTEGRATED = StatusObject(
         status="blocked",
-        message="Can't integrate with vault.",
+        message="The vault-kv interface cannot be used with encryption at rest disabled.",
+        short_message="Invalid vault-kv relation.",
         check="Encryption at rest is disabled.",
         action="Remove vault integration",
     )
