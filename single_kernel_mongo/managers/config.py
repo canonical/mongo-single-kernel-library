@@ -261,7 +261,7 @@ class MongoDBExporterConfigManager(CommonConfigManager):
 
 @final
 class VaultConfigManager(FileBasedConfigManager):
-    """Config manager for mongodb-exporter."""
+    """Config manager for Vault."""
 
     def __init__(
         self,
