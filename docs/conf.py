@@ -169,9 +169,9 @@ html_context = {
 # - https://launchpad.net/example
 # - https://git.launchpad.net/example
 #
-# html_theme_options = {
-# 'source_edit_link': 'https://github.com/canonical/sphinx-docs-starter-pack',
-# }
+html_theme_options = {
+'source_edit_link': 'https://github.com/canonical/mongo-single-kernel-library',
+}
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
 #
@@ -212,7 +212,7 @@ sitemap_excludes = [
 ################################
 
 # html_static_path = ["_static"]
-# templates_path = ["_templates"]
+templates_path = ["_templates"]
 
 
 #############
