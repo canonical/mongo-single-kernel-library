@@ -1,12 +1,20 @@
 (reference)=
 # Reference
 
-This section contains technical specifications, APIs, release notes, and other reference material for fast lookup.
+Release notes for each stable revision of Charmed MongoDB 8 on VM and K8s:
+
+```{toctree}
+:titlesonly:
+:maxdepth: 3
+
+Release notes <release-notes/index>
+```
+
+Software and hardware requirements and other technical reference material:
 
 ```{toctree}
 :titlesonly:
 
-Release notes <release-notes/index>
 System requirements <system-requirements>
 Charm testing <charm-testing>
 ```

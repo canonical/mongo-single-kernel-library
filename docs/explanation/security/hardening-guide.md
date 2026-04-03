@@ -132,7 +132,7 @@ A new version of the Charmed MongoDB image may be released to provide patching o
 Charmed MongoDB and Charmed Mongos install pinned revisions of the [Charmed MongoDB snap](https://snapcraft.io/charmed-mongodb), to provide reproducible and secure environments. 
 New versions of Charmed MongoDB and Charmed Mongos may be released to provide patching of vulnerabilities (CVEs). 
 It is important to refresh the charms regularly to make sure the workload is as secure as possible. 
-For more information on how to refresh the MongoDB charm, see {ref}`how-to-upgrade`.
+For more information on how to refresh the MongoDB charm, see {ref}`upgrade`.
 ```
 ```{tab-item} K8s
 :sync: k8s
@@ -140,7 +140,7 @@ For more information on how to refresh the MongoDB charm, see {ref}`how-to-upgra
 Charmed MongoDB K8s and Charmed Mongos K8s install a pinned revisions of the [Charmed MongoDB snap](https://snapcraft.io/charmed-mongodb), to provide reproducible and secure environments. 
 New versions of Charmed MongoDB K8s and Charmed Mongos K8s may be released to provide patching of vulnerabilities (CVEs). 
 It is important to refresh charms regularly to make sure the workload is as secure as possible. 
-For more information on how to refresh the MongoDB charm, see {ref}`how-to-upgrade`.
+For more information on how to refresh the MongoDB charm, see {ref}`upgrade`.
 ```
 ````
 
