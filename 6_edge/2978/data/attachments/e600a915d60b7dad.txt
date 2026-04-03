@@ -1,0 +1,80 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] maintenance: installing charm software
+  shard-one/0 [allocating] waiting: agent initialising
+  shard-one/1 [allocating] waiting: agent initialising
+  shard-two/0 [allocating] waiting: installing agent
+  shard-two/1 [allocating] waiting: installing agent
+  shard-tree/0 [allocating] waiting: installing agent
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  shard-one/0 [executing] maintenance: Starting MongoDB.
+  shard-one/1 [executing] maintenance: Adding shard to config-server...
+  shard-two/0 [executing] maintenance: Adding shard to config-server...
+  shard-two/1 [executing] maintenance: installing charm software
+  shard-tree/0 [allocating] waiting: agent initialising
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+3fddc35-dirty-locally built.
+  shard-one/0 [executing] maintenance: Adding shard to config-server...
+  shard-one/1 [executing] maintenance: Adding shard to config-server...
+  shard-two/0 [executing] maintenance: Starting MongoDB.
+  shard-two/1 [executing] maintenance: Adding shard to config-server...
+  shard-tree/0 [idle] maintenance: Adding shard to config-server...
+  shard-tree/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+3fddc35-dirty-locally built.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-tree/0 [executing] maintenance: Starting MongoDB.
+  shard-tree/1 [executing] maintenance: Adding shard to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+3fddc35-dirty-locally built.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: 
+  shard-tree/0 [executing] active: 
+  shard-tree/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+3fddc35-dirty-locally built.
+  shard-one/0 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-tree/0 [executing] active: 
+  shard-tree/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for shards to upgrade/downgrade to revision 1+3fddc35-dirty-locally built.
+  shard-tree/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  shard-one/0 [idle] active: 
+[32mINFO    [0m integration.helpers.sharding:sharding.py:163 Expecting ['shard-one', 'shard-two', 'shard-tree'], got {'shard-two', 'shard-tree', 'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:40:17Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  6.0.24   active      1  mongodb-k8s             0  10.152.183.250  no       
+shard-one      6.0.24   active      2  mongodb-k8s             1  10.152.183.177  no       
+shard-tree     6.0.24   active      2  mongodb-k8s             3  10.152.183.56   no       
+shard-two      6.0.24   active      2  mongodb-k8s             2  10.152.183.128  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.13         Primary.
+shard-one/0*      active    idle   10.1.53.18         
+shard-one/1       active    idle   10.1.53.19         Primary.
+shard-tree/0*     active    idle   10.1.53.34         
+shard-tree/1      active    idle   10.1.53.36         
+shard-two/0*      active    idle   10.1.53.25         
+shard-two/1       active    idle   10.1.53.26         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 01:38:02 ERROR unit.config-server/0.juju-log config-server:16: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1775180282, 1), \'signature\': {\'hash\': b\'\\xf9\\xe0\\xd7\\x07]\\xfd\\x15\\xf6\\xf5\\xd3<\\x00\\xbc\\x1d\\xf4\\x0f\\xc5\\xb0)\\xd8\', \'keyId\': 7624340937866477594}}, \'operationTime\': Timestamp(1775180282, 1)}')
+unit-shard-one-0: 01:38:27 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69cf1a125d322ecba5ca33eb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012521190000143179>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012993489999644225>]>
+unit-shard-one-0: 01:38:31 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69cf1a165d322ecba5ca33ec, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0017644770000515564>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013102350000053775>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
