@@ -155,7 +155,7 @@ html_context = {
     },
 }
 
-html_extra_path = []
+# html_extra_path = []
 
 # Allow opt-in build of the OpenAPI "Hello" example so docs stay clean by default.
 # if os.getenv("OPENAPI", ""):
