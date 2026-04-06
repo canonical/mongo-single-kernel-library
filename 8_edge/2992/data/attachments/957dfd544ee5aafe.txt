@@ -1,0 +1,315 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [executing] terminated: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.sharding:sharding.py:166 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  04:20:54Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  8.0.10   active      2  mongodb-k8s             0  10.152.183.98   no       
+shard-one      8.0.10   active      2  mongodb-k8s             1  10.152.183.148  no       
+shard-tree     8.0.10   active      2  mongodb-k8s             3  10.152.183.240  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.16         Primary.
+config-server/1   active    idle   10.1.53.19         
+shard-one/0*      active    idle   10.1.53.27         Primary.
+shard-one/1       active    idle   10.1.53.30         
+shard-tree/0*     active    idle   10.1.53.50         
+shard-tree/1      active    idle   10.1.53.52         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 03:32:28 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-06T03:32:27Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-06T03:32:27Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:27Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-06T03:32:27Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-06T03:32:27Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:27Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 03:32:33 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:33Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:28.588Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:28.589Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:31.778Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:31.779Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:33Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:33Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:28.588Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:28.589Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:31.778Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:31.779Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:33Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 03:32:38 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:38Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:28.588Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:28.589Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:31.778Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:31.779Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:36.989Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:36.990Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:38Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:38Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-06T03:32:27.974Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:27.975Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:28.588Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:28.589Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:29.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:31.778Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:31.779Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.119Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:36.989Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:36.990Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:38Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 03:32:43 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:43Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:36.989Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:36.990Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.831Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.832Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:43Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:43Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:33.723Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:34.817Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:35.914Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:36.989Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:36.990Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.243Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:38.831Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.832Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:43Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 03:32:48 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:48Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-04-06T03:32:38.831Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.832Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:44.140Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:44.140Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:44.545Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:44.546Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:45.262Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:45.262Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:46.795Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:46.795Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:48.646Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:48.647Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:48Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-04-06T03:32:48Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-04-06T03:32:38.831Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:38.832Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:39.963Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:40.323Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:42.154Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:43.448Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:44.140Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:44.140Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:44.545Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:44.546Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:45.262Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:45.262Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:46.795Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:46.795Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-04-06T03:32:48.646Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-06T03:32:48.647Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-06T03:32:48Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-tree-0: 03:51:18 ERROR unit.shard-tree/0.juju-log database-peers:12: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d32db55a2f2efd9002e5cd, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005360440000004019>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005984970000554313>]>
+unit-config-server-0: 03:57:10 ERROR unit.config-server/0.juju-log config-server:18: single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 03:57:10 ERROR unit.config-server/0.juju-log config-server:18: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 04:00:01 ERROR unit.shard-two/1.juju-log sharding:17: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 04:10:04 ERROR unit.shard-tree/1.juju-log sharding:18: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-1: 04:15:08 ERROR unit.shard-two/1.juju-log sharding:19: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-1: 04:16:51 ERROR unit.shard-two/1.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d333b210c182598f1286a6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSGhost, rtt: 0.0005434449999484059>]>
+unit-shard-one-0: 04:19:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 04:19:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 04:19:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 04:19:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 04:20:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-tree-1: 04:20:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
