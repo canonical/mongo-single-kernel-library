@@ -418,7 +418,7 @@ Machine  State    Address       Inst id        Series  AZ  Message
 ```
 
 #### Verify replica set
-If you want to verify the replica set configuration, you could connect to MongoDB via `charmed-mongodb.mongosh`. Since your replica set has 2 additional hosts, you will need to update the hosts in your URI. You can retrieve these host IPs with:
+If you want to verify the replica set configuration, you could connect to MongoDB via `charmed-mongodb.mongosh`. Since your replica set has 2 additional hosts, you will need to update the hosts in your URI. You can retrieve these host IP addresses with:
 
 ```shell
 export HOST_IP_1=$(juju show-unit mongodb/1 | awk '/public-address:/{print $NF;exit}')
@@ -589,7 +589,7 @@ mongodb:
   username: relation-5
 ok: "True"
 ```
-Save the value listed under `uris:` Note that your hostnames, usernames, and passwords will likely be different.
+Save the value listed under `uris:` Note that your host names, usernames, and passwords will likely be different.
 
 ### Access the related database
 
