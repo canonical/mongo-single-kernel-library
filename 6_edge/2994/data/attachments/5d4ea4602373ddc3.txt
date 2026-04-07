@@ -1,0 +1,50 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [executing] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: Primary.
+  shard-two/0 [executing] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  02:35:25Z
+
+App               Version  Status   Scale  Charm             Channel      Rev  Address         Exposed  Message
+config-server     6.0.24   active       2  mongodb-k8s                      0  10.152.183.23   no       
+continuous-write           waiting      1  continuous-write                 0  10.152.183.78   no       
+s3-integrator              active       1  s3-integrator     latest/edge  520  10.152.183.111  no       
+shard-one         6.0.24   active       2  mongodb-k8s                      1  10.152.183.62   no       
+shard-two         6.0.24   active       1  mongodb-k8s                      2  10.152.183.33   no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.15         Primary.
+config-server/1      active    idle   10.1.53.14         
+continuous-write/0*  waiting   idle   10.1.53.31         
+s3-integrator/0*     active    idle   10.1.53.30         
+shard-one/0*         active    idle   10.1.53.23         
+shard-one/1          active    idle   10.1.53.25         Primary.
+shard-two/0*         active    idle   10.1.53.29         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:20:16 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d469deb72fd50f5b66b3bb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.006276329999991503>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0038537339999038522>]>
+unit-shard-one-0: 02:20:20 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d469e3b72fd50f5b66b3bc, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001004216999945129>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69d469dc43c522de4a8b7b66'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12596}")>]>
+unit-shard-one-0: 02:20:38 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d469f56be7fa422067b0ae, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0014922599999636077>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012434760000132883>]>
+unit-shard-one-0: 02:20:42 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d469f96be7fa422067b0af, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0027080239999577316>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('69d469f4d7ebea1993432210'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13046, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1775528436, 2), 'signature': {'hash': b'\\x83\\xd2\\x12\\xa6I\\xa7u\\xdfb\\x9cy\\x86\\xdcKL\\xa7\\xbc\\x01|\\x83', 'keyId': 7625836076111757338}}, 'operationTime': Timestamp(1775528429, 7)}")>]>
+unit-shard-one-0: 02:20:47 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d469fd6be7fa422067b0b0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010023086000046533>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006593690000045171>]>
+unit-config-server-0: 02:21:59 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/69d46a467fdae2261e80dc01 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 02:22:13 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.201:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69d46a467fdae2261e80dc01 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 02:22:13 ERROR unit.config-server/0.juju-log s3-credentials:15: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69d46a467fdae2261e80dc01 [config-server/config-server-1.config-server-endpoints:27017]\n', 'stderr': ''}
+unit-config-server-0: 02:22:22 ERROR unit.config-server/0.juju-log cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.201:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69d46a467fdae2261e80dc01 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 02:22:22 ERROR unit.config-server/0.juju-log Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69d46a467fdae2261e80dc01 [config-server/config-server-1.config-server-endpoints:27017]\n', 'stderr': ''}
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
