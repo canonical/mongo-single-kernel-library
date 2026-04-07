@@ -31,6 +31,7 @@ class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
         refresh: charm_refresh.Common | None,
     ) -> None:
         self.dependent = dependent
+        self.charm = self.dependent.charm
         self.state = state
         self.workload = workload
         self.refresh = refresh

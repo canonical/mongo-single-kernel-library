@@ -65,7 +65,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[PeerRelationNames]
     status_peer_rel_name: ClassVar[PeerRelationNames] = PeerRelationNames.STATUS_PEERS
-    name: ClassVar[str]
+    name: str
 
     def __init__(self, *args):
         # Init the Juju object Object
