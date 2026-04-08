@@ -1,10 +1,12 @@
 (configure-s3-aws)=
+
 # How to configure S3 storage on AWS
 
 [Amazon S3](https://aws.amazon.com/s3/) storage can be configured for Charmed MongoDB replica sets and sharded clusters with the [`s3-integrator` charm](https://charmhub.io/s3-integrator).
 
 ## Prerequisites
-* An existing bucket in Amazon S3 
+
+* An existing bucket in Amazon S3
 * A replica set with at least three nodes **or** a sharded cluster with at least one shard
   * See {ref}`scale-replicas-and-shards`
 
@@ -22,7 +24,7 @@ Sync your `s3-integrator` credentials:
 juju run s3-integrator/leader sync-s3-credentials access-key=<access-key> secret-key=<secret-key>
 ```
 
-To configure `s3-integrator`, run `juju config` with the [relevant parameters](https://charmhub.io/s3-integrator/configure) to your S3 storage. 
+To configure `s3-integrator`, run `juju config` with the [relevant parameters](https://charmhub.io/s3-integrator/configure) to your S3 storage.
 
 For example:
 
