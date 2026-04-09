@@ -5,6 +5,7 @@ from platform import platform
 import pytest
 import tomllib
 import yaml
+from ops.hookcmds import Network
 from ops.testing import Harness
 
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
@@ -44,6 +45,28 @@ class _MockRefreshVM:
 
     def unit_status_lower_priority(self, *, workload_is_running=True):
         return None
+
+
+@pytest.fixture(autouse=True)
+def mock_network_get(mocker):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.network_get",
+        return_value=Network._from_dict(
+            {
+                "bind-addresses": [
+                    {
+                        "mac-address": "aa:bb",
+                        "interface-name": "eth0",
+                        "addresses": [
+                            {"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}
+                        ],
+                    }
+                ],
+                "egress-subnets": ["127.0.0.0/24"],
+                "ingress-addresses": ["10.0.0.1"],
+            }
+        ),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -91,6 +114,10 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
 
     if substrate == "microk8s":
@@ -127,6 +154,10 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
     harness.add_relation("router-peers", "router-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
     if substrate == "microk8s":
         container = harness.model.unit.get_container("mongos")
@@ -242,12 +273,12 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
 @pytest.fixture
 def mongodb_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.10"
+        return "10.0.0.1"
     return "mongodb-k8s-0.mongodb-k8s-endpoints"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.11"
+        return "10.0.0.2"
     return "mongodb-k8s-1.mongodb-k8s-endpoints"

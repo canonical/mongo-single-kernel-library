@@ -31,7 +31,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import DBPrivilege
+from single_kernel_mongo.utils.mongodb_users import AuthRestrictions, DBPrivilege
 
 logger = logging.getLogger(__name__)
 
@@ -142,11 +142,19 @@ class MongoConnection:
                 logger.error("Cannot initialize replica set. error=%r", e)
                 raise e
 
-    def create_user(self, username: str, password: str, roles: list[DBPrivilege]):
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        roles: list[DBPrivilege],
+        auth_restrictions: list[AuthRestrictions] | None = None,
+    ):
         """Create user.
 
         Grant read and write privileges for specified database.
         """
+        if not auth_restrictions:
+            auth_restrictions = []
         try:
             self.client.admin.command(
                 "createUser",
@@ -154,6 +162,7 @@ class MongoConnection:
                 pwd=password,
                 roles=roles,
                 mechanisms=["SCRAM-SHA-256"],
+                authenticationRestrictions=auth_restrictions,
             )
         except OperationFailure as e:
             if e.code == MongoErrorCodes.USER_ALREADY_EXISTS:

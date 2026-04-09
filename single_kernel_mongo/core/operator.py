@@ -17,15 +17,15 @@ from __future__ import annotations
 
 import shutil
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
@@ -35,7 +35,6 @@ from single_kernel_mongo.config.literals import (
     SYSTEMD_MONGODB_OVERRIDE,
     SYSTEMD_MONGOS_OVERRIDE,
     TRUST_STORE_PATH,
-    Scope,
     Substrates,
     TrustStoreFiles,
 )
@@ -95,7 +94,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[str]
+    name: str
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager
@@ -218,7 +217,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> Sequence[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Recomputes the statuses for the given scope."""
         ...
 

@@ -109,6 +109,7 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongod
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
 
     mocked_reconcile = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
@@ -134,6 +135,7 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
 
     mocked_reconcile = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
