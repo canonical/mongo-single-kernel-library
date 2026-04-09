@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, final
 import charm_refresh
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
 from ops.model import Relation, Unit
@@ -616,7 +617,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 

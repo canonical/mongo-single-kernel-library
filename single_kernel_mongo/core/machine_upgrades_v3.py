@@ -27,7 +27,7 @@ class MachineMongoDBRefresh(
 
         if self.dependent.name == CharmKind.MONGOD:
             try:
-                if self.dependent.charm.unit.name == self.dependent.primary_unit_name:
+                if self.dependent.charm.unit.name == self.dependent.primary_unit_name:  # type: ignore[attr-defined]
                     self.dependent.mongo_manager.step_down_primary_and_wait_reelection()
             except FailedToElectNewPrimaryError:
                 logger.error("Failed to reelect primary before upgrading unit.")
@@ -42,7 +42,7 @@ class MachineMongoDBRefresh(
         if not self.dependent.workload.install(revision=snap_revision, retry_and_raise=False):
             logger.exception("Snap refresh failed")
 
-            if self.charm.workload.snap_revision() == revision_before_refresh:
+            if self.dependent.charm.workload.snap_revision() == revision_before_refresh:
                 self.dependent.start_charm_services()
             else:
                 refresh.update_snap_revision()
