@@ -1,0 +1,176 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: installing charm software
+  shard-one/0 [allocating] waiting: agent initialising
+  shard-one/1 [allocating] waiting: agent initialising
+  shard-two/0 [allocating] waiting: agent initialising
+  shard-two/1 [allocating] waiting: installing agent
+  shard-tree/0 [allocating] waiting: installing agent
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Starting MongoDB.
+  shard-one/0 [executing] maintenance: Adding shard to config-server...
+  shard-one/1 [executing] maintenance: Starting MongoDB.
+  shard-two/0 [idle] maintenance: Adding shard to config-server...
+  shard-two/1 [idle] blocked: Failed to start services. Retrying.... Run `status-detail`: 1 action required; 1 additional statuses.
+  shard-tree/0 [allocating] waiting: installing agent
+  shard-tree/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+86acbd2-dirty-locally built.
+  shard-one/0 [executing] maintenance: Adding shard to config-server...
+  shard-one/1 [executing] maintenance: Adding shard to config-server...
+  shard-two/0 [executing] maintenance: Adding shard to config-server...
+  shard-two/1 [executing] maintenance: Adding shard to config-server...
+  shard-tree/0 [executing] maintenance: Adding shard to config-server...
+  shard-tree/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Adding shard shard-one to config-server...
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: 
+  shard-tree/0 [executing] maintenance: Adding shard to config-server...
+  shard-tree/1 [executing] maintenance: Adding shard to config-server...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] waiting: Waiting for shards to upgrade/downgrade to revision 1+86acbd2-dirty-locally built.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: 
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: 
+  shard-tree/0 [executing] active: 
+  shard-tree/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for shards to upgrade/downgrade to revision 1+86acbd2-dirty-locally built.
+  shard-one/0 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-tree/0 [executing] active: 
+  shard-tree/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for shards to upgrade/downgrade to revision 1+86acbd2-dirty-locally built.
+  shard-tree/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-tree/0 [idle] active: Primary.
+  shard-tree/1 [idle] active: 
+[32mINFO    [0m integration.helpers.sharding:sharding.py:163 Expecting ['shard-one', 'shard-two', 'shard-tree'], got {'shard-tree', 'shard-one', 'shard-two'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  04:28:33Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  6.0.24   active      1  mongodb-k8s             0  10.152.183.164  no       
+shard-one      6.0.24   active      2  mongodb-k8s             1  10.152.183.129  no       
+shard-tree     6.0.24   active      2  mongodb-k8s             3  10.152.183.218  no       
+shard-two      6.0.24   active      2  mongodb-k8s             2  10.152.183.56   no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.11         Primary.
+shard-one/0*      active    idle   10.1.53.16         
+shard-one/1       active    idle   10.1.53.17         Primary.
+shard-tree/0*     active    idle   10.1.53.29         Primary.
+shard-tree/1      active    idle   10.1.53.31         
+shard-two/0*      active    idle   10.1.53.22         
+shard-two/1       active    idle   10.1.53.23         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-1: 04:24:33 ERROR unit.shard-one/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-two-1: 04:24:44 ERROR unit.shard-two/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-0: 04:25:51 ERROR unit.config-server/0.juju-log config-server:16: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1775708751, 1), \'signature\': {\'hash\': b\'/\\xab}\\xe8\\xb3\\x1arx\\x01\\x07\\xa3Zde\\x93EO\\x8b]+\', \'keyId\': 7626610617629016090}}, \'operationTime\': Timestamp(1775708751, 1)}')
+unit-shard-one-0: 04:26:26 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a719ef1dc0c61153f30, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006365250000044398>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000801912999918386>]>
+unit-shard-two-0: 04:26:32 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a77d4a63225ad937f27, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0022901759999740534>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008310470000196801>]>
+unit-shard-tree-1: 04:26:34 ERROR unit.shard-tree/1.juju-log sharding:18: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-09T04:26:33Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-04-09T04:26:34Z INFO Most recent service output:
+    2026-04-09T04:26:34.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-04-09T04:26:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-09T04:26:33Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-04-09T04:26:34Z INFO Most recent service output:
+    2026-04-09T04:26:34.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-04-09T04:26:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-tree-1: 04:26:34 ERROR unit.shard-tree/1.juju-log sharding:18: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-tree-1: 04:26:34 ERROR unit.shard-tree/1.juju-log sharding:18: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-09T04:26:33Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-04-09T04:26:34Z INFO Most recent service output:
+    2026-04-09T04:26:34.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-04-09T04:26:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/sharding.py", line 147, in _on_database_created
+    self.manager.synchronise_cluster_secrets(event.relation)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 599, in synchronise_cluster_secrets
+    self.dependent.backup_manager.configure_and_restart()
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 154, in configure_and_restart
+    self.workload.start()
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 49, in start
+    self.restart()
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-tree-1: 04:26:34 ERROR juju.worker.uniter.operation hook "sharding-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-0: 04:26:44 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a83ae1542135177f3a6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005179570000564127>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'69d72a7325372d03a64539b7\'), \'counter\': 5}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 12454, \'lastCommittedOpTime\': Timestamp(1775708795, 1), \'$clusterTime\': {\'clusterTime\': Timestamp(1775708802, 3), \'signature\': {\'hash\': b\'\\xae\\xf1#\\xe5+?"\\x0cg\\x07\\x8eS\\x1c%l\\x14\\xb44,\\xeb\', \'keyId\': 7626610617629016090}}, \'operationTime\': Timestamp(1775708795, 1)}')>]>
+unit-shard-tree-0: 04:26:49 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a87ae1542135177f3a7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008126999999831241>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0017178969999349647>]>
+unit-shard-tree-0: 04:26:53 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a8cae1542135177f3a8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0015682729999753064>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005661500000542219>]>
+unit-shard-tree-0: 04:26:57 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69d72a90ae1542135177f3a9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0021019540000679626>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.001064476999999897>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
