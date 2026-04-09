@@ -1,7 +1,7 @@
 (reference)=
 # Reference
 
-Release notes for each stable revision of Charmed MongoDB 8 on VM and K8s:
+Release notes for each stable revision of Charmed MongoDB 6 on VM and K8s:
 
 ```{toctree}
 :titlesonly:
