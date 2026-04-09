@@ -1,3 +1,10 @@
+---
+relatedlinks: "[Charmhub&#32;|&#32;MongoDB&#32;VM](https://charmhub.io/mongodb?channel=6/edge), [Charmhub&#32;|&#32;MongoDB&#32;K8s](https://charmhub.io/mongodb-k8s?channel=6/edge)"
+myst:
+  html_meta:
+    description: "Official documentation for Charmed MongoDB. Deploy and manage MongoDB on bare metal/virtual machines and Kubernetes using Juju."
+---
+
 # Charmed MongoDB documentation
 
 Charmed MongoDB is an open-source software operator that deploys and operates [MongoDB](https://www.mongodb.com/) databases on IAAS/VM and Kubernetes. In addition to MongoDB's essential operations for managing production-grade deployments, Charmed MongoDB offers advanced features such as backup and restores, monitoring, easy application integrations, sharding, and encryption.
@@ -8,33 +15,60 @@ This charm is for anyone looking for a complete database management interface. T
 
 ## In this documentation
 
-|  |  |
-|--|--|
-| {ref}`tutorial` </br> A hands-on introduction to using the Charmed MongoDB operator for new users </br> |  {ref}`how-to-guides` </br> Step-by-step guides covering key operations and common tasks |
-| {ref}`reference` </br> Technical information - requirements, release notes | {ref}`explanation` </br> Clarification of key topics  |
+This documentation contains practical information about installing and operating Charmed MongoDB. It covers instructions for both VM and K8s substrates.  
+
+### Get started
+
+Learn about what's in the charm, how to try it out, and perform the most common operations.
+
+* **Charm overview**: {ref}`system-requirements` • {ref}`release-notes` 
+* **Deploy MongoDB**: {ref}`Quickstart <via-juju-cli>` • {ref}`Guided tutorial <tutorial>` • {ref}`Terraform <via-terraform>`
+* **Key operations**: {ref}`Scale your cluster <scale-replicas-and-shards>` • {ref}`Connect to a client <manage-client-connections>` • {ref}`Create a backup <create-a-backup>`
+
+### Production deployments
+
+Advanced deployments and operations focused on production scenarios and high availability.
+
+* **Advanced configuration**: {ref}`Enable LDAP <enable-ldap>`
+* **Upgrades and data migration**: {ref}`Minor upgrades <minor-version-upgrade>` • {ref}`Upgrade from MongoDB 6 to 8 <major-version-upgrade>` • {ref}`Migrate a cluster <migrate-a-cluster>`
+* **Security**: {ref}`TLS encryption <enable-tls>` • {ref}`Hardening guide <hardening-guide>`
+* **Troubleshooting**: {ref}`Monitoring <monitoring>` • {ref}`Advanced statuses <advanced-statuses>` 
+
+### Charm developers
+
+Information for developers looking to make their application compatible with MongoDB.
+
+* **Libraries and interfaces**: [`mongodb_client` interface](https://charmhub.io/integrations/mongodb_client)
+* **Learn more about the charm**: {ref}`Internal users <users>` • {ref}`sharding`
+
+## How this documentation is organised
+
+This documentation uses the [Diátaxis documentation structure](https://diataxis.fr/):
+
+* The {ref}`tutorial` provides step-by-step guidance for a beginner through the basics of a deployment in a local machine.
+* {ref}`how-to` are more focused, and assume you already have basic familiarity with the product.
+* {ref}`reference` contains structured information for quick lookup, such as system requirements and configuration parameters
+* {ref}`explanation` gives more background and context about key topics
 
 ## Project and community
 
 Charmed MongoDB is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback.
 
-* Check our [Code of Conduct](https://ubuntu.com/community/ethos/code-of-conduct)
-* Raise software issues or feature requests in [GitHub](https://github.com/canonical/mongo-single-kernel-library/issues)
-<!-- * Report security issues through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File).  -->
-* Meet the community and chat with us on [Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+### Get involved
+
+* [Report an issue](https://github.com/canonical/mongo-single-kernel-library/issues/new/choose)
+* [Public Matrix channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
+* [Discourse forum](https://discourse.charmhub.io/tag/mongodb)
 * [Contribute](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/CONTRIBUTING.md)
 
-## Licensing & trademark
+### Governance and policies
 
-The Charmed MongoDB Operator is free software, distributed under the [Apache Software License, version 2.0](https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/LICENSE). It installs, operates, and depends on [MongoDB Community Version](https://github.com/mongodb/mongo), which is licensed under the Server Side Public License (SSPL)
-
-MongoDB is a trademark or registered trademark of MongoDB, Inc. Other trademarks are property of their respective owners.
-
+* [Code of Conduct](https://ubuntu.com/community/code-of-conduct)
 
 ```{toctree}
 :titlesonly:
 :hidden:
 
-Home <self>
 Tutorial <tutorial>
 How-to guides <how-to/index>
 Reference <reference/index>

@@ -1,3 +1,4 @@
+(monitoring)=
 # Monitoring
 
 ```{toctree}

@@ -150,7 +150,7 @@ html_context = {
     #       it inherits the code license instead; specify it instead of 'CC-BY-SA'.
 
     "license": {
-        "name": "CC-BY-SA-3.0",
+        "name": "Apache License 2.0",
         "url": "https://github.com/canonical/mongo-single-kernel-library/blob/6/edge/LICENSE",
     },
 }
