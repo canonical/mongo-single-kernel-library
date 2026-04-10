@@ -1,0 +1,102 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller          Cloud/Region                      Version  SLA          Timestamp
+test-ldap-zma7  concierge-microk8s  test-ldap-k8s-cloud-hcv4/default  3.6.21   unsupported  01:37:27Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         error            1  glauth-k8s                latest/edge     56  10.152.183.214  no       hook failed: "start"
+glauth-utils                       blocked          1  glauth-utils              latest/edge     50  10.152.183.62   no       Waiting for the required auxiliary integration.
+postgresql-k8s            14.20    active           1  postgresql-k8s            14/stable      774  10.152.183.195  no       
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  10.152.183.126  no       
+traefik-k8s                        maintenance      1  traefik-k8s               latest/stable  281  10.152.183.124  no       installing charm software
+
+Unit                         Workload     Agent      Address      Ports  Message
+glauth-k8s/0*                error        idle       10.1.79.209         hook failed: "start"
+glauth-utils/0*              blocked      idle       10.1.79.205         Waiting for the required auxiliary integration.
+postgresql-k8s/0*            active       idle       10.1.79.203         Primary
+self-signed-certificates/0*  active       executing  10.1.79.208         (config-changed) 
+traefik-k8s/0*               maintenance  executing  10.1.79.207         (install) installing charm software
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:37:06 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-zma7...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[1m[31mERROR   [0m pytest_operator.plugin:plugin.py:1031 Timeout resetting test-ldap-zma7
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/utils.py", line 142, in _block
+    await asyncio.sleep(wait_period)
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 605, in sleep
+    return await future
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 456, in wait_for
+    return fut.result()
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/pytest_operator/plugin.py", line 1024, in _reset
+    await model.block_until(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 1170, in block_until
+    await utils.block_until(done, timeout=timeout, wait_period=wait_period)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/utils.py", line 144, in block_until
+    await asyncio.shield(asyncio.wait_for(_block(), timeout))
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 458, in wait_for
+    raise exceptions.TimeoutError() from exc
+asyncio.exceptions.TimeoutError
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-zma7 to die...
+[1m[31mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:__init__.py:1340 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-3554' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py:697> exception=ProxyNotConnectedError()>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 328, in _open
+    sock = self.proxy.socket()
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/proxy/kubernetes/proxy.py", line 80, in socket
+    raise ProxyNotConnectedError()
+juju.client.proxy.proxy.ProxyNotConnectedError
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-hcv4...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  01:52:48Z
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
