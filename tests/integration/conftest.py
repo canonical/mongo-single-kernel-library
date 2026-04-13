@@ -136,13 +136,12 @@ def mongos_resource(mongos_metadata, substrate) -> dict[str, Any]:
     return {}
 
 
-pytest.fixture
-
-
+@pytest.fixture
 def mongodb_charm_name(substrate: Substrate) -> str:
     return "mongodb" if substrate == "lxd" else "mongodb-k8s"
 
 
+@pytest.fixture
 def mongos_charm_name(substrate: Substrate) -> str:
     return "mongos" if substrate == "lxd" else "mongos-k8s"
 
