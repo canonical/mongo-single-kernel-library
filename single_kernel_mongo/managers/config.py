@@ -324,7 +324,7 @@ class VaultConfigManager(FileBasedConfigManager):
         if not self.state.enable_encryption_at_rest:
             return
 
-        current_config = hcl2.loads(f"{self.file}")
+        current_config = hcl2.loads(f"{self.file.read_text()}")
         new_config = hcl2.loads(self._render_template())
 
         if force or not self.workload.active() or current_config != new_config:
