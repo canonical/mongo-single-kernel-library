@@ -64,7 +64,7 @@ class VaultManager(Object, ManagerStatusProtocol):
         """Checks if we should integrate vault."""
         return self.state.enable_encryption_at_rest
 
-    def ensures_config_stored(self):
+    def ensures_config_stored(self) -> None:
         """Ensures that the config is stored in the app peer databag for resiliency."""
         if self.state.app_peer_data.enable_encryption_at_rest is None:
             self.state.app_peer_data.enable_encryption_at_rest = (
@@ -72,7 +72,7 @@ class VaultManager(Object, ManagerStatusProtocol):
             )
             logger.debug("Stored enable-encryption-at-rest config value in databag.")
 
-    def ensures_value_is_not_updated(self):
+    def ensures_value_is_not_updated(self) -> None:
         """Ensures that we don't update the config value after startup."""
         if (
             self.state.app_peer_data.enable_encryption_at_rest is None
@@ -85,13 +85,13 @@ class VaultManager(Object, ManagerStatusProtocol):
                 f"Revert config enable-encryption-at-rest to {self.state.enable_encryption_at_rest}"
             )
 
-    def generate_nonce(self):
+    def generate_nonce(self) -> None:
         """Sets the nonce in the databag (once per unit)."""
         if self.state.vault_state.nonce:
             return
         self.state.vault_state.nonce = secrets.token_hex(16)
 
-    def get_subnets(self) -> list[str]:
+    def get_egress_subnets(self) -> list[str]:
         """Gets the ordered list of subnets for that specific relation."""
         if not self.state.vault_relation:
             return []
@@ -121,7 +121,7 @@ class VaultManager(Object, ManagerStatusProtocol):
         # Trigger the startup.
         self.charm.on.start.emit()
 
-    def _check_connectivity(self, data: vault_kv.VaultKvProviderSchema):
+    def _check_connectivity(self, data: vault_kv.VaultKvProviderSchema) -> bool:
         """Checks that the connectivity to vault works."""
         local_path = TRUST_STORE_PATH / TrustStoreFiles.VAULT.value
         self.workload.copy_to_unit(
@@ -150,8 +150,7 @@ class VaultManager(Object, ManagerStatusProtocol):
             return VaultConfigurationState.DISABLED
         if not self.state.vault_relation:
             return VaultConfigurationState.VAULT_NOT_INTEGRATED
-        data = self.state.vault_state.get()
-        if not data:
+        if not (data := self.state.vault_state.get()):
             return VaultConfigurationState.MISSING_DATA
         if not self._check_connectivity(data):
             return VaultConfigurationState.VAULT_UNREACHABLE
@@ -161,15 +160,22 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def rotate_master_key(self) -> None:
         """Rotates the vault master key."""
-        vault_state = self.vault_state()
-        match vault_state:
+        if self.dependent.refresh_in_progress:
+            raise ImpossibleToRotateMasterKeyError("Refresh in progress.")
+        for manager in (self.dependent.s3_backup_manager, self.dependent.gcs_backup_manager):
+            if manager.backup_in_progress():
+                raise ImpossibleToRotateMasterKeyError("Backup in progress")
+            if manager.restore_in_progress():
+                raise ImpossibleToRotateMasterKeyError("Restore in progress")
+
+        match self.vault_state():
             case VaultConfigurationState.ACTIVE:
                 pass
             case VaultConfigurationState.DISABLED:
                 raise ImpossibleToRotateMasterKeyError(
                     "Encryption at rest not enabled on this application."
                 )
-            case _:
+            case vault_state:
                 raise ImpossibleToRotateMasterKeyError(
                     self.map_state_to_status(vault_state).message
                 )
@@ -227,7 +233,7 @@ class VaultManager(Object, ManagerStatusProtocol):
                 charm_statuses["unit"].append(status)
         return charm_statuses[scope]
 
-    def set_status(self, status: StatusObject, scope: Literal["both"] | Scope):
+    def set_status(self, status: StatusObject, scope: Literal["both"] | Scope) -> None:
         """Sets a status for scope app or unit, or both."""
         if scope == "unit" or scope == "both":
             self.state.statuses.set(status, component=self.name, scope="unit")
@@ -236,7 +242,7 @@ class VaultManager(Object, ManagerStatusProtocol):
         if scope == "app" or scope == "both":
             self.state.statuses.set(status, component=self.name, scope="app")
 
-    def clear_statuses(self, scope: Literal["both"] | Scope):
+    def clear_statuses(self, scope: Literal["both"] | Scope) -> None:
         """Sets a status for scope app or unit, or both."""
         logger.info(f"Clearing statuses for {scope=}")
         if scope == "unit" or scope == "both":

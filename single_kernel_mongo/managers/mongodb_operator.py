@@ -349,7 +349,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.vault_manager.prepare_vault_agent(data)
 
         if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
-            raise WaitingForVaultError()
+            return
+
         self._configure_workloads()
         self.start_charm_services()
 
@@ -1021,11 +1022,14 @@ class MongoDBOperator(OperatorProtocol, Object):
         reconfigure. Especially in the case that the leader's IP address changed, it will not
         receive a relation event.
         """
-        # All nodes should restart PBM and MongoDBExporter if it's not running
+        # All nodes should restart PBM, Vault and MongoDBExporter if it's not running
         if self.workload.active():
+            # Ensures that MongoDB Exporter is running.
             self.mongodb_exporter_config_manager.configure_and_restart()
-            # We can use either manager, what matters is the BackupConfigManager below
+            # Ensures that PBM is running.
             self.s3_backup_manager.configure_and_restart()
+            # Ensures that vault is running
+            self.vault_config_manager.configure_and_restart()
 
         self.update_ips_in_databag()
 

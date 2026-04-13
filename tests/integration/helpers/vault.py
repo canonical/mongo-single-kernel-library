@@ -41,6 +41,11 @@ logger = getLogger(__name__)
 
 @final
 class Vault:
+    """A Vault  helper class.
+
+    This is taken from vault charmintegration test helpers.
+    """
+
     def __init__(self, url: str, ca_file_location: str | None = None, token: str | None = None):
         self.url = url
         verify = abspath(ca_file_location) if ca_file_location else False
@@ -119,7 +124,16 @@ async def get_vault_client(
     return Vault(url=f"https://{address}:8200", token=token, ca_file_location=ca_file_name)
 
 
-async def deploy_vault(ops_test: OpsTest, substrate: Substrate, vault_charm_name: str):
+async def deploy_vault(ops_test: OpsTest, substrate: Substrate, vault_charm_name: str) -> None:
+    """Deploys vault and runs the initialization process.
+
+    To initialize, you must first initialize on the leaver, then unseal vault on all units,
+    and finally authorize.
+
+
+    The flow is described in vault docs:
+    https://canonical-vault-charms.readthedocs-hosted.com/en/latest/tutorial/getting_started_k8s/
+    """
     assert ops_test.model
     await ops_test.model.deploy(
         vault_charm_name,
@@ -153,6 +167,28 @@ async def get_vault_token_and_unseal_key(model: Model, app_name: str) -> tuple[s
     root_token, unseal_key = await get_juju_secret(
         model, label=f"root-token-key-{app_name}", fields=["root-token", "key"]
     )
+    return root_token, unseal_key
+
+
+async def initialize_unseal_authorize_vault(
+    ops_test: OpsTest, substrate: Substrate, app_name: str
+) -> tuple[str, str]:
+    """Initializes the vault leader, then unseal and authorize."""
+    assert ops_test.model
+
+    # Initialize the vault on the leader, and get back the root token and unseal key.
+    root_token, unseal_key = await initialize_vault_leader(ops_test, substrate, app_name)
+
+    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
+        # Using the token and the unseal key, unseal all units, and authorize them
+        await unseal_all_vault_units(
+            ops_test,
+            substrate=substrate,
+            app_name=app_name,
+            unseal_key=unseal_key,
+            token=root_token,
+        )
+        await authorize_charm_and_wait(ops_test, app_name, root_token)
     return root_token, unseal_key
 
 
@@ -206,12 +242,17 @@ async def unseal_all_vault_units(
 
     # We need to unseal the leader first, since this is the one we initialized.
     leader = await find_unit(ops_test, leader=True, app_name=app.name)
-    vault = await get_vault_client(ops_test, substrate, leader.name, unseal_key, ca_file_name)
+
+    # Create a client with the right token
+    vault = await get_vault_client(ops_test, substrate, leader.name, token, ca_file_name)
+
+    # Unseal the leader
     if vault.is_sealed():
         vault.unseal(unseal_key)
     await vault.wait_for_node_to_be_unsealed()
 
     for unit in app.units:
+        # Unseal the all other units.
         vault = await get_vault_client(ops_test, substrate, unit.name, token, ca_file_name)
         vault.unseal(unseal_key)
         await vault.wait_for_node_to_be_unsealed()
@@ -220,8 +261,10 @@ async def unseal_all_vault_units(
 async def authorize_charm(
     ops_test: OpsTest, root_token: str, app_name: str, attempts: int = 12
 ) -> Any | dict[Any, Any]:
+    """Authorizes the charm as a client for vault."""
     assert ops_test.model
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
+    ## Add a new secret with the root token.
     try:
         secret = await ops_test.model.add_secret(
             f"approle-token-{app_name}", [f"token={root_token}"]
@@ -234,8 +277,11 @@ async def authorize_charm(
         )
         secret = await get_model_secret_id(ops_test, f"approle-token-{app_name}")
     secret_id = secret.split(":")[-1]
+
+    # Grant it to the charm.
     await ops_test.model.grant_secret(f"approle-token-{app_name}", app_name)
-    # TODO: I have never seen this help. Should we remove it?
+
+    # Run the action to authorize the charm.
     for attempt in range(1, attempts + 1):
         authorize_action = await leader_unit.run_action(
             action_name="authorize-charm",
@@ -283,24 +329,6 @@ async def authorize_charm_and_wait(
         )
     logger.info("Charm authorized")
     return result
-
-
-async def initialize_unseal_authorize_vault(
-    ops_test: OpsTest, substrate: Substrate, app_name: str
-) -> tuple[str, str]:
-    assert ops_test.model
-    root_token, unseal_key = await initialize_vault_leader(ops_test, substrate, app_name)
-
-    async with ops_test.fast_forward(fast_interval=FAST_INTERVAL):
-        await unseal_all_vault_units(
-            ops_test,
-            substrate=substrate,
-            app_name=app_name,
-            unseal_key=unseal_key,
-            token=root_token,
-        )
-        await authorize_charm_and_wait(ops_test, app_name, root_token)
-    return root_token, unseal_key
 
 
 def vault_base_path(substrate: Substrate) -> str:

@@ -285,7 +285,7 @@ class VaultConfigManager(FileBasedConfigManager):
         return template.render(**new_content)
 
     @override
-    def set_environment(self):
+    def set_environment(self) -> None:
         """Write update parameters in the file."""
         current_config = {}
         if self.file.exists():
@@ -319,7 +319,7 @@ class VaultConfigManager(FileBasedConfigManager):
             "token_file_path": f"{self.workload.paths.vault_token_file_path}",
         }
 
-    def configure_and_restart(self, force: bool = False):
+    def configure_and_restart(self, force: bool = False) -> None:
         """Restarts vault agent with the correct config."""
         if not self.state.enable_encryption_at_rest:
             return

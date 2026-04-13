@@ -49,11 +49,13 @@ class VaultEventHandler(Object):
         self.relation_name = ExternalRequirerRelations.VAULT.value
 
         super().__init__(parent=dependent, key=self.relation_name)
-        self.interface = vault_kv.VaultKvRequires(self.charm, self.relation_name, self.charm.name)
+        self.kv_interface = vault_kv.VaultKvRequires(
+            self.charm, self.relation_name, self.charm.name
+        )
 
-        self.framework.observe(self.interface.on.connected, self._on_connected)
-        self.framework.observe(self.interface.on.ready, self._on_ready)
-        self.framework.observe(self.interface.on.gone_away, self._on_gone_away)
+        self.framework.observe(self.kv_interface.on.connected, self._on_connected)
+        self.framework.observe(self.kv_interface.on.ready, self._on_ready)
+        self.framework.observe(self.kv_interface.on.gone_away, self._on_gone_away)
 
         # Handlers for lifecycle events for the vault specific parts.
         self.framework.observe(self.charm.on.install, self._generate_nonce)
@@ -77,9 +79,9 @@ class VaultEventHandler(Object):
             self.manager.set_status(VaultStatuses.VAULT_INTEGRATED.value, scope="both")
             return
         self.manager.clear_statuses(scope="both")
-        egress_subnets = self.manager.get_subnets()
+        egress_subnets = self.manager.get_egress_subnets()
         nonce = self.manager.get_nonce()
-        self.interface.request_credentials(
+        self.kv_interface.request_credentials(
             event.relation, egress_subnet=egress_subnets, nonce=nonce
         )
 
@@ -90,14 +92,14 @@ class VaultEventHandler(Object):
             return
         self.manager.clear_statuses(scope="both")
         # First, get the credentials from the interface
-        unit_credentials = self.interface.get_unit_credentials(event.relation)
+        unit_credentials = self.kv_interface.get_unit_credentials(event.relation)
         secret = self.model.get_secret(id=unit_credentials)
         secret_content = secret.get_content(refresh=True)
         data = vault_kv.VaultKvProviderSchema.model_validate(
             {
-                "vault_url": self.interface.get_vault_url(event.relation),
-                "mount": self.interface.get_mount(event.relation),
-                "ca_certificate": self.interface.get_ca_certificate(event.relation),
+                "vault_url": self.kv_interface.get_vault_url(event.relation),
+                "mount": self.kv_interface.get_mount(event.relation),
+                "ca_certificate": self.kv_interface.get_ca_certificate(event.relation),
                 "credentials": json.dumps(
                     {
                         "role-id": secret_content["role-id"],
@@ -142,9 +144,9 @@ class VaultEventHandler(Object):
             return
         if not self.manager.state.vault_relation:
             return
-        egress_subnets = self.manager.get_subnets()
+        egress_subnets = self.manager.get_egress_subnets()
         nonce = self.manager.get_nonce()
-        self.interface.request_credentials(
+        self.kv_interface.request_credentials(
             self.manager.state.vault_relation,
             egress_subnet=egress_subnets,
             nonce=nonce,
