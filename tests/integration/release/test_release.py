@@ -136,6 +136,7 @@ async def test_integrate_with_tls(
     await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
 
 
+@pytest.mark.abort_on_fail
 async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
     """Tests that we can integrate with LDAP without losing data."""
     assert ops_test.model

@@ -66,5 +66,8 @@ async def kubernetes_model(ops_test: OpsTest) -> AsyncGenerator[Model]:
             pass
 
     # Remove the offers and tear down deployment
-    await teardown_offers(ops_test, kubernetes_model)
+    try:
+        await teardown_offers(ops_test, kubernetes_model)
+    except Exception:
+        pass
     await ops_test.forget_model(alias="secondary", timeout=TIMEOUT, allow_failure=True)
