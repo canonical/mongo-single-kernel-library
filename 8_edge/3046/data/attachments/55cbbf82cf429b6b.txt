@@ -1,0 +1,268 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m integration.helpers.ha:ha.py:87 Calling network loss on ns=testing and pod=shard-two-1
+[32mINFO    [0m integration.helpers.ha:ha.py:114 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  03:17:15Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.10   active       3  mongodb-k8s                  0  10.152.183.112  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.173  no       
+shard-one         8.0.10   active       3  mongodb-k8s                  1  10.152.183.68   no       
+shard-two         8.0.10   active       3  mongodb-k8s                  2  10.152.183.204  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.58         
+config-server/1      active    idle   10.1.53.57         Primary.
+config-server/2      active    idle   10.1.53.56         
+continuous-write/0*  waiting   idle   10.1.53.55         
+shard-one/0*         active    idle   10.1.53.61         
+shard-one/1          active    idle   10.1.53.60         Primary.
+shard-one/2          active    idle   10.1.53.59         
+shard-two/0*         active    idle   10.1.53.5          
+shard-two/1          active    idle   10.1.53.63         Primary.
+shard-two/2          active    idle   10.1.53.62         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-1: 02:55:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:55:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:55:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:55:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:55:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 02:55:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:55:13 ERROR unit.shard-one/2.juju-log root:Uncaught exception while in charm code:
+pymongo.errors.AutoReconnect: connection pool paused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 1062, in get_statuses
+    if not self._is_shard_aware():
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 954, in _is_shard_aware
+    return mongo.is_shard_aware(self.state.app_peer_data.replica_set)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 700, in is_shard_aware
+    sc_status = self.client.admin.command("listShards")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 934, in command
+    with self._client._conn_for_reads(read_preference, session, operation=command_name) as (
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/mongo_client.py", line 1867, in _conn_from_server
+    with self._checkout(server, session) as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/mongo_client.py", line 1777, in _checkout
+    with server.checkout(handler=err_handler) as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1101, in checkout
+    conn = self._get_conn(checkout_started_time, handler=handler)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1217, in _get_conn
+    self._raise_if_not_ready(checkout_started_time, emit_event=True)
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1169, in _raise_if_not_ready
+    _raise_connection_failure(
+  File "/var/lib/juju/agents/unit-shard-one-2/charm/venv/lib/python3.12/site-packages/pymongo/pool_shared.py", line 148, in _raise_connection_failure
+    raise AutoReconnect(msg) from error
+pymongo.errors.AutoReconnect: config-server-0.config-server-endpoints:27018: connection pool paused (configured timeouts: connectTimeoutMS: 2000.0ms)
+unit-shard-two-2: 02:55:13 ERROR unit.shard-two/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/src/charm.py", line 36, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 1058, in get_statuses
+    if not self.cluster_password_synced():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 920, in cluster_password_synced
+    mongos.get_shard_members()
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 392, in get_shard_members
+    shard_list = self.client.admin.command("listShards")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 934, in command
+    with self._client._conn_for_reads(read_preference, session, operation=command_name) as (
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/mongo_client.py", line 1867, in _conn_from_server
+    with self._checkout(server, session) as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/mongo_client.py", line 1777, in _checkout
+    with server.checkout(handler=err_handler) as conn:
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1101, in checkout
+    conn = self._get_conn(checkout_started_time, handler=handler)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1263, in _get_conn
+    conn = self.connect(handler=handler)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 1050, in connect
+    conn.hello()
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 243, in hello
+    return self._hello(None, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 285, in _hello
+    doc = self.command("admin", cmd, publish_events=False, exhaust_allowed=awaitable)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-shard-two-2/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 267, in _check_command_response
+    raise NotPrimaryError(errmsg, response)
+pymongo.errors.NotPrimaryError: Mongos is in quiesce mode and will shut down, full error: {'ok': 0.0, 'errmsg': 'Mongos is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14880, '$clusterTime': {'clusterTime': Timestamp(1776048912, 24), 'signature': {'hash': b'H\x82\x8a\x01\xc7\x9a]h\xb6\xd1\x9c\xa4)o\x08\x0c\xe8r\x11\x84', 'keyId': 7628068114780913670}}, 'operationTime': Timestamp(1776048912, 24), 'topologyVersion': {'processId': ObjectId('69dc57b3afea95760c101781'), 'counter': 1}}
+unit-shard-one-2: 02:55:14 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-2: 02:55:14 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-1: 02:55:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-continuous-write-0: 02:55:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 02:56:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 02:56:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 02:56:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 02:56:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 02:56:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:01:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-13T03:01:53Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-13T03:01:53Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-13T03:01:53.136Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-13T03:01:53.137Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-13T03:01:53Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-13T03:01:53Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-13T03:01:53Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-13T03:01:53.136Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-13T03:01:53.137Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-13T03:01:53Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 03:01:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-shard-two-0: 03:02:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:02:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 03:02:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:03:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:03:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:07:20 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 03:07:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 03:07:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:07:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-1: 03:08:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:08:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:08:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-2: 03:08:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-2: 03:08:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:09:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-1: 03:09:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:09:16 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:09:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-2: 03:09:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:13:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:13:15 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:13:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:14:21 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-config-server-0: 03:14:53 ERROR unit.config-server/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x73ed0e21f920 state=finished raised ClusterNotHealthyError>]
+unit-shard-one-0: 03:15:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-one-0: 03:15:30 ERROR unit.shard-one/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x724a38926270 state=finished raised ClusterNotHealthyError>]
+unit-shard-two-0: 03:15:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-shard-two-0: 03:16:07 ERROR unit.shard-two/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7f81e85240b0 state=finished raised ClusterNotHealthyError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
