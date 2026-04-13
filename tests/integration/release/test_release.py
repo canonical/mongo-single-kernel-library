@@ -102,8 +102,9 @@ async def test_deploy_apps(
             series="noble",
             config={"database-name": "test-database"},
         ),
-        deploy_glauth(ops_test, kubernetes_model),
     )
+
+    await deploy_glauth(ops_test, kubernetes_model)
 
     # Consume the offers exposed by glauth
     await consume_glauth_offers(ops_test, kubernetes_model)
