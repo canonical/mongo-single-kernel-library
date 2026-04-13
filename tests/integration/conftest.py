@@ -61,17 +61,15 @@ def architecture() -> str:
 
 
 @pytest.fixture(scope="session")
-def mongodb_revision(request: pytest.FixtureRequest, arch: str):
+def mongodb_revision(request: pytest.FixtureRequest):
     """Revision for the correct arch."""
-    data = json.loads(request.config.option.mongodb_revision)
-    return data[arch]
+    return request.config.option.mongodb_revision
 
 
 @pytest.fixture(scope="session")
-def mongos_revision(request: pytest.FixtureRequest, arch: str):
+def mongos_revision(request: pytest.FixtureRequest):
     """Revision for the correct arch."""
-    data = json.loads(request.config.option.mongos_revision)
-    return data[arch]
+    return request.config.option.mongos_revision
 
 
 @pytest.fixture
