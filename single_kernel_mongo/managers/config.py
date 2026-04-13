@@ -368,6 +368,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                         "certificateKeyFile": f"{self.workload.paths.ext_pem_file}",
                         "mode": "preferTLS",
                         "disabledProtocols": "TLS1_0,TLS1_1",
+                        "allowConnectionsWithoutCertificates": True,
                     }
                 },
             }

@@ -79,7 +79,7 @@ async def mongo_tls_command(
         uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
 
     if app_name == MONGOS_APP_NAME:
-        status_command = "db.getUsers()"
+        status_command = "db.version()"
     else:
         status_command = "rs.status()" if not mongos else "sh.status()"
 

@@ -316,6 +316,7 @@ def test_mongodb_config_manager_tls_enabled(mocker):
                 "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
                 "mode": "preferTLS",
                 "disabledProtocols": "TLS1_0,TLS1_1",
+                "allowConnectionsWithoutCertificates": True,
             }
         },
     }
