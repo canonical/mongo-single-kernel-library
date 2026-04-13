@@ -150,7 +150,7 @@ html_context = {
     #       it inherits the code license instead; specify it instead of 'CC-BY-SA'.
 
     "license": {
-        "name": "CC-BY-SA-3.0",
+        "name": "Apache License 2.0",
         "url": "https://github.com/canonical/mongo-single-kernel-library/blob/8/edge/LICENSE",
     },
 }
@@ -295,6 +295,7 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "sphinx_new_tab_link"
 ]
 
 new_tab_link_show_external_link_icon = True

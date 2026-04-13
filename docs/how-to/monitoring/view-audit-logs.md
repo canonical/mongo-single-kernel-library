@@ -1,3 +1,4 @@
+(view-audit-logs)=
 # How to view audit logs
 
 You can view [audit logs](https://www.mongodb.com/docs/manual/core/auditing/) in two ways:
