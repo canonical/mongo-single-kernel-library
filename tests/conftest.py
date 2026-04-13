@@ -17,6 +17,18 @@ def pytest_addoption(parser: Parser):
         choices=("lxd", "microk8s"),
         default="lxd",
     )
+    parser.addoption(
+        "--mongodb-revision",
+        action="store",
+        help="MongoDB revisions for the said substrate in the shape of a json dictionary",
+        default="{}",
+    )
+    parser.addoption(
+        "--mongos-revision",
+        action="store",
+        help="MongoDB revisions for the said substrate in the shape of a json dictionary",
+        default="{}",
+    )
 
 
 def pytest_configure(config):

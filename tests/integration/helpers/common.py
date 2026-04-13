@@ -49,6 +49,8 @@ INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
+CONTINUOUS_WRITE_APPLICATION_BIS = "continuous-write-bis"
+READER_APPLICATION = "reader-application"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
 DEFAULT_DATABASE_NAME = "continuous_writes_database"
 DEFAULT_COLLECTION_NAME = "continuous_writes_collection"
@@ -100,10 +102,11 @@ async def deploy_charm(
     ops_test: OpsTest,
     charm: str,
     substrate: Substrate,
-    mongod_resource: dict[str, str],
     app_name: str,
     num_units: int = 3,
+    mongod_resource: dict[str, str] | None = None,
     channel: str | None = None,
+    revision: int | None = None,
     config: dict[str, str] | None = None,
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
@@ -115,8 +118,9 @@ async def deploy_charm(
         series = series or "noble"
         await ops_test.model.deploy(
             charm,
-            resources=(mongod_resource if not channel else None),
             application_name=app_name,
+            revision=revision,
+            resources=(mongod_resource if not channel else None),
             num_units=0 if subordinate else num_units,
             series=series,
             trust=True,
@@ -127,8 +131,9 @@ async def deploy_charm(
     else:
         await ops_test.model.deploy(
             charm,
-            num_units=0 if subordinate else num_units,
             application_name=app_name,
+            num_units=0 if subordinate else num_units,
+            revision=revision,
             config=config,
             channel=channel,
             storage=storage,
@@ -1033,6 +1038,20 @@ async def start_continous_writes(
     await start_writes_action.wait()
 
 
+async def start_continuous_reads(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+):
+    """Helper function to run the `start-continuous-write` action on the continuous write app."""
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    start_writes_action = await application_unit.run_action(
+        "start-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
+    )
+    await start_writes_action.wait()
+
+
 async def stop_continous_writes(
     ops_test: OpsTest,
     client_app_name: str,
@@ -1049,6 +1068,21 @@ async def stop_continous_writes(
     )
     await stop_writes_action.wait()
     return int(stop_writes_action.results["writes"])
+
+
+async def stop_continuous_reads(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+) -> tuple[int, list[str]]:
+    """Helper function to run the `start-continuous-write` action on the continuous write app."""
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    stop_writes_action = await application_unit.run_action(
+        "stop-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
+    )
+    await stop_writes_action.wait()
+    return int(stop_writes_action.results["reads"]), stop_writes_action.results["failed_reads"]
 
 
 async def clear_continous_writes(

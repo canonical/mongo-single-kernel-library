@@ -24,7 +24,7 @@ def sigterm_handler(_signo, _stack_frame):
     run = False
 
 def n_read_filename(db_name: str, coll_name: str) -> str:
-    return f"n_read_value-{db_name}-{coll_name}"
+    return f"n_read_value-{db_name}-{coll_name}.json"
 
 
 def continous_reads(

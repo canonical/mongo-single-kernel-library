@@ -57,6 +57,20 @@ def architecture() -> str:
     return _architecture
 
 
+@pytest.fixture(scope="session")
+def mongodb_revision(request: pytest.FixtureRequest, arch: str):
+    """Revision for the correct arch."""
+    data = json.loads(request.config.option.mongodb_revision)
+    return data[arch]
+
+
+@pytest.fixture(scope="session")
+def mongos_revision(request: pytest.FixtureRequest, arch: str):
+    """Revision for the correct arch."""
+    data = json.loads(request.config.option.mongos_revision)
+    return data[arch]
+
+
 @pytest.fixture
 def application_path(architecture: str) -> str:
     """The test application path."""
@@ -119,6 +133,17 @@ def mongos_resource(mongos_metadata, substrate) -> dict[str, Any]:
     if substrate == "microk8s":
         return {"mongodb-image": mongos_metadata["resources"]["mongodb-image"]["upstream-source"]}
     return {}
+
+
+pytest.fixture
+
+
+def mongodb_charm_name(substrate: Substrate) -> str:
+    return "mongodb" if substrate == "lxd" else "mongodb-k8s"
+
+
+def mongos_charm_name(substrate: Substrate) -> str:
+    return "mongos" if substrate == "lxd" else "mongos-k8s"
 
 
 @pytest.fixture
