@@ -15,8 +15,20 @@ TIMEOUT = 15 * 60
 logger = getLogger(__name__)
 
 
+@pytest.fixture
+def mongodb_base_app_name(mongod_metadata: dict[str, Any]) -> str:
+    """Default application name for testing."""
+    return mongod_metadata["name"]
+
+
+@pytest.fixture
+def mongos_base_app_name(mongos_metadata: dict[str, Any]) -> str:
+    """Default application name for testing."""
+    return mongos_metadata["name"]
+
+
 @pytest.fixture(scope="module")
-async def kubernetes_model(ops_test: OpsTest, architecture: str) -> AsyncGenerator[Model, Any]:
+async def kubernetes_model(ops_test: OpsTest) -> AsyncGenerator[Model]:
     try:
         k8s_cloud = await ops_test.add_k8s(skip_storage=False)
         logger.warning(f"created cloud {k8s_cloud}")

@@ -6,6 +6,7 @@ import asyncio
 from logging import getLogger
 
 import pytest
+from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying
 from tenacity.stop import stop_after_delay
@@ -19,6 +20,7 @@ from tests.integration.helpers.common import (
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     MONGOS_APP_NAME,
+    READER_APPLICATION,
     TIMEOUT,
     UNIT_IDS,
     count_writes,
@@ -26,9 +28,10 @@ from tests.integration.helpers.common import (
     deploy_charm,
     execute_on_mongod,
     find_unit,
-    get_app_name,
     start_continous_writes,
+    start_continuous_reads,
     stop_continous_writes,
+    stop_continuous_reads,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.ldap import (
@@ -62,10 +65,11 @@ SECOND_DB_NAME = f"{DEFAULT_DATABASE_NAME}_bis"
 SECOND_COLL_NAME = f"{DEFAULT_COLLECTION_NAME}_bis"
 
 MONGOS_BIS_APP_NAME = f"{MONGOS_APP_NAME}-bis"
+MONGOS_TER_APP_NAME = f"{MONGOS_APP_NAME}-ter"
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
+async def test_deploy_apps(
     ops_test: OpsTest,
     mongodb_charm_name: str,
     mongos_charm_name: str,
@@ -73,9 +77,13 @@ async def test_build_and_deploy(
     substrate: Substrate,
     mongodb_revision: int,
     mongos_revision: int,
-    kubernetes_model: str,
+    kubernetes_model: Model,
 ):
-    """Build and deploy one unit of MongoDB."""
+    """Deploys and integrate a cluster with the right revisions.
+
+    This also deploys a data integrator, alongside a continuous write application,
+    a self-signed-certificates application, and LDAP with all it needs.
+    """
     tls_config = {"ca-common-name": "MongoDB release CA"}
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
@@ -121,6 +129,14 @@ async def test_build_and_deploy(
             charm=mongos_charm_name,
             substrate=substrate,
             app_name=MONGOS_BIS_APP_NAME,
+            num_units=(1 if substrate == "microk8s" else 0),
+        ),
+        deploy_charm(
+            ops_test=ops_test,
+            revision=mongos_revision,
+            charm=mongos_charm_name,
+            substrate=substrate,
+            app_name=MONGOS_TER_APP_NAME,
             num_units=(1 if substrate == "microk8s" else 0),
         ),
         ops_test.model.deploy(
@@ -174,7 +190,8 @@ async def test_build_and_deploy(
 async def test_integrate_with_tls(
     ops_test: OpsTest,
 ):
-    """Tests that we can integrate with TLS without losing data."""
+    """Tests that we can integrate with TLS, and then add a writer and start writing."""
+    assert ops_test.model
     await ops_test.model.integrate(
         f"{MONGOS_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
@@ -250,6 +267,8 @@ async def test_integrate_with_tls(
 
 
 async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
+    """Tests that we can integrate with LDAP without losing data."""
+    assert ops_test.model
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_APP_NAME}:ldap")
     await ops_test.model.integrate(
@@ -271,8 +290,11 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 async def test_integrate_second_client(ops_test: OpsTest, application_path: str):
-    app_name = await get_app_name(ops_test)
+    """Tests that we can integrate with a second client, and we also start writing on that client.
 
+    The client is a continuous write application.
+    """
+    assert ops_test.model
     await deploy_application(
         ops_test,
         application_path=application_path,
@@ -305,7 +327,8 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
 @pytest.mark.abort_on_fail
 async def test_integrate_third_shard(
     ops_test: OpsTest, substrate: Substrate, mongodb_charm_name: str, mongodb_revision: int | None
-):
+) -> None:
+    """Tests that we can integrate a new shard to the cluster."""
     await deploy_charm(
         ops_test=ops_test,
         revision=mongodb_revision,
@@ -325,10 +348,57 @@ async def test_integrate_third_shard(
         f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME],
+        status="active",
+        timeout=TIMEOUT,
+    )
+
+
+@pytest.mark.abort_on_fail
+async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
+    """Tests that we can integrate with a third client, which will only read data.
+
+    The client is a continuous write application.
+    """
+    assert ops_test.model
+    await deploy_application(
+        ops_test,
+        application_path=application_path,
+        app_name=READER_APPLICATION,
+        database_name=SECOND_DB_NAME,
+    )
+    await ops_test.model.integrate(
+        f"{MONGOS_TER_APP_NAME}",
+        f"{READER_APPLICATION}",
+    )
+    await integrate_apps_with_tls(
+        ops_test,
+        applications=[
+            MONGOS_TER_APP_NAME,
+        ],
+    )
+    await ops_test.model.integrate(
+        f"{TLS_CERTIFICATES_APP_NAME}",
+        f"{READER_APPLICATION}",
+    )
+
+    await start_continuous_reads(
+        ops_test,
+        READER_APPLICATION,
+        db_name=SECOND_DB_NAME,
+        coll_name=SECOND_COLL_NAME,
+    )
 
 
 @pytest.mark.abort_on_fail
 async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs):
+    """Tests that we can integrate with S3 and create a backup.
+
+    This test ensures that the backup is created and finished.
+    """
+    assert ops_test.model
+
     # deploy the s3 integrator charm
     await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
@@ -362,6 +432,13 @@ async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs)
 
 @pytest.mark.abort_on_fail
 async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
+    """Tests that we can restore a backup.
+
+    This test starts by stopping the writes applications, and counting the number of writes
+    ensuring that we have never lost any write until now.
+    Then it restores the backup, counts the number of writes,
+    and checks that it is lower than what we had, proving that the backup was restored successfully.
+    """
     first_reported_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
     second_reported_writes = await stop_continous_writes(
         ops_test,
@@ -399,11 +476,24 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
     with ops_test.fast_forward("60s"):
-        (
-            await ops_test.model.wait_for_idle(
-                apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=15
-            ),
+        await ops_test.model.wait_for_idle(
+            apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=15
         )
+
+    first_number_writes_after_restore = await count_writes(
+        ops_test, substrate, CONFIG_SERVER_APP_NAME, leader_unit
+    )
+    second_number_writes_after_restore = await count_writes(
+        ops_test,
+        substrate,
+        CONFIG_SERVER_APP_NAME,
+        leader_unit,
+        db_name=SECOND_DB_NAME,
+        coll_name=SECOND_COLL_NAME,
+    )
+
+    assert first_number_writes_after_restore < first_number_writes
+    assert second_number_writes_after_restore < second_number_writes
 
 
 @pytest.mark.abort_on_fail
@@ -440,3 +530,16 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
         f"db.{DEFAULT_COLLECTION_NAME}.find().limit(10)",
     )
     assert result.succeeded, "Failed to read value with LDAP client"
+
+
+@pytest.mark.abort_on_fail
+async def test_valid_reads(ops_test: OpsTest):
+    """Checks the reads at the end of the tests."""
+    reads, failed_reads = await stop_continuous_reads(
+        ops_test,
+        READER_APPLICATION,
+        db_name=DEFAULT_DATABASE_NAME,
+        coll_name=DEFAULT_COLLECTION_NAME,
+    )
+    assert reads > 1000
+    assert len(failed_reads) == 0

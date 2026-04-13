@@ -9,7 +9,9 @@ import os
 import shutil
 import subprocess
 import time
+import uuid
 import zipfile
+from collections.abc import Generator
 from logging import getLogger
 from pathlib import Path
 from platform import machine
@@ -24,6 +26,7 @@ from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
 from .helpers.architecture import architecture as _architecture
+from .helpers.backups import CloudConfigs, CloudConfiguration
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
@@ -499,3 +502,57 @@ def s3_bucket(storage_credentials, storage_config) -> None:
     s3 = session.resource("s3", endpoint_url=storage_config["endpoint"], verify="cert.pem")
     bucket = s3.Bucket(storage_config["bucket"])
     yield bucket
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "endpoint": "https://s3.amazonaws.com",
+        "bucket": "data-charms-testing",
+        "path": f"{path}/{uuid.uuid4()}",
+        "region": "us-east-1",
+    }
+    credentials: dict[str, str] = {
+        "access-key": os.environ["AWS_ACCESS_KEY"],
+        "secret-key": os.environ["AWS_SECRET_KEY"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "bucket": "data-charms-testing",
+        "endpoint": "https://storage.googleapis.com",
+        "region": "",
+        "path": f"{path}/{uuid.uuid4()}",
+    }
+    credentials: dict[str, str] = {
+        "access-key": os.environ["GCP_ACCESS_KEY"],
+        "secret-key": os.environ["GCP_SECRET_KEY"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "bucket": "data-charms-testing",
+        "path": f"{path}/{uuid.uuid4()}",
+    }
+    credentials: dict[str, str] = {
+        "secret-key": os.environ["GCS_SERVICE_ACCOUNT"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs(
+    cloud_configs_gcp: CloudConfiguration,
+    cloud_configs_aws: CloudConfiguration,
+    cloud_configs_gcs: CloudConfiguration,
+) -> Generator[CloudConfigs]:
+    yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp, "GCS": cloud_configs_gcs}

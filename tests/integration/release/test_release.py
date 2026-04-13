@@ -6,6 +6,7 @@ import asyncio
 from logging import getLogger
 
 import pytest
+from juju.model import Model
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying
 from tenacity.stop import stop_after_delay
@@ -58,17 +59,23 @@ SECOND_COLL_NAME = f"{DEFAULT_COLLECTION_NAME}_bis"
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
+async def test_deploy_apps(
     ops_test: OpsTest,
     mongodb_charm_name: str,
     application_path: str,
     substrate: Substrate,
     mongodb_revision: int,
-    base_app_name: str,
-    kubernetes_model: str,
+    mongodb_base_app_name: str,
+    kubernetes_model: Model,
 ):
-    """Build and deploy one unit of MongoDB."""
+    """Deploy MongoDB with the right revision.
+
+    This also deploys a data integrator, alongside a continuous write application,
+    a self-signed-certificates application, and LDAP with all it needs.
+    """
     tls_config = {"ca-common-name": "MongoDB release CA"}
+
+    assert ops_test.model
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
     asyncio.gather(
@@ -77,7 +84,7 @@ async def test_build_and_deploy(
             revision=mongodb_revision,
             charm=mongodb_charm_name,
             substrate=substrate,
-            app_name=base_app_name,
+            app_name=mongodb_base_app_name,
             num_units=len(UNIT_IDS),
         ),
         deploy_application(
@@ -105,7 +112,9 @@ async def test_build_and_deploy(
     await apply_ldif(ops_test, kubernetes_model, "ldap_entries.ldif")
 
     await ops_test.model.wait_for_idle(
-        apps=[base_app_name, TLS_CERTIFICATES_APP_NAME], timeout=DEPLOYMENT_TIMEOUT, status="active"
+        apps=[mongodb_base_app_name, TLS_CERTIFICATES_APP_NAME],
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
     )
 
 
@@ -113,7 +122,8 @@ async def test_build_and_deploy(
 async def test_integrate_with_tls(
     ops_test: OpsTest,
 ):
-    """Tests that we can integrate with TLS without losing data."""
+    """Tests that we can integrate with TLS, and then add a writer and start writing."""
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
     await integrate_apps_with_tls(ops_test, applications=[app_name])
 
@@ -126,6 +136,8 @@ async def test_integrate_with_tls(
 
 
 async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
+    """Tests that we can integrate with LDAP without losing data."""
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
@@ -146,6 +158,10 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 async def test_integrate_second_client(ops_test: OpsTest, application_path: str):
+    """Tests that we can integrate with a second client, and we also start writing on that client.
+
+    The client is a continuous write application.
+    """
     app_name = await get_app_name(ops_test)
 
     await deploy_application(
@@ -165,6 +181,10 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
 
 @pytest.mark.abort_on_fail
 async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
+    """Tests that we can integrate with a third client, which will only read data.
+
+    The client is a continuous write application.
+    """
     app_name = await get_app_name(ops_test)
 
     await deploy_application(
@@ -185,6 +205,11 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
 
 @pytest.mark.abort_on_fail
 async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs):
+    """Tests that we can integrate with S3 and create a backup.
+
+    This test ensures that the backup is created and finished.
+    """
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
 
     # deploy the s3 integrator charm
@@ -220,6 +245,14 @@ async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs)
 
 @pytest.mark.abort_on_fail
 async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
+    """Tests that we can restore a backup.
+
+    This test starts by stopping the writes applications, and counting the number of writes
+    ensuring that we have never lost any write until now.
+    Then it restores the backup, counts the number of writes,
+    and checks that it is lower than what we had, proving that the backup was restored successfully.
+    """
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
 
     first_reported_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
@@ -258,6 +291,21 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
 
     with ops_test.fast_forward("60s"):
         (await ops_test.model.wait_for_idle(apps=[app_name], status="active", idle_period=15),)
+
+    first_number_writes_after_restore = await count_writes(
+        ops_test, substrate, app_name, leader_unit
+    )
+    second_number_writes_after_restore = await count_writes(
+        ops_test,
+        substrate,
+        app_name,
+        leader_unit,
+        db_name=SECOND_DB_NAME,
+        coll_name=SECOND_COLL_NAME,
+    )
+
+    assert first_number_writes_after_restore < first_number_writes
+    assert second_number_writes_after_restore < second_number_writes
 
 
 @pytest.mark.abort_on_fail
@@ -300,6 +348,7 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
 
 @pytest.mark.abort_on_fail
 async def test_valid_reads(ops_test: OpsTest):
+    """Checks the reads at the end of the tests."""
     reads, failed_reads = await stop_continuous_reads(
         ops_test,
         READER_APPLICATION,

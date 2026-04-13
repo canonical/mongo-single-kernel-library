@@ -1,60 +1,42 @@
 on:
   workflow_call:
     inputs:
-      mongodb-revision:
+      mongodb-revisions:
         description: |
           MongoDB revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
         required: true
         type: string
-      mongos-revision:
+      mongos-revisions:
         description: |
           Mongos revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
         required: true
         type: string
-      charm:
-        description: |
-          The charm type we're targetting.
-
-          One of mongodb or mongos or "..." (default, both charms).
-        type: string
-        required: false
-        default: "..."
       backend:
         description: |
           Backend to target.
 
-          Either lxd or microk8s, or "..." (default, all backends).
-        required: false
+          Either lxd or microk8s.
+        required: true
         type: string
-        default: "..."
   workflow_dispatch:
     inputs:
-      mongodb-revision:
+      mongodb-revisions:
         description: |
-          MongoDB revision to target
+          MongoDB revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
         required: true
         type: number
-      charm:
+      mongos-revisions:
         description: |
-          The charm type we're targetting.
-
-          One of mongodb or mongos or "..." (default, both charms).
-        type: string
-        required: false
-        default: "..."
-      mongos-revision:
-        description: |
-          MongoDB revision to target
+          Mongos revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
         required: true
         type: number
       backend:
         description: |
           Backend to target.
 
-          Either lxd or microk8s, or "..." (default, all backends).
-        required: false
+          Either lxd or microk8s
+        required: true
         type: string
-        default: "..."
 
 jobs:
   collect-release-tests:
@@ -82,8 +64,8 @@ jobs:
           import os
           import subprocess
           backend = "${{ inputs.backend }}"
-          charm_type = "${{ inputs.charm }}
-          pattern = f"github-ci:...:tests/spread/release/{charm_type}/{backend}/"
+          pattern = f"github-ci:...:tests/spread/release/{backend}/"
+          mongodb_revisions = json.loads("${{ inputs.mongodb-revisions }}")
           spread_jobs = (
               subprocess.run(
                 [pathlib.Path.home() / "go/bin/spread", "-list", pattern],
@@ -107,13 +89,18 @@ jobs:
                   architecture = "amd64"
               # Example: "test_charm.py | amd64"
               name = f"{task} | {architecture}"
+
+              mongodb_revision = mongodb_revisions[architecture]
+              mongos_revision = mongos_revisions[architecture]
               # ":" character not valid in GitHub Actions artifact
-              name_in_artifact = f"{task.replace('/', '-')}-{architecture}"
+              name_in_artifact = f"{task.replace('/', '-')}-{architecture}-mongodb-{mongodb_revision}-mongos-{mongos_revision}"
               jobs.append({
                   "spread_job": job,
                   "name": name,
                   "name_in_artifact": name_in_artifact,
                   "runner": runner,
+                  "mongodb_revision": mongodb_revision,
+                  "mongos_revision": mongos_revision,
               })
           output = f"jobs={json.dumps(jobs)}"
           print(output)
@@ -126,10 +113,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job: ${{ fromJSON(needs.collect-integration-tests.outputs.jobs) }}
+        job: ${{ fromJSON(needs.collect-release-tests.outputs.jobs) }}
     name: ${{ matrix.job.name }}
     needs:
-      - collect-integration-tests
+      - collect-release-tests
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
     steps:
@@ -160,8 +147,8 @@ jobs:
         # https://github.com/canonical/charmcraft/issues/2130 fixed
         run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
         env:
-          MONGODB_REVISION: ${{ inputs.mongodb-revision }}
-          MONGOS_REVISION: ${{ inputs.mongos-revision }}
+          MONGODB_REVISION: ${{ matrix.job.mongodb_revision }}
+          MONGOS_REVISION: ${{ matrix.job.mongos_revision }}
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
@@ -200,7 +187,7 @@ jobs:
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
         with:
-          name: logs-integration-test-${{ matrix.job.name_in_artifact }}
+          name: logs-release-test-${{ matrix.job.name_in_artifact }}
           path: ~/logs/
           if-no-files-found: error
       - name: Disk usage
