@@ -286,7 +286,7 @@ def test_update_status(
 ):
     _, _, vault_relation, state_in = vault_state_full
     with mocker.patch(
-        "single_kernel_mongo.managers.vault.VaultManager.get_subnets",
+        "single_kernel_mongo.managers.vault.VaultManager.get_egress_subnets",
         return_value=["192.0.3.0/25", "192.0.3.128/25", "192.0.3.0/32"],
     ):
         state_out = mongodb_ctx.run(mongodb_ctx.on.update_status(), state=state_in)
