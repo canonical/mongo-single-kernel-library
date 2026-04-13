@@ -78,7 +78,7 @@ async def test_deploy_apps(
     assert ops_test.model
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    asyncio.gather(
+    await asyncio.gather(
         deploy_charm(
             ops_test=ops_test,
             revision=mongodb_revision,
