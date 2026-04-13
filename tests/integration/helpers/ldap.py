@@ -171,7 +171,7 @@ async def create_mongodb_user_roles(
         "db.createRole({"
         f"  role: '{role_name}',"
         "  privileges: [],"
-        f"  roles: [{'db': '{db}', 'role': 'readWrite'}, {'db': '{db}', 'role': 'enableSharding'}]"
+        f"  roles: [{{'db': '{db}', 'role': 'readWrite'}}, {{'db': '{db}', 'role': 'enableSharding'}}]"
         "})",
     )
     assert result.succeeded, "Failed to create role"
