@@ -114,6 +114,8 @@ async def deploy_charm(
     constraints: dict[str, list[str]] | None = None,
     bind: dict[str, str] | None = None,
 ):
+    if revision is not None:
+        channel = "8/beta"
     if substrate == "microk8s":
         series = series or "noble"
         await ops_test.model.deploy(

@@ -20,14 +20,16 @@ def pytest_addoption(parser: Parser):
     parser.addoption(
         "--mongodb-revision",
         action="store",
-        help="MongoDB revisions for the said substrate in the shape of a json dictionary",
-        default="{}",
+        help="MongoDB revision",
+        default=1,
+        type=int,
     )
     parser.addoption(
         "--mongos-revision",
         action="store",
-        help="MongoDB revisions for the said substrate in the shape of a json dictionary",
-        default="{}",
+        help="MongoDB revision",
+        default=1,
+        type=int,
     )
 
 
