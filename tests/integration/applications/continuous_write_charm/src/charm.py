@@ -13,12 +13,15 @@ import os
 import signal
 import subprocess
 import sys
+from pathlib import Path
+from urllib.parse import quote_plus, urlencode
 
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires, DatabaseCreatedEvent
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, Relation, WaitingStatus
 from pymongo import MongoClient
+from pymongo.uri_parser import parse_uri
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,8 @@ REPLICATION_COLL_NAME = "test_ubuntu_collection"
 PEER = "application-peers"
 PROC_PID_KEY = "proc-pid"
 LAST_WRITTEN_FILE = "last_written_value"
+
+CA_PATH = Path("/tmp/ca.crt")
 
 
 class ContinuousWritesApplication(CharmBase):
@@ -51,12 +56,34 @@ class ContinuousWritesApplication(CharmBase):
         )
 
         # Database related events
-        self.database = DatabaseRequires(self, "database", DATABASE_NAME)
+        self.database = DatabaseRequires(self, "mongodb", self.database_name)
+        # Database related events
+        self.mongos_database = DatabaseRequires(self, "mongos", self.database_name, external_node_connectivity=True)
+
         self.framework.observe(self.database.on.database_created, self._on_database_created)
+        self.framework.observe(self.mongos_database.on.database_created, self._on_database_created)
+
+        if (data:= list(self.database.fetch_relation_data().values())):
+            if (tls_ca := data[0].get("tls-ca")):
+                CA_PATH.write_text(tls_ca)
+                return
+
+        if (data:= list(self.mongos_database.fetch_relation_data().values())):
+            if (tls_ca := data[0].get("tls-ca")):
+                CA_PATH.write_text(tls_ca)
+                return
+
+        if tls_ca := self.model.config.get("tls-ca", None):
+            CA_PATH.write_text(tls_ca)
+            return
 
     # ==============
     # Properties
     # ==============
+
+    @property
+    def database_name(self) -> str:
+        return self.model.config.get("database-name", DATABASE_NAME)
 
     @property
     def _peers(self) -> Relation | None:
@@ -76,32 +103,59 @@ class ContinuousWritesApplication(CharmBase):
         """Returns the database config to use to connect to the MongoDB cluster."""
         # In some tests we want to write directly to mongos, but the config-server does not
         # support integrations to client applications, so the data to connect is set via config.
-        if not (data := list(self.database.fetch_relation_data().values())):
-            return {"uris": self.model.config.get("mongos-uri", None)}
+        if not self.database.relations and not self.mongos_database.relations:
+            uri = self.model.config.get("mongos-uri", "")
+            if self.model.config.get("tls-ca"):
+                uri = self._build_tls_uri(uri)
 
-        data = data[0]
-        username, password, endpoints, replset, uris = (
+            return {"uris": uri}
+
+        if self.database.relations:
+            data =list(self.database.fetch_relation_data().values())[0]
+        elif self.mongos_database.relations:
+            data =list(self.mongos_database.fetch_relation_data().values())[0]
+        else:
+            return {}
+
+        username, password, endpoints, replset, uris, tls = (
             data.get("username"),
             data.get("password"),
             data.get("endpoints"),
             data.get("replset"),
             data.get("uris"),
+            data.get("tls")
         )
 
-        if None in [username, password, endpoints, replset, uris]:
+        if None in [username, password, endpoints, uris]:
             return {}
+
+        if tls:
+            uris = self._build_tls_uri(uris)
 
         return {
             "user": username,
             "password": password,
             "endpoints": endpoints,
-            "replset": replset,
+            "replset": replset or "",
             "uris": uris,
         }
 
     # ==============
     # Helpers
     # ==============
+
+    def _build_tls_uri(self, uris: str) -> str:
+            parsed_uri = parse_uri(uris)
+            params = parsed_uri["options"]
+            params["tls"] = "true"
+            params["tlsCaFile"] = f"{CA_PATH}"
+            hosts = ",".join(f"{host}:{port}" for host, port in parsed_uri["nodelist"])
+            return (
+                    f"mongodb://{quote_plus(parsed_uri['username'])}:"
+                        f"{quote_plus(parsed_uri['password'])}@"
+                        f"{hosts}/{quote_plus(parsed_uri['database'])}?"
+                        f"{urlencode(params)}"
+                )
 
     def _start_continuous_writes(
         self, starting_number: int, db_name: str, collection_name: str
@@ -148,8 +202,9 @@ class ContinuousWritesApplication(CharmBase):
             logger.info(
                 f"Process {self.proc_id_key(db_name, collection_name)} was killed already (or never existed)"
             )
-
-        del self.app_peer_data[self.proc_id_key(db_name, collection_name)]
+            return -1
+        finally:
+            del self.app_peer_data[self.proc_id_key(db_name, collection_name)]
 
         # read the last written_value
         try:
@@ -170,7 +225,7 @@ class ContinuousWritesApplication(CharmBase):
         return f"{PROC_PID_KEY}-{db_name}-{collection_name}"
 
     def last_written_filename(self, db_name: str, collection_name: str) -> str:
-        """Returns a process id key for the continuous writes process to a given db and coll."""
+        """Returns the filename for the written data for a given db and coll."""
         return f"{LAST_WRITTEN_FILE}-{db_name}-{collection_name}"
 
     # ==============
@@ -210,7 +265,7 @@ class ContinuousWritesApplication(CharmBase):
         if not self._database_config:
             return
 
-        db_name = event.params.get("db-name") or DATABASE_NAME
+        db_name = event.params.get("db-name") or self.database_name
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
         self._start_continuous_writes(1, db_name, collection_name)
 
@@ -225,10 +280,12 @@ class ContinuousWritesApplication(CharmBase):
         event.set_results({"writes": writes or -1})
         return None
 
-    def _on_database_created(self, _) -> None:
+    def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Handle the database created event."""
-        self.unit.status = ActiveStatus()
+        if event.tls == "True":
+            CA_PATH.write_text(event.tls_ca)
 
+        self.unit.status = ActiveStatus()
 
 if __name__ == "__main__":
     main(ContinuousWritesApplication)

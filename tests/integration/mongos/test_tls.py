@@ -36,9 +36,9 @@ async def test_build_and_deploy(
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
-    mongod_resource: dict,
-    mongos_resource: dict,
-    mongos_client_application_path: str,
+    mongod_resource: dict[str, str],
+    mongos_resource: dict[str, str],
+    application_path: str,
 ) -> None:
     """Build and deploy a sharded cluster."""
     await deploy_cluster_components(
@@ -48,12 +48,16 @@ async def test_build_and_deploy(
         mongos_charm,
         mongod_resource,
         mongos_resource,
-        mongos_client_application_path,
+        application_path,
     )
     await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
+    config = {"ca-common-name": "Test CA"}
     await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME, channel="latest/stable", base="ubuntu@22.04"
+        TLS_CERTIFICATES_APP_NAME,
+        channel="latest/stable",
+        base="ubuntu@22.04",
+        config=config,
     )
 
     await ops_test.model.wait_for_idle(

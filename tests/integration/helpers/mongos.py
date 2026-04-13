@@ -3,8 +3,10 @@
 
 import json
 import subprocess
+import time
 from logging import getLogger
 
+from cryptography import x509
 from juju.unit import Unit as JujuUnit
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
@@ -16,15 +18,19 @@ from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
     TIMEOUT,
+    clear_continous_writes,
     deploy_charm,
     find_unit,
     get_address_of_unit,
     get_application_relation_data,
     get_relation_username_password,
+    get_secret_by_label,
     get_secret_data,
     get_unit_hostnames,
     get_unit_id,
     mongosh,
+    start_continous_writes,
+    stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.tls import (
@@ -71,10 +77,10 @@ async def deploy_cluster_components(
     substrate: Substrate,
     mongodb_charm: str,
     mongos_charm: str,
-    mongod_resource: dict,
-    mongos_resource: dict,
+    mongod_resource: dict[str, str],
+    mongos_resource: dict[str, str],
     mongos_client_application_path: str,
-    num_units_cluster_config: dict | None = None,
+    num_units_cluster_config: dict[str, int] | None = None,
     config_server_name: str = CONFIG_SERVER_APP_NAME,
     shard_one_name: str = SHARD_ONE_APP_NAME,
     mongos_units: int = 1,
@@ -333,6 +339,34 @@ async def assert_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate, int
             container="mongos",
             uri=uri,
         ), f"TLS not enabled on {unit.name}"
+        assert await check_continuous_writes(ops_test), "Client is not able to write to database."
+
+
+async def check_continuous_writes(ops_test: OpsTest):
+    relation = None
+
+    for rel in ops_test.model.applications[MONGOS_CLIENT_APPLICATION].relations:
+        if MONGOS_APP_NAME in [app.name for app in rel.applications]:
+            relation = rel
+
+    assert relation
+    secret = await get_secret_by_label(ops_test, f"mongos_proxy.{relation.id}.tls.secret")
+    assert secret.get("tls") == "True"
+    tls_certificate = secret.get("tls-ca")
+    assert tls_certificate, "No TLS CA in secret."
+
+    parsed_cert = x509.load_pem_x509_certificate(data=tls_certificate.encode())
+    _common_name = parsed_cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
+    common_name = str(_common_name[0].value) if _common_name else ""
+
+    assert common_name == "Test CA"
+
+    await start_continous_writes(ops_test, MONGOS_CLIENT_APPLICATION)
+    time.sleep(20)
+    n_writes = await stop_continous_writes(ops_test, MONGOS_CLIENT_APPLICATION)
+    await clear_continous_writes(ops_test, MONGOS_CLIENT_APPLICATION)
+
+    return n_writes != -1
 
 
 async def assert_mongos_tls_disabled(
