@@ -10,6 +10,8 @@ from juju.model import Model
 from kubernetes.config.config_exception import ConfigException
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.helpers.ldap import teardown_offers
+
 TIMEOUT = 15 * 60
 
 logger = getLogger(__name__)
@@ -42,4 +44,6 @@ async def kubernetes_model(ops_test: OpsTest) -> AsyncGenerator[Model]:
 
     yield kubernetes_model
 
+    # Remove the offers and tear down deployment
+    await teardown_offers(ops_test, kubernetes_model)
     await ops_test.forget_model(alias="secondary", timeout=TIMEOUT, allow_failure=True)
