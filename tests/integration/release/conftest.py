@@ -10,7 +10,11 @@ from juju.model import Model
 from kubernetes.config.config_exception import ConfigException
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.ldap import teardown_offers
+from tests.integration.helpers.common import MONGOS_APP_NAME, get_app_name
+from tests.integration.helpers.ldap import LDAP_CERT_OFFER, LDAP_OFFER, teardown_offers
+from tests.integration.helpers.sharding import (
+    CONFIG_SERVER_APP_NAME,
+)
 
 TIMEOUT = 15 * 60
 
@@ -43,6 +47,23 @@ async def kubernetes_model(ops_test: OpsTest) -> AsyncGenerator[Model]:
     logger.warning(f"Created model {kubernetes_model.name}")
 
     yield kubernetes_model
+
+    for app_name in (
+        await get_app_name(ops_test),
+        await get_app_name(ops_test, CONFIG_SERVER_APP_NAME),
+        await get_app_name(ops_test, MONGOS_APP_NAME),
+    ):
+        if app_name is None:
+            continue
+        try:
+            await ops_test.model.applications[app_name].remove_relation(
+                f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
+            )
+            await ops_test.model.applications[app_name].remove_relation(
+                f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
+            )
+        except Exception:
+            pass
 
     # Remove the offers and tear down deployment
     await teardown_offers(ops_test, kubernetes_model)

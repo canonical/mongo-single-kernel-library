@@ -674,7 +674,7 @@ async def remove_units(
 
 async def get_app_name(
     ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
-) -> str:
+) -> str | None:
     """Returns the name of the cluster running MongoDB.
 
     This is important since not all deployments of the MongoDB charm have the application name
