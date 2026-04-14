@@ -33,6 +33,10 @@ class VaultStateKeys(str, Enum):
     MOUNT_POINT = "vault-secret-mount-point"
     NONCE = "vault-nonce"
 
+    # Agent certificates keys
+    AGENT_CA_CERTIFICATE = "agent-ca-certificate"
+    AGENT_CA_PRIVATE_KEY = "agent-ca-private-key"
+
 
 @final
 class VaultState:
@@ -159,3 +163,27 @@ class VaultState:
         if not self.mount_point:
             return ""
         return f"{self.mount_point}/data/{self.unit_name}"
+
+    @property
+    def agent_ca_certificate(self) -> str | None:
+        """The Agent CA certificate."""
+        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.AGENT_CA_CERTIFICATE.value)
+
+    @agent_ca_certificate.setter
+    def agent_ca_certificate(self, value: str | None) -> None:
+        if not value:
+            self.secrets.remove(Scope.APP, VaultStateKeys.AGENT_CA_CERTIFICATE.value)
+            return
+        self.secrets.set(VaultStateKeys.AGENT_CA_CERTIFICATE.value, value, Scope.APP)
+
+    @property
+    def agent_ca_private_key(self) -> str | None:
+        """The CA Private key."""
+        return self.secrets.get_for_key(Scope.APP, VaultStateKeys.AGENT_CA_PRIVATE_KEY.value)
+
+    @agent_ca_private_key.setter
+    def agent_ca_private_key(self, value: str | None) -> None:
+        if not value:
+            self.secrets.remove(Scope.APP, VaultStateKeys.AGENT_CA_PRIVATE_KEY.value)
+            return
+        self.secrets.set(VaultStateKeys.AGENT_CA_PRIVATE_KEY.value, value, Scope.APP)

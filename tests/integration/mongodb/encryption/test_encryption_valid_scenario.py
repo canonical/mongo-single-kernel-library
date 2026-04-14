@@ -3,8 +3,10 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import ssl
 from pathlib import Path
 
+import httpx
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -19,6 +21,7 @@ from tests.integration.helpers.common import (
     get_address_of_unit,
     get_app_name,
     get_password,
+    get_unit_app,
     has_file,
     wait_for_mongodb_units_blocked,
 )
@@ -104,6 +107,30 @@ async def test_integration_goes_to_active(
         )
         assert result.succeeded
         assert result.data.get("parsed", {}).get("security", {}).get("enableEncryption", False)
+
+
+async def test_vault_agent_metrics(ops_test: OpsTest, substrate: Substrate):
+    assert ops_test.model
+    app_name = await get_app_name(ops_test)
+    application = ops_test.model.applications[app_name]
+    if substrate == "lxd":
+        ca_file = "/var/snap/charmed-mongodb/current/etc/vault/ca.pem"
+    else:
+        ca_file = "/etc/vault/ca.pem"
+
+    for unit in application.units:
+        unit_id, app_name = get_unit_app(unit.name)
+        unit_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+        vault_telemetry_url = f"https://{unit_address}:8200/agent/v1/metrics"
+        filename = Path(await scp_file_preserve_ctime(ops_test, substrate, unit.name, ca_file))
+
+        ctx = ssl.create_default_context(cafile=f"{filename}")
+        mongo_resp = httpx.get(
+            vault_telemetry_url, verify=ctx, headers={"Accept": "prometheus/telemetry"}
+        )
+        assert mongo_resp.status_code == 200
+        assert "vault_agent_authenticated 1" in mongo_resp.text
+        filename.unlink()
 
 
 async def test_rotate_master_key(

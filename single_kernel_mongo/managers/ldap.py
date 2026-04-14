@@ -19,6 +19,7 @@ from ops.model import Relation
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
+    CharmKind,
     Substrates,
     TrustStoreFiles,
 )
@@ -76,6 +77,13 @@ class LDAPManager(Object, ManagerStatusProtocol):
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
+        if (
+            self.dependent.name == CharmKind.MONGOD
+            and self.dependent.state.enable_encryption_at_rest
+            and not self.dependent.vault_manager.is_ready()  # type: ignore[attr-defined]
+        ):
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         # Defer upon regular integration, but let's continue on an update.
         if self.dependent.refresh_in_progress and not self.state.ldap.is_ready():
             raise DeferrableFailedHookChecksError(

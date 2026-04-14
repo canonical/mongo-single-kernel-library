@@ -288,8 +288,9 @@ class VaultConfigManager(FileBasedConfigManager):
     def set_environment(self) -> None:
         """Write update parameters in the file."""
         current_config = {}
-        if self.file.exists():
-            current_config = hcl2.loads(self.file.read_text())
+        data = "\n".join(self.workload.read(self.file))
+        if data:
+            current_config = hcl2.loads(data)
         rendered_template = self._render_template()
         new_config = hcl2.loads(rendered_template)
 
@@ -317,6 +318,9 @@ class VaultConfigManager(FileBasedConfigManager):
             "role_id_path": f"{self.workload.paths.role_id}",
             "role_secret_id_path": f"{self.workload.paths.role_secret_id}",
             "token_file_path": f"{self.workload.paths.vault_token_file_path}",
+            "peer_addr": self.state.unit_peer_data.internal_address,
+            "tls_cert_file": f"{self.workload.paths.vault_agent_cert}",
+            "tls_key_file": f"{self.workload.paths.vault_agent_key}",
         }
 
     def configure_and_restart(self, force: bool = False) -> None:
@@ -324,7 +328,13 @@ class VaultConfigManager(FileBasedConfigManager):
         if not self.state.enable_encryption_at_rest:
             return
 
-        current_config = hcl2.loads(f"{self.file.read_text()}")
+        if not self.state.vault_relation:
+            return
+
+        current_config = {}
+        data = "\n".join(self.workload.read(self.file))
+        if data:
+            current_config = hcl2.loads(data)
         new_config = hcl2.loads(self._render_template())
 
         if force or not self.workload.active() or current_config != new_config:

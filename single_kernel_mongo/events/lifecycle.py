@@ -197,6 +197,7 @@ class LifecycleEventsHandler(Object):
             WaitingForLeaderError,
             DeferrableFailedHookChecksError,
             SetPasswordError,
+            WaitingForVaultError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:
@@ -253,6 +254,10 @@ class LifecycleEventsHandler(Object):
         """Relation joined event."""
         try:
             self.dependent.new_peer()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
@@ -266,6 +271,10 @@ class LifecycleEventsHandler(Object):
         """Relation changed event."""
         try:
             self.dependent.peer_changed()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()

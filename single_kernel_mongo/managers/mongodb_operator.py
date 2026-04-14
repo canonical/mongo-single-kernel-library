@@ -257,8 +257,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self.sysctl_config = sysctl.Config(name=self.charm.app.name)
 
-        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
-
         # Event Handlers
         self.vault_events = VaultEventHandler(self)
         self.backup_events = BackupEventsHandler(self)
@@ -269,6 +267,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.sharding_event_handlers = ShardEventHandler(self)
         self.cluster_event_handlers = ClusterConfigServerEventHandler(self)
         self.ldap_events = LDAPEventHandler(self)
+
+        # Listens after all other events to have the latest up to date data.
+        self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
 
         if self.refresh is not None and not self.refresh.next_unit_allowed_to_refresh:
             if self.refresh.in_progress:
@@ -626,6 +627,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise WaitingForVaultError("Encryption at rest is not working properly.")
+
         if self.refresh_in_progress:
             logger.warning(
                 "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
@@ -773,6 +778,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         application in upgrade ?). Then we proceed to call the relation changed
         handler and update the list of related hosts.
         """
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise WaitingForVaultError
+
         if self.refresh_in_progress:
             logger.warning(
                 "Adding replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
@@ -804,6 +813,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         # the replica set is initialised.
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
+
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise WaitingForVaultError
 
         if self.refresh_in_progress:
             logger.warning(
@@ -865,6 +878,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handles the relation departed events."""
         if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
             return
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.warning(
+                "Encryption at rest is not working properly. The charm may be in a broken, unrecoverable state"
+            )
+
         if self.refresh_in_progress:
             # do not defer or return here, if a user removes a unit, the config will be incorrect
             # and lead to MongoDB reporting that the replica set is unhealthy, we should make an
@@ -901,6 +919,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         If the removing unit is primary also allow it to step down and elect another unit as
         primary while it still has access to its storage.
         """
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            logger.warning(
+                "Encryption at rest is not working properly. The charm may be in a broken, unrecoverable state"
+            )
         if self.refresh_in_progress:
             # We cannot defer and prevent a user from removing a unit, log a warning instead.
             logger.warning(
@@ -1398,6 +1420,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.model.unit.is_leader():
             return PasswordManagementContext(PasswordManagementState.NOT_LEADER)
 
+        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+            return PasswordManagementContext(
+                PasswordManagementState.ENCRYPTION_NOT_WORKING,
+                "Cannot update passwords while encryption at rest is not working.",
+            )
         if self.refresh_in_progress:
             return PasswordManagementContext(
                 PasswordManagementState.UPGRADE_RUNNING,

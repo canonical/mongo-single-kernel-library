@@ -215,6 +215,13 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                     "Cannot add/remove shards while a backup/restore is in progress."
                 )
 
+        if (
+            self.dependent.state.enable_encryption_at_rest
+            and not self.dependent.vault_manager.is_ready()
+        ):
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
+
         if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"
@@ -525,6 +532,12 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
+        if (
+            self.dependent.state.enable_encryption_at_rest
+            and not self.dependent.vault_manager.is_ready()
+        ):
+            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"

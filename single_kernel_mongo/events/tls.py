@@ -131,7 +131,7 @@ class TLSEventsHandler(Object):
         """Handle the relation broken event."""
         state = self.manager.get_tls_management_state()
         match state:
-            case TlsManagementState.UPGRADE_IN_PROGRESS:
+            case TlsManagementState.UPGRADE_IN_PROGRESS | TlsManagementState.ENCRYPTION_NOT_ACTIVE:
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case (
@@ -165,7 +165,11 @@ class TLSEventsHandler(Object):
         """
         state = self.manager.get_tls_management_state()
         match state:
-            case TlsManagementState.DB_NOT_INTIALIZED | TlsManagementState.UPGRADE_IN_PROGRESS:
+            case (
+                TlsManagementState.DB_NOT_INTIALIZED
+                | TlsManagementState.UPGRADE_IN_PROGRESS
+                | TlsManagementState.ENCRYPTION_NOT_ACTIVE
+            ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:

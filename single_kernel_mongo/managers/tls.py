@@ -22,7 +22,7 @@ from data_platform_helpers.advanced_statuses.protocol import (
 )
 from ops.model import ModelError, SecretNotFoundError
 
-from single_kernel_mongo.config.literals import Substrates, TLSType
+from single_kernel_mongo.config.literals import CharmKind, Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -285,6 +285,10 @@ class TLSManager(ManagerStatusProtocol):
 
     def get_tls_management_state(self) -> TlsManagementState:
         """Pre-checks on TLS certificates management."""
+        if self.dependent.name == CharmKind.MONGOD:
+            # For typing purposes
+            if self.state.enable_encryption_at_rest and not self.dependent.vault_manager.is_ready():  # type: ignore[attr-defined]
+                return TlsManagementState.ENCRYPTION_NOT_ACTIVE
         if self.dependent.refresh_in_progress and self.initial_integration():
             return TlsManagementState.UPGRADE_IN_PROGRESS
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.config_server_name is None:

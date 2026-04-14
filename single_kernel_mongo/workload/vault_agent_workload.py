@@ -34,6 +34,21 @@ class VaultAgentPaths(MongoPaths):
         """Vault approle role-secret-id file path."""
         return Path(f"{self.etc_path}/vault/role_secret_id")
 
+    @property
+    def vault_agent_ca(self) -> Path:
+        """Vault Agent API CA certificate."""
+        return Path(f"{self.etc_path}/vault/ca.pem")
+
+    @property
+    def vault_agent_cert(self) -> Path:
+        """Vault Agent API Unit certificate."""
+        return Path(f"{self.etc_path}/vault/cert.pem")
+
+    @property
+    def vault_agent_key(self) -> Path:
+        """Vault Agent API Unit Private key."""
+        return Path(f"{self.etc_path}/vault/key.pem")
+
 
 class VaultAgentWorkload(WorkloadBase, ABC):
     """Vault Agent Workload definition."""

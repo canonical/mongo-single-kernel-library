@@ -149,6 +149,14 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         if not self.state.db_initialised:
             return
         if self.dependent.name == CharmKind.MONGOD:
+            if (
+                self.dependent.state.enable_encryption_at_rest
+                and not self.dependent.vault_manager.is_ready()  # type: ignore[attr-defined]
+            ):
+                logger.error(
+                    "Encryption at rest is not working properly. This must be fixed first."
+                )
+                raise charm_refresh.PrecheckFailed("Encryption at rest is not working properly.")
             if not self.dependent.mongo_manager.mongod_ready():
                 logger.error("Cannot proceed with refresh. Service mongod is not running.")
                 raise charm_refresh.PrecheckFailed("mongod is not running")

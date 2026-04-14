@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import secrets
+import socket
+from datetime import timedelta
 from logging import getLogger
 from typing import TYPE_CHECKING, Literal, final, override
 
@@ -25,6 +27,14 @@ from single_kernel_mongo.exceptions import (
     WaitingForLeaderError,
     WorkloadExecError,
 )
+from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    PrivateKey,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.state.charm_state import CharmState
 
@@ -32,6 +42,8 @@ if TYPE_CHECKING:
     from single_kernel_mongo.managers.mongodb_operator import MongoDBOperator
 
 logger = getLogger(__name__)
+
+VAULT_CA_SUBJECT = "Vault Agent self signed CA"
 
 
 @final
@@ -55,6 +67,22 @@ class VaultManager(Object, ManagerStatusProtocol):
         self.state = state
         self.substrate = substrate
         self.relation_name = relation_name
+        self.config_manager = self.dependent.vault_config_manager
+
+        self.common_name = (
+            f"{self.state.unit_peer_data.name.replace('/', '')}-{self.state.model.uuid}"
+        )
+        unit_id = self.charm.unit.name.split("/")[1]
+
+        self.sans_dns = frozenset(
+            [
+                f"{self.charm.app.name}-{unit_id}",
+                socket.getfqdn(),
+                "localhost",
+                f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
+            ]
+        )
+        self.sans_ip = frozenset([self.state.bind_address, "127.0.0.1"])
 
     def is_ready(self) -> bool:
         """Checks that we are ready with vault."""
@@ -71,6 +99,118 @@ class VaultManager(Object, ManagerStatusProtocol):
                 self.dependent.config.enable_encryption_at_rest
             )
             logger.debug("Stored enable-encryption-at-rest config value in databag.")
+
+    def _generate_vault_ca_certificate(self) -> tuple[str, str]:
+        """Generate Vault CA certificates valid for 50 years.
+
+        Returns:
+            Tuple[str, str]: CA Private key, CA certificate
+        """
+        ca_private_key = generate_private_key()
+        ca_certificate = generate_ca(
+            private_key=ca_private_key,
+            common_name=VAULT_CA_SUBJECT,
+            validity=timedelta(days=365 * 50),
+        )
+        return str(ca_private_key), str(ca_certificate)
+
+    def generate_vault_ca_certificate(self) -> None:
+        """Generate and store the Vault CA private keys."""
+        if self.state.enable_encryption_at_rest:
+            ca_private_key, ca_certificate = self._generate_vault_ca_certificate()
+            self.state.vault_state.agent_ca_private_key = ca_private_key
+            self.state.vault_state.agent_ca_certificate = ca_certificate
+
+    def generate_vault_unit_certificate(
+        self,
+        common_name: str,
+        sans_ip: frozenset[str],
+        sans_dns: frozenset[str],
+        ca_certificate: str,
+        ca_private_key: str,
+    ) -> tuple[str, str]:
+        """Generate Vault unit certificates valid for 50 years.
+
+        Args:
+            common_name: Common name of the certificate
+            sans_ip: Subject alternative IP addresses of the certificate
+            sans_dns: Subject alternative names of the certificate
+            ca_certificate: CA certificate
+            ca_private_key: CA private key
+
+        Returns:
+            Tuple[str, str]: Private key, Certificate
+        """
+        vault_private_key = generate_private_key()
+        csr = generate_csr(
+            private_key=vault_private_key,
+            common_name=common_name,
+            sans_ip=sans_ip,
+            sans_dns=sans_dns,
+        )
+        vault_certificate = generate_certificate(
+            ca=Certificate.from_string(ca_certificate),
+            ca_private_key=PrivateKey.from_string(ca_private_key),
+            csr=csr,
+            validity=timedelta(days=365 * 50),
+        )
+        return str(vault_private_key), str(vault_certificate)
+
+    def configure_self_signed_certificates(self):
+        """Configures and restart Vault Agent with new certificates if needed."""
+        if not self.assert_should_integrate():
+            return
+
+        secret_ca = self.state.vault_state.agent_ca_certificate
+        secret_private_key = self.state.vault_state.agent_ca_private_key
+        if not secret_ca or not secret_private_key:
+            raise WaitingForLeaderError("Still waiting for CA certificate")
+
+        try:
+            workload_ca = Certificate.from_string(
+                "\n".join(self.workload.read(self.workload.paths.vault_agent_ca))
+            )
+        except Exception:
+            workload_ca = None
+        if workload_ca and workload_ca.common_name == VAULT_CA_SUBJECT and workload_ca == secret_ca:
+            workload_unit_cert = "\n".join(self.workload.read(self.workload.paths.vault_agent_cert))
+            if workload_unit_cert and self._match_sans_request(workload_unit_cert):
+                return
+
+        unit_private_key, unit_certificate = self.generate_vault_unit_certificate(
+            common_name=self.common_name,
+            sans_dns=self.sans_dns,
+            sans_ip=self.sans_ip,
+            ca_certificate=secret_ca,
+            ca_private_key=secret_private_key,
+        )
+
+        self.workload.write(self.workload.paths.vault_agent_ca, secret_ca)
+        self.workload.write(self.workload.paths.vault_agent_cert, unit_certificate)
+        self.workload.write(self.workload.paths.vault_agent_key, unit_private_key)
+
+        if self.is_ready():
+            # Force restart because we now the certificates were rotated.
+            self.config_manager.configure_and_restart(force=True)
+
+    def _match_sans_request(self, unit_cert_content: str) -> bool:
+        """Checks if the argument certificate matches the expected values."""
+        try:
+            unit_cert = Certificate.from_string(unit_cert_content)
+
+            cert_sans_dns = set(unit_cert.sans_dns) if unit_cert.sans_dns else set[str]()
+            cert_sans_ip = set(unit_cert.sans_ip) if unit_cert.sans_ip else set[str]()
+            current_sans_dns = set(self.sans_dns) if self.sans_dns else set[str]()
+            current_sans_ip = set(self.sans_ip) if self.sans_ip else set[str]()
+
+            return (
+                cert_sans_dns == current_sans_dns
+                and cert_sans_ip == current_sans_ip
+                and unit_cert.common_name == self.common_name
+            )
+        except Exception as e:
+            logger.warning("Failed to parse unit certificate attributes: %s", e)
+            return False
 
     def ensures_value_is_not_updated(self) -> None:
         """Ensures that we don't update the config value after startup."""
@@ -115,7 +255,7 @@ class VaultManager(Object, ManagerStatusProtocol):
             raise ValueError("Connectivity failed.")
         self.workload.write(self.workload.paths.role_id, data.credentials["role-id"])
         self.workload.write(self.workload.paths.role_secret_id, data.credentials["role-secret-id"])
-        self.dependent.vault_config_manager.set_environment()
+        self.config_manager.set_environment()
         self.workload.start()
 
         # Trigger the startup.

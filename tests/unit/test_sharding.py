@@ -140,6 +140,35 @@ def test_config_server_database_requested_failed_wrong_pbm_status(
     assert err.value.args[0] == "Cannot add/remove shards while a backup/restore is in progress."
 
 
+def test_config_server_database_requested_failed_vault_not_ready(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.config_server_manager
+
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.db_initialised = True
+    harness.charm.operator.state.enable_encryption_at_rest = True
+
+    mocker.patch(
+        "single_kernel_mongo.managers.backups.common.CommonBackupManager.backup_state",
+        return_value=BackupState.ACTIVE,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.vault.VaultManager.is_ready",
+        return_value=False,
+    )
+
+    rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
+
+    relation: Relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, rel_id)  # type: ignore[assignment]
+
+    with pytest.raises(DeferrableFailedHookChecksError) as err:
+        manager.prepare_sharding_config(relation)
+
+    assert err.value.args[0] == "Encryption at rest is not working properly"
+
+
 def test_config_server_update_credentials(harness: Harness[MongoTestCharm]):
     manager = harness.charm.operator.config_server_manager
 

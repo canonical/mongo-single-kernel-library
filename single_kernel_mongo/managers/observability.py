@@ -46,6 +46,12 @@ class ObservabilityManager(Object):
         self.state = state
         self.substrate = substrate
 
+        refresh_events = [
+            self.charm.on.start,
+            self.charm.on.update_status,
+            self.charm.on.config_changed,
+        ]
+
         if self.substrate == Substrates.VM:
             self._grafana_agent = COSAgentProvider(
                 self.charm,
@@ -54,11 +60,12 @@ class ObservabilityManager(Object):
                 dashboard_dirs=[f"{OBSERVABILITY_CONFIG.grafana_dashboards}"],
                 log_slots=OBSERVABILITY_CONFIG.log_slots,
                 scrape_configs=self.mongo_scrape_config,
+                refresh_events=refresh_events,
             )
         else:
             self.metrics_endpoint = MetricsEndpointProvider(
                 self.charm,
-                refresh_event=[self.charm.on.start, self.charm.on.update_status],
+                refresh_event=refresh_events,
                 jobs=self.mongo_scrape_config(),
                 alert_rules_path=f"{OBSERVABILITY_CONFIG.k8s_prometheus}",
             )
@@ -75,9 +82,40 @@ class ObservabilityManager(Object):
                 container_name=self.dependent.role.name,
             )
 
+    def vault_metrics(self) -> dict[str, Any]:
+        """The metrics specific to vault."""
+        if not self.state.enable_encryption_at_rest and self.dependent.vault_manager.is_ready():
+            return {}
+
+        ca_data = "\n".join(
+            self.dependent.vault_manager.workload.read(
+                self.dependent.vault_manager.workload.paths.vault_agent_cert
+            )
+        )
+        if not ca_data:
+            return {}
+
+        return {
+            "job_name": "vault-agent",
+            "metrics_path": "agent/v1/metrics",
+            "static_configs": [
+                {
+                    "targets": [f"{self.state.unit_peer_data.internal_address}:8200"],
+                    "labels": {
+                        "cluster": self.state.config_server_name or self.charm.app.name,
+                    },
+                    "scheme": "https",
+                    "tls_config": {
+                        "insecure_skip_verify": True,
+                        "ca": ca_data,
+                    },
+                }
+            ],
+        }
+
     def mongo_scrape_config(self) -> list[dict[str, Any]]:
         """Generates scrape config for the mongo metrics endpoint."""
-        return [
+        metrics = [
             {
                 "metrics_path": "/metrics",
                 "static_configs": [
@@ -92,3 +130,6 @@ class ObservabilityManager(Object):
                 ],
             }
         ]
+        if vault_metrics := self.vault_metrics():
+            metrics.append(vault_metrics)
+        return metrics

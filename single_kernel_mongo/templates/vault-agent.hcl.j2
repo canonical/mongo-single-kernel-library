@@ -1,3 +1,17 @@
+listener "tcp" {
+    address = "{{ peer_addr }}:8200"
+    role = "metrics_only"
+    tls_cert_file = "{{ tls_cert_file }}"
+    tls_key_file = "{{ tls_key_file }}"
+}
+
+listener "tcp" {
+    address = "127.0.0.1:8200"
+    role = "metrics_only"
+    tls_cert_file = "{{ tls_cert_file }}"
+    tls_key_file = "{{ tls_key_file }}"
+}
+
 vault {
     address = "{{ vault_url }}"
     ca_path = "{{ ca_path }}"
@@ -24,4 +38,10 @@ auto_auth {
             mode = 0600
         }
     }
+}
+
+telemetry {
+    unauthenticated_metrics_access = true
+    disable_hostname = true
+    prometheus_retention_time = "10m"
 }

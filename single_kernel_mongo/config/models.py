@@ -190,6 +190,7 @@ class PasswordManagementState(Enum):
     NOT_LEADER = auto()
     PASSWORD_ON_SHARD = auto()
     UPGRADE_RUNNING = auto()
+    ENCRYPTION_NOT_WORKING = auto()
     BACKUP_RUNNING = auto()
     SECRET_NOT_FOUND = auto()
     SECRET_NOT_GRANTED = auto()
@@ -236,4 +237,5 @@ class PasswordManagementContext:
                 return [PasswordManagementStatuses.SECRET_NOT_FOUND.value]
             case PasswordManagementState.INVALID_CONTENT:
                 return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
-        return []
+            case _:
+                return []

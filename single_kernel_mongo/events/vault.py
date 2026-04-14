@@ -113,11 +113,13 @@ class VaultEventHandler(Object):
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handler for leader elected events that ensures that the config option is stored."""
         self.manager.ensures_config_stored()
+        self.manager.generate_vault_ca_certificate()
 
     def _on_config_changed(self, event: ConfigChangedEvent):
         """Handler for config-changed events that ensures that the config option doesn't change."""
         try:
             self.manager.ensures_value_is_not_updated()
+            self.manager.configure_self_signed_certificates()
         except WaitingForLeaderError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
@@ -151,6 +153,7 @@ class VaultEventHandler(Object):
             egress_subnet=egress_subnets,
             nonce=nonce,
         )
+        self.manager.configure_self_signed_certificates()
 
     def _on_rotate_master_key(self, event: ActionEvent):
         """Rotates the master key."""
