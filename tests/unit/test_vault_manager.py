@@ -246,7 +246,7 @@ def test_vault_manager_ready(
         "single_kernel_mongo.managers.config.VaultConfigManager.set_environment"
     )
     configure_self_signed_certificates = mocker.patch(
-        "single_kernel_mongo.managers.vault_manager.VaultManager.configure_self_signed_certificates"
+        "single_kernel_mongo.managers.vault.VaultManager.configure_self_signed_certificates"
     )
 
     state_out = mongodb_ctx.run(
