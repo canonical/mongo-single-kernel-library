@@ -245,11 +245,15 @@ def test_vault_manager_ready(
     set_environment = mocker.patch(
         "single_kernel_mongo.managers.config.VaultConfigManager.set_environment"
     )
+    configure_self_signed_certificates = mocker.patch(
+        "single_kernel_mongo.managers.vault_manager.VaultManager.configure_self_signed_certificates"
+    )
 
     state_out = mongodb_ctx.run(
         mongodb_ctx.on.relation_changed(relation=vault_relation), state=state_in
     )
     check_connectivity.assert_called()
+    configure_self_signed_certificates.assert_called()
     set_environment.assert_called()
 
     unit_secret = state_out.get_secret(label=f"vault-kv.{mongodb_name}.unit")

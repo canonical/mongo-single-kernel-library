@@ -156,7 +156,7 @@ class VaultManager(Object, ManagerStatusProtocol):
         )
         return str(vault_private_key), str(vault_certificate)
 
-    def configure_self_signed_certificates(self):
+    def configure_self_signed_certificates(self, restart: bool = False):
         """Configures and restart Vault Agent with new certificates if needed."""
         if not self.assert_should_integrate():
             return
@@ -189,8 +189,7 @@ class VaultManager(Object, ManagerStatusProtocol):
         self.workload.write(self.workload.paths.vault_agent_cert, unit_certificate)
         self.workload.write(self.workload.paths.vault_agent_key, unit_private_key)
 
-        if self.is_ready():
-            # Force restart because we now the certificates were rotated.
+        if restart and self.is_ready():
             self.config_manager.configure_and_restart(force=True)
 
     def _match_sans_request(self, unit_cert_content: str) -> bool:
@@ -255,6 +254,7 @@ class VaultManager(Object, ManagerStatusProtocol):
             raise ValueError("Connectivity failed.")
         self.workload.write(self.workload.paths.role_id, data.credentials["role-id"])
         self.workload.write(self.workload.paths.role_secret_id, data.credentials["role-secret-id"])
+        self.configure_self_signed_certificates()
         self.config_manager.set_environment()
         self.workload.start()
 

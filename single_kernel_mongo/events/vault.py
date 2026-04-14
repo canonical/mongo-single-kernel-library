@@ -108,7 +108,15 @@ class VaultEventHandler(Object):
                 ),
             }
         )
-        self.manager.prepare_vault_agent(data)
+        try:
+            self.manager.prepare_vault_agent(data)
+        except WaitingForLeaderError:
+            logger.info(f"Deferring {event}: Still waiting for leader.")
+            event.defer()
+        except ValueError:
+            logger.info("Vault connectivity check failed.")
+            self.manager.set_status(VaultStatuses.VAULT_UNREACHABLE.value, scope="unit")
+            event.defer()
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handler for leader elected events that ensures that the config option is stored."""
@@ -119,7 +127,7 @@ class VaultEventHandler(Object):
         """Handler for config-changed events that ensures that the config option doesn't change."""
         try:
             self.manager.ensures_value_is_not_updated()
-            self.manager.configure_self_signed_certificates()
+            self.manager.configure_self_signed_certificates(restart=True)
         except WaitingForLeaderError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
@@ -153,7 +161,10 @@ class VaultEventHandler(Object):
             egress_subnet=egress_subnets,
             nonce=nonce,
         )
-        self.manager.configure_self_signed_certificates()
+        try:
+            self.manager.configure_self_signed_certificates(restart=True)
+        except WaitingForLeaderError:
+            return
 
     def _on_rotate_master_key(self, event: ActionEvent):
         """Rotates the master key."""

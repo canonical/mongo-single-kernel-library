@@ -84,6 +84,8 @@ class ObservabilityManager(Object):
 
     def vault_metrics(self) -> dict[str, Any]:
         """The metrics specific to vault."""
+        if not self.dependent.workload.workload_present:
+            return {}
         if not self.state.enable_encryption_at_rest and self.dependent.vault_manager.is_ready():
             return {}
 
