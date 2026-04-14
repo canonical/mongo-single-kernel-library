@@ -185,9 +185,13 @@ class VaultManager(Object, ManagerStatusProtocol):
             ca_private_key=secret_private_key,
         )
 
-        self.workload.write(self.workload.paths.vault_agent_ca, secret_ca)
-        self.workload.write(self.workload.paths.vault_agent_cert, unit_certificate)
-        self.workload.write(self.workload.paths.vault_agent_key, unit_private_key)
+        for path, data in (
+            (self.workload.paths.vault_agent_ca, secret_ca),
+            (self.workload.paths.vault_agent_cert, unit_certificate),
+            (self.workload.paths.vault_agent_key, unit_private_key),
+        ):
+            self.workload.write(path, data)
+            self.workload.exec(["chmod", "640", f"{path}"])
 
         if restart and self.is_ready():
             self.config_manager.configure_and_restart(force=True)

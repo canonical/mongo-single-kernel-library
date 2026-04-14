@@ -321,6 +321,7 @@ class VaultConfigManager(FileBasedConfigManager):
             "peer_addr": self.state.unit_peer_data.internal_address,
             "tls_cert_file": f"{self.workload.paths.vault_agent_cert}",
             "tls_key_file": f"{self.workload.paths.vault_agent_key}",
+            "log_file": f"{self.workload.paths.vault_agent_log_file}",
         }
 
     def configure_and_restart(self, force: bool = False) -> None:
