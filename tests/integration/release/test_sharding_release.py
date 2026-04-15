@@ -281,6 +281,7 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
         CONFIG_SERVER_APP_NAME,
         role_name="ou=superheroes,ou=users,dc=glauth,dc=com",
         db=DEFAULT_DATABASE_NAME,
+        tls=True,
     )
 
     await ops_test.model.wait_for_idle(
@@ -513,12 +514,12 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
     )
 
     result = await execute_on_mongod(
-        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.insertOne({number: 1})"
+        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.insertOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to insert value with LDAP client"
 
     result = await execute_on_mongod(
-        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.findOne({number: 1})"
+        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.findOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 
@@ -528,6 +529,7 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
         substrate,
         uri,
         f"db.{DEFAULT_COLLECTION_NAME}.find().limit(10)",
+        tls=True,
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 

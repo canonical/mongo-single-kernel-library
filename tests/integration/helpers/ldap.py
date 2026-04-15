@@ -159,6 +159,7 @@ async def create_mongodb_user_roles(
     role_name: str,
     mongos: bool = False,
     db: str = "superdb",
+    tls: bool = False,
 ) -> None:
     """Creates the roles for mongodb with the provided role_name."""
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=mongos)
@@ -173,6 +174,7 @@ async def create_mongodb_user_roles(
         "  privileges: [],"
         f"  roles: [{{'db': '{db}', 'role': 'readWrite'}}, {{'db': '{db}', 'role': 'enableSharding'}}]"
         "})",
+        tls=tls,
     )
     assert result.succeeded, "Failed to create role"
 

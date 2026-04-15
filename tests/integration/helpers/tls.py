@@ -19,11 +19,14 @@ from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
     ProcessError,
+    external_cert_path,
+    external_pem_path,
     get_address_of_unit,
     get_application_relation_data,
     get_password,
     get_secret_content,
     get_secret_id,
+    internal_cert_path,
     mongosh,
 )
 from tests.integration.helpers.types import Substrate
@@ -38,29 +41,9 @@ CLIENT_TLS_RELATION_NAME = "client-certificates"
 
 DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
-MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
-MONGODB_ROCK_CONF_DIR = "/etc/mongod"
 
 SNAP_MONGOD_SERVICE = "snap.charmed-mongodb.mongod.service"
 SNAP_MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"
-
-
-def external_cert_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
-
-
-def external_pem_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
-
-
-def internal_cert_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
 
 
 async def integrate_apps_with_tls(

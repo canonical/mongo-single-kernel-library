@@ -7,6 +7,7 @@ import math
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from random import choices
 from string import ascii_lowercase, digits
 from typing import Any
@@ -32,7 +33,11 @@ from tenacity import (
     wait_fixed,
 )
 
+from tests.integration.helpers.tls import scp_file_preserve_ctime
 from tests.integration.helpers.types import Substrate
+
+MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
+MONGODB_ROCK_CONF_DIR = "/etc/mongod"
 
 MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOD_PORT = 27017
@@ -88,6 +93,24 @@ def mongosh(substrate: Substrate) -> str:
             return "charmed-mongodb.mongosh"
         case "microk8s":
             return "mongosh"
+
+
+def external_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
+
+
+def external_pem_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
+
+
+def internal_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
 
 
 class ProcessError(Exception):
@@ -987,17 +1010,24 @@ async def execute_on_mongod(
     uri: str,
     command: str,
     container_name: str = "mongod",
+    tls: bool = False,
     stringify: bool = True,
     expecting_output: bool = True,
 ) -> CommandResult:
     """Executes the command with mongosh."""
     leader_id = await get_leader_id(ops_test, app_name)
     ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
+    tls_string = ""
+    if tls:
+        tls_string = (
+            f"--tls --tlsCAFile {external_cert_path(substrate)}"
+            f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
+        )
 
     if stringify:
-        formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})"'
+        formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})" {tls_string}'
     else:
-        formatted_string = f'"{uri}" --quiet --eval "{command}"'
+        formatted_string = f'"{uri}" --quiet --eval "{command}" {tls_string}'
 
     cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
 
@@ -1110,6 +1140,7 @@ async def count_writes(
     username: str = CHARMED_OPERATOR_USERNAME,
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
+    tls: bool = False,
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
@@ -1121,12 +1152,25 @@ async def count_writes(
         hosts=[host],
         username=username,
     )
+    if mongos:
+        container = "mongos"
+    else:
+        container = "mongod"
+    if tls:
+        ca_file = await scp_file_preserve_ctime(
+            ops_test, substrate, unit.name, external_cert_path(substrate), container
+        )
+    else:
+        ca_file = None
 
-    client = MongoClient(uri, directConnection=True)
+    client = MongoClient(uri, directConnection=True, tlsCaFile=ca_file, tls=tls)
     db = client[db_name]
     test_collection = db[coll_name]
     count = test_collection.count_documents({})
     client.close()
+
+    if ca_file:
+        Path(ca_file).unlink()
     return count
 
 

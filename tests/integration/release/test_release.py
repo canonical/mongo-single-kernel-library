@@ -126,6 +126,7 @@ async def test_integrate_with_tls(
     """Tests that we can integrate with TLS, and then add a writer and start writing."""
     assert ops_test.model
     app_name = await get_app_name(ops_test)
+    assert app_name
     await integrate_apps_with_tls(ops_test, applications=[app_name])
 
     await ops_test.model.wait_for_idle(
@@ -141,6 +142,7 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
     """Tests that we can integrate with LDAP without losing data."""
     assert ops_test.model
     app_name = await get_app_name(ops_test)
+    assert app_name
 
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{app_name}:ldap")
     await ops_test.model.integrate(
@@ -150,9 +152,10 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
     await create_mongodb_user_roles(
         ops_test,
         substrate,
-        app_name,
+        app_name=app_name,
         role_name="ou=superheroes,ou=users,dc=glauth,dc=com",
         db=DEFAULT_DATABASE_NAME,
+        tls=True,
     )
 
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
@@ -256,6 +259,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     """
     assert ops_test.model
     app_name = await get_app_name(ops_test)
+    assert app_name
 
     first_reported_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
     second_reported_writes = await stop_continous_writes(
@@ -266,7 +270,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     )
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     # count total writes
-    first_number_writes = await count_writes(ops_test, substrate, app_name, leader_unit)
+    first_number_writes = await count_writes(ops_test, substrate, app_name, leader_unit, tls=True)
     second_number_writes = await count_writes(
         ops_test,
         substrate,
@@ -274,6 +278,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         leader_unit,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
+        tls=True,
     )
     assert first_number_writes == first_reported_writes
     assert second_number_writes == second_reported_writes
@@ -295,7 +300,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         (await ops_test.model.wait_for_idle(apps=[app_name], status="active", idle_period=15),)
 
     first_number_writes_after_restore = await count_writes(
-        ops_test, substrate, app_name, leader_unit
+        ops_test, substrate, app_name, leader_unit, tls=True
     )
     second_number_writes_after_restore = await count_writes(
         ops_test,
@@ -304,6 +309,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         leader_unit,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
+        tls=True,
     )
 
     assert first_number_writes_after_restore < first_number_writes
@@ -317,6 +323,7 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
     This checks both authentication and authorisation.
     """
     app_name = await get_app_name(ops_test)
+    assert app_name
 
     # We create a client which should be able to write
     uri = await generate_mongodb_ldap_client(
@@ -329,12 +336,12 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
     )
 
     result = await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "db.test.insertOne({number: 1})"
+        ops_test, app_name, substrate, uri, "db.test.insertOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to insert value with LDAP client"
 
     result = await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "db.test.findOne({number: 1})"
+        ops_test, app_name, substrate, uri, "db.test.findOne({number: 1})", tls=True
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 
@@ -344,6 +351,7 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
         substrate,
         uri,
         f"db.{DEFAULT_COLLECTION_NAME}.find().limit(10)",
+        tls=True,
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 
