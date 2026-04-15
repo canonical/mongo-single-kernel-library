@@ -234,6 +234,11 @@ class VaultManager(Object, ManagerStatusProtocol):
             return
         self.state.vault_state.nonce = secrets.token_hex(16)
 
+    def prepare_log_dir(self):
+        """Creates the log directory for vault agent."""
+        if not self.workload.exists(self.workload.paths.vault_agent_log_dir):
+            self.workload.mkdir(self.workload.paths.vault_agent_log_dir, make_parents=True)
+
     def get_egress_subnets(self) -> list[str]:
         """Gets the ordered list of subnets for that specific relation."""
         if not self.state.vault_relation:
@@ -252,13 +257,25 @@ class VaultManager(Object, ManagerStatusProtocol):
 
     def prepare_vault_agent(self, data: vault_kv.VaultKvProviderSchema) -> None:
         """Prepares the vault agent with the provided configuration."""
+        # Creates the log directory
+        self.prepare_log_dir()
+
+        # Store the data in the secret
         self.state.vault_state.set_from(data)
+
+        # Write the certificate to the workload FS
         self.workload.write(self.workload.paths.vault_cert, data.ca_certificate)
-        if not self._check_connectivity(data):
-            raise ValueError("Connectivity failed.")
+
+        # Write the approle files to the workload fs
         self.workload.write(self.workload.paths.role_id, data.credentials["role-id"])
         self.workload.write(self.workload.paths.role_secret_id, data.credentials["role-secret-id"])
         self.configure_self_signed_certificates()
+
+        # Run the connectivity checks
+        if not self._check_connectivity(data):
+            raise ValueError("Connectivity failed.")
+
+        # Configure the vault-agent service and start.
         self.config_manager.set_environment()
         self.workload.start()
 

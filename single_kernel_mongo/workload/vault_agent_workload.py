@@ -50,9 +50,14 @@ class VaultAgentPaths(MongoPaths):
         return Path(f"{self.etc_path}/vault/key.pem")
 
     @property
+    def vault_agent_log_dir(self) -> Path:
+        """Vault Agent log directory."""
+        return Path(f"{self.logs_path}/vault")
+
+    @property
     def vault_agent_log_file(self) -> Path:
         """Vault Agent log file."""
-        return Path(f"{self.logs_path}/vault-agent.log")
+        return self.vault_agent_log_dir / "vault-agent.log"
 
 
 class VaultAgentWorkload(WorkloadBase, ABC):
