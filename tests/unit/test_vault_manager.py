@@ -248,12 +248,16 @@ def test_vault_manager_ready(
     configure_self_signed_certificates = mocker.patch(
         "single_kernel_mongo.managers.vault.VaultManager.configure_self_signed_certificates"
     )
+    prepare_log_dir = mocker.patch(
+        "single_kernel_mongo.managers.vault.VaultManager.prepare_log_dir"
+    )
 
     state_out = mongodb_ctx.run(
         mongodb_ctx.on.relation_changed(relation=vault_relation), state=state_in
     )
-    check_connectivity.assert_called()
+    prepare_log_dir.assert_called()
     configure_self_signed_certificates.assert_called()
+    check_connectivity.assert_called()
     set_environment.assert_called()
 
     unit_secret = state_out.get_secret(label=f"vault-kv.{mongodb_name}.unit")
