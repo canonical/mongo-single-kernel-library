@@ -33,7 +33,6 @@ from tenacity import (
     wait_fixed,
 )
 
-from tests.integration.helpers.tls import scp_file_preserve_ctime
 from tests.integration.helpers.types import Substrate
 
 MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
@@ -491,7 +490,7 @@ async def find_unit(ops_test: OpsTest, leader: bool, app_name: str | None = None
     return ret_unit
 
 
-async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
+async def get_leader_id(ops_test: OpsTest, app_name: str | None = None) -> int:
     """Returns the unit number of the juju leader unit."""
     app_name = app_name or await get_app_name(ops_test)
     for unit in ops_test.model.applications[app_name].units:
@@ -1420,3 +1419,30 @@ async def execute_on_server(
         shell=True,
         universal_newlines=True,
     )
+
+
+async def scp_file_preserve_ctime(
+    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
+) -> str:
+    """Returns the unix timestamp of when a file was created on a specified unit."""
+    # Retrieving the file
+    filename = path.split("/")[-1]
+    if substrate == "lxd":
+        complete_command = f"exec --unit {unit_name} -- sudo cat {path}"
+        return_code, stdout, stderr = await ops_test.juju(*complete_command.split(), check=True)
+        with open(filename, mode="w") as fd:
+            fd.write(stdout.strip())
+    else:
+        complete_command = f"scp --container {container} {unit_name}:{path} {filename}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+
+    return f"{filename}"

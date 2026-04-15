@@ -28,6 +28,7 @@ from tests.integration.helpers.common import (
     get_secret_id,
     internal_cert_path,
     mongosh,
+    scp_file_preserve_ctime,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -339,33 +340,6 @@ def process_systemctl_time(systemctl_output) -> datetime:
     "ActiveEnterTimestamp=Thu 2022-09-22 10:00:00 UTC"
     time_as_str = "T".join(systemctl_output.split("=")[1].split(" ")[1:3])
     return datetime.strptime(time_as_str, "%Y-%m-%dT%H:%M:%S")
-
-
-async def scp_file_preserve_ctime(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
-) -> str:
-    """Returns the unix timestamp of when a file was created on a specified unit."""
-    # Retrieving the file
-    filename = path.split("/")[-1]
-    if substrate == "lxd":
-        complete_command = f"exec --unit {unit_name} -- sudo cat {path}"
-        return_code, stdout, stderr = await ops_test.juju(*complete_command.split(), check=True)
-        with open(filename, mode="w") as fd:
-            fd.write(stdout.strip())
-    else:
-        complete_command = f"scp --container {container} {unit_name}:{path} {filename}"
-        return_code, _, stderr = await ops_test.juju(*complete_command.split())
-
-    if return_code != 0:
-        logger.error(stderr)
-        raise ProcessError(
-            "Expected command %s to succeed instead it failed: %s; %s",
-            complete_command,
-            return_code,
-            stderr,
-        )
-
-    return f"{filename}"
 
 
 async def check_certs_correctly_distributed(
