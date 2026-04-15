@@ -238,6 +238,13 @@ class VaultManager(Object, ManagerStatusProtocol):
         """Creates the log directory for vault agent."""
         if not self.workload.exists(self.workload.paths.vault_agent_log_dir):
             self.workload.mkdir(self.workload.paths.vault_agent_log_dir, make_parents=True)
+            self.workload.exec(
+                [
+                    "chown",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{self.workload.paths.vault_agent_log_dir}",
+                ]
+            )
 
     def get_egress_subnets(self) -> list[str]:
         """Gets the ordered list of subnets for that specific relation."""
