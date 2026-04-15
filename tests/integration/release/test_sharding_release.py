@@ -12,7 +12,7 @@ from tenacity import RetryError, Retrying
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_fixed
 
-from tests.integration.helpers.backups import S3_APP_NAME, CloudConfigs, count_logical_backups
+from tests.integration.helpers.backups import S3_APP_NAME, count_logical_backups
 from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     CONTINUOUS_WRITE_APPLICATION_BIS,
@@ -393,7 +393,11 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
 
 
 @pytest.mark.abort_on_fail
-async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs):
+async def test_integrate_with_s3(
+    ops_test: OpsTest,
+    storage_credentials: dict[str, str],
+    storage_config: dict[str, str],
+):
     """Tests that we can integrate with S3 and create a backup.
 
     This test ensures that the backup is created and finished.
@@ -404,12 +408,13 @@ async def test_integrate_with_s3(ops_test: OpsTest, cloud_configs: CloudConfigs)
     await ops_test.model.deploy(S3_APP_NAME, channel="1/edge")
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME], timeout=DEPLOYMENT_TIMEOUT)
 
-    configuration_parameters, credentials = cloud_configs["AWS"]
     s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
 
     # apply new configuration options
-    await ops_test.model.applications[S3_APP_NAME].set_config(configuration_parameters)
-    action = await s3_integrator_unit.run_action(action_name="sync-s3-credentials", **credentials)
+    await ops_test.model.applications[S3_APP_NAME].set_config(storage_config)
+    action = await s3_integrator_unit.run_action(
+        action_name="sync-s3-credentials", **storage_credentials
+    )
     await action.wait()
 
     await ops_test.model.wait_for_idle(
