@@ -1,0 +1,95 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Release to candidate promotion train
+
+on:
+  workflow_dispatch:
+    inputs:
+      mongodb:
+        description: JSON mapping architecture to revision for MongoDB VM
+        required: true
+        type: string
+      mongos:
+        description: JSON mapping architecture to revision for Mongos VM
+        required: true
+        type: string
+      mongodb-k8s:
+        description: JSON mapping architecture to revision for MongoDB K8S VM
+        required: true
+        type: string
+      mongos-k8s:
+        description: JSON mapping architecture to revision for Mongos K8S VM
+        required: true
+        type: string
+
+jobs:
+  trigger-release-ci:
+    # only on beta promotion
+    name: Trigger release CI (Airflow)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build JSON Document
+        id: build-json
+        shell: python
+        env:
+          MONGODB: ${{ inputs.mongodb }}
+          MONGOS: ${{ inputs.mongos }}
+          MONGODB_K8S: ${{ inputs.mongodb-k8s }}
+          MONGOS_K8S: ${{ inputs.mongos-k8s }}
+        run: |
+          import json
+          import os
+          import sys
+          output = {}
+          ARCHITECTURES = ("amd64", "arm64")
+
+          for name, input in [
+              ("mongodb", os.environ["MONGODB"]),
+              ("mongos", os.environ["MONGOS"]),
+              ("mongodb-k8s", os.environ["MONGODB_K8S"]),
+              ("mongos-k8s", os.environ["MONGOS_K8S"]),
+          ]:
+              try:
+                  data = json.loads(input)
+              except Exception:
+                  print(f"Invalid data for {name}: {input} (Impossible to JSON decode)")
+                  sys.exit(1)
+              if not isinstance(data, dict):
+                  print(f"Invalid data for {name}: {data} (Not a dictionary)")
+                  sys.exit(1)
+              if any(data.get(arch, None) is None for arch in ARCHITECTURES):
+                  print(f"Invalid data for {name}: {data} (Missing architecture)")
+                  sys.exit(1)
+              output[name] = data
+
+          full_output = f"charms={json.dumps(output)}"
+          print(f"Computed output: {full_output}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as file:
+            file.write(full_output)
+
+      - name: Trigger Airflow DAG
+        run: |
+          #shellcheck disable=SC2016
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            'https://airflow.data-platform.ps7.canonical.com/api/v2/dags/mongodb_8/dagRuns' \
+            -H 'Content-Type: application/json' \
+            -H 'Authorization: Bearer ${{ secrets.AIRFLOW_API_TOKEN }}' \
+            -d '{
+              "dag_run_id": "promote-${{ github.run_id }}",
+              "logical_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "conf": {
+                "charms": ${{ steps.build-json.outputs.charms }}
+              }
+            }')
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "$body"
+          if echo "$body" | grep -q '"detail":"Token Expired"'; then
+            echo "::error::Airflow API token has expired"
+            exit 1
+          fi
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Airflow API request failed with status $http_code"
+            exit 1
+          fi
