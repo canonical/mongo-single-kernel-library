@@ -363,7 +363,7 @@ class ContinuousWritesApplication(CharmBase):
 
         db_name = event.params.get("db-name") or self.database_name
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
-        self._start_continuous_reads(1, db_name, collection_name)
+        self._start_continuous_reads(db_name, collection_name)
 
     def _on_stop_continuous_reads_action(self, event: ActionEvent) -> None:
         """Handle the stop continuous reads action event."""

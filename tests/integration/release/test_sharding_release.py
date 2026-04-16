@@ -417,6 +417,8 @@ async def test_integrate_with_s3(
     )
     await action.wait()
 
+    await ops_test.model.integrate(S3_APP_NAME, CONFIG_SERVER_APP_NAME)
+
     await ops_test.model.wait_for_idle(
         apps=[S3_APP_NAME, CONFIG_SERVER_APP_NAME], status="active", timeout=TIMEOUT
     )
