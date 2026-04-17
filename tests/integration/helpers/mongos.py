@@ -202,7 +202,7 @@ async def integrate_cluster_with_tls(ops_test: OpsTest) -> None:
         )
 
     await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS,
+        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
         idle_period=20,
         timeout=TIMEOUT,
         raise_on_blocked=False,
