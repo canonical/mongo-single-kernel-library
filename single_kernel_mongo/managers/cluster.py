@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
+from ops.charm import RelationChangedEvent
 from ops.model import Relation
 from pymongo.errors import PyMongoError
 
@@ -306,7 +307,7 @@ class ClusterRequirer(Object):
         self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
         self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
 
-    def update_mongos_and_restart(self) -> None:
+    def update_mongos_and_restart(self, event: RelationChangedEvent) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
         key_file_contents = self.state.cluster.keyfile
@@ -330,17 +331,16 @@ class ClusterRequirer(Object):
                 MongosStatuses.STARTING_MONGOS.value, scope="unit"
             )
 
-            self.dependent.restart_charm_services()
-
-            # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
-            if not self.dependent.is_mongos_running():
-                logger.info("Mongos has not started yet, deferring")
-                self.state.statuses.set(
-                    MongosStatuses.WAITING_FOR_MONGOS_START.value,
-                    scope="unit",
-                    component=self.dependent.name,
-                )
-                raise DeferrableError
+            self.dependent.rollingops_manager.request_async_lock(
+                callback_id="restart_charm_services",
+            )
+            self.state.statuses.set(
+                MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+            event.defer()
+            return
 
         self.state.statuses.set(
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name

@@ -56,7 +56,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
-
+from charmlibs.rollingops import RollingOpsManager, OperationResult
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
@@ -102,6 +102,15 @@ class MongosOperator(OperatorProtocol, Object):
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
+        )
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name="rollingops-peers",
+            etcd_relation_name="etcd",
+            cluster_id="mongodb",
+            callback_targets={
+                "restart_charm_services" : self.restart_charm_services
+            },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
@@ -398,13 +407,15 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self, force: bool = False) -> None:
+    def restart_charm_services(self, force: bool = False) -> OperationResult:
         """Restarts the charm with the new configuration."""
         try:
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
-                raise MissingConfigServerError()
+                #raise MissingConfigServerError()
+                return OperationResult.RELEASE
             self.mongos_config_manager.configure_and_restart(force=force)
+            return OperationResult.RELEASE
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
@@ -412,7 +423,8 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
-            raise
+            #raise
+            return OperationResult.RETRY_RELEASE
 
     def update_ips_in_databag(self) -> None:
         """Sets all the ips in the databag to be used by the leader."""

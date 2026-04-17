@@ -27,6 +27,7 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
+from charmlibs.rollingops import OperationResult
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
@@ -86,7 +87,7 @@ class VMWorkload(WorkloadBase):
         except snap.SnapError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(str(e)) from e
-
+        
     @override
     def exists(self, path: Path) -> bool:
         return path.is_file()

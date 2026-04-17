@@ -165,13 +165,13 @@ class ClusterMongosEventHandler(Object):
         The manager will update the mongos configuration and restart it.
         """
         try:
-            self.manager.update_mongos_and_restart()
+            self.manager.update_mongos_and_restart(event)
         except (
             DeferrableError,
             DeferrableFailedHookChecksError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except (NonDeferrableFailedHookChecksError, WaitingForSecretsError) as e:
+        except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except WaitingForSecretsError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -180,10 +180,6 @@ class ClusterMongosEventHandler(Object):
                 scope="unit",
                 component=self.charm.name,
             )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

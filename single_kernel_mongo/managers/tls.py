@@ -160,7 +160,10 @@ class TLSManager(ManagerStatusProtocol):
             self.dependent.state.update_client_ca_secrets(new_ca=None)
 
         self.delete_certificates_from_workload(internal)
-        self.dependent.restart_charm_services(force=True)
+        self.dependent.rollingops_manager.request_async_lock(
+                callback_id="restart_charm_services",
+                kwargs={"force": True}
+            )
 
     def enable_certificates_for_unit(self, internal: bool):
         """Enables the new certificates for this unit."""
@@ -184,12 +187,10 @@ class TLSManager(ManagerStatusProtocol):
             logger.info("Still waiting for a certificate, delaying restart.")
             return
 
-        try:
-            self.dependent.restart_charm_services(force=True)
-        except WorkloadServiceError as e:
-            # TODO should we defer or just error
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            return
+        self.dependent.rollingops_manager.request_async_lock(
+                callback_id="restart_charm_services",
+                kwargs={"force": True}
+            )
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""

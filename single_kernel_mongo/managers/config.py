@@ -96,11 +96,14 @@ class FileBasedConfigManager(CommonConfigManager):
         """Re-configure if needed and restart the service if needed."""
         current_config_file = "\n".join(self.workload.read(self.file))
         current_config_file_content = safe_load(current_config_file)
-
         new_content = self.build_config()
 
-        if force or not self.workload.active() or new_content != current_config_file_content:
+        config_changed = new_content != current_config_file_content
+        should_restart = force or not self.workload.active() or config_changed
+
+        if config_changed:
             self.workload.write(self.file, safe_dump(new_content))
+        if should_restart:
             self.workload.restart()
 
 

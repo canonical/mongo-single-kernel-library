@@ -39,6 +39,7 @@ from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
 
+from charmlibs import apt
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
 
@@ -110,6 +111,12 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
             self.workload.install()
+
+            try:
+                apt.update()
+                apt.add_package('etcd-client')
+            except apt.PackageError as e:
+                logger.error('could not install package. Reason: %s', e.message)
 
     def on_leader_elected(self, event):
         """First leader elected handler."""

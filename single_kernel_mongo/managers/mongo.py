@@ -506,6 +506,25 @@ class MongoManager(Object, ManagerStatusProtocol):
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.remove_replset_member(self.state.unit_peer_data.internal_address)
+    
+    def can_remove_replset_member(self) -> bool:
+        """Return whether replica-set member removal can proceed now.
+
+        This is a best-effort synchronization check based on current
+        replica-set state. It returns False if MongoDB reports that some
+        member removal is already in progress.
+
+        Returns:
+            True if no member removal is currently in progress, otherwise False.
+
+        Raises:
+            PyMongoError: If replica-set state cannot be queried.
+            NotReadyError: If MongoDB is not yet ready to answer the request.
+        """
+        with MongoConnection(self.state.mongo_config) as mongo:
+            rs_status = mongo.client.admin.command("replSetGetStatus")
+            return not mongo.is_any_removing(rs_status)
+    
 
     def process_added_units(self) -> None:
         """Adds units to replica set."""

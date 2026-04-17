@@ -112,7 +112,9 @@ from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
 )
+from charmlibs.rollingops import RollingOpsManager, OperationResult
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
+import time 
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
@@ -176,6 +178,17 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.state,
             container,
         )
+
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name="rollingops-peers",
+            etcd_relation_name="etcd",
+            cluster_id="mongodb",
+            callback_targets={
+                "restart_charm_services" : self.restart_charm_services
+            },
+        )
+
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
@@ -887,20 +900,21 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
-            # retries over a period of 10 minutes in an attempt to resolve race conditions it is
-            # not possible to defer in storage detached.
             logger.debug(
                 "Removing %s from replica set",
                 self.state.unit_peer_data.internal_address,
             )
-            for attempt in Retrying(
-                stop=stop_after_attempt(600),
-                wait=wait_fixed(1),
-                reraise=True,
+            with self.rollingops_manager.acquire_sync_lock(
+                backend_id="stop-replset-member",
+                timeout=600,
             ):
-                with attempt:
-                    # remove_replset_member retries for 60 seconds
-                    self.mongo_manager.remove_replset_member()
+                self.mongo_manager.remove_replset_member()
+
+        except TimeoutError:
+            logger.info(
+                "Timed out waiting to remove %s from replica set.",
+                self.charm.unit.name,
+            )
         except NotReadyError:
             logger.info(
                 "Failed to remove %s from replica set, another member is syncing",
@@ -1098,17 +1112,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self, force: bool = False):
+    def restart_charm_services(self, force: bool = False) -> OperationResult:
         """Restarts the charm services with updated config.
 
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
-            raise WorkloadServiceError("Workload not allowed to start")
+            logger.error("Cannot restart during refresh. Dropping.")
+            return OperationResult.RELEASE # raise WorkloadServiceError
         try:
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
+            return OperationResult.RELEASE
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.state.statuses.add(
@@ -1116,7 +1132,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
-            raise
+            return OperationResult.RETRY_RELEASE  # raise WorkloadServiceError
 
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""

@@ -739,7 +739,10 @@ class ShardManager(Object, ManagerStatusProtocol):
                 self.dependent.tls_events.refresh_certificates()
                 raise WaitingForCertificatesError()
             if keyfile_changed:
-                self.dependent.restart_charm_services(force=True)
+                self.dependent.rollingops_manager.request_async_lock(
+                    callback_id="restart_charm_services",
+                    kwargs={"force": True}
+                )
             return
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
