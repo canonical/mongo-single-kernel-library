@@ -702,9 +702,8 @@ class CharmState(Object, StatusesStateProtocol):
                 self.config_server_data_interface.update_relation_data(
                     relation.id, {AppShardingComponentKeys.INT_CA_SECRET.value: new_ca}
                 )
-        self._update_client_ca_secrets(new_ca)
 
-    def _update_client_ca_secrets(self, new_ca: str | None) -> None:
+    def update_client_ca_secrets(self, new_ca: str | None) -> None:
         """Updates the CA secret for the right values on the right fields."""
         if not self.charm.unit.is_leader():
             return
