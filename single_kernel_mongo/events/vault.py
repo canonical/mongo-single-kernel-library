@@ -167,7 +167,10 @@ class VaultEventHandler(Object):
                 nonce=nonce,
             )
         except ValueError as e:
-            logger.warning(f"[Update Status] Could not request new credentials for vault: {e}")
+            defer_event_with_info_log(
+                logger, event, str(type(event)), f"Could not request new credentials for vault: {e}"
+            )
+            return
         try:
             self.manager.configure_self_signed_certificates(restart=True)
         except WaitingForLeaderError:
