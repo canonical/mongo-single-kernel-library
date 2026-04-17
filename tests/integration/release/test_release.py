@@ -255,6 +255,9 @@ async def test_integrate_with_s3(
     except RetryError:
         assert backups == 1, "Backup not created."
 
+    # Wait for status to go back to idle.
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
 
 @pytest.mark.abort_on_fail
 async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):

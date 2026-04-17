@@ -271,8 +271,10 @@ class ContinuousWritesApplication(CharmBase):
             logger.info(
                 f"Process {self.read_proc_id_key(db_name, collection_name)} was killed already (or never existed)"
             )
+            return (None, [])
+        finally:
+            del self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]
 
-        del self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]
 
         # read the last written_value
         try:

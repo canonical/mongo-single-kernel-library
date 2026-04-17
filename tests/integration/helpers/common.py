@@ -206,13 +206,23 @@ async def relate_mongodb_and_application(
         mongodb_application_name: The mongodb charm application name
         application_name: The continuous writes test charm application name
     """
-    if is_relation_joined(ops_test, "mongodb", "database"):
+    if is_relation_joined(
+        ops_test, "mongodb", "database", app_one=application_name, app_two=mongodb_application_name
+    ):
         return
 
     await ops_test.model.integrate(
         f"{application_name}:mongodb", f"{mongodb_application_name}:database"
     )
-    await ops_test.model.block_until(lambda: is_relation_joined(ops_test, "mongodb", "database"))
+    await ops_test.model.block_until(
+        lambda: is_relation_joined(
+            ops_test,
+            "mongodb",
+            "database",
+            app_one=application_name,
+            app_two=mongodb_application_name,
+        )
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[mongodb_application_name, application_name],
@@ -971,17 +981,38 @@ async def check_app_status(
         assert app.status_message == message
 
 
-def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
+def is_relation_joined(
+    ops_test: OpsTest,
+    endpoint_one: str,
+    endpoint_two: str,
+    app_one: str | None = None,
+    app_two: str | None = None,
+) -> bool:
     """Check if a relation is joined.
 
     Args:
         ops_test: The ops test object passed into every test case
         endpoint_one: The first endpoint of the relation
         endpoint_two: The second endpoint of the relation
+        app_one: Application name for the first endpoint of the relation
+        app_two: Application name for the second endpoint of the relation
     """
     for rel in ops_test.model.relations:
-        endpoints = [endpoint.name for endpoint in rel.endpoints]
-        if endpoint_one in endpoints and endpoint_two in endpoints:
+        endpoints = rel.endpoints
+        endpoint_names = [endpoint.name for endpoint in endpoints]
+        invalid = False
+        if endpoint_one not in endpoint_names or endpoint_two not in endpoint_names:
+            continue
+        if not app_one and not app_two:
+            return True
+        for endpoint in endpoints:
+            if endpoint.name == endpoint_one:
+                if app_one and endpoint.application.name != app_one:
+                    invalid = True
+            if endpoint.name == endpoint_two:
+                if app_two and endpoint.application.name != app_two:
+                    invalid = True
+        if not invalid:
             return True
     return False
 
