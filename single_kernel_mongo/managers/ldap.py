@@ -23,7 +23,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
+from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState, VaultConfigurationState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -80,10 +80,13 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if (
             self.dependent.name == CharmKind.MONGOD
             and self.dependent.state.enable_encryption_at_rest
-            and not self.dependent.vault_manager.is_ready()  # type: ignore[attr-defined]
+            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
+            != VaultConfigurationState.ACTIVE
         ):
-            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
-            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
+            logger.warning(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly.")
         # Defer upon regular integration, but let's continue on an update.
         if self.dependent.refresh_in_progress and not self.state.ldap.is_ready():
             raise DeferrableFailedHookChecksError(

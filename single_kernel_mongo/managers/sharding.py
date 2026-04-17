@@ -33,7 +33,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import BackupState
+from single_kernel_mongo.config.models import BackupState, VaultConfigurationState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -217,9 +217,12 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
 
         if (
             self.dependent.state.enable_encryption_at_rest
-            and not self.dependent.vault_manager.is_ready()
+            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
+            != VaultConfigurationState.ACTIVE
         ):
-            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            logger.warning(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
 
         if self.dependent.refresh_in_progress:
@@ -534,9 +537,12 @@ class ShardManager(Object, ManagerStatusProtocol):
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
         if (
             self.dependent.state.enable_encryption_at_rest
-            and not self.dependent.vault_manager.is_ready()
+            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
+            != VaultConfigurationState.ACTIVE
         ):
-            logger.warning("Encryption at rest is not working properly. This must be fixed first.")
+            logger.warning(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:
             logger.warning(

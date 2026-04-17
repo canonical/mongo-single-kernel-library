@@ -201,14 +201,14 @@ class PasswordManagementState(Enum):
 class VaultConfigurationState(Enum):
     """State that can be mapped to a status."""
 
-    INVALID_CONFIG = auto()
-    DISABLED = auto()
-    VAULT_INTEGRATED = auto()
-    VAULT_NOT_INTEGRATED = auto()
-    MISSING_DATA = auto()
-    VAULT_UNREACHABLE = auto()
-    VAULT_AGENT_FAILED = auto()
-    ACTIVE = auto()
+    INVALID_CONFIG = "Invalid configuration option"
+    DISABLED = "Encryption at rest is disabled."
+    VAULT_INTEGRATED = "Vault charm should not be integrated with charm."
+    VAULT_NOT_INTEGRATED = "Vault charm is not integrated with charm."
+    MISSING_DATA = "Vault charm has not sent approle yet."
+    VAULT_UNREACHABLE = "Vault connectivity check failed."
+    VAULT_AGENT_FAILED = "Vault agent is not running."
+    ACTIVE = "Encryption at rest is working properly."
 
 
 @dataclass

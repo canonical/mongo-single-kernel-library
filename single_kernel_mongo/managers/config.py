@@ -288,8 +288,7 @@ class VaultConfigManager(FileBasedConfigManager):
     def set_environment(self) -> None:
         """Write update parameters in the file."""
         current_config = {}
-        data = "\n".join(self.workload.read(self.file))
-        if data:
+        if data := "\n".join(self.workload.read(self.file)):
             current_config = hcl2.loads(data)
         rendered_template = self._render_template()
         new_config = hcl2.loads(rendered_template)
@@ -333,8 +332,7 @@ class VaultConfigManager(FileBasedConfigManager):
             return
 
         current_config = {}
-        data = "\n".join(self.workload.read(self.file))
-        if data:
+        if data := "\n".join(self.workload.read(self.file)):
             current_config = hcl2.loads(data)
         new_config = hcl2.loads(self._render_template())
 

@@ -15,6 +15,7 @@ from tests.integration.helpers.common import (
     TIMEOUT,
     UNIT_IDS,
     check_app_status,
+    delete_file_on_remote,
     deploy_charm,
     execute_on_mongod,
     find_unit,
@@ -205,6 +206,48 @@ async def reintegrate_goes_to_regular(
     """Checks that reintegrating goes back to normal state and we haven't missed writes."""
     app_name = await get_app_name(ops_test)
     assert ops_test.model
+
+    await ops_test.model.integrate(
+        f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
+    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
+    # verify that no writes were skipped
+    await verify_writes(ops_test, substrate, app_name)
+
+
+@pytest.mark.abort_on_fail
+async def test_remove_token_then_reintegrate(
+    ops_test: OpsTest, substrate: Substrate, vault_charm_name: str, continuous_writes_to_db
+) -> None:
+    """Checks that reintegrating goes back to normal state and we haven't missed writes."""
+    app_name = await get_app_name(ops_test)
+    assert ops_test.model
+    # Remove the relation.
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"
+    )
+    # MongoDB unit all goes to blocked.
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        app_name,
+        status="Must be integrated with vault to enable encryption at rest.",
+    )
+    # MongoDB app goes to blocked.
+    await check_app_status(
+        ops_test,
+        app_name,
+        status="blocked",
+        message="Must be integrated with vault to enable encryption at rest.",
+    )
+    if substrate == "lxd":
+        filepath = "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
+    else:
+        filepath = "/etc/vault/vaultTokenFile"
+
+    for unit in ops_test.model.applications[app_name].units:
+        await delete_file_on_remote(ops_test, substrate, unit.name, filepath)
 
     await ops_test.model.integrate(
         f"{app_name}:{VAULT_KV_RELATION}", f"{vault_charm_name}:{VAULT_KV_RELATION}"

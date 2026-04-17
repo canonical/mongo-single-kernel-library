@@ -1366,3 +1366,27 @@ def mongodb_base_path(substrate: Substrate) -> str:
     if substrate == "lxd":
         return "/var/snap/charmed-mongodb/current/etc/mongod/"
     return "/etc/mongod/"
+
+
+async def delete_file_on_remote(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+):
+    if substrate == "lxd":
+        complete_command = f"exec --unit {unit_name} -- sudo rm {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split(), check=True)
+    else:
+        complete_command = f"ssh --container {container} {unit_name} rm -f {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+    return

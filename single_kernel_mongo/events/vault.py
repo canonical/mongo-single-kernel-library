@@ -79,11 +79,15 @@ class VaultEventHandler(Object):
             self.manager.set_status(VaultStatuses.VAULT_INTEGRATED.value, scope="both")
             return
         self.manager.clear_statuses(scope="both")
-        egress_subnets = self.manager.get_egress_subnets()
-        nonce = self.manager.get_nonce()
-        self.kv_interface.request_credentials(
-            event.relation, egress_subnet=egress_subnets, nonce=nonce
-        )
+        try:
+            egress_subnets = self.manager.get_egress_subnets()
+            nonce = self.manager.get_nonce()
+            self.kv_interface.request_credentials(
+                event.relation, egress_subnet=egress_subnets, nonce=nonce
+            )
+        except ValueError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
 
     def _on_ready(self, event: vault_kv.VaultKvReadyEvent) -> None:
         """Handler for on ready event that starts vault."""
@@ -154,13 +158,16 @@ class VaultEventHandler(Object):
             return
         if not self.manager.state.vault_relation:
             return
-        egress_subnets = self.manager.get_egress_subnets()
-        nonce = self.manager.get_nonce()
-        self.kv_interface.request_credentials(
-            self.manager.state.vault_relation,
-            egress_subnet=egress_subnets,
-            nonce=nonce,
-        )
+        try:
+            egress_subnets = self.manager.get_egress_subnets()
+            nonce = self.manager.get_nonce()
+            self.kv_interface.request_credentials(
+                self.manager.state.vault_relation,
+                egress_subnet=egress_subnets,
+                nonce=nonce,
+            )
+        except ValueError as e:
+            logger.warning(f"[Update Status] Could not request new credentials for vault: {e}")
         try:
             self.manager.configure_self_signed_certificates(restart=True)
         except WaitingForLeaderError:

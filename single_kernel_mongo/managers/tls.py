@@ -15,10 +15,14 @@ import re
 import socket
 from typing import TYPE_CHECKING, TypedDict
 
+from data_platform_helpers.advanced_statuses.models import (
+    StatusObject,
+)
 from data_platform_helpers.advanced_statuses.protocol import (
     ManagerStatusProtocol,
+)
+from data_platform_helpers.advanced_statuses.types import (
     Scope,
-    StatusObject,
 )
 from ops.model import ModelError, SecretNotFoundError
 
@@ -288,7 +292,7 @@ class TLSManager(ManagerStatusProtocol):
         if self.dependent.name == CharmKind.MONGOD:
             # For typing purposes
             if self.state.enable_encryption_at_rest and not self.dependent.vault_manager.is_ready():  # type: ignore[attr-defined]
-                return TlsManagementState.ENCRYPTION_NOT_ACTIVE
+                return TlsManagementState.ENCRYPTION_DEGRADED
         if self.dependent.refresh_in_progress and self.initial_integration():
             return TlsManagementState.UPGRADE_IN_PROGRESS
         if self.state.is_role(MongoDBRoles.MONGOS) and self.state.config_server_name is None:

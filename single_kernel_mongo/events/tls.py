@@ -131,7 +131,7 @@ class TLSEventsHandler(Object):
         """Handle the relation broken event."""
         state = self.manager.get_tls_management_state()
         match state:
-            case TlsManagementState.UPGRADE_IN_PROGRESS | TlsManagementState.ENCRYPTION_NOT_ACTIVE:
+            case TlsManagementState.UPGRADE_IN_PROGRESS | TlsManagementState.ENCRYPTION_DEGRADED:
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case (
@@ -168,7 +168,7 @@ class TLSEventsHandler(Object):
             case (
                 TlsManagementState.DB_NOT_INTIALIZED
                 | TlsManagementState.UPGRADE_IN_PROGRESS
-                | TlsManagementState.ENCRYPTION_NOT_ACTIVE
+                | TlsManagementState.ENCRYPTION_DEGRADED
             ):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
