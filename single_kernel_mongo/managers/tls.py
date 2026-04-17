@@ -244,7 +244,7 @@ class TLSManager(ManagerStatusProtocol):
             self.state.paths.ext_ca_file.chmod(600)
         if not internal and pem:
             self.state.paths.ext_pem_file.write_text(pem)
-            self.state.paths.ext_ca_file.chmod(600)
+            self.state.paths.ext_pem_file.chmod(600)
 
     def set_certificates(
         self,

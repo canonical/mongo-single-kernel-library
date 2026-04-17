@@ -5,9 +5,10 @@ Charmed MongoDB supports in-place upgrades via [`juju refresh`](https://document
 
 This type of upgrade can only be done between revisions of the same major version.
 
-*e.g.* revision 199 in `6/stable` --> revision 229 in `6/stable`.   
+*e.g.* revision 241 in `8/stable` --> revision 282 in `8/stable`.   
 
 ## Guides
+
 ```{toctree}
 :titlesonly:
 

@@ -49,7 +49,7 @@ async def test_deploy_charms(
     ops_test: OpsTest,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource: str,
+    mongod_resource: dict[str, str],
     base_app_name: str,
     client_relation_charm_path: str,
 ):
@@ -122,12 +122,14 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
     )
 
     await ops_test.model.block_until(
-        lambda: is_relation_joined(
-            ops_test,
-            FIRST_DATABASE_RELATION_NAME,
-            DATABASE_RELATION_NAME,
-        )
-        is True,
+        lambda: (
+            is_relation_joined(
+                ops_test,
+                FIRST_DATABASE_RELATION_NAME,
+                DATABASE_RELATION_NAME,
+            )
+            is True
+        ),
         timeout=600,
     )
 
