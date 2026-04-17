@@ -175,7 +175,6 @@ class TLSEventsHandler(Object):
                 event.certificate,
                 event.ca,
             )
-            self.dependent.state.update_ca_secrets(event.ca)
 
             # If we don't have both certificates, we early return, the next
             # certificate available event will enable certificates for this
