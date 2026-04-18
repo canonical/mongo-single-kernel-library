@@ -1,0 +1,82 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:38:14Z
+
+App                  Version  Status   Scale  Charm             Channel            Rev  Address         Exposed  Message
+application                   waiting      1  continuous-write                       0  10.152.183.229  no       
+config-server-eight           active       1  mongodb-k8s                            0  10.152.183.235  no       
+config-server-seven  7.0.28   active       1  mongodb-k8s       8-transition/edge  156  10.152.183.159  no       
+config-server-six    6.0.24   active       1  mongodb-k8s       6/edge             152  10.152.183.38   no       
+s3-integrator                 active       1  s3-integrator     latest/edge        533  10.152.183.89   no       
+shard-one-eight               active       1  mongodb-k8s                            1  10.152.183.42   no       
+shard-one-seven      7.0.28   active       1  mongodb-k8s       8-transition/edge  156  10.152.183.73   no       
+shard-one-six        6.0.24   active       1  mongodb-k8s       6/edge             152  10.152.183.138  no       
+shard-two-eight               waiting    0/1  mongodb-k8s                            2  10.152.183.77   no       installing agent
+shard-two-seven      7.0.28   active       1  mongodb-k8s       8-transition/edge  156  10.152.183.195  no       
+shard-two-six        6.0.24   active       1  mongodb-k8s       6/edge             152  10.152.183.85   no       
+
+Unit                    Workload     Agent       Address     Ports  Message
+application/0*          waiting      idle        10.1.53.20         
+config-server-eight/0*  error        idle        10.1.53.36         hook failed: "config-changed"
+config-server-seven/0*  maintenance  idle        10.1.53.28         Backup started/running, backup id: '2026-04-18T02:36:34Z'
+config-server-six/0*    active       idle        10.1.53.16         Primary.
+s3-integrator/0*        active       idle        10.1.53.19         
+shard-one-eight/0*      active       executing   10.1.53.41         
+shard-one-seven/0*      active       idle        10.1.53.31         
+shard-one-six/0*        active       idle        10.1.53.17         Primary.
+shard-two-eight/0       waiting      allocating                     installing agent
+shard-two-seven/0*      active       idle        10.1.53.25         Primary.
+shard-two-six/0*        active       idle        10.1.53.18         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-six-0: 02:28:13 ERROR unit.config-server-six/0.juju-log s3-credentials:16: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/69e2ec3c9b4ed80e8edc7af7 [config-server-six/config-server-six-0.config-server-six-endpoints:27017]
+, stderr=None
+unit-config-server-eight-0: 02:38:13 ERROR unit.config-server-eight/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 189, in on_config_changed
+    self.dependent.update_config_and_restart()
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 610, in update_config_and_restart
+    self.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 1109, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/config.py", line 97, in configure_and_restart
+    current_config_file = "\n".join(self.workload.read(self.file))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 96, in read
+    if not self.container.exists(path):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3101, in exists
+    self._pebble.list_files(path, itself=True)
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2833, in list_files
+    resp = self._request('GET', '/v1/files', query)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2182, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-eight-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2235, in _request_raw
+    raise ConnectionError(
+ops.pebble.ConnectionError: Could not connect to Pebble: socket not found at '/charm/containers/mongod/pebble.socket' (container restarted?)
+unit-config-server-eight-0: 02:38:13 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
