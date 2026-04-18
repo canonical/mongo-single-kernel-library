@@ -1,0 +1,37 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] active: Primary.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups:test_backups.py:441 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-04-18T02:15:02Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:15:08Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.227  no       
+mongodb-k8s       6.0.24   active      3  mongodb-k8s                      0  10.152.183.103  no       
+s3-integrator              active      1  s3-integrator     latest/edge  533  10.152.183.245  no       
+
+Unit                 Workload     Agent      Address      Ports  Message
+continuous-write/0*  active       idle       10.1.86.211         
+mongodb-k8s/0*       maintenance  idle       10.1.86.206         Backup started/running, backup id: '2026-04-18T02:15:02Z'
+mongodb-k8s/1        active       executing  10.1.86.209         
+mongodb-k8s/2        active       executing  10.1.86.210         
+s3-integrator/0*     active       idle       10.1.86.205         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-new-mongodb-aws-0: 02:02:23 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=data-charms-testing --set storage.s3.endpointUrl=https://s3.amazonaws.com --set storage.s3.prefix=mongodb-k8s/658811a2-29e4-4310-b5ab-7aadfa9008b7 --set storage.s3.region=us-east-1 --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/69e2e62f02198d53b6731746 [new-mongodb-aws/new-mongodb-aws-0.new-mongodb-aws-endpoints:27017]
+, stderr=None
+unit-new-mongodb-aws-0: 02:02:23 ERROR unit.new-mongodb-aws/0.juju-log s3-credentials:12: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/69e2e62f02198d53b6731746 [new-mongodb-aws/new-mongodb-aws-0.new-mongodb-aws-endpoints:27017]\n', 'stderr': ''}
+unit-new-mongodb-aws-0: 02:05:38 ERROR unit.new-mongodb-aws/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e2e6f1a5a196daa6efab8b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0010166459996980848>]>
+unit-new-mongodb-aws-1: 02:05:39 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e2e6f292dbc609b8bbe018, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.0006301150001490896>]>
+unit-new-mongodb-gcp-2: 02:13:07 ERROR unit.new-mongodb-gcp/2.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e2e8b28cbf2b2def087494, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-2.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.0009352749998470244>]>
+unit-new-mongodb-gcp-1: 02:13:09 ERROR unit.new-mongodb-gcp/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e2e8b433b665a967de748e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-gcp-1.new-mongodb-gcp-endpoints', 27017) server_type: RSGhost, rtt: 0.0007858570002099441>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
