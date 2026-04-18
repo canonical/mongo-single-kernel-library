@@ -26,7 +26,6 @@ from single_kernel_mongo.config.literals import Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.exceptions import WorkloadServiceError
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
@@ -161,9 +160,8 @@ class TLSManager(ManagerStatusProtocol):
 
         self.delete_certificates_from_workload(internal)
         self.dependent.rollingops_manager.request_async_lock(
-                callback_id="restart_charm_services",
-                kwargs={"force": True}
-            )
+            callback_id="restart_charm_services", kwargs={"force": True}
+        )
 
     def enable_certificates_for_unit(self, internal: bool):
         """Enables the new certificates for this unit."""
@@ -188,9 +186,8 @@ class TLSManager(ManagerStatusProtocol):
             return
 
         self.dependent.rollingops_manager.request_async_lock(
-                callback_id="restart_charm_services",
-                kwargs={"force": True}
-            )
+            callback_id="restart_charm_services", kwargs={"force": True}
+        )
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""

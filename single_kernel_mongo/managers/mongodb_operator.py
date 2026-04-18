@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs.rollingops import OperationResult, RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
@@ -33,7 +34,11 @@ from single_kernel_mongo.config.models import (
     PasswordManagementContext,
     PasswordManagementState,
 )
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    PeerRelationNames,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -112,9 +117,7 @@ from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
 )
-from charmlibs.rollingops import RollingOpsManager, OperationResult
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
-import time 
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
@@ -181,12 +184,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self.rollingops_manager = RollingOpsManager(
             charm=charm,
-            peer_relation_name="rollingops-peers",
-            etcd_relation_name="etcd",
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
+            etcd_relation_name=RelationNames.ETCD,
             cluster_id="mongodb",
-            callback_targets={
-                "restart_charm_services" : self.restart_charm_services
-            },
+            callback_targets={"restart_charm_services": self.restart_charm_services},
         )
 
         self.tls_manager = TLSManager(self, self.workload, self.state)
@@ -1119,7 +1120,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
             logger.error("Cannot restart during refresh. Dropping.")
-            return OperationResult.RELEASE # raise WorkloadServiceError
+            return OperationResult.RELEASE  # raise WorkloadServiceError
         try:
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):

@@ -120,9 +120,9 @@ class LDAPManager(Object, ManagerStatusProtocol):
                 self.dependent.rollingops_manager.request_async_lock(
                     callback_id="restart_charm_services",
                 )
-                #self.state.statuses.set(
+                # self.state.statuses.set(
                 #    LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
-                #)
+                # )
             case state:
                 self.state.statuses.clear(scope="unit", component=self.name)
                 for status in self.map_state_to_statuses(state):

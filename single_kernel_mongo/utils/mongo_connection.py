@@ -299,7 +299,6 @@ class MongoConnection:
         logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
         self.client.admin.command("replSetReconfig", rs_config["config"])
 
-
     def add_replset_member(self, hostname: str) -> None:
         """Adds a member to replicaset config inside MongoDB.
 

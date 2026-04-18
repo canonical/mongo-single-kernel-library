@@ -506,7 +506,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.remove_replset_member(self.state.unit_peer_data.internal_address)
-    
+
     def can_remove_replset_member(self) -> bool:
         """Return whether replica-set member removal can proceed now.
 
@@ -524,7 +524,6 @@ class MongoManager(Object, ManagerStatusProtocol):
         with MongoConnection(self.state.mongo_config) as mongo:
             rs_status = mongo.client.admin.command("replSetGetStatus")
             return not mongo.is_any_removing(rs_status)
-    
 
     def process_added_units(self) -> None:
         """Adds units to replica set."""

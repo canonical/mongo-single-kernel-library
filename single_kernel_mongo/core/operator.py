@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
+from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -64,7 +65,7 @@ from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
-from charmlibs.rollingops import RollingOpsManager
+
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler

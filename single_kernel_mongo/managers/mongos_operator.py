@@ -12,6 +12,7 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs.rollingops import OperationResult, RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
@@ -36,7 +37,6 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
-    MissingConfigServerError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -56,7 +56,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
-from charmlibs.rollingops import RollingOpsManager, OperationResult
+
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm  # pragma: nocover
 
@@ -108,9 +108,7 @@ class MongosOperator(OperatorProtocol, Object):
             peer_relation_name="rollingops-peers",
             etcd_relation_name="etcd",
             cluster_id="mongodb",
-            callback_targets={
-                "restart_charm_services" : self.restart_charm_services
-            },
+            callback_targets={"restart_charm_services": self.restart_charm_services},
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
@@ -412,7 +410,7 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
-                #raise MissingConfigServerError()
+                # raise MissingConfigServerError()
                 return OperationResult.RELEASE
             self.mongos_config_manager.configure_and_restart(force=force)
             return OperationResult.RELEASE
@@ -423,7 +421,7 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
-            #raise
+            # raise
             return OperationResult.RETRY_RELEASE
 
     def update_ips_in_databag(self) -> None:

@@ -740,8 +740,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 raise WaitingForCertificatesError()
             if keyfile_changed:
                 self.dependent.rollingops_manager.request_async_lock(
-                    callback_id="restart_charm_services",
-                    kwargs={"force": True}
+                    callback_id="restart_charm_services", kwargs={"force": True}
                 )
             return
 

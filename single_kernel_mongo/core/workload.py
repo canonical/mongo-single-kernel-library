@@ -17,7 +17,7 @@ from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VERSIONS_FILE, WorkloadUser
 from single_kernel_mongo.config.models import CharmSpec
-from charmlibs.rollingops import OperationResult
+
 
 class MongoPaths:
     """Object to store the common paths for a mongodb instance."""

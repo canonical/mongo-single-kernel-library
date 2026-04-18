@@ -17,7 +17,6 @@ from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadExecError, WorkloadServiceError
 from single_kernel_mongo.utils.helpers import mask_sensitive_information
-from charmlibs.rollingops import OperationResult
 
 logger = getLogger(__name__)
 
@@ -77,7 +76,6 @@ class KubernetesWorkload(WorkloadBase):
         except ConnectionError as e:
             logger.exception(f"Connection Error: {e}")
             raise WorkloadServiceError(*e.args) from e
-    
 
     @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:

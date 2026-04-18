@@ -10,8 +10,8 @@ from logging import getLogger
 from typing import TYPE_CHECKING
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from ops.framework import Object
 from ops.charm import RelationChangedEvent
+from ops.framework import Object
 from ops.model import Relation
 from pymongo.errors import PyMongoError
 
