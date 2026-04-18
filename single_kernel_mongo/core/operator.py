@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
-from charmlibs.rollingops import RollingOpsManager
+from charmlibs.rollingops import OperationResult, RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -204,7 +204,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def restart_charm_services(self, force: bool = False) -> None:
+    def restart_charm_services(self, force: bool = False) -> OperationResult:
         """Restart the relevant services with updated config."""
         ...
 
