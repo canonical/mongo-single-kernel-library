@@ -120,6 +120,7 @@ class MongoDBCharmConfig(MongoConfigModel):
     system_users: str | None = Field(default=None, alias="system-users")
 
     role: SerializeLiteralAsStr[MongoDBRoles] = Field(default=MongoDBRoles.REPLICATION)
+    enable_encryption_at_rest: bool = Field(default=False, alias="enable-encryption-at-rest")
 
     @field_validator("role", mode="before")
     @classmethod

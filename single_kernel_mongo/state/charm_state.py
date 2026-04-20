@@ -67,6 +67,7 @@ from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
 )
+from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.utils.helpers import (
     generate_relation_departed_key,
 )
@@ -250,6 +251,11 @@ class CharmState(Object, StatusesStateProtocol):
         """The certificate transfer relation for LDAP if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.LDAP_CERT.value)
 
+    @property
+    def vault_relation(self) -> Relation | None:
+        """The Vault relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.VAULT.value)
+
     # END: Relations
 
     # BEGIN: State Accessors
@@ -385,6 +391,14 @@ class CharmState(Object, StatusesStateProtocol):
             component=self.model.app,
         )
 
+    @property
+    def vault_state(self) -> VaultState:
+        """A view of the vault state from the local app databag."""
+        return VaultState(
+            charm=self.charm,
+            vault_relation=self.vault_relation,
+        )
+
     # END: State Accessors
 
     # BEGIN: Helpers
@@ -415,6 +429,15 @@ class CharmState(Object, StatusesStateProtocol):
     @db_initialised.setter
     def db_initialised(self, other: bool):
         self.app_peer_data.db_initialised = other
+
+    @property
+    def enable_encryption_at_rest(self) -> bool:
+        """Should encryption at rest be enabled."""
+        return self.app_peer_data.enable_encryption_at_rest or False
+
+    @enable_encryption_at_rest.setter
+    def enable_encryption_at_rest(self, other: bool):
+        self.app_peer_data.enable_encryption_at_rest = other
 
     @property
     def bind_address(self) -> str:

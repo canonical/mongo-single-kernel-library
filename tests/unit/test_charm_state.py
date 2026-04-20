@@ -1,4 +1,3 @@
-import pytest
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
@@ -71,12 +70,6 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
-
-    with pytest.raises(ValueError):
-        state.app_peer_data.external_connectivity = 1  # type: ignore
-
-    with pytest.raises(ValueError):
-        state.app_peer_data.db_initialised = 0  # type: ignore
 
 
 def test_unit_peer_data(

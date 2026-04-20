@@ -1,0 +1,52 @@
+listener "tcp" {
+    address = "{{ peer_addr }}:8200"
+    role = "metrics_only"
+    tls_cert_file = "{{ tls_cert_file }}"
+    tls_key_file = "{{ tls_key_file }}"
+}
+
+log_file = "{{ log_file }}"
+log_format = "json"
+log_rotate_bytes = 20000000
+log_rotate_max_files = 25
+
+listener "tcp" {
+    address = "127.0.0.1:8200"
+    role = "metrics_only"
+    tls_cert_file = "{{ tls_cert_file }}"
+    tls_key_file = "{{ tls_key_file }}"
+}
+
+vault {
+    address = "{{ vault_url }}"
+    ca_path = "{{ ca_path }}"
+    retries {
+        num_retries = 5
+    }
+}
+
+auto_auth {
+    method {
+        type = "approle"
+
+        config = {
+            role_id_file_path = "{{ role_id_path }}"
+            secret_id_file_path = "{{ role_secret_id_path }}"
+            remove_secret_id_file_after_reading = false
+        }
+    }
+
+    sink {
+        type = "file"
+        config = {
+            path = "{{ token_file_path }}"
+            mode = 0600
+        }
+    }
+}
+
+telemetry {
+    unauthenticated_metrics_access = true
+    disable_hostname = true
+    prometheus_retention_time = "10m"
+}
