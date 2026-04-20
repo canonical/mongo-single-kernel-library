@@ -53,7 +53,7 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests race condition: mongos charm can integrate with TLS and then the config-server."""
-    await integrate_cluster_with_tls(ops_test)
+    await integrate_cluster_with_tls(ops_test, integrate_with_mongos=False)
     await ops_test.model.integrate(
         f"{MONGOS_APP_NAME}:{TLS_RELATION_NAME}",
         f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
