@@ -22,9 +22,20 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
 
-def test_valid_ldap_integration(harness: Harness[MongoTestCharm]):
+@pytest.mark.parametrize(
+    "role",
+    [
+        MongoDBRoles.REPLICATION,
+        MongoDBRoles.CONFIG_SERVER,
+        MongoDBRoles.MONGOS,
+    ],
+)
+def test_valid_ldap_integration(
+    harness: Harness[MongoTestCharm],
+    role: MongoDBRoles,
+):
     harness.set_leader()
-    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.role = role
     harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
     assert harness.charm.operator.ldap_manager.is_valid_ldap_integration()
 

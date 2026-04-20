@@ -621,7 +621,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # If we had an IP change, we must restart.
-        self.restart_charm_services()
+        self.rollingops_manager.request_async_lock(
+            callback_id="restart_charm_services", kwargs={"force": False}
+        )
 
         if not self.charm.unit.is_leader():
             return
@@ -901,15 +903,20 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
+            # retries over a period of 10 minutes in an attempt to resolve race conditions it is
+            # not possible to defer in storage detached.
             logger.debug(
                 "Removing %s from replica set",
                 self.state.unit_peer_data.internal_address,
             )
-            with self.rollingops_manager.acquire_sync_lock(
-                backend_id="stop-replset-member",
-                timeout=600,
+            for attempt in Retrying(
+                stop=stop_after_attempt(600),
+                wait=wait_fixed(1),
+                reraise=True,
             ):
-                self.mongo_manager.remove_replset_member()
+                with attempt:
+                    # remove_replset_member retries for 60 seconds
+                    self.mongo_manager.remove_replset_member()
 
         except TimeoutError:
             logger.info(

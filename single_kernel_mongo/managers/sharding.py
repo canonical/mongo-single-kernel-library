@@ -610,7 +610,7 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
-        self.update_pbm_certificate_in_trust_store()
+        self.update_pbm_certificate_in_trust_store()  # could i change  the order with member auth?
 
         if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
