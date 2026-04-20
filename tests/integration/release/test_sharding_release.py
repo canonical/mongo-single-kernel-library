@@ -483,7 +483,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     logger.info(f"Restore backup result {restore.results=}")
     assert restore.results["restore-status"] == "restore started", "restore not successful"
 
-    with ops_test.fast_forward("60s"):
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
             apps=[CONFIG_SERVER_APP_NAME], status="active", idle_period=15
         )
