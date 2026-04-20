@@ -327,13 +327,7 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            self.charm.status_handler.set_running_status(
-                MongosStatuses.STARTING_MONGOS.value, scope="unit"
-            )
-
-            self.dependent.rollingops_manager.request_async_lock(
-                callback_id="restart_charm_services",
-            )
+            self.dependent.rolling_restart_charm_services(force=False)
             self.state.statuses.set(
                 MongosStatuses.WAITING_FOR_MONGOS_START.value,
                 scope="unit",

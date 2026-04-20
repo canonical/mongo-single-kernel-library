@@ -12,7 +12,7 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
-from charmlibs.rollingops import OperationResult, RollingOpsManager
+from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
@@ -407,22 +407,42 @@ class MongosOperator(OperatorProtocol, Object):
     @override
     def restart_charm_services(self, force: bool = False) -> OperationResult:
         """Restarts the charm with the new configuration."""
+        self.charm.state.statuses.delete(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
         try:
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
                 # raise MissingConfigServerError()
                 return OperationResult.RELEASE
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.RESTARTING.value, scope="unit"
+            )
             self.mongos_config_manager.configure_and_restart(force=force)
             return OperationResult.RELEASE
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                MongosStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
             # raise
             return OperationResult.RETRY_RELEASE
+
+    @override
+    def rolling_restart_charm_services(self, force: bool = False) -> None:
+        self.charm.state.statuses.add(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id="restart_charm_services", kwargs={"force": force}
+        )
+        logger.info("Requested and async lock to restart Mongos.")
 
     def update_ips_in_databag(self) -> None:
         """Sets all the ips in the databag to be used by the leader."""
@@ -627,7 +647,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 
@@ -670,6 +690,9 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info("mongos has not started yet")
             charm_statuses.append(MongosStatuses.WAITING_FOR_MONGOS_START.value)
             return charm_statuses
+
+        if scope == "unit" and self.rollingops_manager.state.status == RollingOpsStatus.WAITING:
+            charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)
 
         username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)
         password = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value)

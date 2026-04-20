@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
-from charmlibs.rollingops import OperationResult, RollingOpsManager
+from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
@@ -621,9 +621,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # If we had an IP change, we must restart.
-        self.rollingops_manager.request_async_lock(
-            callback_id="restart_charm_services", kwargs={"force": False}
-        )
+        self.rolling_restart_charm_services(force=False)
 
         if not self.charm.unit.is_leader():
             return
@@ -791,7 +789,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
         except (NotReadyError, PyMongoError) as e:
-            logger.error(f"Not reconfiguring: error={e}")
+            logger.error("Not reconfiguring: error=%s", e)
             self.state.statuses.add(
                 MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
             )
@@ -1125,10 +1123,18 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         If we are running as config-server, we should update both mongod and mongos environments.
         """
+        self.charm.state.statuses.delete(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
         if not self.refresh or not self.refresh.workload_allowed_to_start:
             logger.error("Cannot restart during refresh. Dropping.")
             return OperationResult.RELEASE  # raise WorkloadServiceError
         try:
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.RESTARTING.value, scope="unit"
+            )
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
@@ -1136,11 +1142,23 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
             return OperationResult.RETRY_RELEASE  # raise WorkloadServiceError
+
+    @override
+    def rolling_restart_charm_services(self, force: bool = False) -> None:
+        self.charm.state.statuses.add(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id="restart_charm_services", kwargs={"force": force}
+        )
+        logger.info("Requested and async lock to restart MongoDB.")
 
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""
@@ -1325,6 +1343,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if scope == "unit" and not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+
+        if scope == "unit" and self.rollingops_manager.state.status == RollingOpsStatus.WAITING:
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)

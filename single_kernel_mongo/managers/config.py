@@ -102,8 +102,10 @@ class FileBasedConfigManager(CommonConfigManager):
         should_restart = force or not self.workload.active() or config_changed
 
         if config_changed:
+            logger.info("Workload config changed. Writing the new config.")
             self.workload.write(self.file, safe_dump(new_content))
         if should_restart:
+            logger.info("Workload should restart now.")
             self.workload.restart()
 
 

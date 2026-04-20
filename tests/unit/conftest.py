@@ -2,10 +2,17 @@ import pathlib
 from contextlib import nullcontext
 from pathlib import Path
 from platform import platform
+from unittest.mock import PropertyMock
 
 import pytest
 import tomllib
 import yaml
+from charmlibs.rollingops import (
+    OperationQueue,
+    ProcessingBackend,
+    RollingOpsState,
+    RollingOpsStatus,
+)
 from ops.hookcmds import Network
 from ops.testing import Harness
 
@@ -99,6 +106,14 @@ def mock_rollingops_manager(mocker):
     manager.request_async_lock.return_value = None
     manager.acquire_sync_lock.return_value = nullcontext()
 
+    state = RollingOpsState(
+        status=RollingOpsStatus.IDLE,
+        processing_backend=ProcessingBackend.PEER,
+        operations=OperationQueue(),
+    )
+
+    type(manager).state = PropertyMock(return_value=state)
+
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.RollingOpsManager",
         return_value=manager,
@@ -107,6 +122,7 @@ def mock_rollingops_manager(mocker):
         "single_kernel_mongo.managers.mongos_operator.RollingOpsManager",
         return_value=manager,
     )
+
     return manager
 
 

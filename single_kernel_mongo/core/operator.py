@@ -209,6 +209,11 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
+    def rolling_restart_charm_services(self, force: bool = False) -> None:
+        """Request an async lock to restart the relevant services."""
+        ...
+
+    @abstractmethod
     def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible in this context."""
         ...
@@ -358,9 +363,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         # Update CA certificates to remove the certificate from the trust store
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
-        self.rollingops_manager.request_async_lock(
-            callback_id="restart_charm_services", kwargs={"force": True}
-        )
+        self.rolling_restart_charm_services(force=True)
 
     def write_thp_config_file(self):
         """Writes the unit file to enable Transparent Huge Pages."""
