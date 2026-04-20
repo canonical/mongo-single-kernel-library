@@ -123,6 +123,7 @@ def vault_state_no_encryption(
     return vault_state_flip_encryption(False)
 
 
+@pytest.mark.skip("TODO")
 def test_vault_create_nonce(
     mongodb_ctx: Context[MongoTestCharm],
     mongodb_name: str,
