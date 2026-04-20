@@ -46,14 +46,16 @@ def continous_reads(
                 # run some basic sampling
                 test_collection.aggregate([{"$sample": {"size": 10}}, {"$sort": {"number": 1}}])
             elif rand < 0.6:
-                n_docs = test_collection.count_documents()
+                n_docs = test_collection.count_documents({})
                 # get one single sample
                 test_collection.aggregate([{"$skip": math.floor(n_docs * random.random())}, {"$limit": 1}])
             else:
-                n_docs = test_collection.count_documents()
+                n_docs = test_collection.count_documents({})
                 test_collection.find({"number": {"$lte": math.floor(n_docs /2)}})
-        except PyMongoError as err:
+        except Exception as err:
             failed_reads.append(str(err))
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
             continue
         finally:
             client.close()

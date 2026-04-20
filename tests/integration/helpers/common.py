@@ -1106,12 +1106,12 @@ async def start_continuous_reads(
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
 ):
-    """Helper function to run the `start-continuous-write` action on the continuous write app."""
+    """Helper function to run the `start-continuous-reads` action on the continuous write app."""
     application_unit = ops_test.model.applications[client_app_name].units[0]
-    start_writes_action = await application_unit.run_action(
+    start_reads_action = await application_unit.run_action(
         "start-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
     )
-    await start_writes_action.wait()
+    await start_reads_action.wait()
 
 
 async def stop_continous_writes(
@@ -1138,13 +1138,14 @@ async def stop_continuous_reads(
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
 ) -> tuple[int, list[str]]:
-    """Helper function to run the `start-continuous-write` action on the continuous write app."""
+    """Helper function to run the `stop-continuous-reads` action on the continuous write app."""
     application_unit = ops_test.model.applications[client_app_name].units[0]
     stop_writes_action = await application_unit.run_action(
         "stop-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
     )
     await stop_writes_action.wait()
-    return int(stop_writes_action.results["reads"]), stop_writes_action.results["failed_reads"]
+    logger.warning(f"Failed reads: {stop_writes_action.results['failed-reads']}")
+    return int(stop_writes_action.results["reads"]), stop_writes_action.results["failed-reads"]
 
 
 async def clear_continous_writes(

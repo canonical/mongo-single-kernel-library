@@ -260,6 +260,7 @@ class ContinuousWritesApplication(CharmBase):
             return None, []
 
         if not self.app_peer_data.get(self.read_proc_id_key(db_name, collection_name)):
+            logger.warning("Missing read proc id.")
             return None, []
 
         # Send a SIGTERM to the process and wait for the process to exit
@@ -269,7 +270,7 @@ class ContinuousWritesApplication(CharmBase):
             )
         except ProcessLookupError:
             logger.info(
-                f"Process {self.read_proc_id_key(db_name, collection_name)} was killed already (or never existed)"
+                f"Process {self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]} was killed already (or never existed)"
             )
             return (None, [])
         finally:
@@ -370,12 +371,12 @@ class ContinuousWritesApplication(CharmBase):
     def _on_stop_continuous_reads_action(self, event: ActionEvent) -> None:
         """Handle the stop continuous reads action event."""
         if not self._database_config:
-            return event.set_results({"reads": -1})
+            return event.set_results({"reads": -1, "failed-reads": []})
 
         db_name = event.params.get("db-name") or self.database_name
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
         reads, failed_reads = self._stop_continuous_reads(db_name, collection_name)
-        event.set_results({"reads": reads or -1, "failed_reads": failed_reads})
+        event.set_results({"reads": reads or -1, "failed-reads": failed_reads})
         return None
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
