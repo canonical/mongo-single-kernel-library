@@ -193,7 +193,7 @@ async def build_cluster(
     )
 
 
-async def integrate_cluster_with_tls(ops_test: OpsTest) -> None:
+async def integrate_cluster_with_tls(ops_test: OpsTest, integrate_with_mongos: bool = True) -> None:
     """Integrate cluster components to the TLS interface."""
     for cluster_component in MONGOS_CLUSTER_COMPONENTS:
         await ops_test.model.integrate(
@@ -201,8 +201,12 @@ async def integrate_cluster_with_tls(ops_test: OpsTest) -> None:
             f"{TLS_CERTIFICATES_APP_NAME}:{TLS_RELATION_NAME}",
         )
 
+    apps = MONGOS_CLUSTER_COMPONENTS
+    if integrate_with_mongos:
+        apps.append(MONGOS_APP_NAME)
+
     await ops_test.model.wait_for_idle(
-        apps=MONGOS_CLUSTER_COMPONENTS + [MONGOS_APP_NAME],
+        apps=apps,
         idle_period=20,
         timeout=TIMEOUT,
         raise_on_blocked=False,
