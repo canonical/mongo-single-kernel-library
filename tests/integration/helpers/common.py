@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import subprocess
+from base64 import b64decode
 from dataclasses import dataclass
 from datetime import datetime
 from random import choices
@@ -104,7 +105,7 @@ async def deploy_charm(
     app_name: str,
     num_units: int = 3,
     channel: str | None = None,
-    config: dict[str, str] | None = None,
+    config: dict[str, str | bool] | None = None,
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
     series: str | None = None,
@@ -1148,7 +1149,7 @@ def get_app_name_from_unit(unit_name: str) -> str:
     return unit_name.split("/")[0]
 
 
-def get_unit_app(unit_name) -> tuple[int, str]:
+def get_unit_app(unit_name: str) -> tuple[int, str]:
     """Returns the unit id and app name from the unit name."""
     return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
 
@@ -1212,6 +1213,29 @@ async def get_secret_data(ops_test: OpsTest, secret_uri: str):
     complete_command = f"show-secret {secret_uri} --reveal --format=json"
     _, stdout, _ = await ops_test.juju(*complete_command.split())
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+async def get_juju_secret(model: Model, label: str, fields: list[str]) -> list[str]:
+    """Get a Juju secret from the model and return the specified fields.
+
+    Ops doesn't provide a way to get the secret values, so we have to do it a
+    little more manually.
+
+    Args:
+        model (Model): The Juju model to get the secret from.
+        label (str): The label of the secret to get.
+        fields (List[str]): The fields to return from the secret.
+    """
+    secrets = await model.list_secrets(show_secrets=True)
+    secret = next(secret for secret in secrets if secret.label == label)
+
+    return [b64decode(secret.value.data[field]).decode("utf-8") for field in fields]
+
+
+async def get_model_secret_id(ops_test: OpsTest, label: str) -> str:
+    secrets = await ops_test.model.list_secrets(show_secrets=True)  # type: ignore
+    secret = next(secret for secret in secrets if secret.label == label)
+    return secret.uri
 
 
 async def get_connection_string(
@@ -1340,3 +1364,33 @@ async def execute_on_server(
         shell=True,
         universal_newlines=True,
     )
+
+
+def mongodb_base_path(substrate: Substrate) -> str:
+    if substrate == "lxd":
+        return "/var/snap/charmed-mongodb/current/etc/mongod/"
+    return "/etc/mongod/"
+
+
+async def delete_file_on_remote(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+):
+    if substrate == "lxd":
+        complete_command = f"exec --unit {unit_name} -- sudo rm {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split(), check=True)
+    else:
+        complete_command = f"ssh --container {container} {unit_name} rm -f {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+    return

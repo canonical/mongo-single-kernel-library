@@ -61,6 +61,7 @@ from single_kernel_mongo.exceptions import (
     SetPasswordError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WaitingForVaultError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
@@ -156,6 +157,10 @@ class LifecycleEventsHandler(Object):
             )
             event.defer()
             return
+        except WaitingForVaultError:
+            logger.info("Waiting for vault to be integrated.")
+            event.defer()
+            return
         except Exception as e:
             logger.error(f"Deferring because of {e.__class__.__name__} {e}")
             self.dependent.state.statuses.add(
@@ -192,6 +197,7 @@ class LifecycleEventsHandler(Object):
             WaitingForLeaderError,
             DeferrableFailedHookChecksError,
             SetPasswordError,
+            WaitingForVaultError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:
@@ -248,6 +254,10 @@ class LifecycleEventsHandler(Object):
         """Relation joined event."""
         try:
             self.dependent.new_peer()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
@@ -261,6 +271,10 @@ class LifecycleEventsHandler(Object):
         """Relation changed event."""
         try:
             self.dependent.peer_changed()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()

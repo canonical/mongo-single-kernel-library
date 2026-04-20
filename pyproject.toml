@@ -3,7 +3,7 @@
 
 [project]
 name = "mongo-charms-single-kernel"
-dynamic = ["version"]
+dynamic = []
 description = "Shared and reusable code for Mongo-related charms"
 readme = "README.md"
 license = "Apache-2.0"
@@ -43,7 +43,11 @@ dependencies = [
     "google-api-core (~=2.17.0)",
     "charmlibs-rollingops @ git+https://github.com/patriciareinoso/charmlibs@DPE-9350-etcd-lock-test#subdirectory=rollingops",
     "charmlibs-apt",
+    "pytest-interface-tester (>=3.4.1,<4.0.0)",
+    "hvac (>=2.4.0,<3.0.0)",
+    "python-hcl2"
 ]
+version = "1.8.32.post7.dev0+3ed1c6295.dirty"
 
 [project.urls]
 homepage = "https://github.com/canonical/mongo-single-kernel-library"
@@ -60,14 +64,13 @@ packages = [
 ]
 include = ["single_kernel_mongo/templates/"]
 exclude = ["single_kernel_mongo/charmcraft.yaml"]
-version = "0.0.0"
 
 [tool.poetry.requires-plugins]
 poetry-plugin-export = ">=1.8"
 poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
 dirty = true
 strict = true
@@ -123,6 +126,7 @@ parameterized = "^0.9.0"
 factory_boy = "*"
 mongomock = "^4.2.0.post1"
 pytest-mock = "*"
+ops = {version = "*", extras = ["testing"]}
 
 [tool.poetry.group.integration.dependencies]
 coverage = {extras = ["toml"], version = "^7.5.0"}
@@ -143,6 +147,7 @@ boto3 = "^1.37.12"
 mypy-boto3-s3 = "^1.37.0"
 tomli = '*'
 tomli-w = '*'
+hvac = ">=2.4.0,<3.0.0"
 
 [tool.ruff]
 target-version = "py310"

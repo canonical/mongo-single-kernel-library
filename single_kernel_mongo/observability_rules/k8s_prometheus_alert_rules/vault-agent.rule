@@ -1,0 +1,32 @@
+groups:
+  - name: VaultAgent
+
+    rules:
+      # Alert if Vault Agent fails to authenticate.
+      - alert: VaultAgentNotAuthenticated
+        expr: "vault_agent_authenticated == 0"
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Vault Agent Not Authenticated (instance {{ $labels.instance }})
+          description: Vault Agent is not properly authenticated\, VALUE = {{ $value }}\n LABELS = {{ $labels }}"
+
+      # Alert if Vault Agent has too many auth failure.
+      - alert: VaultAgentAuthFailure
+        expr: "vault_agent_auth_failure > 5"
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Vault Agent Auth Failure (instance {{ $labels.instance }})
+          description: Vault Agent Authentication request failure\, VALUE = {{ $value }}\n LABELS = {{ $labels }}"
+      # Alert if Vault becomes unreachable.
+      - alert: VaultUnreachable
+        expr: up{job="vault-agent"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vault Agent instance {{ $labels.instance }} is unreachable"
+          description: "Prometheus cannot scrape metrics from Vault node."

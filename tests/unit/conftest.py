@@ -4,6 +4,7 @@ from pathlib import Path
 from platform import platform
 from unittest.mock import PropertyMock
 
+import ops.testing
 import pytest
 import tomllib
 import yaml
@@ -14,7 +15,7 @@ from charmlibs.rollingops import (
     RollingOpsStatus,
 )
 from ops.hookcmds import Network
-from ops.testing import Harness
+from ops.testing import Context, Harness
 
 from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
 from tests.integration.helpers.types import Substrate
@@ -267,7 +268,7 @@ def setup_secrets(harness: Harness) -> None:
 
 
 @pytest.fixture
-def mock_fs_interactions(mocker, substrate: Substrate) -> None:
+def short_mock_fs_interactions(mocker, substrate: Substrate) -> None:
     if substrate == "lxd":
         mocker.patch(
             "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.present",
@@ -300,6 +301,10 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+
+
+@pytest.fixture
+def mock_fs_interactions(mocker, short_mock_fs_interactions) -> None:
     mocker.patch("pathlib.Path.mkdir")
     mocker.patch("pathlib.Path.write_text")
     mocker.patch("pathlib.Path.chmod")
@@ -318,3 +323,33 @@ def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
         return "10.0.0.2"
     return "mongodb-k8s-1.mongodb-k8s-endpoints"
+
+
+@pytest.fixture
+def mongodb_ctx(substrate: Substrate):
+    if substrate == "lxd":
+        from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm as TestCharm
+    else:
+        from tests.charms.mongodb_k8s_test_charm.src.charm import (
+            MongoKubernetesTestCharm as TestCharm,
+        )
+
+    return Context(TestCharm)
+
+
+@pytest.fixture
+def mongodb_container(substrate: Substrate) -> set[ops.testing.Container]:
+    if substrate == "lxd":
+        return set()
+    return {ops.testing.Container(name="mongod", can_connect=True)}
+
+
+@pytest.fixture
+def mongos_ctx(substrate: Substrate):
+    if substrate == "lxd":
+        from tests.charms.mongos_test_charm.src.charm import MongosTestCharm as TestCharm
+    else:
+        from tests.charms.mongos_k8s_test_charm.src.charm import (
+            MongosKubernetesTestCharm as TestCharm,
+        )
+    return Context(TestCharm)
