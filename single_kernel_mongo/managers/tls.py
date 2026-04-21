@@ -195,6 +195,10 @@ class TLSManager(ManagerStatusProtocol):
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             return
 
+        if self.state.is_role(MongoDBRoles.MONGOS):
+            # After restarting, we update the certificates for all clients.
+            self.dependent.share_connection_info()  # type: ignore[attr-defined]
+
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""
         logger.info(
