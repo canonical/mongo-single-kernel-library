@@ -74,6 +74,9 @@ class THPConfig:
 THP_CONFIG = THPConfig()
 
 
+VAULT_AGENT_TEMPLATE: Traversable = TEMPLATE_DIRECTORY / "vault-agent.hcl.j2"
+
+
 @dataclass(frozen=True)
 class OverrideFile:
     """Dataclass for the systemd override."""
@@ -187,11 +190,25 @@ class PasswordManagementState(Enum):
     NOT_LEADER = auto()
     PASSWORD_ON_SHARD = auto()
     UPGRADE_RUNNING = auto()
+    ENCRYPTION_NOT_WORKING = auto()
     BACKUP_RUNNING = auto()
     SECRET_NOT_FOUND = auto()
     SECRET_NOT_GRANTED = auto()
     INVALID_CONTENT = auto()
     NEED_PASSWORD_UPDATE = auto()
+
+
+class VaultConfigurationState(Enum):
+    """State that can be mapped to a status."""
+
+    INVALID_CONFIG = "Invalid configuration option"
+    DISABLED = "Encryption at rest is disabled."
+    VAULT_INTEGRATED = "Vault charm should not be integrated with charm."
+    VAULT_NOT_INTEGRATED = "Vault charm is not integrated with charm."
+    MISSING_DATA = "Vault charm has not sent approle yet."
+    VAULT_UNREACHABLE = "Vault connectivity check failed."
+    VAULT_AGENT_FAILED = "Vault agent is not running."
+    ACTIVE = "Encryption at rest is working properly."
 
 
 @dataclass
@@ -220,4 +237,5 @@ class PasswordManagementContext:
                 return [PasswordManagementStatuses.SECRET_NOT_FOUND.value]
             case PasswordManagementState.INVALID_CONTENT:
                 return [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
-        return []
+            case _:
+                return []

@@ -33,7 +33,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import BackupState
+from single_kernel_mongo.config.models import BackupState, VaultConfigurationState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -214,6 +214,16 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 raise DeferrableFailedHookChecksError(
                     "Cannot add/remove shards while a backup/restore is in progress."
                 )
+
+        if (
+            self.dependent.state.enable_encryption_at_rest
+            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
+            != VaultConfigurationState.ACTIVE
+        ):
+            logger.warning(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
 
         if self.dependent.refresh_in_progress:
             logger.warning(
@@ -525,6 +535,15 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
+        if (
+            self.dependent.state.enable_encryption_at_rest
+            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
+            != VaultConfigurationState.ACTIVE
+        ):
+            logger.warning(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
+            raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:
             logger.warning(
                 "Adding/Removing shards is not supported during an upgrade. The charm may be in a broken, unrecoverable state"

@@ -22,6 +22,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterState
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
+from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 
 
@@ -47,6 +48,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_state.app_peer_data.role = role
     mock_state.tls.peer_enabled = False
     mock_state.tls.client_enabled = False
+    mock_state.vault_relation = None
     mock_state.peer_network = lambda: Network._from_dict(
         {
             "bind-addresses": [
@@ -195,6 +197,46 @@ def test_mongodb_ldap_config(mocker):
     assert ldap_config["bind"]["queryPassword"] == "password"
     assert ldap_config["bind"]["queryUser"] == "cn=user,ou=group,dc=glauth,dc=com"
     assert ldap_config["transportSecurity"] == "tls"
+
+
+def test_mongodb_encryption_at_rest_config(mocker):
+    mock_state = mocker.MagicMock(CharmState)
+    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.app_peer_data = mock_app_state
+    mock_state.vault_state = mocker.MagicMock(VaultState)
+
+    mock_state.enable_encryption_at_rest = True
+    mock_state.vault_state.is_ready = lambda: True
+    mock_state.vault_relation = mocker.MagicMock(Relation)
+    mock_state.vault_state.vault_url_tuple = "192.168.1.1", "8200"
+    mock_state.vault_state.vault_secret_path = "mongodb-mongodb/data/mongodb-0"
+
+    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.is_role = lambda x: False
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
+    config = MongoDBCharmConfig()
+    manager = MongoDBConfigManager(
+        config,
+        mock_state,
+        workload,
+    )
+    vault_config = manager.vault_parameters["security"]
+    assert vault_config["enableEncryption"]
+    assert vault_config["vault"]["serverName"] == "192.168.1.1"
+    assert vault_config["vault"]["port"] == "8200"
+    assert (
+        vault_config["vault"]["tokenFile"]
+        == "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
+    )
+    assert (
+        vault_config["vault"]["serverCAFile"]
+        == "/var/snap/charmed-mongodb/current/etc/vault/vault_cert.pem"
+    )
+    assert vault_config["vault"]["secret"] == "mongodb-mongodb/data/mongodb-0"
 
 
 def test_mongos_config_manager(mocker):

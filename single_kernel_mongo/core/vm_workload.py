@@ -18,6 +18,7 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
     CRON_FILE,
+    RootUser,
     VmUser,
 )
 from single_kernel_mongo.config.models import SNAP_NAME, CharmSpec
@@ -39,6 +40,7 @@ class VMWorkload(WorkloadBase):
     substrate = "vm"
     container: None
     users = VmUser()
+    command_user = RootUser()
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
@@ -131,6 +133,8 @@ class VMWorkload(WorkloadBase):
         env: Mapping[str, str] | None = None,
         working_dir: str | None = None,
         input: str | None = None,
+        user: str | None = None,
+        group: str | None = None,
     ) -> str:
         try:
             output = subprocess.check_output(
@@ -141,6 +145,8 @@ class VMWorkload(WorkloadBase):
                 env=env,
                 cwd=working_dir,
                 input=input,
+                user=user,
+                group=group,
             )
             logger.debug(f"{output=}")
             return output

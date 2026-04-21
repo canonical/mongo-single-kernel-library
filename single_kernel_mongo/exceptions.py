@@ -265,5 +265,17 @@ class InvalidPasswordError(Exception):
     """Raised when an invalid password is found in the system-users config secret."""
 
 
+class InvalidConfigError(Exception):
+    """Raised when a config value is invalid."""
+
+
 class InvalidConfigRoleError(Exception):
     """Raised when the role is invalid."""
+
+
+class WaitingForVaultError(DeferrableError):
+    """Raised when we're waiting for vault."""
+
+
+class ImpossibleToRotateMasterKeyError(Exception):
+    """Raised when it's impossible to rotate the master key."""
