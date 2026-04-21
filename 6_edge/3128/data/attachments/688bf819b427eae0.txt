@@ -1,0 +1,120 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] blocked: TLS is mandatory for LDAP transport.
+  mongodb-k8s/1 [idle] blocked: TLS is mandatory for LDAP transport.
+  mongodb-k8s/2 [idle] blocked: TLS is mandatory for LDAP transport.
+[32mINFO    [0m integration.helpers.ldap:ldap.py:133 Removing ldap offer
+[32mINFO    [0m integration.helpers.ldap:ldap.py:139 Removing ldap cert offer
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller          Cloud/Region                      Version  SLA          Timestamp
+test-ldap-lxcw  concierge-microk8s  test-ldap-k8s-cloud-3brd/default  3.6.21   unsupported  01:57:38Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.67   no       
+glauth-utils                       active      1  glauth-utils              latest/edge     50  10.152.183.170  no       
+postgresql-k8s            14.20    active      1  postgresql-k8s            14/stable      774  10.152.183.123  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.138  no       
+traefik-k8s               2.11.0   active      1  traefik-k8s               latest/stable  281  10.152.183.82   no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address      Ports  Message
+glauth-k8s/0*                active    idle   10.1.86.221         
+glauth-utils/0*              active    idle   10.1.86.216         
+postgresql-k8s/0*            active    idle   10.1.86.214         Primary
+self-signed-certificates/0*  active    idle   10.1.86.219         
+traefik-k8s/0*               active    idle   10.1.86.218         Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:50:19 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:50:23 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-lxcw...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Reset test-ldap-lxcw completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-lxcw to die...
+[31m[1mERROR   [0m juju.model:__init__.py:1388 Error in watcher
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 1379, in _all_watcher
+    old_obj, new_obj = self.state.apply_delta(entity)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 287, in apply_delta
+    entity = self.get_entity(delta.entity, delta.get_id())
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 311, in get_entity
+    return entity_class(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/action.py", line 11, in __init__
+    self._status = self.data["status"]
+TypeError: 'NoneType' object is not subscriptable
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-10529' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py:697> exception=ProxyNotConnectedError()>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 328, in _open
+    sock = self.proxy.socket()
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/proxy/kubernetes/proxy.py", line 80, in socket
+    raise ProxyNotConnectedError()
+juju.client.proxy.proxy.ProxyNotConnectedError
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-3brd...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:11:26Z
+
+App          Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+mongodb-k8s  6.0.24   active      3  mongodb-k8s             0  10.152.183.154  no       
+
+Unit            Workload  Agent  Address      Ports  Message
+mongodb-k8s/0*  active    idle   10.1.86.208         
+mongodb-k8s/1   active    idle   10.1.86.213         
+mongodb-k8s/2   active    idle   10.1.86.212         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 01:49:43 ERROR unit.mongodb-k8s/1.juju-log database-peers:0: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-21T01:49:43Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-04-21T01:49:43Z INFO Most recent service output:
+    2026-04-21T01:49:43.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-04-21T01:49:43Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-21T01:49:43Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-04-21T01:49:43Z INFO Most recent service output:
+    2026-04-21T01:49:43.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-04-21T01:49:43Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-1: 01:49:43 ERROR unit.mongodb-k8s/1.juju-log database-peers:0: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+controller-0: 01:57:16 ERROR juju.worker.remoterelations cmr error in relation units worker for mongodb-k8s:ldap ldap-integration:ldap: bad catacomb ErrDying: still alive
+controller-0: 01:57:16 ERROR juju.worker.remoterelations cmr error in relation units worker for mongodb-k8s:ldap ldap-integration:ldap: bad catacomb ErrDying: still alive
+controller-0: 01:57:16 ERROR juju.worker.remoterelations cmr error in remote application worker for ldap-integration: bad catacomb ErrDying: still alive
+controller-0: 01:57:16 ERROR juju.worker.remoterelations cmr exited "ldap-integration": bad catacomb ErrDying: still alive
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
