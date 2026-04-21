@@ -1,0 +1,47 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  03:02:53Z
+
+App      Version  Status  Scale  Charm    Channel      Rev  Exposed  Message
+mongodb  8.0.10   active      3  mongodb                 0  no       
+vault             active      1  vault    1.18/stable  643  no       
+
+Unit        Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0*  active    idle   1        10.130.225.182  27017/tcp  
+mongodb/1   active    idle   2        10.130.225.114  27017/tcp  
+mongodb/2   active    idle   3        10.130.225.173  27017/tcp  
+vault/0*    active    idle   0        10.130.225.81   8200/tcp   
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.130.225.81   juju-73b214-0  ubuntu@24.04  github-runner  Running
+1        started  10.130.225.182  juju-73b214-1  ubuntu@24.04  github-runner  Running
+2        started  10.130.225.114  juju-73b214-2  ubuntu@24.04  github-runner  Running
+3        started  10.130.225.173  juju-73b214-3  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:57:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:57:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:57:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:57:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:57:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:57:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:57:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:57:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-vault-0: 02:58:09 ERROR unit.vault/0.juju-log [vault_client] Error while checking Vault health status: HTTPSConnectionPool(host='10.130.225.81', port=8200): Max retries exceeded with url: /v1/sys/health (Caused by NewConnectionError("HTTPSConnection(host='10.130.225.81', port=8200): Failed to establish a new connection: [Errno 111] Connection refused"))
+unit-vault-0: 02:58:09 ERROR unit.vault/0.juju-log [vault_client] Error while checking Vault health status: HTTPSConnectionPool(host='10.130.225.81', port=8200): Max retries exceeded with url: /v1/sys/health (Caused by NewConnectionError("HTTPSConnection(host='10.130.225.81', port=8200): Failed to establish a new connection: [Errno 111] Connection refused"))
+unit-vault-0: 02:58:10 ERROR unit.vault/0.juju-log [vault_client] Error while checking Vault health status: HTTPSConnectionPool(host='10.130.225.81', port=8200): Max retries exceeded with url: /v1/sys/health (Caused by NewConnectionError("HTTPSConnection(host='10.130.225.81', port=8200): Failed to establish a new connection: [Errno 111] Connection refused"))
+unit-mongodb-1: 02:58:55 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:58:55 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:58:55 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:58:55 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:58:56 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-0: 02:58:56 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 02:59:23 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:59:23 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:59:24 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 03:02:22 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "33b10142-63d4-4081-8765-99aa9673b214:r#5#vault": settings 33b10142-63d4-4081-8765-99aa9673b214:r#5#vault not found (not found)
+unit-mongodb-1: 03:02:23 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "33b10142-63d4-4081-8765-99aa9673b214:r#5#vault": settings 33b10142-63d4-4081-8765-99aa9673b214:r#5#vault not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
