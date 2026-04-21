@@ -629,9 +629,12 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
-        self.update_pbm_certificate_in_trust_store()  # could i change  the order with member auth?
+        self.update_pbm_certificate_in_trust_store()
 
-        if not self.dependent.mongo_manager.mongod_ready():
+        if (
+            self.dependent.is_waiting_for_rolling_restart()
+            or not self.dependent.mongo_manager.mongod_ready()
+        ):
             logger.info("MongoDB is not ready")
             raise NotReadyError
 
@@ -698,14 +701,14 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (
             backup_tls_chain := self.state.shard_state.backup_ca_secret
         ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
-            logger.debug("Adding certificate for PBM")
+            logger.info("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
             # We updated the configuration, so we restart PBM.
             self.dependent.s3_backup_manager.configure_and_restart(force=True)
         elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
             TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         ):
-            logger.debug("Removing certificate for PBM")
+            logger.info("Removing certificate for PBM")
             # If it is not in the databag, always remove it, it won't change a
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)

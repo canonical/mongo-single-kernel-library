@@ -1278,6 +1278,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         logger.info("Requested and async lock to restart MongoDB.")
 
+    def is_waiting_for_rolling_restart(self) -> bool:
+        """Returns whether Mongos has pending rolling operations."""
+        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
+
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""
         try:
@@ -1462,7 +1466,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if scope == "unit" and not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
 
-        if scope == "unit" and self.rollingops_manager.state.status == RollingOpsStatus.WAITING:
+        if scope == "unit" and self.is_waiting_for_rolling_restart():
             charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
         if self.config.role == MongoDBRoles.INVALID:

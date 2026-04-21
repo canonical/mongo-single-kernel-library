@@ -444,6 +444,10 @@ class MongosOperator(OperatorProtocol, Object):
         )
         logger.info("Requested and async lock to restart Mongos.")
 
+    def is_waiting_for_rolling_restart(self) -> bool:
+        """Returns whether Mongos has pending rolling operations."""
+        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
+
     def update_ips_in_databag(self) -> None:
         """Sets all the ips in the databag to be used by the leader."""
         self.state.unit_peer_data.database_address = ip_addresses(
@@ -691,7 +695,7 @@ class MongosOperator(OperatorProtocol, Object):
             charm_statuses.append(MongosStatuses.WAITING_FOR_MONGOS_START.value)
             return charm_statuses
 
-        if scope == "unit" and self.rollingops_manager.state.status == RollingOpsStatus.WAITING:
+        if scope == "unit" and self.is_waiting_for_rolling_restart():
             charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)
 
         username = self.state.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.USERNAME.value)

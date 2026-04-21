@@ -295,7 +295,6 @@ def test_cluster_requirer_share_credentials_to_clients(
     assert manager.state.secrets.get_for_key(Scope.APP, "password") == "password"
 
 
-@pytest.mark.skip("skip")
 def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker, substrate: Substrate
 ):
@@ -359,7 +358,6 @@ def test_cluster_requirer_update_mongos_and_restart(
         assert data["database"] == "test-db"
 
 
-@pytest.mark.skip("TODO")
 @pytest.mark.parametrize(
     ("databag"), (({"key-file": "deadbeef"}), ({"config-server-db": "deadbeef"}), ({}))
 )
@@ -387,7 +385,7 @@ def test_cluster_requirer_update_mongos_and_restart_fail_missing_data(
         databag,
     )
     with pytest.raises(WaitingForSecretsError) as err:
-        manager.update_mongos_and_restart(None)
+        manager.update_mongos_and_restart()
 
     assert err.value.args[0] == "Waiting for keyfile or config server db uri"
 

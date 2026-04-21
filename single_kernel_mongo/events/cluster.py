@@ -164,7 +164,12 @@ class ClusterMongosEventHandler(Object):
         The manager will update the mongos configuration and restart it.
         """
         try:
-            self.manager.update_mongos_and_restart(event)
+            self.manager.update_mongos_and_restart()
+            if self.dependent.is_waiting_for_rolling_restart():
+                msg = "Waiting for mongos to be restarted"
+                defer_event_with_info_log(logger, event, str(type(event)), str(msg))
+                return
+            self.manager._reconcile_after_mongos_restart()
         except (
             DeferrableError,
             DeferrableFailedHookChecksError,

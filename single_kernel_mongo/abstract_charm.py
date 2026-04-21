@@ -26,7 +26,6 @@ import logging
 from typing import ClassVar, Generic, TypeVar
 
 import ops.log
-from charmlibs import apt
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
@@ -111,12 +110,6 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
             self.workload.install()
-
-            try:
-                apt.update()
-                apt.add_package("etcd-client")
-            except apt.PackageError as e:
-                logger.error("could not install package. Reason: %s", e.message)
 
     def on_leader_elected(self, event):
         """First leader elected handler."""

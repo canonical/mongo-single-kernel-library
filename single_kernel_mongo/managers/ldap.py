@@ -129,9 +129,9 @@ class LDAPManager(Object, ManagerStatusProtocol):
                 self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
                 self.dependent.rolling_restart_charm_services(force=False)
-                # self.state.statuses.set(
-                #    LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
-                # )
+                self.state.statuses.set(
+                    LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
+                )
             case state:
                 self.state.statuses.clear(scope="unit", component=self.name)
                 for status in self.map_state_to_statuses(state):
