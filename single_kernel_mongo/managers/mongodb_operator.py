@@ -1020,12 +1020,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 with attempt:
                     # remove_replset_member retries for 60 seconds
                     self.mongo_manager.remove_replset_member()
-
-        except TimeoutError:
-            logger.info(
-                "Timed out waiting to remove %s from replica set.",
-                self.charm.unit.name,
-            )
         except NotReadyError:
             logger.info(
                 "Failed to remove %s from replica set, another member is syncing",
