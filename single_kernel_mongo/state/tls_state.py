@@ -26,6 +26,7 @@ class TlsManagementState(Enum):
     """TLS management state that can be mapped to a status."""
 
     EMPTY = ""
+    ENCRYPTION_DEGRADED = "Encryption at rest is enabled but not active."
     UPGRADE_IN_PROGRESS = "Upgrade in progress."
     DB_NOT_INTIALIZED = "DB is not initialized."
     MONGOS_MISSING_CONFIG_SERVER = "mongos is not running (not integrated to config-server)."

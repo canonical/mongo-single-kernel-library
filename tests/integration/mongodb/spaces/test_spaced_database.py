@@ -64,7 +64,7 @@ async def test_build_and_deploy(
         application_path=application_path,
         app_name=CONTINUOUS_WRITE_APPLICATION,
         constraints={"spaces": ["client"]},
-        bind={"database": "client"},
+        bind={"mongodb": "client"},
     )
 
     await ops_test.model.wait_for_idle(
@@ -77,7 +77,7 @@ async def test_build_and_deploy(
 async def test_integrate_with_spaces(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     await ops_test.model.integrate(
-        f"{app_name}:database", f"{CONTINUOUS_WRITE_APPLICATION}:database"
+        f"{app_name}:database", f"{CONTINUOUS_WRITE_APPLICATION}:mongodb"
     )
 
     await ops_test.model.wait_for_idle(
@@ -116,13 +116,13 @@ async def test_integrate_with_isolated_space(ops_test: OpsTest, application_path
         application_path=application_path,
         app_name=ISOLATED_APP_NAME,
         constraints={"spaces": ["isolated"]},
-        bind={"database": "isolated"},
+        bind={"mongodb": "isolated"},
     )
     await ops_test.model.wait_for_idle(
         apps=[ISOLATED_APP_NAME], timeout=DEPLOYMENT_TIMEOUT, status="waiting"
     )
 
-    await ops_test.model.integrate(f"{app_name}:database", f"{ISOLATED_APP_NAME}:database")
+    await ops_test.model.integrate(f"{app_name}:database", f"{ISOLATED_APP_NAME}:mongodb")
 
     await ops_test.model.wait_for_idle(apps=[app_name, ISOLATED_APP_NAME], status="active")
 
