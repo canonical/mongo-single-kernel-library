@@ -360,6 +360,7 @@ class CharmState(Object, StatusesStateProtocol):
                 ClusterStateKeys.KEYFILE.value,
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
+                ClusterStateKeys.EXT_CA_SECRET.value,
             ],
         )
 

@@ -378,6 +378,28 @@ class ClusterRequirer(Object):
                 component=self.charm.name,
             )
             return OperationResult.RELEASE
+    def handle_secret_changed(self, secret_label: str | None) -> None:
+        """If the certificates are rotated for example, handle it immediately.
+
+        Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
+        to secret changes events.
+        """
+        if not secret_label:
+            return
+        if not (relation := self.state.mongos_cluster_relation):
+            return
+        # many secret changed events occur,only listen to the ones related to our interface
+        # with the config server.
+        cluster_extra_secret_label = f"{self.relation_name.value}.{relation.id}.extra.secret"
+        cluster_user_secret_label = f"{self.relation_name.value}.{relation.id}.user.secret"
+        if secret_label not in (cluster_extra_secret_label, cluster_user_secret_label):
+            logger.info(
+                f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
+            )
+            return
+
+        # This will take care of updating everything that needs updating
+        self.update_mongos_and_restart()
 
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""
@@ -409,6 +431,11 @@ class ClusterRequirer(Object):
         # server.
         if self.substrate != Substrates.K8S:
             return
+
+        if not self.state.has_credentials():
+            # This happens if we haven't received yet credentials.
+            logger.info("We haven't received credentials yet, exiting early.")
+            raise DeferrableError("Credentials not received yet, can't reconcile users for mongos.")
 
         # We are a Kubernetes Mongos Charm so we are in charge of our client
         # applications and their users and we proceed to update the users and their DBs.
