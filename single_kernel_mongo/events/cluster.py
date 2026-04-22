@@ -163,27 +163,15 @@ class ClusterMongosEventHandler(Object):
 
         The manager will update the mongos configuration and restart it.
         """
-        try:
-            self.manager.update_mongos_and_restart()
-            if self.dependent.is_waiting_for_rolling_restart():
-                msg = "Waiting for mongos to be restarted"
-                defer_event_with_info_log(logger, event, str(type(event)), str(msg))
-                return
-            self.manager._reconcile_after_mongos_restart()
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
-            defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except WaitingForSecretsError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
+        self.charm.state.statuses.add(
+            MongosStatuses.WAITING_FOR_MONGOS_START.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+        self.dependent.rollingops_manager.request_async_lock(
+            callback_id="update_mongos_and_restart_callback", max_retry=2
+        )
+        logger.info("Requested and async lock to update Mongos and restart.")
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

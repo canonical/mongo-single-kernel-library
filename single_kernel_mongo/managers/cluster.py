@@ -9,6 +9,7 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
 from ops.model import Relation
@@ -21,8 +22,10 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
+    MissingConfigServerError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
@@ -326,22 +329,24 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            self.dependent.rolling_restart_charm_services(force=False)
-            self.state.statuses.set(
-                MongosStatuses.WAITING_FOR_RESTART.value,
-                scope="unit",
-                component=self.dependent.name,
-            )
 
-    def _reconcile_after_mongos_restart(self) -> None:
-        if not self.dependent.is_mongos_running():
-            logger.info("Mongos has not started yet, deferring")
-            self.state.statuses.set(
-                MongosStatuses.WAITING_FOR_MONGOS_START.value,
-                scope="unit",
-                component=self.dependent.name,
-            )
-            raise DeferrableError
+            try:
+                self.dependent.restart_charm_services(force=False)
+            except MissingConfigServerError as e:
+                raise NonDeferrableFailedHookChecksError from e
+            except WorkloadServiceError as e:
+                raise DeferrableError from e
+
+            # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
+            if not self.dependent.is_mongos_running():
+                logger.info("Mongos has not started yet, deferring")
+                self.state.statuses.set(
+                    MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                    scope="unit",
+                    component=self.dependent.name,
+                )
+                raise DeferrableError("Mongos is not running.")
+
         self.state.statuses.set(
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
         )
@@ -351,6 +356,28 @@ class ClusterRequirer(Object):
             self.update_users_for_k8s_routers()
 
         self.dependent.share_connection_info()
+
+    def update_mongos_and_restart_callback(self) -> OperationResult:
+        """Callback use during update mongos and restart rolling operation."""
+        try:
+            self.update_mongos_and_restart()
+        except (
+            DeferrableError,
+            DeferrableFailedHookChecksError,
+        ) as e:
+            logger.info("Deferrable error during mongos update and restart. %s", e)
+            return OperationResult.RETRY_RELEASE
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info("Non deferrable error during mongos update and restart. %s", e)
+            return OperationResult.RELEASE
+        except WaitingForSecretsError as e:
+            logger.info("Skipping mongos update and restart: %s", e)
+            self.state.statuses.add(
+                MongosStatuses.WAITING_FOR_SECRETS.value,
+                scope="unit",
+                component=self.charm.name,
+            )
+            return OperationResult.RELEASE
 
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""

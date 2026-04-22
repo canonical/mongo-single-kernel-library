@@ -116,8 +116,12 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         actual_uri = uri or f"mongodb://localhost:{port}"
         actual_uri = f"{actual_uri}/?{urlencode(params)}"
-        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
-            return direct_mongo.is_ready
+        try:
+            with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
+                return direct_mongo.is_ready
+        except FileNotFoundError as e:  # restart hasn't happened and we do not have /var/snap/charmed-mongodb/current/etc/mongod/external-cert.pem
+            logger.error("%s", e)
+            return False
 
     def set_user_password(self, user: MongoDBUser, password: str) -> None:
         """Sets the password for a given username in the workload and secrets.
@@ -521,7 +525,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 logger.debug("Adding %s to replica set", member)
                 if not self.mongod_ready(uri=f"mongodb://{member}"):
                     logger.debug("not reconfiguring: %s is not ready yet.", member)
-                    raise NotReadyError
+                    raise NotReadyError(f"{member} is not ready yet.")
                 mongo.add_replset_member(member)
 
     def get_draining_shards(

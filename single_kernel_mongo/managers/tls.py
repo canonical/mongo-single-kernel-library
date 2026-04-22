@@ -149,6 +149,84 @@ class TLSManager(ManagerStatusProtocol):
 
         return ca_file, pem_file
 
+    def _tls_files_exist_on_workload(self, internal: bool) -> tuple[bool, bool]:
+        """Return whether both TLS files exist on the workload."""
+        if internal:
+            ca_path = self.workload.paths.int_ca_file
+            pem_path = self.workload.paths.int_pem_file
+        else:
+            ca_path = self.workload.paths.ext_ca_file
+            pem_path = self.workload.paths.ext_pem_file
+
+        exists = [self.workload.exists(ca_path), self.workload.exists(pem_path)]
+        return any(exists), all(exists)
+
+    def _has_tls_secrets(self, internal: bool) -> bool:
+        """Return whether complete TLS material exists for the given scope."""
+        ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
+        chain = self.state.tls.get_secret(internal, SECRET_CHAIN_LABEL)
+        key = self.state.tls.get_secret(internal, SECRET_KEY_LABEL)
+        cert = self.state.tls.get_secret(internal, SECRET_CERT_LABEL)
+
+        return bool((chain or ca) and key and cert)
+
+    def _tls_files_differ_on_workload(self, internal: bool) -> bool:
+        """Return whether workload TLS files differ from the current secret state."""
+        expected_ca, expected_pem = self.get_tls_file_contents(internal)
+
+        if internal:
+            ca_path = self.workload.paths.int_ca_file
+            pem_path = self.workload.paths.int_pem_file
+        else:
+            ca_path = self.workload.paths.ext_ca_file
+            pem_path = self.workload.paths.ext_pem_file
+
+        actual_ca = self.workload.read(ca_path) if self.workload.exists(ca_path) else None
+        actual_pem = self.workload.read(pem_path) if self.workload.exists(pem_path) else None
+
+        if actual_ca is not None:
+            actual_ca = "\n".join(actual_ca)
+            actual_ca = actual_ca.strip()
+        if actual_pem is not None:
+            actual_pem = "\n".join(actual_pem)
+            actual_pem = actual_pem.strip()
+
+        return actual_ca != expected_ca or actual_pem != expected_pem
+
+    def reconcile_tls_files(self) -> bool:
+        """Ensure TLS files on disk match the current TLS secret state."""
+        need_restart = False
+        for internal in (True, False):
+            has_secrets = self._has_tls_secrets(internal)
+            any_files, all_files = self._tls_files_exist_on_workload(internal)
+
+            if not has_secrets and any_files:
+                logger.info(
+                    "TLS secrets missing for internal=%s; removing certificates from workload.",
+                    internal,
+                )
+                self.delete_certificates_from_workload(internal)
+                need_restart = True
+                continue
+
+            if has_secrets and not all_files:
+                logger.info(
+                    "TLS secrets present for internal=%s but files missing on workload; writing certificates.",
+                    internal,
+                )
+                need_restart = True
+                self.push_tls_files_to_workload(internal)
+                continue
+            if has_secrets and self._tls_files_differ_on_workload(internal):
+                logger.info(
+                    "TLS secrets present for internal=%s but workload file differs; rewriting certificates",
+                    internal,
+                )
+                need_restart = True
+                self.push_tls_files_to_workload(internal)
+
+        return need_restart
+
     def disable_certificates_for_unit(self, internal: bool):
         """Disables the certificates on relation broken."""
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
@@ -162,14 +240,10 @@ class TLSManager(ManagerStatusProtocol):
         else:
             self.dependent.state.update_client_ca_secrets(new_ca=None)
 
-        self.delete_certificates_from_workload(internal)
-        self.dependent.rolling_restart_charm_services(force=True)
+        self.dependent.rolling_restart_charm_services(force=False)
 
     def enable_certificates_for_unit(self, internal: bool):
         """Enables the new certificates for this unit."""
-        self.delete_certificates_from_workload(internal)
-        self.push_tls_files_to_workload(internal)
-
         if not self.state.db_initialised and self.state.is_role(MongoDBRoles.MONGOS):
             logger.info(
                 "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."
@@ -187,7 +261,7 @@ class TLSManager(ManagerStatusProtocol):
             logger.info("Still waiting for a certificate, delaying restart.")
             return
 
-        self.dependent.rolling_restart_charm_services(force=True)
+        self.dependent.rolling_restart_charm_services(force=False)
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload."""

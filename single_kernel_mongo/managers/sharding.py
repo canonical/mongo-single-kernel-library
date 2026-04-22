@@ -14,6 +14,7 @@ import time
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
+from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -39,6 +40,7 @@ from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatu
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
@@ -50,6 +52,7 @@ from single_kernel_mongo.exceptions import (
     ShardNotPlannedForRemovalError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
@@ -631,10 +634,10 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_pbm_certificate_in_trust_store()
 
-        if (
-            self.dependent.is_waiting_for_rolling_restart()
-            or not self.dependent.mongo_manager.mongod_ready()
-        ):
+        if self.dependent.is_waiting_for_rolling_restart():
+            return
+
+        if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
             raise NotReadyError
 
@@ -642,6 +645,9 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.state.shard_state.shard_integrated:
             self.dependent.s3_backup_manager.configure_and_restart()
 
+        self._reconcile_shard_after_restart()
+
+    def _reconcile_shard_after_restart(self):
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
@@ -656,6 +662,30 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         # Store the mongos hosts on this side of the relation.
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
+
+    def shard_restart_on_keyfile_callback(self) -> OperationResult:
+        """Shard restart on keyfile callback."""
+        try:
+            self.restart_charm_services(force=True)
+        except WorkloadServiceError:
+            return OperationResult.RELEASE
+        except DeferrableError:
+            return OperationResult.RETRY_RELEASE
+
+        self._reconcile_shard_after_restart()
+        return OperationResult.RELEASE
+
+    def rolling_shard_restart_on_key_file(self):
+        """Rolling shard restart on keyfile."""
+        self.charm.state.statuses.add(
+            ShardStatuses.ADDING_TO_CLUSTER.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.dependent.rollingops_manager.request_async_lock(
+            callback_id="shard_restart_on_keyfile_callback", max_retry=2
+        )
+        logger.info("Requested and async lock to shard restart on keyfile MongoDB.")
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """Update charmed-operator and charmed-backup user passwords when rotation occurs.

@@ -67,6 +67,7 @@ from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
@@ -188,14 +189,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             container,
         )
 
-        self.rollingops_manager = RollingOpsManager(
-            charm=charm,
-            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
-            etcd_relation_name=RelationNames.ETCD.value,
-            cluster_id="mongodb",
-            callback_targets={"restart_charm_services": self.restart_charm_services},
-        )
-
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
@@ -219,6 +212,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         self.cluster_manager = ClusterProvider(
             self, self.state, self.substrate, RelationNames.CLUSTER
+        )
+
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
+            etcd_relation_name=RelationNames.ETCD.value,
+            cluster_id="mongodb",
+            callback_targets={
+                "restart_charm_services_callback": self.restart_charm_services_callback,
+                "shard_restart_on_keyfile_callback": self.shard_manager.shard_restart_on_keyfile_callback,
+            },
         )
 
         # LDAP Manager, which covers both send-ca-cert interface and ldap interface.
@@ -688,7 +692,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
-        # If we had an IP change, we must restart
+        # If we had an IP change, we must restart.
         if self.state.db_initialised:
             self.rolling_restart_charm_services(force=False)
 
@@ -1073,7 +1077,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             try:
                 self.perform_self_healing()
             except (ServerSelectionTimeoutError, OperationFailure) as e:
-                logger.warning(f"Failed to perform self healing: {e}")
+                logger.warning("Failed to perform self healing: %s", e)
             except ShardAuthError:
                 logger.warning("Failed to add shard")
             except NotDrainedError:
@@ -1127,7 +1131,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_hosts()
         # Add in any new IPs to the replica set. Relation handlers require a reference to
         # a unit.
-        self.peer_changed()
+        self.peer_changed()  # TODO can raise a not ready
 
         # make sure all nodes in the replica set have the same priority for re-election. This is
         # necessary in the case that pre-upgrade hook fails to reset the priority of election for
@@ -1231,7 +1235,30 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self, force: bool = False) -> OperationResult:
+    def restart_charm_services(self, force: bool = False) -> None:
+        if not self.refresh or not self.refresh.workload_allowed_to_start:
+            raise WorkloadServiceError("Workload not allowed to start on refresh.")
+        if not self.state.db_initialised:
+            raise WorkloadServiceError("Workload not allowed to start: DB not initialised")
+        try:
+            should_restart = self.tls_manager.reconcile_tls_files()
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.RESTARTING.value, scope="unit"
+            )
+            force = force or should_restart
+            self.config_manager.configure_and_restart(force=force)
+            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                self.mongos_config_manager.configure_and_restart(force=force)
+        except WorkloadServiceError as e:
+            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            self.charm.state.statuses.add(
+                MongoDBStatuses.WAITING_FOR_RESTART.value,
+                scope="unit",
+                component=self.name,
+            )
+            raise DeferrableError from e
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Restarts the charm services with updated config.
 
         If we are running as config-server, we should update both mongod and mongos environments.
@@ -1241,25 +1268,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             scope="unit",
             component=self.name,
         )
-        if not self.refresh or not self.refresh.workload_allowed_to_start:
-            logger.error("Cannot restart during refresh. Dropping.")
-            return OperationResult.RELEASE  # raise WorkloadServiceError
         try:
-            self.charm.status_handler.set_running_status(
-                MongoDBStatuses.RESTARTING.value, scope="unit"
-            )
-            self.config_manager.configure_and_restart(force=force)
-            if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-                self.mongos_config_manager.configure_and_restart(force=force)
+            self.restart_charm_services(force=force)
+        except WorkloadServiceError:
             return OperationResult.RELEASE
-        except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
-            self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_RESTART.value,
-                scope="unit",
-                component=self.name,
-            )
-            return OperationResult.RETRY_RELEASE  # raise WorkloadServiceError
+        except DeferrableError:
+            return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
 
     @override
     def rolling_restart_charm_services(self, force: bool = False) -> None:
@@ -1269,7 +1284,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             component=self.name,
         )
         self.rollingops_manager.request_async_lock(
-            callback_id="restart_charm_services", kwargs={"force": force}
+            callback_id="restart_charm_services_callback", kwargs={"force": force}, max_retry=2
         )
         logger.info("Requested and async lock to restart MongoDB.")
 

@@ -37,6 +37,7 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
+    MissingConfigServerError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -108,7 +109,10 @@ class MongosOperator(OperatorProtocol, Object):
             peer_relation_name="rollingops-peers",
             etcd_relation_name="etcd",
             cluster_id="mongodb",
-            callback_targets={"restart_charm_services": self.restart_charm_services},
+            callback_targets={
+                "restart_charm_services_callback": self.restart_charm_services_callback,
+                "update_mongos_and_restart_callback": self.cluster_manager.update_mongos_and_restart_callback,
+            },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
@@ -405,23 +409,18 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload.stop()
 
     @override
-    def restart_charm_services(self, force: bool = False) -> OperationResult:
+    def restart_charm_services(self, force: bool = False) -> None:
         """Restarts the charm with the new configuration."""
-        self.charm.state.statuses.delete(
-            MongosStatuses.WAITING_FOR_RESTART.value,
-            scope="unit",
-            component=self.name,
-        )
         try:
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
-                # raise MissingConfigServerError()
-                return OperationResult.RELEASE
+                raise MissingConfigServerError("Cannot start mongos without a config server db")
+            should_restart = self.tls_manager.reconcile_tls_files()
+            force = force or should_restart
             self.charm.status_handler.set_running_status(
                 MongosStatuses.RESTARTING.value, scope="unit"
             )
             self.mongos_config_manager.configure_and_restart(force=force)
-            return OperationResult.RELEASE
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
@@ -429,8 +428,22 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
-            # raise
+            raise
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
+        """Restarts the charm with the new configuration."""
+        self.charm.state.statuses.delete(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        try:
+            self.restart_charm_services(force=force)
+        except MissingConfigServerError:
+            return OperationResult.RELEASE
+        except WorkloadServiceError:
             return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
 
     @override
     def rolling_restart_charm_services(self, force: bool = False) -> None:
@@ -440,7 +453,7 @@ class MongosOperator(OperatorProtocol, Object):
             component=self.name,
         )
         self.rollingops_manager.request_async_lock(
-            callback_id="restart_charm_services", kwargs={"force": force}
+            callback_id="restart_charm_services_callback", kwargs={"force": force}, max_retry=2
         )
         logger.info("Requested and async lock to restart Mongos.")
 
