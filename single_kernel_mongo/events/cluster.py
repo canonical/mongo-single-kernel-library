@@ -17,12 +17,10 @@ from ops.charm import (
 )
 from ops.framework import Object
 
-from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
-    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
 )
@@ -169,58 +167,14 @@ class ClusterMongosEventHandler(Object):
 
     def _handle_changed_secrets(self, event: SecretChangedEvent):
         """SecretChanged event handler, which is used to propagate the updated passwords."""
-        try:
-            self.manager.handle_secret_changed(event.secret.label or "")
-        except (DeferrableError, DeferrableFailedHookChecksError):
-            event.defer()
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except WaitingForSecretsError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
+        self.manager.handle_secret_changed(event.secret.label or "")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
 
         The manager will update the mongos configuration and restart it.
         """
-        self.charm.state.statuses.add(
-            MongosStatuses.WAITING_FOR_MONGOS_START.value,
-            scope="unit",
-            component=self.dependent.name,
-        )
-        self.dependent.rollingops_manager.request_async_lock(
-            callback_id="update_mongos_and_restart_callback", max_retry=2
-        )
-        logger.info("Requested and async lock to update Mongos and restart.")
-        try:
-            self.manager.update_mongos_and_restart()
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
-            defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except (WaitingForSecretsError, MissingCredentialsError) as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
+        self.manager.async_update_mongos_and_restart()
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

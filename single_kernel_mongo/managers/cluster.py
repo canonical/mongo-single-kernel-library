@@ -23,6 +23,7 @@ from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     MissingConfigServerError,
+    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
     WorkloadServiceError,
@@ -370,7 +371,7 @@ class ClusterRequirer(Object):
         except NonDeferrableFailedHookChecksError as e:
             logger.info("Non deferrable error during mongos update and restart. %s", e)
             return OperationResult.RELEASE
-        except WaitingForSecretsError as e:
+        except (WaitingForSecretsError, MissingCredentialsError) as e:
             logger.info("Skipping mongos update and restart: %s", e)
             self.state.statuses.add(
                 MongosStatuses.WAITING_FOR_SECRETS.value,
@@ -378,6 +379,7 @@ class ClusterRequirer(Object):
                 component=self.charm.name,
             )
             return OperationResult.RELEASE
+
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """If the certificates are rotated for example, handle it immediately.
 
@@ -399,7 +401,19 @@ class ClusterRequirer(Object):
             return
 
         # This will take care of updating everything that needs updating
-        self.update_mongos_and_restart()
+        self.async_update_mongos_and_restart()
+
+    def async_update_mongos_and_restart(self):
+        """Async update mongos and restart."""
+        self.state.statuses.add(
+            MongosStatuses.WAITING_FOR_MONGOS_START.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+        self.dependent.rollingops_manager.request_async_lock(
+            callback_id="update_mongos_and_restart_callback", max_retry=2
+        )
+        logger.info("Requested and async lock to update Mongos and restart.")
 
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""
