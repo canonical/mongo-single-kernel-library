@@ -43,7 +43,7 @@ You'll need:
 
 ## A few words of caution
 
-Encryption at rest encrypts the data on disk. It relies on Vault to store the database encryption key. If Vault is unavailable for too long and MongoDB restarts, it will fail to start as it can't decrypt the database.
+Encryption at rest encrypts the data on disk. It relies on Vault to store the database encryption key. If Vault is unavailable for too long and MongoDB restarts, it will fail to start as it can't decrypt the database. It is recommended to have a scheduled backup policy working and regularly tested for both Charmed MongoDB and Vault.
 
 This implementation provides some alerts if you are integrated with [COS Lite](https://charmhub.io/cos-lite). If Vault fails, the charm will raise critical statuses and start alerting. The tokens have a lifetime of one hour, so after one hour of downtime, a restart of MongoDB will fail.
 
