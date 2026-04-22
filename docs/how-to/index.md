@@ -68,7 +68,7 @@ Upgrade your MongoDB applications to a new minor revision in-place, or across ma
 :maxdepth: 3
 
 Upgrade <upgrade/index>
-Encryption at Rest <encryption-at-rest>
+Encryption at rest <encryption-at-rest>
 ```
 ## Delete your deployment
 

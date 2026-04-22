@@ -1,16 +1,24 @@
+---
+myst:
+  html_meta:
+    description: "Learn how to configure encryption at rest on Charmed MongoDB using Vault as a storage backend."
+---
+
 (encryption-at-rest)=
 
 # How to configure encryption at rest
 
 Data at rest encryption should be used when your data is highly valuable. It should be used with data in transit encryption (TLS), and adequate policies to protect accounts.
-It helpers organizations to comply with security and privacy standards like HIPAA, PCI-DSS, GDPR and FIPS.
+It helps organizations comply with security and privacy standards like HIPAA, PCI-DSS, GDPR and FIPS.
 
-Charmed MongoDB provides encryption at rest using Vault as a storage backend for the encryption keys.
+Charmed MongoDB provides encryption at rest using Vault as a key management backend for the encryption keys.
 
 ```{caution}
-This feature can only be enabled at deploy time. It requires a MongoDB instance that has never been started.
-The charm will prevent you from enabling it after it has started.
-If you remove the vault integration and MongoDB restarts, it will be unable to decrypt the databases and start.
+**This feature can only be enabled at deploy time.** 
+
+It requires a MongoDB instance that has never been started. The charm will prevent you from enabling it after it has started.
+
+If you remove the Vault integration and MongoDB restarts, the charm will be unable to decrypt the databases and start.
 ```
 
 ## Pre-requisite
@@ -35,22 +43,21 @@ You'll need:
 
 ## A few words of caution
 
-Encryption at rest encrypts the data on disk. It relies on Vault to store the database encryption key. If vault is unavailable for a too long period of time and MongoDB restarts, it will fail to start as it can't decrypt the database.
+Encryption at rest encrypts the data on disk. It relies on Vault to store the database encryption key. If Vault is unavailable for too long and MongoDB restarts, it will fail to start as it can't decrypt the database.
 
-This implementation provides some alerts if you are integrated with [COS Lite](https://charmhub.io/cos-lite). If vault fails, the charm will raise some critical statuses and start alerting. The tokens have a lifetime of one hour so after one hour of downtime, a restart of mongodb will fail.
+This implementation provides some alerts if you are integrated with [COS Lite](https://charmhub.io/cos-lite). If Vault fails, the charm will raise critical statuses and start alerting. The tokens have a lifetime of one hour, so after one hour of downtime, a restart of MongoDB will fail.
 
-Do not lose the credentials store in Vault, otherwise you will be left unable to decrypt the data.
-It is recommended to have regular backups of the Vault to ensure the key is not lost.
+It is highly recommended to make regular backups of the Vault to ensure the key is not lost. Without the credentials, you will be unable to decrypt the data.
 
 ## Deploy and configure Vault
 
 Follow the [official Charmed Vault documentation](https://canonical-vault-charms.readthedocs-hosted.com/en/latest/tutorial/)
 until the vault is unsealed, authorised and you have removed the `one-time-token` secret.
-You don't need to create a key-value type secret, nor don't you want to destroy your environment.
+You don't need to create a key-value type secret, and you should not destroy your environment.
 
 ## Deploy MongoDB
 
-Deploy Charmed MongoDB for your substrate
+Deploy Charmed MongoDB for your substrate, specifying the `enable-encryption-at-rest` config option
 
 `````{tab-set}
 ````{tab-item} VM
@@ -68,7 +75,7 @@ juju deploy mongodb-k8s vault --channel=8/edge --trust --config enable-encryptio
 ````
 `````
 
-After a few minutes it will stay in status `blocked/idle`:
+After a few minutes it will stay in a `blocked/idle` status:
 
 `````{tab-set}
 ````{tab-item} VM
