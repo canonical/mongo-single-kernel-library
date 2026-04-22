@@ -150,7 +150,7 @@ async def test_deploy_apps(
         ),
     )
 
-    (await deploy_glauth(ops_test, kubernetes_model),)
+    await deploy_glauth(ops_test, kubernetes_model)
 
     # Consume the offers exposed by glauth
     await consume_glauth_offers(ops_test, kubernetes_model)
@@ -184,6 +184,20 @@ async def test_deploy_apps(
         status="active",
         timeout=TIMEOUT,
         raise_on_error=False,
+    )
+
+    await ops_test.model.integrate(
+        f"{MONGOS_APP_NAME}",
+        f"{CONTINUOUS_WRITE_APPLICATION}",
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[
+            MONGOS_APP_NAME,
+            CONTINUOUS_WRITE_APPLICATION,
+        ],
+        idle_period=15,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
     )
 
 
@@ -229,41 +243,6 @@ async def test_integrate_with_tls(
         idle_period=60,
     )
 
-    await ops_test.model.integrate(
-        f"{MONGOS_APP_NAME}",
-        f"{CONTINUOUS_WRITE_APPLICATION}",
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[
-            CONTINUOUS_WRITE_APPLICATION,
-            MONGOS_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
-            CONFIG_SERVER_APP_NAME,
-        ],
-        idle_period=20,
-        raise_on_blocked=False,
-        timeout=TIMEOUT,
-        raise_on_error=False,
-    )
-
-    await ops_test.model.integrate(CONTINUOUS_WRITE_APPLICATION, TLS_CERTIFICATES_APP_NAME)
-
-    await ops_test.model.wait_for_idle(
-        apps=[
-            CONTINUOUS_WRITE_APPLICATION,
-            MONGOS_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
-            CONFIG_SERVER_APP_NAME,
-        ],
-        idle_period=20,
-        raise_on_blocked=False,
-        timeout=TIMEOUT,
-        raise_on_error=False,
-    )
-
     await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
 
 
@@ -307,15 +286,26 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
         f"{MONGOS_BIS_APP_NAME}",
         f"{CONTINUOUS_WRITE_APPLICATION_BIS}",
     )
+    await ops_test.model.wait_for_idle(
+        apps=[
+            MONGOS_BIS_APP_NAME,
+            CONTINUOUS_WRITE_APPLICATION_BIS,
+        ],
+        idle_period=15,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+    )
     await integrate_apps_with_tls(
         ops_test,
         applications=[
             MONGOS_BIS_APP_NAME,
         ],
     )
-    await ops_test.model.integrate(
-        f"{TLS_CERTIFICATES_APP_NAME}",
-        f"{CONTINUOUS_WRITE_APPLICATION_BIS}",
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_BIS_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, CONFIG_SERVER_APP_NAME],
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
     )
 
     await start_continous_writes(
@@ -374,15 +364,26 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         f"{MONGOS_TER_APP_NAME}",
         f"{READER_APPLICATION}",
     )
+    await ops_test.model.wait_for_idle(
+        apps=[
+            MONGOS_TER_APP_NAME,
+            READER_APPLICATION,
+        ],
+        idle_period=15,
+        timeout=TIMEOUT,
+        raise_on_blocked=False,
+    )
     await integrate_apps_with_tls(
         ops_test,
         applications=[
             MONGOS_TER_APP_NAME,
         ],
     )
-    await ops_test.model.integrate(
-        f"{TLS_CERTIFICATES_APP_NAME}",
-        f"{READER_APPLICATION}",
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_TER_APP_NAME, READER_APPLICATION, CONFIG_SERVER_APP_NAME],
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
     )
 
     await start_continuous_reads(
