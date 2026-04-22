@@ -20,18 +20,27 @@ If you remove the vault integration and MongoDB restarts, it will be unable to d
 :sync: vm
 
 You'll need:
-* Charmed MongoDB - Revision XXX or higher
-* (Optional) Charmed Mongos - Revision XXX or higher
+* Charmed MongoDB - Revision 305 or higher
+* (Optional) Charmed Mongos - Revision 118 or higher
 ```
 
 ```{tab-item} K8s
 :sync: k8s
 
 You'll need:
-* Charmed MongoDB K8s - Revision XXX or higher
-* (Optional) Charmed Mongos - Revision XXX or higher
+* Charmed MongoDB K8s - Revision 162 or higher
+* (Optional) Charmed Mongos K8s - Revision 115 or higher
 ```
 ````
+
+## A few words of caution
+
+Encryption at rest encrypts the data on disk. It relies on Vault to store the database encryption key. If vault is unavailable for a too long period of time and MongoDB restarts, it will fail to start as it can't decrypt the database.
+
+This implementation provides some alerts if you are integrated with [COS Lite](https://charmhub.io/cos-lite). If vault fails, the charm will raise some critical statuses and start alerting. The tokens have a lifetime of one hour so after one hour of downtime, a restart of mongodb will fail.
+
+Do not lose the credentials store in Vault, otherwise you will be left unable to decrypt the data.
+It is recommended to have regular backups of the Vault to ensure the key is not lost.
 
 ## Deploy and configure Vault
 
