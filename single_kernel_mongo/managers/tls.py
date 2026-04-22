@@ -204,6 +204,7 @@ class TLSManager:
             self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
 
         self.state.update_ca_secrets(new_ca=None)
+        self.state.update_client_ca_secrets(new_ca=None)
 
         self.delete_certificates_from_workload()
         self.dependent.restart_charm_services(force=True)
@@ -274,6 +275,11 @@ class TLSManager:
 
         if not self.certificate_and_private_key_match(certificate, internal):
             raise UnknownCertificateAvailableError
+
+        if internal:
+            self.dependent.state.update_ca_secrets(ca)
+        else:
+            self.dependent.state.update_client_ca_secrets(ca)
 
         self.state.tls.set_secret(
             internal,

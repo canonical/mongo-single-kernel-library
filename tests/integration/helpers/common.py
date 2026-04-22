@@ -88,6 +88,10 @@ class ProcessError(Exception):
     """Raised when a process fails."""
 
 
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
+
+
 async def deploy_charm(
     ops_test: OpsTest,
     charm: str,
@@ -127,6 +131,7 @@ async def deploy_application(
     ops_test: OpsTest,
     application_path: str,
     app_name: str,
+    database_name: str = DEFAULT_DATABASE_NAME,
 ):
     """Deploys the helpers applications with one unit and waits for idle."""
     application_name = await get_app_name(ops_test, app_name)
@@ -137,6 +142,7 @@ async def deploy_application(
         application_name=app_name,
         num_units=1,
         series="jammy",
+        config={"database-name": database_name},
     )
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
@@ -157,13 +163,13 @@ async def relate_mongodb_and_application(
         mongodb_application_name: The mongodb charm application name
         application_name: The continuous writes test charm application name
     """
-    if is_relation_joined(ops_test, "database", "database"):
+    if is_relation_joined(ops_test, "mongodb", "database"):
         return
 
     await ops_test.model.integrate(
-        f"{application_name}:database", f"{mongodb_application_name}:database"
+        f"{application_name}:mongodb", f"{mongodb_application_name}:database"
     )
-    await ops_test.model.block_until(lambda: is_relation_joined(ops_test, "database", "database"))
+    await ops_test.model.block_until(lambda: is_relation_joined(ops_test, "mongodb", "database"))
 
     await ops_test.model.wait_for_idle(
         apps=[mongodb_application_name, application_name],
@@ -363,6 +369,24 @@ async def get_password(
     except KeyError:
         logger.error("Failed to get password. Action %s. Results %s", action, action.results)
         return None
+
+
+async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    for secret_id in secret_ids:
+        secret_data_raw = await ops_test.juju(
+            "show-secret", "--format", "json", "--reveal", secret_id
+        )
+        secret_data = json.loads(secret_data_raw[1])
+
+        if label == secret_data[secret_id].get("label"):
+            return secret_data[secret_id]["content"]["Data"]
+
+    raise SecretNotFoundError(f"Secret with label {label} not found.")
 
 
 @retry(
@@ -982,7 +1006,12 @@ async def clear_continous_writes(
 
 
 async def count_writes(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, unit: JujuUnit
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    unit: JujuUnit,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
@@ -991,8 +1020,8 @@ async def count_writes(
     )
 
     client = MongoClient(uri, directConnection=True)
-    db = client[DEFAULT_DATABASE_NAME]
-    test_collection = db[DEFAULT_COLLECTION_NAME]
+    db = client[db_name]
+    test_collection = db[coll_name]
     count = test_collection.count_documents({})
     client.close()
     return count
