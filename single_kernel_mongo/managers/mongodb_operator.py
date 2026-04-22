@@ -688,8 +688,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
-        # If we had an IP change, we must restart.
-        self.rolling_restart_charm_services(force=False)
+        # If we had an IP change, we must restart
+        if self.state.db_initialised:
+            self.rolling_restart_charm_services(force=False)
 
         if not self.charm.unit.is_leader():
             return
