@@ -706,6 +706,8 @@ class CharmState(Object, StatusesStateProtocol):
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
                 members = mongos.get_shard_members()
+        except FileNotFoundError:  # No such file or directory: '/var/snap/charmed-mongodb/current/etc/mongod/external-cert.pem'
+            return False
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,
