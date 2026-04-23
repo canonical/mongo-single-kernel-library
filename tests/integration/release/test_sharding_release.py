@@ -309,16 +309,11 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
         f"{CONFIG_SERVER_APP_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_BIS_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, CONFIG_SERVER_APP_NAME],
-        timeout=DEPLOYMENT_TIMEOUT,
-        status="active",
-    )
-
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
     )
+
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_BIS_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, CONFIG_SERVER_APP_NAME],
         timeout=DEPLOYMENT_TIMEOUT,
