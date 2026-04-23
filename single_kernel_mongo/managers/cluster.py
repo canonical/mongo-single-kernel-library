@@ -362,6 +362,7 @@ class ClusterRequirer(Object):
         """Callback use during update mongos and restart rolling operation."""
         try:
             self.update_mongos_and_restart()
+            return OperationResult.RELEASE
         except (
             DeferrableError,
             DeferrableFailedHookChecksError,

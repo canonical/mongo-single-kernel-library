@@ -666,7 +666,7 @@ class ShardManager(Object, ManagerStatusProtocol):
     def shard_restart_on_keyfile_callback(self) -> OperationResult:
         """Shard restart on keyfile callback."""
         try:
-            self.restart_charm_services(force=True)
+            self.dependent.restart_charm_services(force=True)
         except WorkloadServiceError:
             return OperationResult.RELEASE
         except DeferrableError:

@@ -186,12 +186,12 @@ class TLSManager(ManagerStatusProtocol):
 
         if actual_ca is not None:
             actual_ca = "\n".join(actual_ca)
-            actual_ca = actual_ca.strip()
+            stripped_actual_ca = actual_ca.strip()
         if actual_pem is not None:
             actual_pem = "\n".join(actual_pem)
-            actual_pem = actual_pem.strip()
+            stripped_actual_pem = actual_pem.strip()
 
-        return actual_ca != expected_ca or actual_pem != expected_pem
+        return stripped_actual_ca != expected_ca or stripped_actual_pem != expected_pem
 
     def reconcile_tls_files(self) -> bool:
         """Ensure TLS files on disk match the current TLS secret state."""
