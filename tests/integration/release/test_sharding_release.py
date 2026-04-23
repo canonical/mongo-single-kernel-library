@@ -250,9 +250,12 @@ async def test_integrate_with_ldap(ops_test: OpsTest, substrate: Substrate):
     """Tests that we can integrate with LDAP without losing data."""
     assert ops_test.model
     await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_APP_NAME}:ldap")
     await ops_test.model.integrate(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_APP_NAME}:ldap-certificate-transfer"
     )
     # Create the roles on MongoDB
     await create_mongodb_user_roles(
@@ -301,7 +304,21 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
             MONGOS_BIS_APP_NAME,
         ],
     )
+    await ops_test.model.integrate(
+        f"{MONGOS_BIS_APP_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}",
+    )
 
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_BIS_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, CONFIG_SERVER_APP_NAME],
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
+    )
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
+    )
     await ops_test.model.wait_for_idle(
         apps=[MONGOS_BIS_APP_NAME, CONTINUOUS_WRITE_APPLICATION_BIS, CONFIG_SERVER_APP_NAME],
         timeout=DEPLOYMENT_TIMEOUT,
@@ -378,6 +395,21 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         applications=[
             MONGOS_TER_APP_NAME,
         ],
+    )
+    await ops_test.model.integrate(
+        f"{MONGOS_BIS_APP_NAME}",
+        f"{CONFIG_SERVER_APP_NAME}",
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_TER_APP_NAME, READER_APPLICATION, CONFIG_SERVER_APP_NAME],
+        timeout=DEPLOYMENT_TIMEOUT,
+        status="active",
+    )
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
     )
 
     await ops_test.model.wait_for_idle(
