@@ -1,0 +1,45 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  config-server/1 [idle] active: Primary.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: Primary.
+  shard-two/0 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:13:52Z
+
+App               Version  Status   Scale  Charm             Channel      Rev  Address         Exposed  Message
+config-server     6.0.24   active       2  mongodb-k8s                      0  10.152.183.138  no       
+continuous-write           waiting      1  continuous-write                 0  10.152.183.232  no       
+s3-integrator              active       1  s3-integrator     latest/edge  538  10.152.183.50   no       
+shard-one         6.0.24   active       2  mongodb-k8s                      1  10.152.183.39   no       
+shard-two         6.0.24   active       1  mongodb-k8s                      2  10.152.183.149  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.14         
+config-server/1      active    idle   10.1.53.15         Primary.
+continuous-write/0*  waiting   idle   10.1.53.29         
+s3-integrator/0*     active    idle   10.1.53.28         
+shard-one/0*         active    idle   10.1.53.21         
+shard-one/1          active    idle   10.1.53.23         Primary.
+shard-two/0*         active    idle   10.1.53.27         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 01:58:59 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e97ce2ba75094d18b0c877, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010211409999101306>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012641160001294338>]>
+unit-shard-one-0: 01:59:03 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e97ce6ba75094d18b0c878, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005046669998591824>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0014894529999764927>]>
+unit-shard-one-0: 01:59:33 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e97d045e7cb9b3ee02a6d4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016060079999533627>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013388679999479791>]>
+unit-shard-one-0: 01:59:37 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69e97d085e7cb9b3ee02a6d5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004454480001641059>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006841859999440203>]>
+unit-config-server-0: 02:03:50 ERROR unit.config-server/0.juju-log s3-credentials:15: cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/69e97e04fdb82036d58413fd [config-server/config-server-0.config-server-endpoints:27017]
+, stderr=None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
