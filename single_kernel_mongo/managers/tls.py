@@ -181,17 +181,13 @@ class TLSManager(ManagerStatusProtocol):
             ca_path = self.workload.paths.ext_ca_file
             pem_path = self.workload.paths.ext_pem_file
 
-        actual_ca = self.workload.read(ca_path) if self.workload.exists(ca_path) else None
-        actual_pem = self.workload.read(pem_path) if self.workload.exists(pem_path) else None
+        raw_ca = self.workload.read(ca_path) if self.workload.exists(ca_path) else None
+        raw_pem = self.workload.read(pem_path) if self.workload.exists(pem_path) else None
 
-        if actual_ca is not None:
-            actual_ca = "\n".join(actual_ca)
-            stripped_actual_ca = actual_ca.strip()
-        if actual_pem is not None:
-            actual_pem = "\n".join(actual_pem)
-            stripped_actual_pem = actual_pem.strip()
+        actual_ca = "\n".join(raw_ca).strip() if raw_ca is not None else None
+        actual_pem = "\n".join(raw_pem).strip() if raw_pem is not None else None
 
-        return stripped_actual_ca != expected_ca or stripped_actual_pem != expected_pem
+        return actual_ca != expected_ca or actual_pem != expected_pem
 
     def reconcile_tls_files(self) -> bool:
         """Ensure TLS files on disk match the current TLS secret state."""
