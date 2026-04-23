@@ -1184,10 +1184,7 @@ async def count_writes(
         hosts=[host],
         username=username,
     )
-    if mongos:
-        container = "mongos"
-    else:
-        container = "mongod"
+    container = "mongod"
     if tls:
         ca_file = await scp_file_preserve_ctime(
             ops_test, substrate, unit.name, external_cert_path(substrate), container

@@ -289,6 +289,17 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
         f"{MONGOS_BIS_APP_NAME}",
         f"{CONTINUOUS_WRITE_APPLICATION_BIS}",
     )
+    await integrate_apps_with_tls(
+        ops_test,
+        applications=[
+            MONGOS_BIS_APP_NAME,
+        ],
+    )
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
+    )
     await ops_test.model.wait_for_idle(
         apps=[
             MONGOS_BIS_APP_NAME,
@@ -298,20 +309,10 @@ async def test_integrate_second_client(ops_test: OpsTest, application_path: str)
         timeout=TIMEOUT,
         raise_on_blocked=False,
     )
-    await integrate_apps_with_tls(
-        ops_test,
-        applications=[
-            MONGOS_BIS_APP_NAME,
-        ],
-    )
+
     await ops_test.model.integrate(
         f"{MONGOS_BIS_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
-    )
-
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
-    await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
     )
 
     await ops_test.model.wait_for_idle(
@@ -376,6 +377,17 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         f"{MONGOS_TER_APP_NAME}",
         f"{READER_APPLICATION}",
     )
+    await integrate_apps_with_tls(
+        ops_test,
+        applications=[
+            MONGOS_TER_APP_NAME,
+        ],
+    )
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
+    )
     await ops_test.model.wait_for_idle(
         apps=[
             MONGOS_TER_APP_NAME,
@@ -385,26 +397,9 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         timeout=TIMEOUT,
         raise_on_blocked=False,
     )
-    await integrate_apps_with_tls(
-        ops_test,
-        applications=[
-            MONGOS_TER_APP_NAME,
-        ],
-    )
     await ops_test.model.integrate(
         f"{MONGOS_BIS_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[MONGOS_TER_APP_NAME, READER_APPLICATION, CONFIG_SERVER_APP_NAME],
-        timeout=DEPLOYMENT_TIMEOUT,
-        status="active",
-    )
-
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
-    await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
     )
 
     await ops_test.model.wait_for_idle(
@@ -486,7 +481,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
     leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
     # count total writes
     first_number_writes = await count_writes(
-        ops_test, substrate, CONFIG_SERVER_APP_NAME, leader_unit
+        ops_test, substrate, CONFIG_SERVER_APP_NAME, leader_unit, tls=True, mongos=True
     )
     second_number_writes = await count_writes(
         ops_test,
@@ -495,6 +490,8 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         leader_unit,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
+        mongos=True,
+        tls=True,
     )
     assert first_number_writes == first_reported_writes
     assert second_number_writes == second_reported_writes
@@ -518,7 +515,7 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         )
 
     first_number_writes_after_restore = await count_writes(
-        ops_test, substrate, CONFIG_SERVER_APP_NAME, leader_unit
+        ops_test, substrate, CONFIG_SERVER_APP_NAME, leader_unit, tls=True, mongos=True
     )
     second_number_writes_after_restore = await count_writes(
         ops_test,
@@ -527,6 +524,8 @@ async def tests_restore_backup(ops_test: OpsTest, substrate: Substrate):
         leader_unit,
         db_name=SECOND_DB_NAME,
         coll_name=SECOND_COLL_NAME,
+        tls=True,
+        mongos=True,
     )
 
     assert first_number_writes_after_restore < first_number_writes
