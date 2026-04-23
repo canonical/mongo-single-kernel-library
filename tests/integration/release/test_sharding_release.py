@@ -199,14 +199,6 @@ async def test_deploy_apps(
         timeout=TIMEOUT,
         raise_on_blocked=False,
     )
-
-
-@pytest.mark.abort_on_fail
-async def test_integrate_with_tls(
-    ops_test: OpsTest,
-):
-    """Tests that we can integrate with TLS, and then add a writer and start writing."""
-    assert ops_test.model
     await ops_test.model.integrate(
         f"{MONGOS_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
@@ -215,12 +207,20 @@ async def test_integrate_with_tls(
         apps=[
             CONTINUOUS_WRITE_APPLICATION,
             MONGOS_APP_NAME,
-            SHARD_ONE_APP_NAME,
             CONFIG_SERVER_APP_NAME,
         ],
+        status="active",
         idle_period=20,
         timeout=TIMEOUT,
     )
+
+
+@pytest.mark.abort_on_fail
+async def test_integrate_with_tls(
+    ops_test: OpsTest,
+):
+    """Tests that we can integrate with TLS, and then add a writer and start writing."""
+    assert ops_test.model
 
     await integrate_apps_with_tls(
         ops_test,
