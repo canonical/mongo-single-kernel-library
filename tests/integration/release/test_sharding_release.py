@@ -384,9 +384,9 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         ],
     )
 
-    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_BIS_APP_NAME}:ldap")
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{MONGOS_TER_APP_NAME}:ldap")
     await ops_test.model.integrate(
-        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_BIS_APP_NAME}:ldap-certificate-transfer"
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{MONGOS_TER_APP_NAME}:ldap-certificate-transfer"
     )
     await ops_test.model.wait_for_idle(
         apps=[
@@ -398,7 +398,7 @@ async def test_integrate_third_client(ops_test: OpsTest, application_path: str):
         raise_on_blocked=False,
     )
     await ops_test.model.integrate(
-        f"{MONGOS_BIS_APP_NAME}",
+        f"{MONGOS_TER_APP_NAME}",
         f"{CONFIG_SERVER_APP_NAME}",
     )
 
