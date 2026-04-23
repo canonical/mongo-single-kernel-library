@@ -9,7 +9,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
+from ops.charm import (
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationCreatedEvent,
+    SecretChangedEvent,
+)
 from ops.framework import Object
 
 from single_kernel_mongo.config.statuses import MongosStatuses
@@ -17,6 +22,7 @@ from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
+    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
     WorkloadServiceError,
@@ -136,6 +142,9 @@ class ClusterMongosEventHandler(Object):
         self.framework.observe(
             self.charm.on[self.relation_name.value].relation_broken, self._on_relation_broken
         )
+        self.framework.observe(
+            getattr(self.charm.on, "secret_changed"), self._handle_changed_secrets
+        )
 
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
@@ -159,6 +168,26 @@ class ClusterMongosEventHandler(Object):
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
+    def _handle_changed_secrets(self, event: SecretChangedEvent):
+        """SecretChanged event handler, which is used to propagate the updated passwords."""
+        try:
+            self.manager.handle_secret_changed(event.secret.label or "")
+        except (DeferrableError, DeferrableFailedHookChecksError):
+            event.defer()
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except WaitingForSecretsError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            self.dependent.state.statuses.add(
+                MongosStatuses.WAITING_FOR_SECRETS.value,
+                scope="unit",
+                component=self.charm.name,
+            )
+        except WorkloadServiceError:
+            # Some status was already set and a log was already displayed in
+            # `restart_charm_services`
+            return
+
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
 
@@ -171,9 +200,9 @@ class ClusterMongosEventHandler(Object):
             DeferrableFailedHookChecksError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except (NonDeferrableFailedHookChecksError, WaitingForSecretsError) as e:
+        except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except WaitingForSecretsError as e:
+        except (WaitingForSecretsError, MissingCredentialsError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             self.dependent.state.statuses.add(
                 MongosStatuses.WAITING_FOR_SECRETS.value,

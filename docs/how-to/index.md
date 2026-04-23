@@ -1,4 +1,5 @@
 (how-to)=
+
 # How-to guides
 
 Key processes and common tasks for deploying, configuring, and operating Charmed MongoDB.
@@ -67,8 +68,8 @@ Upgrade your MongoDB applications to a new minor revision in-place, or across ma
 :maxdepth: 3
 
 Upgrade <upgrade/index>
+Encryption at rest <encryption-at-rest>
 ```
-
 ## Delete your deployment
 
 Securely decomission your deployment to avoid exposing sensitive data:
