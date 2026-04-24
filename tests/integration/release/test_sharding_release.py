@@ -542,19 +542,31 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
     uri = await generate_mongodb_ldap_client(
         ops_test,
         substrate,
-        CONFIG_SERVER_APP_NAME,
+        MONGOS_APP_NAME,
         database=DEFAULT_DATABASE_NAME,
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
         password="dogood",
     )
 
     result = await execute_on_mongod(
-        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.insertOne({number: 1})", tls=True
+        ops_test,
+        MONGOS_APP_NAME,
+        substrate,
+        uri,
+        "db.test.insertOne({number: 1})",
+        tls=True,
+        container_name="mongos",
     )
     assert result.succeeded, "Failed to insert value with LDAP client"
 
     result = await execute_on_mongod(
-        ops_test, CONFIG_SERVER_APP_NAME, substrate, uri, "db.test.findOne({number: 1})", tls=True
+        ops_test,
+        MONGOS_APP_NAME,
+        substrate,
+        uri,
+        "db.test.findOne({number: 1})",
+        tls=True,
+        container_name="mongos",
     )
     assert result.succeeded, "Failed to read value with LDAP client"
 
@@ -565,8 +577,8 @@ async def test_valid_reads(ops_test: OpsTest):
     reads, failed_reads = await stop_continuous_reads(
         ops_test,
         READER_APPLICATION,
-        db_name=DEFAULT_DATABASE_NAME,
-        coll_name=DEFAULT_COLLECTION_NAME,
+        db_name=SECOND_DB_NAME,
+        coll_name=SECOND_COLL_NAME,
     )
     assert reads > 1000
     # We can allow for a few errors during restore.
