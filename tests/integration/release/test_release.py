@@ -43,6 +43,7 @@ from tests.integration.helpers.ldap import (
     create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
+    teardown_offers,
 )
 from tests.integration.helpers.tls import (
     TLS_CERTIFICATES_APP_NAME,
@@ -369,3 +370,19 @@ async def test_valid_reads(ops_test: OpsTest):
     assert reads > 1000
     # We can allow for a few errors during restore for example
     assert len(failed_reads) < 50
+
+
+@pytest.mark.abort_on_fail
+async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
+    """Teardown of the whole offers and relations."""
+    app_name = await get_app_name(ops_test)
+    assert app_name
+
+    # Removing the second relation should go into active
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
+    )
+    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
+
+    # Remove the offers and tear down deployment
+    await teardown_offers(ops_test, kubernetes_model)

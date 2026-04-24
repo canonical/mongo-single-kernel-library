@@ -42,6 +42,7 @@ from tests.integration.helpers.ldap import (
     create_mongodb_user_roles,
     deploy_glauth,
     generate_mongodb_ldap_client,
+    teardown_offers,
 )
 from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
@@ -584,3 +585,34 @@ async def test_valid_reads(ops_test: OpsTest):
     assert reads > 1000
     # We can allow for a few errors during restore.
     assert len(failed_reads) < 10
+
+
+@pytest.mark.abort_on_fail
+async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
+    for app_name in (MONGOS_APP_NAME, MONGOS_BIS_APP_NAME, MONGOS_TER_APP_NAME):
+        await ops_test.model.applications[app_name].remove_relation(
+            f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
+        )
+        await ops_test.model.applications[app_name].remove_relation(
+            f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
+        )
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
+    )
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            MONGOS_APP_NAME,
+            MONGOS_BIS_APP_NAME,
+            MONGOS_TER_APP_NAME,
+        ],
+        status="active",
+        timeout=TIMEOUT,
+    )
+    await teardown_offers(ops_test, kubernetes_model)
