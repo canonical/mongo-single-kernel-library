@@ -1,0 +1,47 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: Primary.
+  config-server/1 [executing] active: 
+  shard-one/0 [executing] active: Primary.
+  shard-one/1 [executing] active: 
+  shard-two/0 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/1 [executing] maintenance: Starting MongoDB.
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-one/0 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:33:38Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.10   active       2  mongodb-k8s                  0  10.152.183.225  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.23   no       
+s3-integrator              active       1  s3-integrator     1/edge   538  10.152.183.176  no       
+shard-one         8.0.10   active       2  mongodb-k8s                  1  10.152.183.211  no       
+shard-two         8.0.10   active       1  mongodb-k8s                  2  10.152.183.213  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.17         Primary.
+config-server/1      active    idle   10.1.53.19         
+continuous-write/0*  waiting   idle   10.1.53.36         
+s3-integrator/0*     active    idle   10.1.53.35         
+shard-one/0*         active    idle   10.1.53.27         Primary.
+shard-one/1          active    idle   10.1.53.29         Primary.
+shard-two/0*         active    idle   10.1.53.34         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:21:20 ERROR unit.config-server/0.juju-log s3-credentials:15: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/69ead39ef24e154adacb0900 [config-server/config-server-0.config-server-endpoints:27017]
+, stderr=None
+unit-s3-integrator-0: 02:32:14 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "b8196255-9582-4292-8700-05aa7cfff674:r#15#config-server": settings b8196255-9582-4292-8700-05aa7cfff674:r#15#config-server not found (not found)
+unit-config-server-1: 02:32:16 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "b8196255-9582-4292-8700-05aa7cfff674:r#15#s3-integrator": settings b8196255-9582-4292-8700-05aa7cfff674:r#15#s3-integrator not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
