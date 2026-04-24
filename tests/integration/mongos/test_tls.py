@@ -180,6 +180,12 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
 async def test_tls_reenabled(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test that mongos can enable TLS after being integrated to cluster ."""
     await toggle_tls_mongos(ops_test, enable=True)
+    await ops_test.model.wait_for_idle(
+        apps=[MONGOS_APP_NAME, TLS_CERTIFICATES_APP_NAME],
+        idle_period=60,
+        status="active",
+        timeout=TIMEOUT,
+    )
     await assert_mongos_tls_enabled(ops_test, substrate)
 
 

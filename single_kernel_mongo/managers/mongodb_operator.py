@@ -860,11 +860,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
-        if self.model.get_relation("rollingops-peers") is None:
+        rolling_relation = self.model.get_relation("rollingops-peers")
+        if rolling_relation is None:
             logger.info("ROLLING OPS RELATION DOES NOT EXISTS")
             return
         planned_units = self.model.app.planned_units()
-        units_in_relation = len(self.model.get_relation("rollingops-peers").units)
+        units_in_relation = len(rolling_relation.units)
         logger.info("PLANNED UNITS %s, UNITS IN RELATIONS %s", planned_units, units_in_relation)
         if planned_units != (units_in_relation + 1):
             raise NotReadyError("Waiting for other units to join the rollingops peer relation.")

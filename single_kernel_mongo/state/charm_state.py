@@ -16,6 +16,7 @@ from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
 from ops.hookcmds import Network, network_get
 from pymongo.errors import (
     AutoReconnect,
+    ConfigurationError,
     NotPrimaryError,
     OperationFailure,
     ServerSelectionTimeoutError,
@@ -716,7 +717,7 @@ class CharmState(Object, StatusesStateProtocol):
             ):
                 return False
             raise
-        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError):
+        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError, ConfigurationError):
             # Connection refused, - this occurs when internal membership is not in sync across the
             # cluster (i.e. TLS + KeyFile).
             return False
