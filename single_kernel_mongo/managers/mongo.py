@@ -101,7 +101,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                     component=self.charm.name,
                 )
 
-    def mongod_ready(self, uri: str | None = None, direct: bool = True) -> bool:
+    def mongod_ready(self, uri: str | None = None, direct: bool = True, should_retry=True) -> bool:
         """Is MongoDB ready and running?
 
         Pass direct=True, when checking if a *single replica* is ready.
@@ -118,7 +118,8 @@ class MongoManager(Object, ManagerStatusProtocol):
         actual_uri = f"{actual_uri}/?{urlencode(params)}"
         try:
             with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
-                return direct_mongo.is_ready
+                # return direct_mongo.is_ready
+                return direct_mongo.is_ready_with_optional_retry(should_retry)
         except FileNotFoundError as e:  # restart hasn't happened and we do not have /var/snap/charmed-mongodb/current/etc/mongod/external-cert.pem
             logger.error("%s", e)
             return False
@@ -511,7 +512,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.remove_replset_member(self.state.unit_peer_data.internal_address)
 
-    def process_added_units(self) -> None:
+    def process_added_units(self, should_retry=True) -> None:
         """Adds units to replica set."""
         with MongoConnection(self.state.mongo_config) as mongo:
             replset_members = mongo.get_replset_members()
@@ -523,7 +524,7 @@ class MongoManager(Object, ManagerStatusProtocol):
 
             for member in config_hosts - replset_members:
                 logger.debug("Adding %s to replica set", member)
-                if not self.mongod_ready(uri=f"mongodb://{member}"):
+                if not self.mongod_ready(uri=f"mongodb://{member}", should_retry=should_retry):
                     logger.debug("not reconfiguring: %s is not ready yet.", member)
                     raise NotReadyError(f"{member} is not ready yet.")
                 mongo.add_replset_member(member)
@@ -555,7 +556,7 @@ class MongoManager(Object, ManagerStatusProtocol):
         if scope == "app":
             return []
 
-        if not self.mongod_ready():
+        if not self.mongod_ready(should_retry=False):
             return [MongodStatuses.NOT_READY.value]
 
         try:

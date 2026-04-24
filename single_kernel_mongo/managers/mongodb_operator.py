@@ -217,8 +217,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.rollingops_manager = RollingOpsManager(
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
-            etcd_relation_name=RelationNames.ETCD.value,
-            cluster_id="mongodb",
             callback_targets={
                 "restart_charm_services_callback": self.restart_charm_services_callback,
                 "shard_restart_on_keyfile_callback": self.shard_manager.shard_restart_on_keyfile_callback,
@@ -862,6 +860,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
+        if self.model.get_relation("rollingops-peers") is None:
+            logger.info("ROLLING OPS RELATION DOES NOT EXISTS")
+            return
+        planned_units = self.model.app.planned_units()
+        units_in_relation = len(self.model.get_relation("rollingops-peers").units)
+        logger.info("PLANNED UNITS %s, UNITS IN RELATIONS %s", planned_units, units_in_relation)
+        if planned_units != (units_in_relation + 1):
+            raise NotReadyError("Waiting for other units to join the rollingops peer relation.")
+        # if not self.rollingops_manager.is_ready():
+        #    raise NotReadyError("Waiting for other units to join the rollingops peer relation.")
+
         if (
             self.state.enable_encryption_at_rest
             and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
@@ -879,8 +888,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             raise UpgradeInProgressError
 
         try:
+            should_retry = not self.state.tls.is_tls_enabled(
+                internal=True
+            ) and not self.state.tls.is_tls_enabled(internal=False)
             # Adds the newly added/updated units.
-            self.mongo_manager.process_added_units()
+            self.mongo_manager.process_added_units(should_retry)
         except (NotReadyError, PyMongoError) as e:
             logger.error("Not reconfiguring: error=%s", e)
             self.state.statuses.add(
@@ -1043,7 +1055,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.prepare_storage()
 
     @override
-    def update_status(self) -> None:
+    def update_status(self) -> None:  # noqa: C901 # We know, this function is complex.
         """Status update Handler."""
         if (
             self.state.enable_encryption_at_rest
@@ -1066,7 +1078,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             logger.info("Early return, cluster mismatch version.")
             return
 
-        if not self.mongo_manager.mongod_ready():
+        if not self.mongo_manager.mongod_ready(should_retry=False):
             logger.info("Mongod not ready.")
             return
 
@@ -1082,6 +1094,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Failed to add shard")
             except NotDrainedError:
                 logger.warning("Still draining shard.")
+            except NotReadyError:
+                logger.info("Not ready.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""

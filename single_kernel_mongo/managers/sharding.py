@@ -467,6 +467,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
+        except FileNotFoundError:
+            return False  # /var/snap/charmed-mongodb/current/etc/mongod/external-cert.pem
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,
@@ -973,6 +975,8 @@ class ShardManager(Object, ManagerStatusProtocol):
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
+        except FileNotFoundError:
+            return False  # /var/snap/charmed-mongodb/current/etc/mongod/external-cert.pem
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,

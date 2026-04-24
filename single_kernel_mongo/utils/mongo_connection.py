@@ -115,6 +115,28 @@ class MongoConnection:
 
         return True
 
+    def is_ready_with_optional_retry(self, retry: bool = True) -> bool:
+        """Check if MongoDB is ready.
+
+        Args:
+            retry: Whether to retry for up to 60 seconds.
+        """
+        try:
+            if not retry:
+                self.client.admin.command("ping")
+                return True
+
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    self.client.admin.command("ping")
+
+        except RetryError:
+            return False
+        except Exception:
+            return False
+
+        return True
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_fixed(5),

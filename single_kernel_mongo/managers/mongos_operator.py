@@ -107,8 +107,6 @@ class MongosOperator(OperatorProtocol, Object):
         self.rollingops_manager = RollingOpsManager(
             charm=charm,
             peer_relation_name="rollingops-peers",
-            etcd_relation_name="etcd",
-            cluster_id="mongodb",
             callback_targets={
                 "restart_charm_services_callback": self.restart_charm_services_callback,
                 "update_mongos_and_restart_callback": self.cluster_manager.update_mongos_and_restart_callback,
