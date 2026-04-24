@@ -378,9 +378,11 @@ async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     app_name = await get_app_name(ops_test)
     assert app_name
 
-    # Removing the second relation should go into active
     await ops_test.model.applications[app_name].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{app_name}:ldap"
+    )
+    await ops_test.model.applications[app_name].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
     )
     await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=TIMEOUT)
 
