@@ -223,6 +223,8 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
 
     units = ops_test.model.applications[db_app_name].units
 
+    await ops_test.model.wait_for_idle(apps=[db_app_name], timeout=TIMEOUT, idle_period=60)
+
     await ops_test.model.block_until(
         *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
     )

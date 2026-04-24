@@ -895,7 +895,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units(should_retry)
         except (NotReadyError, PyMongoError) as e:
-            logger.error("Not reconfiguring: error=%s", e)
+            logger.warning("Not reconfiguring: error=%s", e)
             self.state.statuses.add(
                 MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
             )
