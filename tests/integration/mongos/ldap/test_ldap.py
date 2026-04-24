@@ -2,7 +2,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from pathlib import Path
 
 import pytest
 from juju.model import Model
@@ -93,7 +92,11 @@ async def test_build_and_deploy_mongodb_cluster(
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongos(
-    ops_test: OpsTest, mongos_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest,
+    mongos_charm: str,
+    substrate: Substrate,
+    mongos_resource: dict[str, str],
+    base_app_name: str,
 ) -> None:
     """Deploys mongos and data integrator, and integrates both.
 
@@ -106,7 +109,7 @@ async def test_build_and_deploy_mongos(
             ops_test=ops_test,
             charm=mongos_charm,
             substrate=substrate,
-            mongod_resource=mongod_resource,
+            mongod_resource=mongos_resource,
             app_name=base_app_name,
             num_units=1,
             subordinate=(substrate == "lxd"),
@@ -250,10 +253,10 @@ async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     await ops_test.model.applications[app_name].remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
     )
-    await ops_test.model.applications[app_name].remove_relation(
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
     )
-    await ops_test.model.applications[app_name].remove_relation(
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 

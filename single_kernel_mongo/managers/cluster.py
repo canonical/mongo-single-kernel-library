@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
@@ -234,6 +234,7 @@ class ClusterProvider(Object):
             )
 
 
+@final
 class ClusterRequirer(Object):
     """Manage relations between the config server and mongos router on the mongos side."""
 
@@ -272,6 +273,7 @@ class ClusterRequirer(Object):
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
+
         if self.dependent.refresh_in_progress:
             logger.warning(
                 "Processing client applications is not supported during an upgrade. The charm may be in a broken, unrecoverable state."
@@ -309,6 +311,11 @@ class ClusterRequirer(Object):
     def update_mongos_and_restart(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
+
+        # Wait for
+        if not self.state.cluster.username or not self.state.cluster.password:
+            raise WaitingForSecretsError("Waiting for username and password.")
+
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
@@ -493,7 +500,7 @@ class ClusterRequirer(Object):
     def mongos_and_config_server_peer_tls_status(self) -> tuple[bool, bool]:
         """Returns the peer TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
-            mongos_has_tls = self.state.peer_tls_relation is not None
+            mongos_has_tls = self.state.tls.peer_enabled
             config_server_has_tls = self.state.cluster.internal_ca_secret is not None
             return mongos_has_tls, config_server_has_tls
 
@@ -502,7 +509,7 @@ class ClusterRequirer(Object):
     def mongos_and_config_server_client_tls_status(self) -> tuple[bool, bool]:
         """Returns the client TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
-            mongos_has_tls = self.state.client_tls_relation is not None
+            mongos_has_tls = self.state.tls.client_enabled
             config_server_has_tls = self.state.cluster.external_ca_secret is not None
             return mongos_has_tls, config_server_has_tls
 
