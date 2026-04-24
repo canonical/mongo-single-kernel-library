@@ -546,6 +546,7 @@ async def test_ldap_user_can_write(ops_test: OpsTest, substrate: Substrate):
         database=DEFAULT_DATABASE_NAME,
         username="cn=johndoe,ou=superheroes,ou=users,dc=glauth,dc=com",
         password="dogood",
+        mongos=True,
     )
 
     result = await execute_on_mongod(
