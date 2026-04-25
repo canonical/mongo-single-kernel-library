@@ -5,20 +5,8 @@ name: Release to candidate promotion train
 on:
   workflow_dispatch:
     inputs:
-      mongodb:
-        description: JSON mapping architecture to revision for MongoDB VM
-        required: true
-        type: string
-      mongos:
-        description: JSON mapping architecture to revision for Mongos VM
-        required: true
-        type: string
-      mongodb-k8s:
-        description: JSON mapping architecture to revision for MongoDB K8S VM
-        required: true
-        type: string
-      mongos-k8s:
-        description: JSON mapping architecture to revision for Mongos K8S VM
+      single-kernel-version:
+        description: "A pip package version of single kernel (eg: 1.8.42)"
         required: true
         type: string
 
@@ -28,60 +16,57 @@ jobs:
     name: Trigger release CI (Airflow)
     runs-on: ubuntu-latest
     steps:
-      - name: Build JSON Document
-        id: build-json
+      - name: Validate input
+        id: validate-input
         shell: python
         env:
-          MONGODB: ${{ inputs.mongodb }}
-          MONGOS: ${{ inputs.mongos }}
-          MONGODB_K8S: ${{ inputs.mongodb-k8s }}
-          MONGOS_K8S: ${{ inputs.mongos-k8s }}
+          PIP_VERSION: ${{ inputs.single-kernel-version }}
         run: |
-          import json
+          import re
           import os
-          import sys
-          output = {}
-          ARCHITECTURES = ("amd64", "arm64")
 
-          for name, input in [
-              ("mongodb", os.environ["MONGODB"]),
-              ("mongos", os.environ["MONGOS"]),
-              ("mongodb-k8s", os.environ["MONGODB_K8S"]),
-              ("mongos-k8s", os.environ["MONGOS_K8S"]),
-          ]:
-              try:
-                  data = json.loads(input)
-              except Exception:
-                  print(f"Invalid data for {name}: {input} (Impossible to JSON decode)")
-                  sys.exit(1)
-              if not isinstance(data, dict):
-                  print(f"Invalid data for {name}: {data} (Not a dictionary)")
-                  sys.exit(1)
-              if any(data.get(arch, None) is None for arch in ARCHITECTURES):
-                  print(f"Invalid data for {name}: {data} (Missing architecture)")
-                  sys.exit(1)
-              output[name] = data
+          pip_package_version = os.environ["PIP_VERSION"]
+          VERSION_REGEX = re.compile(r"\d.\d.\d+")
 
-          full_output = f"charms={json.dumps(output)}"
-          print(f"Computed output: {full_output}")
+          if not VERSION_REGEX.match(pip_package_version):
+              raise ValueError(f"Invalid version received: {pip_package_version}")
+      - name: Check version exists
+        id: check-version
+        env:
+          PIP_VERSION: ${{ inputs.single-kernel-version }}
+        run: |
+          set -euo pipefail
+          DEP_NAME="mongo-charms-single-kernel"
+          URL="https://pypi.org/pypi/${DEP_NAME}/${PIP_VERSION}/json"
+          for i in {1..30}; do
+            if curl -fsS "$URL" >/dev/null; then
+              echo "Found ${DEP_NAME}==${VERSION_NUMBER} on PyPI."
+              exit 0
+            fi
+            echo "Maybe transient error (attempt $i/30). Sleeping..."
+            sleep 60
+          done
 
-          with open(os.environ["GITHUB_OUTPUT"], "a") as file:
-            file.write(full_output)
+          echo "Timed out waiting for ${DEP_NAME}==${PIP_VERSION} on PyPI."
+          echo "Is the revision available on PyPI ?"
+          exit 1
 
       - name: Trigger Airflow DAG
+        env:
+          PIP_VERSION: ${{ inputs.single-kernel-version }}
         run: |
           #shellcheck disable=SC2016
           response=$(curl -s -w "\n%{http_code}" -X POST \
             'https://airflow.data-platform.ps7.canonical.com/api/v2/dags/mongodb_8/dagRuns' \
             -H 'Content-Type: application/json' \
             -H 'Authorization: Bearer ${{ secrets.AIRFLOW_API_TOKEN }}' \
-            -d '{
-              "dag_run_id": "promote-${{ github.run_id }}",
-              "logical_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-              "conf": {
-                "charms": ${{ steps.build-json.outputs.charms }}
+            -d "{
+              \"dag_run_id\": \"promote-${{ github.run_id }}\",
+              \"logical_date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+              \"conf\": {
+                \"pip_version\": \"${PIP_VERSION}\"
               }
-            }')
+            }")
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
           echo "$body"
