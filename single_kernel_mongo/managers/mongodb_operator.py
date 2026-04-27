@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs.rollingops import RollingOpsManager, RollingOpsSyncLockError
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
@@ -34,7 +35,11 @@ from single_kernel_mongo.config.models import (
     PasswordManagementState,
     VaultConfigurationState,
 )
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    PeerRelationNames,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import (
     BackupStatuses,
     CharmStatuses,
@@ -114,6 +119,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     validate_charm_user_password_config,
 )
 from single_kernel_mongo.utils.network_helpers import ip_addresses
+from single_kernel_mongo.utils.rollingops import MongoReplsetSyncLockBackend
 from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
@@ -181,6 +187,18 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.substrate,
             self.state,
             container,
+        )
+
+        sync_lock_backend = MongoReplsetSyncLockBackend(self.state)
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
+            etcd_relation_name=None,
+            cluster_id="mongodb",
+            callback_targets={},
+            sync_lock_targets={
+                "stop-replset-member": sync_lock_backend,
+            },
         )
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
@@ -993,20 +1011,25 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
-            # retries over a period of 10 minutes in an attempt to resolve race conditions it is
-            # not possible to defer in storage detached.
-            logger.debug(
+            logger.info(
                 "Removing %s from replica set",
                 self.state.unit_peer_data.internal_address,
             )
-            for attempt in Retrying(
-                stop=stop_after_attempt(600),
-                wait=wait_fixed(1),
-                reraise=True,
+            # When we remove member, to avoid issues when majority members is removed, we need to
+            # remove next member only when MongoDB forget the previous removed member.
+            with self.rollingops_manager.acquire_sync_lock(
+                backend_id="stop-replset-member",
+                timeout=600,
             ):
-                with attempt:
-                    # remove_replset_member retries for 60 seconds
-                    self.mongo_manager.remove_replset_member()
+                self.mongo_manager.remove_replset_member()
+
+        except TimeoutError:
+            logger.info(
+                "Timed out waiting to remove %s from replica set.",
+                self.charm.unit.name,
+            )
+        except RollingOpsSyncLockError as e:
+            logger.error("Failed to acquire sync lock to remove replica set. %s", e)
         except NotReadyError:
             logger.info(
                 "Failed to remove %s from replica set, another member is syncing",
@@ -1025,7 +1048,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.prepare_storage()
 
     @override
-    def update_status(self) -> None:
+    def update_status(self) -> None:  # noqa: C901
         """Status update Handler."""
         if (
             self.state.enable_encryption_at_rest
@@ -1064,6 +1087,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Failed to add shard")
             except NotDrainedError:
                 logger.warning("Still draining shard.")
+            except NotReadyError:
+                logger.warning("Not ready.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""
@@ -1136,8 +1161,35 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Update the replica set hosts and remove any unremoved replica from the config."""
         if not self.state.db_initialised:
             return
-        self.mongo_manager.process_unremoved_units()
+        self.process_unremoved_units()
         self.update_related_hosts()
+
+    def process_unremoved_units(self) -> None:
+        """Remove units from replica set."""
+        try:
+            with self.rollingops_manager.acquire_sync_lock(
+                backend_id="stop-replset-member",
+                timeout=3 * 60,
+            ):
+                with MongoConnection(self.state.mongo_config) as mongo:
+                    replset_members = mongo.get_replset_members()
+
+                    for member in replset_members - mongo.config.hosts:
+                        logger.info("Removing %s from replica set", member)
+                        mongo.remove_replset_member(member)
+
+        except TimeoutError:
+            logger.info("Deferring process_unremoved_units: another member is syncing")
+            raise
+        except RollingOpsSyncLockError as e:
+            logger.info("Deferring: sync lock error=%r", e)
+            raise NotReadyError from e
+        except NotReadyError:
+            logger.info("Deferring process_unremoved_units: another member is syncing")
+            raise
+        except PyMongoError as e:
+            logger.error("Deferring process_unremoved_units: error=%r", e)
+            raise
 
     def update_related_hosts(self) -> None:
         """Update the app relations that need to be made aware of the new set of hosts."""

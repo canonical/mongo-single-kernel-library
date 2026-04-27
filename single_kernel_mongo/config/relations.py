@@ -13,6 +13,7 @@ class PeerRelationNames(str, Enum):
     ROUTER_PEERS = "router-peers"
     STATUS_PEERS = "status-peers"
     LDAP_PEERS = "ldap-peers"
+    ROLLINGOPS_PEERS = "rollingops-peers"
 
 
 class RelationNames(str, Enum):

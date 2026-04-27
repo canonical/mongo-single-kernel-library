@@ -265,12 +265,6 @@ class MongoConnection:
 
         return rs_status_parsed
 
-    @retry(
-        stop=stop_after_attempt(20),
-        wait=wait_fixed(3),
-        reraise=True,
-        before=before_log(logger, logging.DEBUG),
-    )
     def remove_replset_member(self, hostname: str) -> None:
         """Remove member from replica set config inside MongoDB.
 
@@ -283,8 +277,6 @@ class MongoConnection:
         # When we remove member, to avoid issues when majority members is removed, we need to
         # remove next member only when MongoDB forget the previous removed member.
         if self.is_any_removing(rs_status):
-            # removing from replicaset is fast operation, lets @retry(3 times with a 5sec timeout)
-            # before giving up.
             raise NotReadyError
 
         # avoid downtime we need to reelect new primary if removable member is the primary.
