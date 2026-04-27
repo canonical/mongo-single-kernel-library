@@ -487,21 +487,6 @@ class MongoManager(Object, ManagerStatusProtocol):
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.set_replicaset_election_priority(priority=priority)
 
-    def process_unremoved_units(self) -> None:
-        """Remove units from replica set."""
-        with MongoConnection(self.state.mongo_config) as mongo:
-            try:
-                replset_members = mongo.get_replset_members()
-                for member in replset_members - mongo.config.hosts:
-                    logger.debug("Removing %s from replica set", member)
-                    mongo.remove_replset_member(member)
-            except NotReadyError:
-                logger.info("Deferring process_unremoved_units: another member is syncing")
-                raise
-            except PyMongoError as e:
-                logger.error("Deferring process_unremoved_units: error=%r", e)
-                raise
-
     def remove_replset_member(self) -> None:  # pragma: nocover
         """Remove a unit from the replicaset."""
         with MongoConnection(self.state.mongo_config) as mongo:

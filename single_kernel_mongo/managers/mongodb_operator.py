@@ -1197,10 +1197,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                         mongo.remove_replset_member(member)
 
         except TimeoutError:
-            logger.info("Deferring process_unremoved_units: another member is syncing")
+            logger.info("Deferring process_unremoved_units: timed out waiting for lock")
             raise
         except RollingOpsSyncLockError as e:
-            logger.info("Deferring: sync lock error=%r", e)
+            logger.info("Deferring process_unremoved_units: sync lock error=%r", e)
             raise NotReadyError from e
         except NotReadyError:
             logger.info("Deferring process_unremoved_units: another member is syncing")
