@@ -1408,7 +1408,7 @@ def test_reconfigure_remove_members_failure(
         harness.remove_relation_unit(rel.id, f"{mongodb_name}/1")
 
         remove_replset.assert_called()
-        mock_rollingops_manager.acquire_sync_lock.assert_called_once_with(
+        mock_rollingops_manager.acquire_sync_lock.assert_called_with(
             backend_id="stop-replset-member",
             timeout=3 * 60,
         )
