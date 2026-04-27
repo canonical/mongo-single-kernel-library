@@ -111,7 +111,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     tls_events: TLSEventsHandler
     ldap_events: LDAPEventHandler
     sysctl_config: Config
-    rollingops_manager = RollingOpsManager
+    rollingops_manager: RollingOpsManager
 
     if TYPE_CHECKING:
 

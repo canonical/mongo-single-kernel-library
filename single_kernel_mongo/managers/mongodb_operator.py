@@ -1015,6 +1015,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Removing %s from replica set",
                 self.state.unit_peer_data.internal_address,
             )
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.WAITING_SYNC_REMOVAL.value, scope="unit"
+            )
             # When we remove member, to avoid issues when majority members is removed, we need to
             # remove next member only when MongoDB forget the previous removed member.
             with self.rollingops_manager.acquire_sync_lock(
@@ -1166,15 +1169,30 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def process_unremoved_units(self) -> None:
         """Remove units from replica set."""
+        members: set[str] = set()
         try:
+            with MongoConnection(self.state.mongo_config) as mongo:
+                members = mongo.get_replset_members() - mongo.config.hosts
+
+            if not members:
+                return
+
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.WAITING_SYNC_REMOVAL.value,
+                scope="unit",
+            )
             with self.rollingops_manager.acquire_sync_lock(
                 backend_id="stop-replset-member",
                 timeout=3 * 60,
             ):
                 with MongoConnection(self.state.mongo_config) as mongo:
                     replset_members = mongo.get_replset_members()
+                    members = replset_members - mongo.config.hosts
 
-                    for member in replset_members - mongo.config.hosts:
+                    if not members:
+                        return
+
+                    for member in members:
                         logger.info("Removing %s from replica set", member)
                         mongo.remove_replset_member(member)
 

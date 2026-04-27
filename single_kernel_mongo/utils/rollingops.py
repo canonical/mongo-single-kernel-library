@@ -6,6 +6,7 @@ import logging
 
 from charmlibs.rollingops import SyncLockBackend
 from tenacity import Retrying, retry_if_exception_type, stop_after_delay, stop_never, wait_fixed
+from tenacity.stop import stop_base
 
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 
@@ -34,6 +35,7 @@ class MongoReplsetSyncLockBackend(SyncLockBackend):
             PyMongoError: If replica-set state cannot be queried.
             NotReadyError: If MongoDB is not yet ready to answer the request.
         """
+        stop_condition: stop_base
         if timeout is None:
             stop_condition = stop_never
         else:
@@ -51,7 +53,6 @@ class MongoReplsetSyncLockBackend(SyncLockBackend):
                 with attempt:
                     with MongoConnection(self.state.mongo_config) as mongo:
                         rs_status = mongo.client.admin.command("replSetGetStatus")
-
                         if mongo.is_any_removing(rs_status):
                             logger.debug(
                                 "Waiting for previous replica-set member removal to finish."
