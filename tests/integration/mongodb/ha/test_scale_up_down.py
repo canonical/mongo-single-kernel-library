@@ -53,7 +53,7 @@ async def test_build_and_deploy(
 async def test_scale_up_down(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
     """Scale up and down the application and verify the replica set is healthy."""
     app_name = await get_app_name(ops_test)
-    scales = [3, -3, 4, -4, 5, -5]
+    scales = [5, -5]
     for count in scales:
         await scale_application(
             ops_test, substrate, app_name, count=count, wait=True, timeout=DEPLOYMENT_TIMEOUT

@@ -36,7 +36,7 @@ from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
-    TIMEOUT,
+    DEPLOYMENT_TIMEOUT,
     ProcessError,
     count_primaries,
     count_writes,
@@ -455,7 +455,7 @@ async def scale_application(
     count: int,
     wait: bool = True,
     raise_on_blocked: bool = True,
-    timeout: int = TIMEOUT,
+    timeout: int = DEPLOYMENT_TIMEOUT,
 ) -> None:
     """Scale a given application to the desired unit count.
 

@@ -675,7 +675,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
 
         # If we had an IP change, we must restart.
-        self.restart_charm_services()
+        if self.state.db_initialised:
+            self.restart_charm_services()
 
         if not self.charm.unit.is_leader():
             return
@@ -1223,6 +1224,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
             raise WorkloadServiceError("Workload not allowed to start")
+        if not self.state.db_initialised:
+            raise WorkloadServiceError("Workload not allowed to start: DB not initialised")
         try:
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
