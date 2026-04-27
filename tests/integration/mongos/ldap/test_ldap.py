@@ -138,11 +138,48 @@ async def test_build_and_deploy_mongos(
         subordinate=(substrate == "lxd"),
     )
 
+
+@pytest.mark.abort_on_fail
+async def test_config_server_only_integrated_with_mongos(ops_test: OpsTest, substrate: Substrate):
+    app_name = await get_app_name(ops_test, charm_name="mongos")
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
+        idle_period=20,
+        status="active",
+    )
+
     # connect sharded cluster to mongos
     await ops_test.model.integrate(
         f"{app_name}:{CLUSTER_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
+        idle_period=20,
+        status="active",
+    )
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        app_name,
+        status="mongos and config-server not integrated with the same ldap server.",
+        timeout=300,
+        subordinate=(substrate == "lxd"),
+    )
+
+    # Go back to normal state
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
+    )
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, app_name],
         idle_period=20,

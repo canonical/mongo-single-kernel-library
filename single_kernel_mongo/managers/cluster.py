@@ -16,7 +16,11 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
+    MongoDBStatuses,
+    MongosStatuses,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -359,6 +363,8 @@ class ClusterRequirer(Object):
 
         self.dependent.share_connection_info()
 
+        self.dependent.ldap_manager.update_hash_status()
+
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """If the certificates are rotated for example, handle it immediately.
 
@@ -389,6 +395,8 @@ class ClusterRequirer(Object):
             self.remove_users_for_k8s_routers(relation)
         except PyMongoError:
             raise DeferrableError("Trouble removing router users")
+
+        self.dependent.ldap_manager.update_hash_status()
 
         self.dependent.stop_charm_services()
         logger.info("Stopped mongos daemon")
