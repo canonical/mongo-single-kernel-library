@@ -230,7 +230,7 @@ class ContinuousWritesApplication(CharmBase):
     def _start_continuous_reads(
         self, db_name: str, collection_name: str
     ) -> None:
-        """Start continuous writes to the MongoDB cluster."""
+        """Start continuous reads to the MongoDB cluster."""
         if not self._database_config:
             logger.warning("No database configured.")
             return
@@ -239,7 +239,7 @@ class ContinuousWritesApplication(CharmBase):
         self._stop_continuous_reads(db_name, collection_name)
 
         uris: str = self._database_config.get("uris", "")
-        # Run continuous writes in the background
+        # Run continuous reads in the background
         proc = subprocess.Popen(
             [
                 sys.executable,
@@ -250,7 +250,7 @@ class ContinuousWritesApplication(CharmBase):
             ]
         )
 
-        # Store the continuous writes process id in stored state to be able to stop it later
+        # Store the continuous reads process id in stored state to be able to stop it later
         self.app_peer_data[self.read_proc_id_key(db_name, collection_name)] = str(proc.pid)
 
     def _stop_continuous_reads(self, db_name: str, collection_name: str) -> tuple[int | None, list[str]]:
