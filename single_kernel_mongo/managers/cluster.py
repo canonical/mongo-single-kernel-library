@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
@@ -16,7 +16,11 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import Scope, Substrates
 from single_kernel_mongo.config.relations import RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses, MongosStatuses
+from single_kernel_mongo.config.statuses import (
+    CharmStatuses,
+    MongoDBStatuses,
+    MongosStatuses,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
@@ -231,6 +235,7 @@ class ClusterProvider(Object):
             )
 
 
+@final
 class ClusterRequirer(Object):
     """Manage relations between the config server and mongos router on the mongos side."""
 
@@ -306,6 +311,11 @@ class ClusterRequirer(Object):
     def update_mongos_and_restart(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
+
+        # Wait for
+        if not self.state.cluster.username or not self.state.cluster.password:
+            raise WaitingForSecretsError("Waiting for username and password.")
+
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
@@ -349,6 +359,31 @@ class ClusterRequirer(Object):
 
         self.dependent.share_connection_info()
 
+        self.dependent.ldap_manager.update_hash_status()
+
+    def handle_secret_changed(self, secret_label: str | None) -> None:
+        """If the certificates are rotated for example, handle it immediately.
+
+        Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
+        to secret changes events.
+        """
+        if not secret_label:
+            return
+        if not (relation := self.state.mongos_cluster_relation):
+            return
+        # many secret changed events occur,only listen to the ones related to our interface
+        # with the config server.
+        cluster_extra_secret_label = f"{self.relation_name.value}.{relation.id}.extra.secret"
+        cluster_user_secret_label = f"{self.relation_name.value}.{relation.id}.user.secret"
+        if secret_label not in (cluster_extra_secret_label, cluster_user_secret_label):
+            logger.info(
+                f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
+            )
+            return
+
+        # This will take care of updating everything that needs updating
+        self.update_mongos_and_restart()
+
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""
         self.dependent.assert_proceed_on_broken_event(relation)
@@ -356,6 +391,8 @@ class ClusterRequirer(Object):
             self.remove_users_for_k8s_routers(relation)
         except PyMongoError:
             raise DeferrableError("Trouble removing router users")
+
+        self.dependent.ldap_manager.update_hash_status()
 
         self.dependent.stop_charm_services()
         logger.info("Stopped mongos daemon")
@@ -458,7 +495,7 @@ class ClusterRequirer(Object):
     def tls_status(self) -> tuple[bool, bool]:
         """Returns the TLS integration status for mongos and config-server."""
         if self.state.mongos_cluster_relation:
-            mongos_has_tls = self.state.tls_relation is not None
+            mongos_has_tls = self.state.tls.internal_enabled
             config_server_has_tls = self.state.cluster.internal_ca_secret is not None
             return mongos_has_tls, config_server_has_tls
 

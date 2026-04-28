@@ -18,7 +18,6 @@ from single_kernel_mongo.managers.config import (
 )
 from single_kernel_mongo.state.app_peer_state import AppPeerReplicaSet
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.cluster_state import ClusterState
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
@@ -187,8 +186,7 @@ def test_mongos_config_manager(mocker):
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
     mock_state.substrate = Substrates.VM
-    mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_uri = "mongodb://config-server-url"
+    mock_state.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.internal_enabled = False
@@ -323,11 +321,10 @@ def test_mongodb_config_manager_tls_enabled(mocker):
 
 
 def test_mongos_default_config_server(mocker):
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state = mocker.create_autospec(CharmState)
+    mock_state.app_peer_data = mocker.Mock(AppPeerReplicaSet)
     mock_state.app_peer_data.replica_set = "deadbeef"
-    mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_uri = ""
+    mock_state.config_server_uri = f"{mock_state.app_peer_data.replica_set}/127.0.0.1:27017"
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.internal_enabled = False
