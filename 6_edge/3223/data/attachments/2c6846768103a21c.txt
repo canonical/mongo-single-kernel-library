@@ -1,0 +1,113 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: Primary.
+  shard-one/0 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+  mongos/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] blocked: TLS is mandatory for LDAP transport.
+  mongos/0 [executing] active: 
+[32mINFO    [0m integration.helpers.ldap:ldap.py:133 Removing ldap offer
+[32mINFO    [0m integration.helpers.ldap:ldap.py:139 Removing ldap cert offer
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-dxed  concierge-lxd  test-ldap-k8s-cloud-2idw/default  3.6.21   unsupported  02:18:20Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.69   no       
+glauth-utils                       active      1  glauth-utils              latest/edge     50  10.152.183.128  no       
+postgresql-k8s            14.20    active      1  postgresql-k8s            14/stable      774  10.152.183.68   no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.219  no       
+traefik-k8s               2.11.0   active      1  traefik-k8s               latest/stable  281  10.152.183.247  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address      Ports  Message
+glauth-k8s/0*                active    idle   10.1.21.212         
+glauth-utils/0*              active    idle   10.1.21.208         
+postgresql-k8s/0*            active    idle   10.1.21.205         Primary
+self-signed-certificates/0*  active    idle   10.1.21.207         
+traefik-k8s/0*               active    idle   10.1.21.210         Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:59:06 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:59:10 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-dxed...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Reset test-ldap-dxed completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-dxed to die...
+[31m[1mERROR   [0m juju.model:__init__.py:1388 Error in watcher
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 1379, in _all_watcher
+    old_obj, new_obj = self.state.apply_delta(entity)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 287, in apply_delta
+    entity = self.get_entity(delta.entity, delta.get_id())
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/model/__init__.py", line 311, in get_entity
+    return entity_class(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/action.py", line 11, in __init__
+    self._status = self.data["status"]
+TypeError: 'NoneType' object is not subscriptable
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-17746' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "6430bfcc-e78a-4701-80e2-2407a0afb196"')>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.10/lib/python3.10/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "6430bfcc-e78a-4701-80e2-2407a0afb196"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-2idw...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:20:28Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
+config-server    6.0.24   active      1  mongodb                           0  no       
+data-integrator           active      1  data-integrator  latest/stable  360  no       
+mongos           6.0.24   active      1  mongos                            0  no       
+shard-one        6.0.24   active      1  mongodb                           1  no       
+shard-two        6.0.24   active      1  mongodb                           2  no       
+
+Unit                Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*    active    idle   0        10.151.6.87     27017-27018/tcp  Primary.
+data-integrator/0*  active    idle   3        10.151.6.108                     
+  mongos/0*         active    idle            10.151.6.108    27018/tcp        
+shard-one/0*        active    idle   1        10.151.6.223    27017/tcp        Primary.
+shard-two/0*        active    idle   2        10.151.6.161    27017/tcp        Primary.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.151.6.87   juju-976500-0  ubuntu@22.04  runnervmlcjhh  Running
+1        started  10.151.6.223  juju-976500-1  ubuntu@22.04  runnervmlcjhh  Running
+2        started  10.151.6.161  juju-976500-2  ubuntu@22.04  runnervmlcjhh  Running
+3        started  10.151.6.108  juju-976500-3  ubuntu@22.04  runnervmlcjhh  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:06:36 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:06:36 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:06:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:06:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:07:20 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:07:20 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-1: 02:07:23 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:07:23 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-two-0: 02:07:31 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:07:31 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:08:09 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:08:09 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 02:13:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:13:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 02:15:44 ERROR unit.mongos/0.juju-log ldap-certificate-transfer:22: Config Server and mongos integrations with LDAP have a different checksum.This usually means they are not integrated with the same LDAP application.
+unit-config-server-0: 02:17:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "c5efc0a5-ab34-423b-8609-6636d9976500:r#24#ldap-cert-integration": settings c5efc0a5-ab34-423b-8609-6636d9976500:r#24#ldap-cert-integration not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
