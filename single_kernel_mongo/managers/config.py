@@ -18,7 +18,6 @@ from typing_extensions import override
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import (
-    LOCALHOST,
     PBM_RESTART_DELAY,
     CharmKind,
     MongoPorts,
@@ -491,13 +490,9 @@ class MongosConfigManager(MongoConfigManager):
         """The config server DB parameter."""
         # In case we are integrated with a config-server, we need to provide
         # it's URI to mongos so it can configure_and_restart to it.
-        if uri := self.state.cluster.config_server_uri:
+        if uri := self.state.config_server_uri:
             return {"sharding": {"configDB": uri}}
-        return {
-            "sharding": {
-                "configDB": f"{self.state.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT.value}"
-            }
-        }
+        return {}
 
     @property
     @override
