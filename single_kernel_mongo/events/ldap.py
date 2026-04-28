@@ -20,6 +20,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapWithShardError,
     LDAPSNotEnabledError,
     NonDeferrableFailedHookChecksError,
+    UnableToBindError,
     WaitingForLdapDataError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -62,6 +63,7 @@ class LDAPEventHandler(Object):
             self.manager.certificate_transfer.on.certificate_available,
             self._on_certificate_available,
         )
+        self.framework.observe(self.charm.on.update_status, self._on_update_status)
         self.framework.observe(
             self.manager.certificate_transfer.on.certificate_removed, self._on_certificate_removed
         )
@@ -128,6 +130,22 @@ class LDAPEventHandler(Object):
                 LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )
 
+    def _on_update_status(self, event: CertificateAvailableEvent):
+        try:
+            # Runs the checks and restart if needed.
+            self.manager.restart_when_ready()
+        except (
+            DeferrableFailedHookChecksError,
+            InvalidLdapWithShardError,
+            UnableToBindError,
+            NonDeferrableFailedHookChecksError,
+        ):
+            logger.warning(
+                "Update Status could not reconcile ldap integration. Please investigate."
+            )
+            # Statuses will be updated in the handler for advanced statuses.
+            return
+
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
         self.manager.remove_ldap_certificates()
@@ -138,6 +156,13 @@ class LDAPEventHandler(Object):
         try:
             self.manager.restart_when_ready()
         except (DeferrableFailedHookChecksError, DeferrableError) as err:
+            defer_event_with_info_log(logger, event, action, f"{err}")
+        except UnableToBindError as err:
+            self.manager.state.statuses.add(
+                LdapStatuses.UNABLE_TO_BIND.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(
