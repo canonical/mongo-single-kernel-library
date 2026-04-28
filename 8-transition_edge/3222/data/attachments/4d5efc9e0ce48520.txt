@@ -1,0 +1,80 @@
+[32mINFO    [0m integration.helpers.sharding:sharding.py:268 Checking TLS is disabled.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:44:24Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+config-server             7.0.28   active      2  mongodb                                    0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+shard-one                 7.0.28   active      3  mongodb                                    1  no       
+shard-two                 7.0.28   active      1  mongodb                                    2  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*             active    idle   0        10.0.168.54     27017-27018/tcp  
+config-server/1              active    idle   1        10.0.168.109    27017-27018/tcp  Primary.
+self-signed-certificates/0*  active    idle   6        10.0.168.145                     
+shard-one/0*                 active    idle   2        10.0.168.100    27017/tcp        Primary.
+shard-one/1                  active    idle   3        10.0.168.158    27017/tcp        
+shard-one/2                  active    idle   4        10.0.168.220    27017/tcp        
+shard-two/0*                 active    idle   5        10.0.168.78     27017/tcp        Primary.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.0.168.54   juju-64cccd-0  ubuntu@24.04  github-runner  Running
+1        started  10.0.168.109  juju-64cccd-1  ubuntu@24.04  github-runner  Running
+2        started  10.0.168.100  juju-64cccd-2  ubuntu@24.04  github-runner  Running
+3        started  10.0.168.158  juju-64cccd-3  ubuntu@24.04  github-runner  Running
+4        started  10.0.168.220  juju-64cccd-4  ubuntu@24.04  github-runner  Running
+5        started  10.0.168.78   juju-64cccd-5  ubuntu@24.04  github-runner  Running
+6        started  10.0.168.145  juju-64cccd-6  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:14:28 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:14:28 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:14:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:14:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:14:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:14:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:14:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:14:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:15:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:15:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:15:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:15:22 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:15:22 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:15:37 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:15:37 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:15:38 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:15:38 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-2: 02:15:50 ERROR unit.shard-one/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-2: 02:15:50 ERROR unit.shard-one/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:15:59 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:15:59 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:16:10 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:16:10 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-6: 02:19:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:19:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:20:50 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f019813e4d8e617822fea4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0028830359999574284>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0009818339999583259>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0015646680000145352>]>
+unit-shard-one-0: 02:20:54 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f019853e4d8e617822fea5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0006880820000105814>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0004945020000377554>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0004555739999432262>]>
+unit-shard-one-0: 02:21:39 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f019b295432eab6290352b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0005250480000995594>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0007098150000501846>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0004875910000237127>]>
+unit-config-server-1: 02:22:15 ERROR unit.config-server/1.juju-log certificates:14: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-1: 02:22:15 ERROR unit.config-server/1.juju-log certificates:14: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:22:15 ERROR unit.shard-one/2.juju-log certificates:15: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-two-0: 02:22:15 ERROR unit.shard-two/0.juju-log certificates:16: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:22:16 ERROR unit.shard-one/1.juju-log certificates:15: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:22:16 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:22:16 ERROR unit.shard-one/2.juju-log certificates:15: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:22:16 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:22:16 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:22:16 ERROR unit.shard-one/1.juju-log certificates:15: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:22:16 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-two-0: 02:22:16 ERROR unit.shard-two/0.juju-log certificates:16: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:22:57 ERROR unit.shard-one/0.juju-log database-peers:5: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f019ffdf0e9b96944a335e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.002281652999954531>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0024062899999535148>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0033971970000266083>]>
+unit-shard-one-0: 02:23:01 ERROR unit.shard-one/0.juju-log Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f01a046730661fd023ad53, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0005264899999701811>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0006966360000433269>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0005700950000573357>]>
+unit-shard-one-0: 02:34:30 ERROR unit.shard-one/0.juju-log database-peers:5: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f01cb58772d52233ee5e04, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0005637760000354319>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0005425639999430132>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0008028849999845988>]>
+unit-shard-one-0: 02:34:34 ERROR unit.shard-one/0.juju-log status-peers:7: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f01cb98be1ff716ff28d1d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0005330999999841879>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0006416930000341381>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.001389375000144355>]>
+unit-shard-one-0: 02:44:09 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f01ef7ec0359cebe39a59e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.0.168.100', 27017) server_type: RSSecondary, rtt: 0.0024011429995880462>, <ServerDescription ('10.0.168.158', 27017) server_type: RSSecondary, rtt: 0.0005697450001207471>, <ServerDescription ('10.0.168.220', 27017) server_type: RSSecondary, rtt: 0.0005946920000496903>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
