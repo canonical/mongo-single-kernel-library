@@ -657,13 +657,9 @@ class MongosConfigManager(MongoConfigManager):
         """The config server DB parameter."""
         # In case we are integrated with a config-server, we need to provide
         # it's URI to mongos so it can configure_and_restart to it.
-        if uri := self.state.cluster.config_server_uri:
+        if uri := self.state.config_server_uri:
             return {"sharding": {"configDB": uri}}
-        return {
-            "sharding": {
-                "configDB": f"{self.state.app_peer_data.replica_set}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
-            }
-        }
+        return {}
 
     @property
     @override
