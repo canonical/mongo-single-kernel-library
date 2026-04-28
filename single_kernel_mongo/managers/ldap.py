@@ -213,6 +213,11 @@ class LDAPManager(Object, ManagerStatusProtocol):
         """Returns an enum object indicating the state of the LDAP integration."""
         if not self.state.db_initialised:
             return LdapState.EMPTY
+        if (
+            self.state.is_role(MongoDBRoles.MONGOS)
+            and self.state.cluster.ldap_hash != self.get_hash()
+        ):
+            return LdapState.LDAP_SERVERS_MISMATCH
         if self.state.ldap_relation is None and self.state.ldap_cert_relation is None:
             return LdapState.EMPTY
         if self.state.is_role(MongoDBRoles.SHARD):
@@ -221,11 +226,6 @@ class LDAPManager(Object, ManagerStatusProtocol):
             return LdapState.MISSING_CERT_REL
         if self.state.ldap_relation is None:
             return LdapState.MISSING_LDAP_REL
-        if (
-            self.state.is_role(MongoDBRoles.MONGOS)
-            and self.state.cluster.ldap_hash != self.get_hash()
-        ):
-            return LdapState.LDAP_SERVERS_MISMATCH
 
         ldap_relation_status = self.state.ldap.ldap_ready()
         ldap_certificate_integration_status = self.state.ldap.ldap_certs_ready()
@@ -369,3 +369,16 @@ class LDAPManager(Object, ManagerStatusProtocol):
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return
         self.dependent.cluster_manager.remove_ldap_hash()  # type: ignore
+
+    def update_hash_status(self) -> None:
+        """Updates the hash incompatibility status."""
+        if not self.state.is_role(MongoDBRoles.MONGOS):
+            return
+        if self.state.cluster.ldap_hash != self.get_hash():
+            self.state.statuses.add(
+                LdapStatuses.LDAP_SERVERS_MISMATCH.value, scope="unit", component=self.name
+            )
+        else:
+            self.state.statuses.delete(
+                LdapStatuses.LDAP_SERVERS_MISMATCH.value, scope="unit", component=self.name
+            )
