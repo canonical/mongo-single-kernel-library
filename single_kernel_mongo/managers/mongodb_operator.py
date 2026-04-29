@@ -25,6 +25,7 @@ from single_kernel_mongo.config.literals import (
     FEATURE_VERSION,
     CharmKind,
     MongoPorts,
+    RollingOpsBackend,
     Scope,
     Substrates,
 )
@@ -119,7 +120,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     validate_charm_user_password_config,
 )
 from single_kernel_mongo.utils.network_helpers import ip_addresses
-from single_kernel_mongo.utils.rollingops import MongoReplsetSyncLockBackend
+from single_kernel_mongo.utils.rollingops import StopReplsetSyncLockBackend
 from single_kernel_mongo.workload import (
     get_mongodb_workload_for_substrate,
     get_mongos_workload_for_substrate,
@@ -189,15 +190,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             container,
         )
 
-        sync_lock_backend = MongoReplsetSyncLockBackend(self.state)
+        stop_replset_sync_lock = StopReplsetSyncLockBackend(self.state)
         self.rollingops_manager = RollingOpsManager(
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
             etcd_relation_name=None,
-            cluster_id="mongodb",
+            cluster_id=None,
             callback_targets={},
             sync_lock_targets={
-                "stop-replset-member": sync_lock_backend,
+                RollingOpsBackend.STOP_REPLSET_MEMBER: stop_replset_sync_lock,
             },
         )
         self.tls_manager = TLSManager(self, self.workload, self.state)
@@ -1024,7 +1025,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             # When we remove member, to avoid issues when majority members is removed, we need to
             # remove next member only when MongoDB forget the previous removed member.
             with self.rollingops_manager.acquire_sync_lock(
-                backend_id="stop-replset-member",
+                backend_id=RollingOpsBackend.STOP_REPLSET_MEMBER,
                 timeout=600,
             ):
                 self.mongo_manager.remove_replset_member()
@@ -1174,9 +1175,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Remove units from replica set."""
         members: set[str] = set()
         try:
-            with MongoConnection(self.state.mongo_config) as mongo:
-                members = mongo.get_replset_members() - mongo.config.hosts
-
+            members = self.mongo_manager.get_replset_members()
             if not members:
                 return
 
@@ -1185,19 +1184,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 scope="unit",
             )
             with self.rollingops_manager.acquire_sync_lock(
-                backend_id="stop-replset-member",
+                backend_id=RollingOpsBackend.STOP_REPLSET_MEMBER,
                 timeout=3 * 60,
             ):
-                with MongoConnection(self.state.mongo_config) as mongo:
-                    replset_members = mongo.get_replset_members()
-                    members = replset_members - mongo.config.hosts
-
-                    if not members:
-                        return
-
-                    for member in members:
-                        logger.info("Removing %s from replica set", member)
-                        mongo.remove_replset_member(member)
+                self.mongo_manager.remove_replset_members(members)
 
         except TimeoutError:
             logger.info("Deferring process_unremoved_units: timed out waiting for lock")

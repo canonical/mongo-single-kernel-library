@@ -6,7 +6,7 @@ This module should contain the literals used in the charms (paths, enums, etc).
 """
 
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -125,3 +125,9 @@ class TrustStoreFiles(str, Enum):
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
     VAULT = "vault.crt"
+
+
+class RollingOpsBackend(StrEnum):
+    """Identifiers of the sync lock backends used for rollingops."""
+
+    STOP_REPLSET_MEMBER = "stop-replset-member"

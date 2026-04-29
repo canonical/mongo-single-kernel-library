@@ -279,6 +279,12 @@ class MongoConnection:
         if self.is_any_removing(rs_status):
             raise NotReadyError
 
+        members = rs_config["config"]["members"]
+
+        if not any(hostname == hostname_from_hostport(member["host"]) for member in members):
+            logger.info("Replica set member %s is already removed", hostname)
+            return
+
         # avoid downtime we need to reelect new primary if removable member is the primary.
         if self.primary(rs_status) == hostname:
             logger.debug("Stepping down from primary.")
@@ -286,10 +292,9 @@ class MongoConnection:
 
         rs_config["config"]["version"] += 1
         rs_config["config"]["members"] = [
-            member
-            for member in rs_config["config"]["members"]
-            if hostname != hostname_from_hostport(member["host"])
+            member for member in members if hostname != hostname_from_hostport(member["host"])
         ]
+
         logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
         self.client.admin.command("replSetReconfig", rs_config["config"])
 

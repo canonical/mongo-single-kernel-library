@@ -13,7 +13,7 @@ from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReady
 logger = logging.getLogger(__name__)
 
 
-class MongoReplsetSyncLockBackend(SyncLockBackend):
+class StopReplsetSyncLockBackend(SyncLockBackend):
     """Mongo-backed sync lock for replica-set membership changes.
 
     This does not create an external lock. It waits until MongoDB has no

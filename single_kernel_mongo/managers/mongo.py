@@ -668,3 +668,21 @@ class MongoManager(Object, ManagerStatusProtocol):
                 serverAddress=cidrs(self.state.peer_network().bind_addresses),
             ),
         ]
+
+    def get_replset_members(self) -> set[str]:
+        """Return replica set members that are no longer part of the desired config."""
+        with MongoConnection(self.state.mongo_config) as mongo:
+            return mongo.get_replset_members() - mongo.config.hosts
+
+    def remove_replset_members(self, members: set[str]) -> None:
+        """Remove the given members from the replica set configuration.
+
+        Raises:
+        NotReadyError: If MongoDB is not ready to process the removal
+            (e.g. another removal is in progress).
+        PyMongoError: If an error occurs while communicating with MongoDB.
+        """
+        with MongoConnection(self.state.mongo_config) as mongo:
+            for member in members:
+                logger.info("Removing %s from replica set", member)
+                mongo.remove_replset_member(member)
