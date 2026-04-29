@@ -131,6 +131,7 @@ class LDAPEventHandler(Object):
             )
 
     def _on_update_status(self, event: CertificateAvailableEvent):
+        """On update-status, check if everything is alright and restart if needed."""
         try:
             # Runs the checks and restart if needed.
             self.manager.restart_when_ready()
