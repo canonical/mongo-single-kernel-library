@@ -12,6 +12,7 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.models import LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -397,6 +398,69 @@ def test_ldap_full_integration_cycle(
         ldap_parameters["userToDNMapping"]
         == '[{"match": "([^@]+)@([^@\\\\.]+)\\\\.glauth\\\\.com", "substitution": "CN={0},CN=Users,DC={1},DC=glauth,DC=com"}]'
     )
+
+
+def test_ldap_unable_to_bind_defers(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
+):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=LdapState.UNABLE_TO_BIND,
+    )
+
+    ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
+    harness.update_relation_data(
+        ldap_relation_id,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_id": "secret-id",
+            "bind_password_secret": secret_id,
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": '["ldaps://ldap.glauth.com"]',
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+
+    ldap_cert_relation_id = harness.add_relation(
+        ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
+    )
+    harness.add_relation_unit(ldap_cert_relation_id, "glauth-k8s/0")
+
+    defer = mocker.patch("ops.framework.EventBase.defer")
+    harness.update_relation_data(
+        ldap_cert_relation_id,
+        "glauth-k8s/0",
+        {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
+    )
+
+    defer.assert_called()
+
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=LdapState.ACTIVE,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.get_statuses",
+        return_value=[CharmStatuses.ACTIVE_IDLE.value],
+    )
+
+    harness.charm.on.update_status.emit()
+    harness.evaluate_status()
+
+    # All is good, we are green
+    assert harness.model.unit.status == ActiveStatus("")
 
 
 def test_ldaps_not_enabled(
