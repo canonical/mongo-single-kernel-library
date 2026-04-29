@@ -24,6 +24,14 @@ def last_written_filename(db_name: str, coll_name: str) -> str:
     return f"last_written_value-{db_name}-{coll_name}"
 
 
+def _client(connection_string: str) -> MongoClient[dict[str, int]]:
+    """Returns a Mongo Client."""
+    return MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+            document_class=dict
+        )
+
 def continous_writes(
     connection_string: str,
     starting_number: int,
@@ -35,10 +43,7 @@ def continous_writes(
     # First, create a unique index to avoid duplicate writes on upsert
     # https://www.mongodb.com/docs/manual/reference/method/db.collection.update/#upsert-with-duplicate-values
     try:
-        client = MongoClient(
-            connection_string,
-            socketTimeoutMS=5000,
-        )
+        client = _client(connection_string=connection_string)
         db = client[db_name]
         test_collection = db[coll_name]
         test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
@@ -48,12 +53,17 @@ def continous_writes(
             fd.write(str(-1))
         return
 
+    client = _client(connection_string=connection_string)
+    should_get_new_client = False
 
     while run:
-        client = MongoClient(
-            connection_string,
-            socketTimeoutMS=5000,
-        )
+        if should_get_new_client:
+            try:
+                client = _client(connection_string=connection_string)
+                should_get_new_client = False
+            except Exception:
+                continue
+
         db = client[db_name]
         test_collection = db[coll_name]
         try:
@@ -67,13 +77,15 @@ def continous_writes(
             ).update_one({"number": write_value}, {"$set": {"number": write_value}}, upsert=True)
 
             # update_one
-        except PyMongoError:
+        except Exception as err:
             # PyMongoErors should result in an attempt to retry a write. An application should
             # try to reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
-            continue
-        finally:
+            should_get_new_client = True
             client.close()
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
+            continue
 
         write_value += 1
 

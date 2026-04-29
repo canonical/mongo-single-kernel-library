@@ -10,8 +10,6 @@ import sys
 
 import math
 from pymongo import MongoClient
-from pymongo.errors import PyMongoError
-from pymongo.write_concern import WriteConcern
 
 DEFAULT_DB_NAME = "continuous_writes_database"
 DEFAULT_COLL_NAME = "continuous_writes_collection"
@@ -26,6 +24,13 @@ def sigterm_handler(_signo, _stack_frame):
 def n_read_filename(db_name: str, coll_name: str) -> str:
     return f"n_read_value-{db_name}-{coll_name}.json"
 
+def _client(connection_string: str) -> MongoClient[dict[str, int]]:
+    """Returns a Mongo Client."""
+    return MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+            document_class=dict
+        )
 
 def continous_reads(
     connection_string: str,
@@ -34,11 +39,15 @@ def continous_reads(
 ):
     failed_reads = []
     reads = 0
+    client = _client(connection_string=connection_string)
+    should_get_new_client = False
     while run:
-        client = MongoClient(
-            connection_string,
-            socketTimeoutMS=5000,
-        )
+        if should_get_new_client:
+            try:
+                client = _client(connection_string=connection_string)
+                should_get_new_client = False
+            except Exception:
+                continue
         db = client[db_name]
         test_collection = db[coll_name]
         try:
@@ -56,8 +65,7 @@ def continous_reads(
             failed_reads.append(str(err))
             with open("error.log", mode="a") as fd:
                 fd.write(f"{err}\n")
-            continue
-        finally:
+            should_get_new_client = True
             client.close()
 
         reads += 1

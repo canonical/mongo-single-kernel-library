@@ -706,7 +706,7 @@ async def remove_units(
 
 
 async def get_app_name(
-    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
+    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] | None = None
 ) -> str | None:
     """Returns the name of the cluster running MongoDB.
 
@@ -715,6 +715,7 @@ async def get_app_name(
 
     Note: if multiple clusters are running MongoDB this will return the one first found.
     """
+    test_deployments = test_deployments or []
     status = await ops_test.model.get_status()
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mongodb" but instead takes the form
