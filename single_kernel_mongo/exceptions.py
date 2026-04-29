@@ -277,6 +277,10 @@ class InvalidLdapQueryTemplateError(Exception):
     """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""
 
 
+class UnableToBindError(Exception):
+    """Raised when we're unable to bind with GLAuth."""
+
+
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
 

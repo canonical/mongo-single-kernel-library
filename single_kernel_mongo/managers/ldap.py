@@ -31,6 +31,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapHashError,
     InvalidLdapWithShardError,
     LDAPSNotEnabledError,
+    UnableToBindError,
     WaitingForLdapDataError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -127,6 +128,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
 
                 if state == LdapState.LDAP_SERVERS_MISMATCH:
                     raise InvalidLdapHashError(
+                        "mongos and config-server not integrated with the same ldap server."
+                    )
+                if state == LdapState.UNABLE_TO_BIND:
+                    raise UnableToBindError(
                         "mongos and config-server not integrated with the same ldap server."
                     )
 
