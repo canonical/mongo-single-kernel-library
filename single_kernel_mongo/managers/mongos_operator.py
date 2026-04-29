@@ -12,7 +12,7 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
-from charmlibs.rollingops import RollingOpsManager
+from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
@@ -22,7 +22,13 @@ from ops.model import Relation, Unit
 from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Scope, Substrates
+from single_kernel_mongo.config.literals import (
+    CharmKind,
+    MongoPorts,
+    RollingOpsCallbackId,
+    Scope,
+    Substrates,
+)
 from single_kernel_mongo.config.models import ROLES
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
@@ -111,9 +117,12 @@ class MongosOperator(OperatorProtocol, Object):
         self.rollingops_manager = RollingOpsManager(
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
-            etcd_relation_name=None,
+            etcd_relation_name=RelationNames.ETCD,
             cluster_id="mongodb",
-            callback_targets={},
+            callback_targets={
+                RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
+                RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART: self.cluster_manager.update_mongos_and_restart_callback,
+            },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
@@ -415,16 +424,52 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
-                raise MissingConfigServerError()
+                raise MissingConfigServerError("Cannot start mongos without a config server db")
+            should_restart = self.tls_manager.reconcile_tls_files()
+            force = force or should_restart
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.RESTARTING.value, scope="unit"
+            )
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                MongosStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
             raise
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
+        """Callback to be used as a rolling operation."""
+        self.charm.state.statuses.delete(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        try:
+            self.restart_charm_services(force=force)
+        except MissingConfigServerError:
+            return OperationResult.RELEASE
+        except WorkloadServiceError:
+            return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
+
+    @override
+    def async_restart_charm_services(self, force: bool = False) -> None:
+        self.charm.state.statuses.add(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": force}
+        )
+        logger.info("Requested and async lock to restart mongos.")
+
+    def is_waiting_for_rolling_operation(self) -> bool:
+        """Returns whether Mongos has pending rolling operations."""
+        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
 
     def update_ips_in_databag(self) -> None:
         """Sets all the ips in the databag to be used by the leader."""
@@ -629,7 +674,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 
@@ -667,6 +712,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
+
+        if scope == "unit" and self.is_waiting_for_rolling_operation():
+            charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")

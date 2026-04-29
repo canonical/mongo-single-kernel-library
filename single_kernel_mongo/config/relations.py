@@ -24,6 +24,7 @@ class RelationNames(str, Enum):
     CONFIG_SERVER = "config-server"
     CLUSTER = "cluster"
     MONGOS_PROXY = "mongos_proxy"
+    ETCD = "etcd"
 
 
 class Scopes(str, Enum):

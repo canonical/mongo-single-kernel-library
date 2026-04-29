@@ -152,7 +152,10 @@ class LDAPEventHandler(Object):
         self.manager.remove_ldap_certificates()
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
-        """Custom ops revent to trigger restart of leader with a single source of truth."""
+        """Custom ops revent to trigger restart of leader with a single source of truth.
+
+        Also executed by follower units on relation changed event.
+        """
         action = "restart-ldap-if-ready"
         try:
             self.manager.restart_when_ready()

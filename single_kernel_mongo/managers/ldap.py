@@ -129,7 +129,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             case LdapState.ACTIVE:
                 self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
-                self.dependent.restart_charm_services()
+                self.dependent.async_restart_charm_services(force=False)
                 self.state.statuses.set(
                     LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
                 )
@@ -154,7 +154,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             self.remove_hash_from_mongos()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
-            self.dependent.restart_charm_services()
+            self.dependent.async_restart_charm_services(force=False)
 
         self.state.statuses.clear(scope="unit", component=self.name)
         statuses = self.get_statuses(scope="unit", recompute=True)
@@ -207,7 +207,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             local_cert_file.unlink()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
-            self.dependent.restart_charm_services()
+            self.dependent.async_restart_charm_services(force=False)
 
         statuses = self.get_statuses(scope="unit", recompute=True)
         self.state.statuses.clear(scope="unit", component=self.name)

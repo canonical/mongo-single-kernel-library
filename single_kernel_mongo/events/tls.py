@@ -225,7 +225,7 @@ class TLSEventsHandler(Object):
         else:
             self.dependent.state.update_client_ca_secrets(provider_cert.ca.raw)
 
-        self.manager.enable_certificates_for_unit(internal)
+        self.manager.enable_certificates_for_unit()
         self._recompute_statuses()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:

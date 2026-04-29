@@ -10,7 +10,12 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
-from charmlibs.rollingops import RollingOpsManager, RollingOpsSyncLockError
+from charmlibs.rollingops import (
+    OperationResult,
+    RollingOpsManager,
+    RollingOpsStatus,
+    RollingOpsSyncLockError,
+)
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
@@ -26,6 +31,7 @@ from single_kernel_mongo.config.literals import (
     CharmKind,
     MongoPorts,
     RollingOpsBackend,
+    RollingOpsCallbackId,
     Scope,
     Substrates,
 )
@@ -68,6 +74,7 @@ from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
@@ -190,17 +197,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             container,
         )
 
-        stop_replset_sync_lock = StopReplsetSyncLockBackend(self.state)
-        self.rollingops_manager = RollingOpsManager(
-            charm=charm,
-            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
-            etcd_relation_name=None,
-            cluster_id=None,
-            callback_targets={},
-            sync_lock_targets={
-                RollingOpsBackend.STOP_REPLSET_MEMBER: stop_replset_sync_lock,
-            },
-        )
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
@@ -238,6 +234,21 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Vault Manager, which covers vault relation. This is used for encryption at rest.
         self.vault_manager = VaultManager(
             self, self.state, self.substrate, ExternalRequirerRelations.VAULT
+        )
+
+        stop_replset_sync_lock = StopReplsetSyncLockBackend(self.state)
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
+            etcd_relation_name=RelationNames.ETCD,
+            cluster_id="mongodb",
+            callback_targets={
+                RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
+                RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED: self.shard_manager.shard_restart_on_keyfile_callback,
+            },
+            sync_lock_targets={
+                RollingOpsBackend.STOP_REPLSET_MEMBER: stop_replset_sync_lock,
+            },
         )
 
         # Upgrades
@@ -698,7 +709,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # If we had an IP change, we must restart.
         if self.state.db_initialised:
-            self.restart_charm_services()
+            self.async_restart_charm_services(force=False)
 
         if not self.charm.unit.is_leader():
             return
@@ -843,7 +854,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader():
             return
 
-        self.peer_changed()
+        self.peer_changed()  # TODO may raise
         self.update_related_hosts()
 
     @override
@@ -1100,7 +1111,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             try:
                 self.perform_self_healing()
             except (ServerSelectionTimeoutError, OperationFailure) as e:
-                logger.warning(f"Failed to perform self healing: {e}")
+                logger.warning("Failed to perform self healing: %s", e)
             except ShardAuthError:
                 logger.warning("Failed to add shard")
             except NotDrainedError:
@@ -1297,21 +1308,56 @@ class MongoDBOperator(OperatorProtocol, Object):
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
-            raise WorkloadServiceError("Workload not allowed to start")
+            raise WorkloadServiceError("Workload not allowed to start on refresh.")
         if not self.state.db_initialised:
             raise WorkloadServiceError("Workload not allowed to start: DB not initialised")
+        # TODO add check on vault
+        # TODO add check on ldap
         try:
+            should_restart = self.tls_manager.reconcile_tls_files()
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.RESTARTING.value, scope="unit"
+            )
+            force = force or should_restart
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            raise DeferrableError from e
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
+        """Callback to be used as a rolling operation."""
+        self.charm.state.statuses.delete(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        try:
+            self.restart_charm_services(force=force)
+        except WorkloadServiceError:
+            return OperationResult.RELEASE
+        except DeferrableError:
             self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
-            raise
+            return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
+
+    @override
+    def async_restart_charm_services(self, force: bool = False) -> None:
+        self.charm.state.statuses.add(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES,
+            kwargs={"force": force},
+        )
+        logger.info("Requested and async lock to restart MongoDB.")
 
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""
@@ -1485,6 +1531,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             return [rev_status]
         return []
 
+    def is_waiting_for_rolling_operation(self) -> bool:
+        """Returns whether mongodb has pending rolling operations."""
+        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
+
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
@@ -1496,6 +1546,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if scope == "unit" and not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+
+        if scope == "unit" and self.is_waiting_for_rolling_operation():
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)

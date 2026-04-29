@@ -116,8 +116,13 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         actual_uri = uri or f"mongodb://localhost:{port}"
         actual_uri = f"{actual_uri}/?{urlencode(params)}"
-        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
-            return direct_mongo.is_ready
+
+        try:
+            with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
+                return direct_mongo.is_ready
+        except FileNotFoundError as e:
+            logger.warning("Failed to check whether mongod is ready: %s", e)
+            return False
 
     def set_user_password(self, user: MongoDBUser, password: str) -> None:
         """Sets the password for a given username in the workload and secrets.
@@ -503,10 +508,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 return
 
             for member in config_hosts - replset_members:
-                logger.debug("Adding %s to replica set", member)
-                if not self.mongod_ready(uri=f"mongodb://{member}"):
-                    logger.debug("not reconfiguring: %s is not ready yet.", member)
-                    raise NotReadyError
+                logger.info("Adding %s to replica set", member)
                 mongo.add_replset_member(member)
 
     def get_draining_shards(
