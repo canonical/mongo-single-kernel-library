@@ -27,6 +27,8 @@ class ClusterStateKeys(str, Enum):
     EXT_CA_SECRET = "ext-ca-secret"
     LDAP_USER_TO_DN_MAPPING = "ldap-user-to-dn-mapping"
     LDAP_HASH = "ldap-hash"
+    USERNAME = "username"
+    PASSWORD = "password"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -42,6 +44,16 @@ class ClusterState(AbstractRelationState[Data]):
     def config_server_uri(self) -> str:
         """Return config-server URI in the databag."""
         return self.relation_data.get(ClusterStateKeys.CONFIG_SERVER_DB.value, "")
+
+    @property
+    def username(self) -> str:
+        """Return config-server URI in the databag."""
+        return self.relation_data.get(ClusterStateKeys.USERNAME.value, "")
+
+    @property
+    def password(self) -> str:
+        """Return config-server URI in the databag."""
+        return self.relation_data.get(ClusterStateKeys.PASSWORD.value, "")
 
     @property
     def database(self) -> str:

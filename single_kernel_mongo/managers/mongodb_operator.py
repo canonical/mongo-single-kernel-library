@@ -409,7 +409,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         manager.set_certificate(credentials)
-        manager.set_config_options(credentials)
+
+        # Only leader should set config options.
+        if self.charm.unit.is_leader():
+            manager.set_config_options(credentials)
 
     @property
     @override
