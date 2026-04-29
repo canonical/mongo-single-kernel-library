@@ -1184,10 +1184,10 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def process_unremoved_units(self) -> None:
         """Remove units from replica set."""
-        members: set[str] = set()
+        unwanted_members: set[str] = set()
         try:
-            members = self.mongo_manager.get_replset_members()
-            if not members:
+            unwanted_members = self.mongo_manager.get_unwanted_replicaset_members()
+            if not unwanted_members:
                 return
 
             self.charm.status_handler.set_running_status(
@@ -1198,7 +1198,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 backend_id=RollingOpsBackend.STOP_REPLSET_MEMBER,
                 timeout=3 * 60,
             ):
-                self.mongo_manager.remove_replset_members(members)
+                self.mongo_manager.remove_replset_members(unwanted_members)
 
         except TimeoutError:
             logger.info("Deferring process_unremoved_units: timed out waiting for lock")

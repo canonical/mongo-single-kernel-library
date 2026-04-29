@@ -669,7 +669,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             ),
         ]
 
-    def get_replset_members(self) -> set[str]:
+    def get_unwanted_replicaset_members(self) -> set[str]:
         """Return replica set members that are no longer part of the desired config."""
         with MongoConnection(self.state.mongo_config) as mongo:
             return mongo.get_replset_members() - mongo.config.hosts
