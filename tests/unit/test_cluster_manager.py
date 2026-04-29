@@ -355,7 +355,7 @@ def test_cluster_requirer_update_mongos_and_restart(
         {
             "key-file": "deadbeef",
             "config-server-db": "mongodb/2.2.2.2:27017",
-            "username": "charmed-operator",
+            "username": "operator",
             "password": "password",  # nosec: B105
         },
     )
