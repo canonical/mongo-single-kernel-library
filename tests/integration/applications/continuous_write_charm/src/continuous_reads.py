@@ -67,6 +67,7 @@ def continous_reads(
                 fd.write(f"{err}\n")
             should_get_new_client = True
             client.close()
+            continue
 
         reads += 1
 
