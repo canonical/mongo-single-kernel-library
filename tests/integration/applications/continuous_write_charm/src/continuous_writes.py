@@ -43,7 +43,11 @@ def continous_writes(
     # First, create a unique index to avoid duplicate writes on upsert
     # https://www.mongodb.com/docs/manual/reference/method/db.collection.update/#upsert-with-duplicate-values
     try:
-        client = _client(connection_string=connection_string)
+        client = MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+            document_class=dict
+        )
         db = client[db_name]
         test_collection = db[coll_name]
         test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
@@ -54,15 +58,13 @@ def continous_writes(
         return
 
     client = _client(connection_string=connection_string)
-    should_get_new_client = False
 
     while run:
-        if should_get_new_client:
-            try:
-                client = _client(connection_string=connection_string)
-                should_get_new_client = False
-            except Exception:
-                continue
+        client = MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+            document_class=dict
+        )
 
         db = client[db_name]
         test_collection = db[coll_name]
@@ -81,11 +83,11 @@ def continous_writes(
             # PyMongoErors should result in an attempt to retry a write. An application should
             # try to reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
-            should_get_new_client = True
-            client.close()
             with open("error.log", mode="a") as fd:
                 fd.write(f"{err}\n")
             continue
+        finally:
+            client.close()
 
         write_value += 1
 
