@@ -18,7 +18,7 @@ from data_platform_helpers.version_check import CrossAppVersionChecker, get_char
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -975,7 +975,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
-    def prepare_storage_for_shutdown(self) -> None:
+    def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
         """Before storage detaches, allow removing unit to remove itself from the set.
 
         If the removing unit is primary also allow it to step down and elect another unit as
@@ -1015,20 +1015,31 @@ class MongoDBOperator(OperatorProtocol, Object):
             return
 
         try:
-            logger.info(
-                "Removing %s from replica set",
-                self.state.unit_peer_data.internal_address,
-            )
             self.charm.status_handler.set_running_status(
                 MongoDBStatuses.WAITING_SYNC_REMOVAL.value, scope="unit"
             )
             # When we remove member, to avoid issues when majority members is removed, we need to
             # remove next member only when MongoDB forget the previous removed member.
-            with self.rollingops_manager.acquire_sync_lock(
-                backend_id=RollingOpsBackend.STOP_REPLSET_MEMBER,
-                timeout=600,
+            # Even if we have the lock, there is a race condition and `remove_replset_member`
+            # may raise `NotReadyError`. In that case we retry
+            for attempt in Retrying(
+                stop=stop_after_attempt(600),
+                wait=wait_fixed(1),
+                retry=retry_if_exception_type(
+                    (NotReadyError, RollingOpsSyncLockError, PyMongoError)
+                ),
+                reraise=True,
             ):
-                self.mongo_manager.remove_replset_member()
+                with attempt:
+                    with self.rollingops_manager.acquire_sync_lock(
+                        backend_id=RollingOpsBackend.STOP_REPLSET_MEMBER,
+                        timeout=600,
+                    ):
+                        logger.info(
+                            "Removing %s from replica set",
+                            self.state.unit_peer_data.internal_address,
+                        )
+                        self.mongo_manager.remove_replset_member()
 
         except TimeoutError:
             logger.info(
