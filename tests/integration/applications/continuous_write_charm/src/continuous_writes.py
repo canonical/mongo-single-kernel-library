@@ -24,14 +24,6 @@ def last_written_filename(db_name: str, coll_name: str) -> str:
     return f"last_written_value-{db_name}-{coll_name}"
 
 
-def _client(connection_string: str) -> MongoClient[dict[str, int]]:
-    """Returns a Mongo Client."""
-    return MongoClient(
-            connection_string,
-            socketTimeoutMS=5000,
-            document_class=dict
-        )
-
 def continous_writes(
     connection_string: str,
     starting_number: int,
@@ -46,7 +38,6 @@ def continous_writes(
         client = MongoClient(
             connection_string,
             socketTimeoutMS=5000,
-            document_class=dict
         )
         db = client[db_name]
         test_collection = db[coll_name]
@@ -57,13 +48,10 @@ def continous_writes(
             fd.write(str(-1))
         return
 
-    client = _client(connection_string=connection_string)
-
     while run:
         client = MongoClient(
             connection_string,
             socketTimeoutMS=5000,
-            document_class=dict
         )
 
         db = client[db_name]
@@ -79,7 +67,7 @@ def continous_writes(
             ).update_one({"number": write_value}, {"$set": {"number": write_value}}, upsert=True)
 
             # update_one
-        except Exception as err:
+        except PyMongoError as err:
             # PyMongoErors should result in an attempt to retry a write. An application should
             # try to reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
