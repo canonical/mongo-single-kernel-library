@@ -12,6 +12,7 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
@@ -23,7 +24,11 @@ from typing_extensions import override
 
 from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Scope, Substrates
 from single_kernel_mongo.config.models import ROLES
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    PeerRelationNames,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
@@ -102,6 +107,13 @@ class MongosOperator(OperatorProtocol, Object):
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
+        )
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
+            etcd_relation_name=None,
+            cluster_id="mongodb",
+            callback_targets={},
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:

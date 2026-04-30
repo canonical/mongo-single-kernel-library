@@ -92,6 +92,11 @@ class MongoDBStatuses(Enum):
         action="Set the role config to a valid value: `replication`, `shard` or `config-server`.",
         running="blocking",
     )
+    WAITING_SYNC_REMOVAL = StatusObject(
+        status="waiting",
+        message="Waiting for lock to remove replica set.",
+        running="blocking",
+    )
 
 
 class MongosStatuses(Enum):

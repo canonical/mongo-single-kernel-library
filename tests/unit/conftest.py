@@ -1,4 +1,5 @@
 import pathlib
+from contextlib import nullcontext
 from pathlib import Path
 from platform import platform
 
@@ -93,6 +94,23 @@ def mock_refresh(mocker):
     yield
 
 
+@pytest.fixture(autouse=True)
+def mock_rollingops_manager(mocker):
+    manager = mocker.Mock()
+    manager.request_async_lock.return_value = None
+    manager.acquire_sync_lock.return_value = nullcontext()
+
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.RollingOpsManager",
+        return_value=manager,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.RollingOpsManager",
+        return_value=manager,
+    )
+    return manager
+
+
 @pytest.fixture
 def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harness:
     if substrate == "lxd":
@@ -115,6 +133,7 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
+    harness.add_relation("rollingops-peers", "rollingops-peers")
 
     # Add network
     harness.add_network("10.0.0.10")
@@ -155,6 +174,7 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
     harness.add_relation("router-peers", "router-peers")
+    harness.add_relation("rollingops-peers", "rollingops-peers")
 
     # Add network
     harness.add_network("10.0.0.10")

@@ -1374,6 +1374,7 @@ def test_reconfigure_remove_members_failure(
     substrate: Substrate,
     mongodb_name: str,
     second_hostname: str,
+    mock_rollingops_manager,
 ):
     """Tests reconfigure does not proceed when unable to remove a member.
 
@@ -1395,7 +1396,9 @@ def test_reconfigure_remove_members_failure(
 
     rel = harness.charm.model.get_relation("database-peers")
 
-    for exception, _ in PYMONGO_EXCEPTIONS:
+    exceptions = PYMONGO_EXCEPTIONS + [(NotReadyError, None)]
+
+    for exception, _ in exceptions:
         remove_replset.side_effect = exception
         # simulate 2nd MongoDB unit joining( need a unit to join before removing a unit)
         harness.add_relation_unit(rel.id, f"{mongodb_name}/1")
@@ -1405,6 +1408,10 @@ def test_reconfigure_remove_members_failure(
         harness.remove_relation_unit(rel.id, f"{mongodb_name}/1")
 
         remove_replset.assert_called()
+        mock_rollingops_manager.acquire_sync_lock.assert_called_with(
+            backend_id="stop-replset-member",
+            timeout=3 * 60,
+        )
         defer.assert_called()
 
 
@@ -1515,7 +1522,9 @@ def test_on_relation_departed_not_leader(
 
 
 def test_on_relation_departed_leader(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+    harness: Harness[MongoTestCharm],
+    mocker,
+    mock_fs_interactions,
 ):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True

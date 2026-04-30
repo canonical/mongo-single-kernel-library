@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
+from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -110,6 +111,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     tls_events: TLSEventsHandler
     ldap_events: LDAPEventHandler
     sysctl_config: Config
+    rollingops_manager: RollingOpsManager
 
     if TYPE_CHECKING:
 
