@@ -22,6 +22,7 @@ from pymongo.errors import (
 )
 
 from single_kernel_mongo.config.literals import (
+    LOCALHOST,
     SECRETS_UNIT,
     SNAP,
     CharmKind,
@@ -665,6 +666,15 @@ class CharmState(Object, StatusesStateProtocol):
         replica_set_name = self.model.app.name
         hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT}" for host in self.internal_hosts)
         return f"{replica_set_name}/{','.join(hosts)}"
+
+    @property
+    def config_server_uri(self) -> str | None:
+        """Gets the config-server URI for Mongos."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return self.cluster.config_server_uri
+        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return None
+        return f"{self.app_peer_data.replica_set}/{LOCALHOST}:{MongoPorts.MONGODB_PORT.value}"
 
     # END: Helpers
     def update_ca_secrets(self, new_ca: str | None) -> None:
