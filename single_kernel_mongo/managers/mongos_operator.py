@@ -112,7 +112,7 @@ class MongosOperator(OperatorProtocol, Object):
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
             etcd_relation_name=None,
-            cluster_id="mongodb",
+            cluster_id=None,
             callback_targets={},
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
