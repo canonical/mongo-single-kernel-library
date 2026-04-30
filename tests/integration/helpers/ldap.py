@@ -153,7 +153,13 @@ async def teardown_offers(ops_test: OpsTest, kubernetes_model: Model) -> None:
 
 
 async def create_mongodb_user_roles(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, role_name: str, mongos: bool = False
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    role_name: str,
+    mongos: bool = False,
+    db: str = "superdb",
+    tls: bool = False,
 ) -> None:
     """Creates the roles for mongodb with the provided role_name."""
     uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=mongos)
@@ -166,8 +172,9 @@ async def create_mongodb_user_roles(
         "db.createRole({"
         f"  role: '{role_name}',"
         "  privileges: [],"
-        "  roles: [{'db': 'superdb', 'role': 'readWrite'}, {'db': 'superdb', 'role': 'enableSharding'}]"
+        f"  roles: [{{'db': '{db}', 'role': 'readWrite'}}, {{'db': '{db}', 'role': 'enableSharding'}}]"
         "})",
+        tls=tls,
     )
     assert result.succeeded, "Failed to create role"
 

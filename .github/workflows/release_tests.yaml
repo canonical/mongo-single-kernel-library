@@ -1,0 +1,197 @@
+on:
+  workflow_call:
+    inputs:
+      mongodb-revisions:
+        description: |
+          MongoDB revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
+        required: true
+        type: string
+      mongos-revisions:
+        description: |
+          Mongos revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
+        required: true
+        type: string
+      backend:
+        description: |
+          Backend to target.
+
+          Either lxd or microk8s.
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      mongodb-revisions:
+        description: |
+          MongoDB revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
+        required: true
+        type: number
+      mongos-revisions:
+        description: |
+          Mongos revisions to target (ex: '{"amd64": "161", "arm64": "162"}'
+        required: true
+        type: number
+      backend:
+        description: |
+          Backend to target.
+
+          Either lxd or microk8s
+        required: true
+        type: string
+
+name: Release testing
+jobs:
+  collect-release-tests:
+    name: Collect release test spread jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up environment
+        run: |
+          sudo snap install go --classic
+          go install github.com/canonical/spread/cmd/spread@latest
+          pipx install tox poetry
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
+      - name: Collect spread jobs
+        id: collect-jobs
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import os
+          import subprocess
+          backend = "${{ inputs.backend }}"
+          pattern = f"github-ci:...:tests/spread/release/{backend}/"
+          mongodb_revisions = json.loads("${{ inputs.mongodb-revisions }}")
+          spread_jobs = (
+              subprocess.run(
+                [pathlib.Path.home() / "go/bin/spread", "-list", pattern],
+                capture_output=True,
+                check=True,
+                text=True,
+              )
+              .stdout.strip()
+              .split("\n")
+          )
+          jobs = []
+          for job in spread_jobs:
+              # Example `job`: "github-ci:ubuntu-24.04:tests/spread/release/microk8s/test_release.py"
+              _, runner, task = job.split(":")
+              # Remove arm jobs in regular testing.
+              # Example: "test_charm.py"
+              task = task.removeprefix("tests/spread/")
+              if "arm64" in runner:
+                  architecture = "arm64"
+              else:
+                  architecture = "amd64"
+              # Example: "test_charm.py | amd64"
+              name = f"{task} | {architecture}"
+
+              mongodb_revision = mongodb_revisions[architecture]
+              mongos_revision = mongos_revisions[architecture]
+              # ":" character not valid in GitHub Actions artifact
+              name_in_artifact = f"{task.replace('/', '-')}-{architecture}-mongodb-{mongodb_revision}-mongos-{mongos_revision}"
+              jobs.append({
+                  "spread_job": job,
+                  "name": name,
+                  "name_in_artifact": name_in_artifact,
+                  "runner": runner,
+                  "mongodb_revision": mongodb_revision,
+                  "mongos_revision": mongos_revision,
+              })
+          output = f"jobs={json.dumps(jobs)}"
+          print(output)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as file:
+              file.write(output)
+    outputs:
+      jobs: ${{ steps.collect-jobs.outputs.jobs }}
+
+  release-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJSON(needs.collect-release-tests.outputs.jobs) }}
+    name: ${{ matrix.job.name }}
+    needs:
+      - collect-release-tests
+    runs-on: ${{ matrix.job.runner }}
+    timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
+    steps:
+      - name: (IS hosted) Disk usage
+        timeout-minutes: 1
+        if: ${{ contains(matrix.job.runner, 'self-hosted') }}
+        run: df --human-readable
+      - name: Checkout
+        timeout-minutes: 3
+        uses: actions/checkout@v6
+      - name: Setup python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Set up environment
+        timeout-minutes: 5
+        run: sudo snap install charmcraft --classic
+      # TODO: remove when https://github.com/canonical/charmcraft/issues/2105 and
+      # https://github.com/canonical/charmcraft/issues/2130 fixed
+      - run: |
+          sudo snap install go --classic
+          go install github.com/canonical/spread/cmd/spread@latest
+      - name: Run spread job
+        timeout-minutes: 180
+        id: spread
+        # TODO: replace with `charmcraft test` when
+        # https://github.com/canonical/charmcraft/issues/2105 and
+        # https://github.com/canonical/charmcraft/issues/2130 fixed
+        run: ~/go/bin/spread -vv -artifacts=artifacts '${{ matrix.job.spread_job }}'
+        env:
+          MONGODB_REVISION: ${{ matrix.job.mongodb_revision }}
+          MONGOS_REVISION: ${{ matrix.job.mongos_revision }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+          GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
+          GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
+      - timeout-minutes: 1
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: snap list
+      - name: Select model
+        timeout-minutes: 1
+        if: ${{ (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        id: juju-switch
+        run: |
+          # sudo needed since spread runs scripts as root
+          # "testing" is default model created by concierge
+          sudo juju switch testing
+          mkdir ~/logs/
+      - name: juju status
+        timeout-minutes: 1
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: sudo juju status --color --relations | tee ~/logs/juju-status.txt
+      - name: juju status (YAML)
+        timeout-minutes: 1
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: sudo juju status --format yaml --color --relations --storage | tee ~/logs/juju-status-yaml.txt
+      - name: juju debug-log
+        timeout-minutes: 3
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: sudo juju debug-log --color --replay --no-tail | tee ~/logs/juju-debug-log.txt
+      - name: jhack tail
+        timeout-minutes: 3
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
+      - name: Upload logs
+        timeout-minutes: 5
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-release-test-${{ matrix.job.name_in_artifact }}
+          path: ~/logs/
+          if-no-files-found: error
+      - name: Disk usage
+        timeout-minutes: 1
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
+        run: df --human-readable

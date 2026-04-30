@@ -9,7 +9,9 @@ import os
 import shutil
 import subprocess
 import time
+import uuid
 import zipfile
+from collections.abc import Generator
 from logging import getLogger
 from pathlib import Path
 from platform import machine
@@ -24,6 +26,7 @@ from pytest_operator.plugin import OpsTest
 from yaml import safe_load
 
 from .helpers.architecture import architecture as _architecture
+from .helpers.backups import CloudConfigs, CloudConfiguration
 from .helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     MONGOS_PORT,
@@ -55,6 +58,18 @@ logger = getLogger(__name__)
 @pytest.fixture(scope="session")
 def architecture() -> str:
     return _architecture
+
+
+@pytest.fixture(scope="session")
+def mongodb_revision(request: pytest.FixtureRequest) -> int:
+    """Revision for the correct arch."""
+    return int(request.config.option.mongodb_revision)
+
+
+@pytest.fixture(scope="session")
+def mongos_revision(request: pytest.FixtureRequest):
+    """Revision for the correct arch."""
+    return int(request.config.option.mongos_revision)
 
 
 @pytest.fixture
@@ -119,6 +134,16 @@ def mongos_resource(mongos_metadata, substrate) -> dict[str, Any]:
     if substrate == "microk8s":
         return {"mongodb-image": mongos_metadata["resources"]["mongodb-image"]["upstream-source"]}
     return {}
+
+
+@pytest.fixture
+def mongodb_charm_name(substrate: Substrate) -> str:
+    return "mongodb" if substrate == "lxd" else "mongodb-k8s"
+
+
+@pytest.fixture
+def mongos_charm_name(substrate: Substrate) -> str:
+    return "mongos" if substrate == "lxd" else "mongos-k8s"
 
 
 @pytest.fixture
@@ -474,3 +499,57 @@ def s3_bucket(storage_credentials, storage_config) -> None:
     s3 = session.resource("s3", endpoint_url=storage_config["endpoint"], verify="cert.pem")
     bucket = s3.Bucket(storage_config["bucket"])
     yield bucket
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "endpoint": "https://s3.amazonaws.com",
+        "bucket": "data-charms-testing",
+        "path": f"{path}/{uuid.uuid4()}",
+        "region": "us-east-1",
+    }
+    credentials: dict[str, str] = {
+        "access-key": os.environ["AWS_ACCESS_KEY"],
+        "secret-key": os.environ["AWS_SECRET_KEY"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "bucket": "data-charms-testing",
+        "endpoint": "https://storage.googleapis.com",
+        "region": "",
+        "path": f"{path}/{uuid.uuid4()}",
+    }
+    credentials: dict[str, str] = {
+        "access-key": os.environ["GCP_ACCESS_KEY"],
+        "secret-key": os.environ["GCP_SECRET_KEY"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
+    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    configs: dict[str, str] = {
+        "bucket": "data-charms-testing",
+        "path": f"{path}/{uuid.uuid4()}",
+    }
+    credentials: dict[str, str] = {
+        "secret-key": os.environ["GCS_SERVICE_ACCOUNT"],
+    }
+    return configs, credentials
+
+
+@pytest.fixture(scope="session")
+def cloud_configs(
+    cloud_configs_gcp: CloudConfiguration,
+    cloud_configs_aws: CloudConfiguration,
+    cloud_configs_gcs: CloudConfiguration,
+) -> Generator[CloudConfigs]:
+    yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp, "GCS": cloud_configs_gcs}
