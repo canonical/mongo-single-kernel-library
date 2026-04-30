@@ -1,0 +1,200 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m integration.helpers.ha:ha.py:87 Calling network loss on ns=testing and pod=shard-two-1
+[32mINFO    [0m integration.helpers.ha:ha.py:114 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for primary re-election...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:54:50Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.10   active       3  mongodb-k8s                  0  10.152.183.158  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.177  no       
+shard-one         8.0.10   active       3  mongodb-k8s                  1  10.152.183.152  no       
+shard-two         8.0.10   active       3  mongodb-k8s                  2  10.152.183.27   no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.59         
+config-server/1      active    idle   10.1.53.58         Primary.
+config-server/2      active    idle   10.1.53.57         
+continuous-write/0*  waiting   idle   10.1.53.56         
+shard-one/0*         active    idle   10.1.53.62         
+shard-one/1          active    idle   10.1.53.61         Primary.
+shard-one/2          active    idle   10.1.53.60         
+shard-two/0*         active    idle   10.1.53.6          
+shard-two/1          active    idle   10.1.53.5          Primary.
+shard-two/2          active    idle   10.1.53.63         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-two-0: 02:42:54 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-30T02:42:54Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-30T02:42:54Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-30T02:42:54.144Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-30T02:42:54.144Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-30T02:42:54Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-04-30T02:42:54Z INFO Service "mongod" has never been started.
+----- Logs from task 1 -----
+2026-04-30T02:42:54Z INFO Most recent service output:
+    {"t":{"$date":"2026-04-30T02:42:54.144Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-04-30T02:42:54.144Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-04-30T02:42:54Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-two-0: 02:42:54 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.mongodb_operator:An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-continuous-write-0: 02:46:44 ERROR unit.continuous-write/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 289, in <module>
+    main(ContinuousWritesApplication)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 253, in _on_clear_continuous_writes_action
+    test_collection.drop()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/collection.py", line 1234, in drop
+    dbo.drop_collection(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 108, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/database.py", line 1249, in drop_collection
+    return self._drop_helper(name, session, comment)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/database.py", line 1163, in _drop_helper
+    with self.__client._conn_for_writes(session, operation=_Op.DROP) as connection:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1333, in _conn_for_writes
+    server = self._select_server(writable_server_selector, session, operation)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1316, in _select_server
+    server = topology.select_server(
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 368, in select_server
+    server = self._select_server(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 346, in _select_server
+    servers = self.select_servers(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 253, in select_servers
+    server_descriptions = self._select_servers_loop(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 303, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: 10.1.53.25:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.17:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.28:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 69f2c276e737f1bb8fa9f0a0, topology_type: Unknown, servers: [<ServerDescription ('10.1.53.17', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.17:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.25', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.25:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.28', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.28:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+unit-continuous-write-0: 02:47:18 ERROR unit.continuous-write/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 289, in <module>
+    main(ContinuousWritesApplication)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 253, in _on_clear_continuous_writes_action
+    test_collection.drop()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/collection.py", line 1234, in drop
+    dbo.drop_collection(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 108, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/database.py", line 1249, in drop_collection
+    return self._drop_helper(name, session, comment)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/database.py", line 1163, in _drop_helper
+    with self.__client._conn_for_writes(session, operation=_Op.DROP) as connection:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1333, in _conn_for_writes
+    server = self._select_server(writable_server_selector, session, operation)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1316, in _select_server
+    server = topology.select_server(
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 368, in select_server
+    server = self._select_server(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 346, in _select_server
+    servers = self.select_servers(
+              ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 253, in select_servers
+    server_descriptions = self._select_servers_loop(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.12/site-packages/pymongo/topology.py", line 303, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: 10.1.53.25:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.17:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.28:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 69f2c298e378e73d5f77813a, topology_type: Unknown, servers: [<ServerDescription ('10.1.53.17', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.17:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.25', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.25:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.28', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.28:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+unit-shard-two-0: 02:49:19 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.mongo:Deferring process_unremoved_units: error=ServerSelectionTimeoutError('No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 69f2c32e842131b45e385fef, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription (\'shard-two-0.shard-two-endpoints\', 27017) server_type: RSSecondary, rtt: 0.0006086339999455959>, <ServerDescription (\'shard-two-1.shard-two-endpoints\', 27017) server_type: Unknown, rtt: None>, <ServerDescription (\'shard-two-2.shard-two-endpoints\', 27017) server_type: RSSecondary, rtt: 0.001274383000236412>]>')
+unit-config-server-0: 02:49:50 ERROR unit.config-server/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7d9600a076e0 state=finished raised ClusterNotHealthyError>]
+unit-shard-one-0: 02:50:25 ERROR unit.shard-one/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x71c304171670 state=finished raised ClusterNotHealthyError>]
+unit-shard-two-0: 02:51:00 ERROR unit.shard-two/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x768bb7790f50 state=finished raised ClusterNotHealthyError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
