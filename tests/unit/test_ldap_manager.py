@@ -406,7 +406,7 @@ def test_ldap_unable_to_bind_defers(
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
-    mocker.patch(
+    mock_restart=mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch(
@@ -446,21 +446,7 @@ def test_ldap_unable_to_bind_defers(
     )
 
     defer.assert_called()
-
-    mocker.patch(
-        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=LdapState.ACTIVE,
-    )
-    mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_statuses",
-        return_value=[CharmStatuses.ACTIVE_IDLE.value],
-    )
-
-    harness.charm.on.update_status.emit()
-    harness.evaluate_status()
-
-    # All is good, we are green
-    assert harness.model.unit.status == ActiveStatus("")
+    mock_restart.assert_not_called()
 
 
 def test_ldaps_not_enabled(
