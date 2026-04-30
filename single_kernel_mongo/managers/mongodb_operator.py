@@ -380,10 +380,8 @@ class MongoDBOperator(OperatorProtocol, Object):
             if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
                 self.vault_manager.prepare_vault_agent(data)
 
-            if (
-                self.state.enable_encryption_at_rest
-                and (state := self.vault_manager.vault_state()) != VaultConfigurationState.ACTIVE
-            ):
+            if self.vault_manager.is_degraded():
+                state = self.vault_manager.vault_state()
                 logger.warning(
                     f"Encryption at rest may be degraded. Vault Agent state: {state}. This must be fixed first."
                 )
@@ -657,6 +655,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         To prevent a user from migrating a cluster, and causing the component to become
         unresponsive therefore causing a cluster failure, error the component. This prevents it
         from executing other hooks with a new role.
+
+        Request an async restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             logger.info("We haven't elected a leader yet.")
@@ -1316,10 +1319,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
             )
 
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state()) != VaultConfigurationState.ACTIVE
-        ):
+        if self.vault_manager.is_degraded():
+            state = self.vault_manager.vault_state()
             raise WorkloadServiceError(
                 f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
             )
@@ -1359,6 +1360,13 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def async_restart_charm_services(self, force: bool = False) -> None:
+        """Request to an async lock to restart.
+
+        All the exceptions are handled in the callback and retries are requested if necessary.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.charm.state.statuses.add(
             MongoDBStatuses.WAITING_FOR_RESTART.value,
             scope="unit",

@@ -417,6 +417,9 @@ class ClusterRequirer(Object):
 
         Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
         to secret changes events.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if not secret_label:
             return

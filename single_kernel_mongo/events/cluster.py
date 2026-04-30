@@ -167,15 +167,27 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _handle_changed_secrets(self, event: SecretChangedEvent):
-        """SecretChanged event handler, which is used to propagate the updated passwords."""
-        self.manager.handle_secret_changed(event.secret.label or "")
+        """SecretChanged event handler, which is used to propagate the updated passwords.
+
+        The manager will request to asynchronously update the mongos configuration
+        and restart. All the exceptions are handled in the callback and
+        retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        """
+        try:
+            self.manager.handle_secret_changed(event.secret.label or "")
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
 
         The manager will request to asynchronously update the mongos configuration
-        and restart it. All the exceptions are handled in the callback and
+        and restart. All the exceptions are handled in the callback and
         retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
         """
         try:
             self.manager.async_update_mongos_and_restart()

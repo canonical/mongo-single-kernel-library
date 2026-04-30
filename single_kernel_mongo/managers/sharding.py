@@ -390,6 +390,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             logger.error(f"Failed to add {shard_name} to cluster")
             raise e
         except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
             logger.warning("Failed to connect to mongos: %s", e)
             raise NotReadyError
 
@@ -471,6 +472,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
         except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
             logger.warning("Failed to connect to cluster members: %s", e)
             return False
         except OperationFailure as e:
@@ -656,6 +658,12 @@ class ShardManager(Object, ManagerStatusProtocol):
         self._reconcile_shard_after_restart()
 
     def _reconcile_shard_after_restart(self):
+        """Reconcile shard state after a unit restart.
+
+        This method resets the shard status to active/idle and, if executed on
+        the leader unit, propagates the necessary shard metadata to allow the
+        config-server to add the shard to the cluster.
+        """
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
@@ -686,7 +694,13 @@ class ShardManager(Object, ManagerStatusProtocol):
         return OperationResult.RELEASE
 
     def async_shard_restart_on_key_file(self):
-        """Rolling shard restart on keyfile."""
+        """Called if a changed in the keyfile is detected.
+
+        Request an async restart using the SHARD_RESTART_ON_KEYFILE_CHANGED callback.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.charm.state.statuses.add(
             ShardStatuses.ADDING_TO_CLUSTER.value,
             scope="unit",
@@ -984,6 +998,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
         except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
             logger.warning("Failed to connect to cluster members: %s", e)
             return False
         except OperationFailure as e:

@@ -464,6 +464,13 @@ class MongosOperator(OperatorProtocol, Object):
 
     @override
     def async_restart_charm_services(self, force: bool = False) -> None:
+        """Request to an async lock to restart.
+
+        All the exceptions are handled in the callback and retries are requested if necessary.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.charm.state.statuses.add(
             MongosStatuses.WAITING_FOR_RESTART.value,
             scope="unit",

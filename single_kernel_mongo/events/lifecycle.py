@@ -23,6 +23,7 @@ to nasty behaviors on other events, especially the stop events on Kubernetes.
 
 import logging
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
@@ -198,6 +199,7 @@ class LifecycleEventsHandler(Object):
             DeferrableFailedHookChecksError,
             SetPasswordError,
             WaitingForVaultError,
+            RollingOpsNoRelationError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:

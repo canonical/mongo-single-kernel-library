@@ -121,7 +121,8 @@ class MongoManager(Object, ManagerStatusProtocol):
             with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
                 return direct_mongo.is_ready
         except FileNotFoundError as e:
-            logger.warning("Failed to check whether mongod is ready: %s", e)
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
+            logger.warning("Failed to connect to mongod: %s", e)
             return False
 
     def set_user_password(self, user: MongoDBUser, password: str) -> None:

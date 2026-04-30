@@ -150,7 +150,19 @@ class TLSManager(ManagerStatusProtocol):
         return ca_file, pem_file
 
     def _tls_files_exist_on_workload(self, internal: bool) -> tuple[bool, bool]:
-        """Return whether both TLS files exist on the workload."""
+        """Check the presence of TLS CA and PEM files on the workload.
+
+        Depending on the ``internal`` flag, this method checks for the existence
+        of either the internal or external TLS certificate files (CA and PEM).
+
+        Args:
+            internal: If True, check internal TLS files. Otherwise, check external TLS files.
+
+        Returns:
+            A tuple ``(any_exists, all_exist)`` where:
+            - ``any_exists`` is True if at least one of the TLS files (CA or PEM) exists.
+            - ``all_exist`` is True if both TLS files (CA and PEM) exist.
+        """
         if internal:
             ca_path = self.workload.paths.int_ca_file
             pem_path = self.workload.paths.int_pem_file
@@ -239,7 +251,14 @@ class TLSManager(ManagerStatusProtocol):
         self.dependent.async_restart_charm_services(force=True)
 
     def enable_certificates_for_unit(self):
-        """Enables the new certificates for this unit."""
+        """Enables the new certificates for this unit.
+
+        If conditions are met an async restart is requested. Certificates will be
+        written to disk in the restart callback.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if not self.state.db_initialised and self.state.is_role(MongoDBRoles.MONGOS):
             logger.info(
                 "Mongos has not yet been initialized, will enable TLS when it is set up with the config-server."

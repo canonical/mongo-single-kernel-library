@@ -119,7 +119,11 @@ class LDAPManager(Object, ManagerStatusProtocol):
             self.dependent.ldap_events.restart_if_ready_event.emit()
 
     def restart_when_ready(self) -> None:
-        """Restarts when we are ready."""
+        """Request and async restart when we are ready.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if not self.state.db_initialised:
             return
 
@@ -148,7 +152,13 @@ class LDAPManager(Object, ManagerStatusProtocol):
                     )
 
     def clean_ldap_credentials_and_uri(self) -> None:
-        """Runs when the LDAP integration is broken."""
+        """Runs when the LDAP integration is broken.
+
+        Requests a lock to asynchronously restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
             self.remove_hash_from_mongos()
@@ -193,7 +203,13 @@ class LDAPManager(Object, ManagerStatusProtocol):
             fd.write("\n".join(full_chain))
 
     def remove_ldap_certificates(self) -> None:
-        """Runs when the certificate is removed."""
+        """Runs when the certificate is removed.
+
+        Requests a lock to asynchronously restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
             self.remove_hash_from_mongos()
