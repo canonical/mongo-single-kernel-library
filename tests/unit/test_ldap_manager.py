@@ -12,7 +12,6 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.models import LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -406,7 +405,7 @@ def test_ldap_unable_to_bind_defers(
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
-    mock_restart=mocker.patch(
+    mock_restart = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch(

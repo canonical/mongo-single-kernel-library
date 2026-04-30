@@ -487,7 +487,7 @@ class TLSManager(ManagerStatusProtocol):
         if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
             if not self.update_private_key(tls_client_private_key_id, internal=False):
                 charm_statuses.append(TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value)
-        print(charm_statuses)
+
         return charm_statuses
 
     def initial_integration(self) -> bool:

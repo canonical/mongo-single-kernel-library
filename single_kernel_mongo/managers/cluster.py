@@ -397,7 +397,11 @@ class ClusterRequirer(Object):
             return OperationResult.RELEASE
 
     def async_update_mongos_and_restart(self):
-        """Async update mongos and restart."""
+        """Async update mongos and restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.state.statuses.add(
             MongosStatuses.WAITING_FOR_MONGOS_START.value,
             scope="unit",
