@@ -648,7 +648,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         # We restart PBM only when the shard is integrated on the cluster side.
         if self.state.shard_state.shard_integrated:
             self.dependent.s3_backup_manager.configure_and_restart()
-        
+
         self._reconcile_shard_after_restart()
 
     def _reconcile_shard_after_restart(self):

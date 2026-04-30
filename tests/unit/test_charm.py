@@ -1255,6 +1255,7 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     spied.assert_called()
     mock_on_relation_changed.assert_not_called()
 
+
 @pytest.mark.skip("TODO")
 def test_mongodb_relation_joined_all_replicas_not_ready(
     harness: Harness[MongoTestCharm], mocker, substrate: Substrate, mongodb_hostname: str
@@ -1288,6 +1289,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(
 
     assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
     mocked_add_replset_member.assert_not_called()
+
 
 @pytest.mark.skip("TODO")
 def test_reconfigure_not_already_initialised(
@@ -1413,6 +1415,7 @@ def test_reconfigure_remove_members_failure(
             timeout=3 * 60,
         )
         defer.assert_called()
+
 
 @pytest.mark.skip("TODO")
 def test_reconfigure_peer_not_ready(

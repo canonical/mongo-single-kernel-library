@@ -297,6 +297,7 @@ def test_cluster_requirer_share_credentials_to_clients(
     assert manager.state.secrets.get_for_key(Scope.APP, "username") == "charmed-operator"
     assert manager.state.secrets.get_for_key(Scope.APP, "password") == "password"
 
+
 @pytest.mark.skip("TODO")
 def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker, substrate: Substrate
