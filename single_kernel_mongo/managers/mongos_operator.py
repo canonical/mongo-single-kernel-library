@@ -421,10 +421,15 @@ class MongosOperator(OperatorProtocol, Object):
     @override
     def restart_charm_services(self, force: bool = False) -> None:
         """Restarts the charm with the new configuration."""
+        if not self.state.cluster.config_server_uri:
+            logger.error("Cannot start mongos without a config server db")
+            raise MissingConfigServerError("Cannot start mongos without a config server db")
+
+        if self.ldap_manager.should_not_restart():
+            raise DeferrableError(
+                "Workload not allowed to restart: LDAP is in an inconsistent state."
+            )
         try:
-            if not self.state.cluster.config_server_uri:
-                logger.error("Cannot start mongos without a config server db")
-                raise MissingConfigServerError("Cannot start mongos without a config server db")
             should_restart = self.tls_manager.reconcile_tls_files()
             force = force or should_restart
             self.charm.status_handler.set_running_status(
@@ -449,9 +454,11 @@ class MongosOperator(OperatorProtocol, Object):
         )
         try:
             self.restart_charm_services(force=force)
-        except MissingConfigServerError:
+        except MissingConfigServerError as e:
+            logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except WorkloadServiceError:
+        except (WorkloadServiceError, DeferrableError) as e:
+            logger.info("Deferrable error during mongos restart. %s", e)
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
 

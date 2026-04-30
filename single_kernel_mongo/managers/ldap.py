@@ -387,3 +387,8 @@ class LDAPManager(Object, ManagerStatusProtocol):
             self.state.statuses.delete(
                 LdapStatuses.LDAP_SERVERS_MISMATCH.value, scope="unit", component=self.name
             )
+
+    def should_not_restart(self) -> bool:
+        """Mongo workload should not be restarted if the LDAP is in an inconsistent state."""
+        state = self.ldap_state()
+        return state == LdapState.LDAP_SERVERS_MISMATCH or state == LdapState.UNABLE_TO_BIND

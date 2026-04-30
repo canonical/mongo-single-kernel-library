@@ -598,7 +598,7 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
 def test_on_config_changed_valid_ldap_query_template(harness, mocker):
     harness.set_leader(True)
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
@@ -1256,8 +1256,7 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     mock_on_relation_changed.assert_not_called()
 
 
-@pytest.mark.skip("TODO")
-def test_mongodb_relation_joined_all_replicas_not_ready(
+def test_mongodb_relation_joined_all_replicas_not_ready_are_added(
     harness: Harness[MongoTestCharm], mocker, substrate: Substrate, mongodb_hostname: str
 ):
     harness.set_leader(True)
@@ -1287,11 +1286,10 @@ def test_mongodb_relation_joined_all_replicas_not_ready(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
 
-    assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
-    mocked_add_replset_member.assert_not_called()
+    assert all(status != MongodStatuses.WAITING_RECONFIG.value for status in statuses)
+    mocked_add_replset_member.assert_called()
 
 
-@pytest.mark.skip("TODO")
 def test_reconfigure_not_already_initialised(
     harness,
     mocker,
@@ -1417,8 +1415,7 @@ def test_reconfigure_remove_members_failure(
         defer.assert_called()
 
 
-@pytest.mark.skip("TODO")
-def test_reconfigure_peer_not_ready(
+def test_reconfigure_peer_not_ready_replica_set_is_added(
     harness,
     mocker,
     mock_fs_interactions,
@@ -1452,8 +1449,8 @@ def test_reconfigure_peer_not_ready(
     harness.add_relation_unit(rel.id, f"{mongodb_name}/1")
     harness.update_relation_data(rel.id, f"{mongodb_name}/1", PEER_ADDR[substrate])
 
-    add_replset.assert_not_called()
-    defer.assert_called()
+    add_replset.assert_called()
+    defer.assert_not_called()
 
 
 def test_reconfigure_add_member_failure(

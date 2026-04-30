@@ -324,7 +324,6 @@ class ClusterRequirer(Object):
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
 
-        # Wait for
         if not self.state.cluster.username or not self.state.cluster.password:
             raise WaitingForSecretsError("Waiting for username and password.")
 

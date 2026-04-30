@@ -144,7 +144,7 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     valid_mapping = [
@@ -298,7 +298,6 @@ def test_cluster_requirer_share_credentials_to_clients(
     assert manager.state.secrets.get_for_key(Scope.APP, "password") == "password"
 
 
-@pytest.mark.skip("TODO")
 def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness: Harness[MongosTestCharm], mock_fs_interactions, mocker, substrate: Substrate
 ):
@@ -338,6 +337,7 @@ def test_cluster_requirer_update_mongos_and_restart(
         },
     )
 
+    manager.update_mongos_and_restart()
     statuses = mongos_harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=mongos_harness.charm.operator.name
     )

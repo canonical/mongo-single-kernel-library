@@ -13,7 +13,6 @@ import charm_refresh
 from charmlibs.rollingops import (
     OperationResult,
     RollingOpsManager,
-    RollingOpsStatus,
     RollingOpsSyncLockError,
 )
 from data_platform_helpers.advanced_statuses.models import StatusObject
@@ -854,7 +853,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader():
             return
 
-        self.peer_changed()  # TODO may raise
+        self.peer_changed()
         self.update_related_hosts()
 
     @override
@@ -1308,11 +1307,22 @@ class MongoDBOperator(OperatorProtocol, Object):
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
-            raise WorkloadServiceError("Workload not allowed to start on refresh.")
+            raise WorkloadServiceError("Workload not allowed to restart on refresh.")
         if not self.state.db_initialised:
-            raise WorkloadServiceError("Workload not allowed to start: DB not initialised")
-        # TODO add check on vault
-        # TODO add check on ldap
+            raise WorkloadServiceError("Workload not allowed to restart: DB not initialised.")
+
+        if self.ldap_manager.should_not_restart():
+            raise DeferrableError(
+                "Workload not allowed to restart: LDAP is in an inconsistent state."
+            )
+
+        if (
+            self.state.enable_encryption_at_rest
+            and (state := self.vault_manager.vault_state()) != VaultConfigurationState.ACTIVE
+        ):
+            raise WorkloadServiceError(
+                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+            )
         try:
             should_restart = self.tls_manager.reconcile_tls_files()
             self.charm.status_handler.set_running_status(
@@ -1323,7 +1333,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
             raise DeferrableError from e
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
@@ -1335,14 +1344,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         try:
             self.restart_charm_services(force=force)
-        except WorkloadServiceError:
+        except WorkloadServiceError as e:
+            logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except DeferrableError:
+        except DeferrableError as e:
             self.charm.state.statuses.add(
                 MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
+            logger.info("Deferrable error during mongod restart. %s", e)
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
 
@@ -1533,7 +1544,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     def is_waiting_for_rolling_operation(self) -> bool:
         """Returns whether mongodb has pending rolling operations."""
-        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
+        return self.rollingops_manager.is_waiting()
 
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""

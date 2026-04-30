@@ -337,7 +337,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 charm_statuses["unit"].append(
                     ConfigServerStatuses.unreachable_shards(unreachable_shards)
                 )
-        except (ServerSelectionTimeoutError, OperationFailure):
+        except (ServerSelectionTimeoutError, OperationFailure, FileNotFoundError):
             return []
 
         return (
@@ -375,21 +375,23 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         self.charm.status_handler.set_running_status(
             ConfigServerStatuses.adding_shard(shard_name), scope="unit"
         )
-
-        with MongoConnection(self.state.mongos_config) as mongo:
-            try:
+        try:
+            with MongoConnection(self.state.mongos_config) as mongo:
                 mongo.add_shard(shard_name, hosts)
-            except OperationFailure as e:
-                if e.code == MongoErrorCodes.AUTHENTICATION_FAILED:
-                    logger.error(
-                        f"{shard_name} shard does not have the same auth as the config server."
-                    )
-                    raise ShardAuthError(shard_name)
-                logger.warning(f"Unhandled Operation Error {e.code}: {e}")
-                raise
-            except PyMongoError as e:
-                logger.error(f"Failed to add {shard_name} to cluster")
-                raise e
+        except OperationFailure as e:
+            if e.code == MongoErrorCodes.AUTHENTICATION_FAILED:
+                logger.error(
+                    f"{shard_name} shard does not have the same auth as the config server."
+                )
+                raise ShardAuthError(shard_name)
+            logger.warning(f"Unhandled Operation Error {e.code}: {e}")
+            raise
+        except PyMongoError as e:
+            logger.error(f"Failed to add {shard_name} to cluster")
+            raise e
+        except FileNotFoundError as e:
+            logger.warning("Failed to connect to mongos: %s", e)
+            raise NotReadyError
 
         # Say to the shard that it has been integrated
         self.data_interface.update_relation_data(
@@ -638,7 +640,9 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_pbm_certificate_in_trust_store()
 
-        if self.dependent.is_waiting_for_rolling_operation():
+        if self.dependent.rollingops_manager.is_waiting_callback(
+            RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED
+        ):
             return
 
         if not self.dependent.mongo_manager.mongod_ready():
@@ -671,9 +675,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         """Shard restart on keyfile callback."""
         try:
             self.dependent.restart_charm_services(force=True)
-        except WorkloadServiceError:
+        except WorkloadServiceError as e:
+            logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except DeferrableError:
+        except DeferrableError as e:
+            logger.info("Deferrable error during mongod restart. %s", e)
             return OperationResult.RETRY_RELEASE
 
         self._reconcile_shard_after_restart()
