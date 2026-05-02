@@ -128,6 +128,7 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongod
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
+    assert len(data.get("cluster-id")) == 8
 
 
 def test_share_secret_to_mongos_also_shares_ldap_config(
@@ -341,6 +342,7 @@ def test_cluster_requirer_update_mongos_and_restart(
     statuses = mongos_harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=mongos_harness.charm.operator.name
     )
+
     assert statuses[0].status == "active"
     assert manager.state.db_initialised
 

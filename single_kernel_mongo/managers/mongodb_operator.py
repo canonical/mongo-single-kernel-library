@@ -10,6 +10,7 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+import shortuuid
 from charmlibs.rollingops import (
     OperationResult,
     RollingOpsManager,
@@ -240,7 +241,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
             etcd_relation_name=RelationNames.ETCD.value,
-            cluster_id="mongodb",
+            cluster_id=self.state.cluster_id,
             callback_targets={
                 RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
                 RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED: self.shard_manager.shard_restart_on_keyfile_callback,
@@ -809,6 +810,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
+        self.generate_cluster_id()
+
         if self.state.internal_user_passwords_are_initialized():
             return
 
@@ -825,6 +828,28 @@ class MongoDBOperator(OperatorProtocol, Object):
             elif not self.state.get_user_password(user):
                 password = self.workload.generate_password()
                 self.state.set_user_password(user, password)
+
+    def generate_cluster_id(self):
+        """Generate and persist a unique cluster identifier.
+
+        This method assigns a cluster ID to the application peer data if all
+        of the following conditions are met:
+
+        - The current unit is the leader.
+        - The application is a replica set or a config server.
+        - No cluster ID has been previously set.
+        """
+        if not self.model.unit.is_leader():
+            return
+
+        if not (
+            self.state.is_role(MongoDBRoles.CONFIG_SERVER)
+            or self.state.is_role(MongoDBRoles.REPLICATION)
+        ):
+            return
+
+        if not self.state.app_peer_data.cluster_id:
+            self.state.app_peer_data.cluster_id = shortuuid.ShortUUID().random(length=8)
 
     @override
     def new_peer(self) -> None:

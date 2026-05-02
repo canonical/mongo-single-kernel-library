@@ -133,6 +133,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.EXT_CA_SECRET.value] = ext_tls_ca
 
+        relation_data[AppShardingComponentKeys.CLUSTER_ID.value] = self.state.cluster_id
+
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
             relation.id, "unused", "unused"

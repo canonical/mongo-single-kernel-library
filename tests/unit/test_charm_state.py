@@ -70,6 +70,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
+    assert len(state.app_peer_data.cluster_id) == 8
 
 
 def test_unit_peer_data(
@@ -130,3 +131,5 @@ def test_is_shard_added_to_cluster_success(
     state.shard_state.shard_integrated = True
 
     assert state.is_shard_added_to_cluster()
+    assert state.shard_state.cluster_id is None
+    assert state.app_peer_data.cluster_id is None
