@@ -124,9 +124,9 @@ backends:
           username: ubuntu
       - self-hosted-linux-arm64-noble-medium:
           username: ubuntu
-      - self-hosted-linux-amd64-noble-large:
+      - self-hosted-linux-amd64-noble-xlarge:
           username: ubuntu
-      - self-hosted-linux-arm64-noble-large:
+      - self-hosted-linux-arm64-noble-xlarge:
           username: ubuntu
 
 suites:
@@ -138,6 +138,18 @@ suites:
     summary: Spread tests for Mongos VM
   tests/spread/mongos/microk8s/:
     summary: Spread tests for Mongos Kubernetes
+  tests/spread/release/lxd/:
+    summary: Spread mongodb release tests for VM
+    manual: True
+    environment:
+      MONGODB_REVISION: "$(HOST: echo $MONGODB_REVISION)"
+      MONGOS_REVISION: "$(HOST: echo $MONGOS_REVISION)"
+  tests/spread/release/microk8s/:
+    summary: Spread mongodb release tests for Kubernetes
+    manual: True
+    environment:
+      MONGODB_REVISION: "$(HOST: echo $MONGODB_REVISION)"
+      MONGOS_REVISION: "$(HOST: echo $MONGOS_REVISION)"
 
 path: /root/spread_project
 
@@ -147,6 +159,7 @@ environment:
   CONCIERGE_JUJU_CHANNEL: 3.6/stable
   CHARM_UBUNTU_BASE: 24.04
   pythonLocation: "$(HOST: echo $pythonLocation)"
+  PIPX_DEFAULT_PYTHON: "$(HOST: echo $pythonLocation)/bin/python"
 prepare: |
   snap refresh --hold
   chown -R root:root "$SPREAD_PATH"

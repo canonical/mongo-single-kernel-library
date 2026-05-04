@@ -48,12 +48,12 @@ def continous_writes(
             fd.write(str(-1))
         return
 
-
     while run:
         client = MongoClient(
             connection_string,
             socketTimeoutMS=5000,
         )
+
         db = client[db_name]
         test_collection = db[coll_name]
         try:
@@ -67,10 +67,12 @@ def continous_writes(
             ).update_one({"number": write_value}, {"$set": {"number": write_value}}, upsert=True)
 
             # update_one
-        except PyMongoError:
+        except PyMongoError as err:
             # PyMongoErors should result in an attempt to retry a write. An application should
             # try to reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
             continue
         finally:
             client.close()

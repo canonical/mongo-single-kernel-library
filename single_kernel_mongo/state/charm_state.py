@@ -595,6 +595,15 @@ class CharmState(Object, StatusesStateProtocol):
         )
         return None
 
+    @property
+    def config_server_uri(self) -> str | None:
+        """Gets the config-server URI for Mongos."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return self.cluster.config_server_uri
+        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return None
+        return f"{self.app_peer_data.replica_set}/{self.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
+
     def get_subject_name(self) -> str:
         """Generate the subject name for CSR."""
         # In sharded MongoDB deployments it is a requirement that all subject names match across

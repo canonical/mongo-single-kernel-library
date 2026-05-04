@@ -14,8 +14,10 @@ from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MONGOS_PORT,
     deploy_charm,
+    external_cert_path,
     get_direct_mongo_client,
     get_leader_id,
+    internal_cert_path,
     mongodb_uri,
 )
 from tests.integration.helpers.tls import (
@@ -24,9 +26,7 @@ from tests.integration.helpers.tls import (
     cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
-    external_cert_path,
     get_file_content,
-    internal_cert_path,
     set_private_keys,
     time_file_created,
     time_process_started,

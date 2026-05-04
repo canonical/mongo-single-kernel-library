@@ -265,12 +265,6 @@ class MongoConnection:
 
         return rs_status_parsed
 
-    @retry(
-        stop=stop_after_attempt(20),
-        wait=wait_fixed(3),
-        reraise=True,
-        before=before_log(logger, logging.DEBUG),
-    )
     def remove_replset_member(self, hostname: str) -> None:
         """Remove member from replica set config inside MongoDB.
 
@@ -283,9 +277,13 @@ class MongoConnection:
         # When we remove member, to avoid issues when majority members is removed, we need to
         # remove next member only when MongoDB forget the previous removed member.
         if self.is_any_removing(rs_status):
-            # removing from replicaset is fast operation, lets @retry(3 times with a 5sec timeout)
-            # before giving up.
             raise NotReadyError
+
+        members = rs_config["config"]["members"]
+
+        if not any(hostname == hostname_from_hostport(member["host"]) for member in members):
+            logger.info("Replica set member %s is already removed", hostname)
+            return
 
         # avoid downtime we need to reelect new primary if removable member is the primary.
         if self.primary(rs_status) == hostname:
@@ -294,10 +292,9 @@ class MongoConnection:
 
         rs_config["config"]["version"] += 1
         rs_config["config"]["members"] = [
-            member
-            for member in rs_config["config"]["members"]
-            if hostname != hostname_from_hostport(member["host"])
+            member for member in members if hostname != hostname_from_hostport(member["host"])
         ]
+
         logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
         self.client.admin.command("replSetReconfig", rs_config["config"])
 

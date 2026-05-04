@@ -22,7 +22,10 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
 )
-from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from single_kernel_mongo.state.tls_state import (
+    SECRET_CA_LABEL,
+    SECRET_CERT_LABEL,
+)
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
@@ -310,8 +313,6 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     mongos_harness.update_relation_data(rel_id_proxy, "test-application", {"database": "test-db"})
 
-    manager.share_credentials_to_clients("charmed-operator", "password")
-
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs")
@@ -328,7 +329,12 @@ def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "mongodb/2.2.2.2:27017",
+            "username": "charmed-operator",
+            "password": "password",  # nosec: B105
+        },
     )
 
     statuses = mongos_harness.charm.operator.state.statuses.get(
@@ -382,7 +388,7 @@ def test_cluster_requirer_update_mongos_and_restart_fail_missing_data(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        databag,
+        databag | {"username": "unused", "password": "unused"},
     )
     with pytest.raises(WaitingForSecretsError) as err:
         manager.update_mongos_and_restart()
@@ -418,7 +424,12 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "mongodb/2.2.2.2:27017",
+            "username": "unused",
+            "password": "unused",
+        },
     )
 
     # Check that we raise a deferrable error because mongos is not running after restart
@@ -592,6 +603,14 @@ def test_cluster_requirer_tls_status(
         mongos_harness.add_relation(
             ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
         )
+        mocker.patch(
+            "single_kernel_mongo.state.tls_state.TLSState.peer_enabled",
+            new_callable=mocker.PropertyMock(return_value=True),
+        )
+        mocker.patch(
+            "single_kernel_mongo.state.tls_state.TLSState.client_enabled",
+            new_callable=mocker.PropertyMock(return_value=True),
+        )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("charmed-operator", "password")
@@ -681,9 +700,13 @@ def test_cluster_requirer_get_tls_statuses(
         mongos_harness.add_relation(
             ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
-        # Local certificate
+        # Local CA certificate
         manager.state.tls.set_secret(
             internal=True, label_name=SECRET_CA_LABEL, contents=mongos_peer_ca_secret
+        )
+        # Local cert
+        manager.state.tls.set_secret(
+            internal=True, label_name=SECRET_CERT_LABEL, contents="useless"
         )
     if mongos_client_ca_secret:
         mongos_harness.add_relation(
@@ -691,6 +714,10 @@ def test_cluster_requirer_get_tls_statuses(
         )
         manager.state.tls.set_secret(
             internal=False, label_name=SECRET_CA_LABEL, contents=mongos_client_ca_secret
+        )
+        # Local cert
+        manager.state.tls.set_secret(
+            internal=False, label_name=SECRET_CERT_LABEL, contents="useless"
         )
 
     # Ensure some credentials are present

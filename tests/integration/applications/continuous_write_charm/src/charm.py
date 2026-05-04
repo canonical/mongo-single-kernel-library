@@ -8,6 +8,7 @@ This charm is meant to be used only for testing
 high availability of the MongoDB charm.
 """
 
+import json
 import logging
 import os
 import signal
@@ -32,6 +33,7 @@ REPLICATION_COLL_NAME = "test_ubuntu_collection"
 PEER = "application-peers"
 PROC_PID_KEY = "proc-pid"
 LAST_WRITTEN_FILE = "last_written_value"
+N_READ_FILE = "n_read_value"
 
 CA_PATH = Path("/tmp/ca.crt")
 
@@ -53,6 +55,13 @@ class ContinuousWritesApplication(CharmBase):
         )
         self.framework.observe(
             self.on.stop_continuous_writes_action, self._on_stop_continuous_writes_action
+        )
+
+        self.framework.observe(
+            self.on.start_continuous_reads_action, self._on_start_continuous_reads_action
+        )
+        self.framework.observe(
+            self.on.stop_continuous_reads_action, self._on_stop_continuous_reads_action
         )
 
         # Database related events
@@ -218,13 +227,85 @@ class ContinuousWritesApplication(CharmBase):
             logger.exception("Unable to query the database", exc_info=e)
             return -1
 
+    def _start_continuous_reads(
+        self, db_name: str, collection_name: str
+    ) -> None:
+        """Start continuous reads to the MongoDB cluster."""
+        if not self._database_config:
+            logger.warning("No database configured.")
+            return
+
+        logger.info(f"Running start continuous reads with {db_name=} and {collection_name=}")
+        self._stop_continuous_reads(db_name, collection_name)
+
+        uris: str = self._database_config.get("uris", "")
+        # Run continuous reads in the background
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                "src/continuous_reads.py",
+                uris,
+                db_name,
+                collection_name,
+            ]
+        )
+
+        # Store the continuous reads process id in stored state to be able to stop it later
+        self.app_peer_data[self.read_proc_id_key(db_name, collection_name)] = str(proc.pid)
+
+    def _stop_continuous_reads(self, db_name: str, collection_name: str) -> tuple[int | None, list[str]]:
+        """Stop continuous reads to the MongoDB cluster and return the number of successful reads."""
+        if not self._database_config:
+            logger.warning("No database configured.")
+            return None, []
+
+        if not self.app_peer_data.get(self.read_proc_id_key(db_name, collection_name)):
+            logger.warning("Missing read proc id.")
+            return None, []
+
+        # Send a SIGTERM to the process and wait for the process to exit
+        try:
+            os.kill(
+                int(self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]), signal.SIGTERM
+            )
+        except ProcessLookupError:
+            logger.info(
+                f"Process {self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]} was killed already (or never existed)"
+            )
+            return (None, [])
+        finally:
+            del self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]
+
+
+        # read the last written_value
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+                with attempt, open(self.n_read_filename(db_name, collection_name)) as fd:
+                    data = json.load(fd)
+                    number_of_reads = int(data.get("reads", -1))
+                    failed_reads = data.get("failed_reads", [])
+                    os.remove(self.n_read_filename(db_name, collection_name))
+                    logger.info(f"Read {number_of_reads} times // Failed {len(failed_reads)}.")
+                    return number_of_reads, failed_reads
+        except RetryError as e:
+            logger.exception("Unable to query the database", exc_info=e)
+            return -1, []
+
     def proc_id_key(self, db_name: str, collection_name: str) -> str:
         """Returns a process id key for the continuous writes process to a given db and coll."""
         return f"{PROC_PID_KEY}-{db_name}-{collection_name}"
 
+    def read_proc_id_key(self, db_name: str, collection_name: str) -> str:
+        """Returns a process id key for the continuous reads process to a given db and coll."""
+        return f"read-{PROC_PID_KEY}-{db_name}-{collection_name}"
+
     def last_written_filename(self, db_name: str, collection_name: str) -> str:
         """Returns the filename for the written data for a given db and coll."""
         return f"{LAST_WRITTEN_FILE}-{db_name}-{collection_name}"
+
+    def n_read_filename(self, db_name: str, collection_name: str) -> str:
+        """Returns the filename for the read data for a given db and coll."""
+        return f"{N_READ_FILE}-{db_name}-{collection_name}.json"
 
     # ==============
     # Handlers
@@ -276,6 +357,26 @@ class ContinuousWritesApplication(CharmBase):
         collection_name = event.params.get("collection-name") or COLLECTION_NAME
         writes = self._stop_continuous_writes(db_name, collection_name)
         event.set_results({"writes": writes or -1})
+        return None
+
+    def _on_start_continuous_reads_action(self, event) -> None:
+        """Handle the start continuous reads action event."""
+        if not self._database_config:
+            return
+
+        db_name = event.params.get("db-name") or self.database_name
+        collection_name = event.params.get("collection-name") or COLLECTION_NAME
+        self._start_continuous_reads(db_name, collection_name)
+
+    def _on_stop_continuous_reads_action(self, event: ActionEvent) -> None:
+        """Handle the stop continuous reads action event."""
+        if not self._database_config:
+            return event.set_results({"reads": -1, "failed-reads": []})
+
+        db_name = event.params.get("db-name") or self.database_name
+        collection_name = event.params.get("collection-name") or COLLECTION_NAME
+        reads, failed_reads = self._stop_continuous_reads(db_name, collection_name)
+        event.set_results({"reads": reads or -1, "failed-reads": failed_reads})
         return None
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
