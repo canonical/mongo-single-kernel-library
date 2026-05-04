@@ -61,6 +61,10 @@ class Sans(TypedDict):
 logger = logging.getLogger(__name__)
 
 
+def _strip(x: str | None) -> str | None:
+    return x.strip() if x else x
+
+
 class TLSManager(ManagerStatusProtocol):
     """Manager for building necessary files for mongodb."""
 
@@ -196,10 +200,12 @@ class TLSManager(ManagerStatusProtocol):
         raw_ca = self.workload.read(ca_path) if self.workload.exists(ca_path) else None
         raw_pem = self.workload.read(pem_path) if self.workload.exists(pem_path) else None
 
-        actual_ca = "\n".join(raw_ca).strip() if raw_ca is not None else None
-        actual_pem = "\n".join(raw_pem).strip() if raw_pem is not None else None
+        actual_ca = "\n".join(raw_ca) if raw_ca is not None else None
+        actual_pem = "\n".join(raw_pem) if raw_pem is not None else None
 
-        return actual_ca != expected_ca or actual_pem != expected_pem
+        return _strip(actual_ca) != _strip(expected_ca) or _strip(actual_pem) != _strip(
+            expected_pem
+        )
 
     def reconcile_tls_files(self) -> bool:
         """Ensure TLS files on disk match the current TLS secret state."""
