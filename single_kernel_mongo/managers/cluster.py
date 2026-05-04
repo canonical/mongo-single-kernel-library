@@ -128,7 +128,7 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
-        relation_data[ClusterStateKeys.CLUSTER_ID] = self.state.cluster_id
+        relation_data[ClusterStateKeys.CLUSTER_ID] = self.state.cluster_id or ""
         self.data_interface.update_relation_data(relation.id, relation_data)
 
     def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:

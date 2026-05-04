@@ -841,6 +841,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.model.unit.is_leader():
             return
 
+        if self.substrate == Substrates.K8S:
+            return
+
         if not (
             self.state.is_role(MongoDBRoles.CONFIG_SERVER)
             or self.state.is_role(MongoDBRoles.REPLICATION)

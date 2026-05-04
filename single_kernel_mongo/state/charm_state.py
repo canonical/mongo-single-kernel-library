@@ -608,6 +608,8 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def cluster_id(self) -> str | None:
         """Returns the cluster ID."""
+        if self.substrate == Substrates.K8S:
+            return None
         if self.charm_role.name == CharmKind.MONGOS:
             return self.cluster.cluster_id
 

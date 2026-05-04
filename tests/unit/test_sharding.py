@@ -31,7 +31,10 @@ from tests.integration.helpers.types import Substrate
 
 
 def test_config_server_database_requested(
-    harness: Harness[MongoTestCharm], mock_fs_interactions, mongodb_hostname: str
+    harness: Harness[MongoTestCharm],
+    mock_fs_interactions,
+    mongodb_hostname: str,
+    substrate: Substrate,
 ):
     manager = harness.charm.operator.config_server_manager
 
@@ -55,7 +58,10 @@ def test_config_server_database_requested(
     assert data.get("charmed-operator-password") is not None
     assert data.get("charmed-backup-password") is not None
     assert data.get("host") == f'["{mongodb_hostname}"]'
-    assert len(data.get("cluster-id")) == 8
+    if substrate == "lxd":
+        assert data.get("cluster-id") == 8
+    else:
+        assert data.get("cluster-id") is None
 
 
 def test_config_server_database_requested_failed_db_not_initialised(

@@ -106,7 +106,9 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     assert "during an upgrade" in err.value.args[0]
 
 
-def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str):
+def test_share_secret_to_mongos(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str, substrate: Substrate
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -128,7 +130,10 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongod
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
-    assert len(data.get("cluster-id")) == 8
+    if substrate == "lxd":
+        assert len(data.get("cluster-id")) == 8
+    else:
+        assert data.get("cluster-id") is None
 
 
 def test_share_secret_to_mongos_also_shares_ldap_config(

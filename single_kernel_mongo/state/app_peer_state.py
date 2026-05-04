@@ -231,6 +231,6 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
         return self.relation_data.get(AppPeerDataKeys.CLUSTER_ID.value, None)
 
     @cluster_id.setter
-    def cluster_id(self, value: str | None):
+    def cluster_id(self, value: str):
         """Sets the the cluster ID."""
         self.update({AppPeerDataKeys.CLUSTER_ID.value: value})
