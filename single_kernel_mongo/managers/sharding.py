@@ -35,7 +35,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import BackupState, VaultConfigurationState
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -133,6 +133,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.EXT_CA_SECRET.value] = ext_tls_ca
 
+        relation_data[AppShardingComponentKeys.CLUSTER_ID.value] = self.state.cluster_id
+
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
             relation.id, "unused", "unused"
@@ -219,13 +221,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                     "Cannot add/remove shards while a backup/restore is in progress."
                 )
 
-        if (
-            self.dependent.state.enable_encryption_at_rest
-            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if self.dependent.vault_manager.is_degraded():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                self.dependent.vault_manager.vault_state(),
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
 
@@ -546,13 +545,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if (
-            self.dependent.state.enable_encryption_at_rest
-            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if self.dependent.vault_manager.is_degraded():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                self.dependent.vault_manager.vault_state(),
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:

@@ -905,6 +905,16 @@ def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
     assert state.get_user_password(CharmedBackupUser) == backup_password
 
 
+def test_on_leader_elected_dont_rotate_cluster_id_already_set(harness):
+    harness.set_leader(True)
+    cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+    harness.charm.on.leader_elected.emit()
+    new_cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+
+    assert len(cluster_id) == 8
+    assert cluster_id == new_cluster_id
+
+
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_secret_changed_system_users_update_on_leader(harness, mocker, mongodb_name, role):
     set_user_password_mock = mocker.patch(

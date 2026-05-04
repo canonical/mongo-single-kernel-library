@@ -29,6 +29,7 @@ class ClusterStateKeys(str, Enum):
     LDAP_HASH = "ldap-hash"
     USERNAME = "username"
     PASSWORD = "password"
+    CLUSTER_ID = "cluster-id"
 
 
 class ClusterState(AbstractRelationState[Data]):
@@ -116,3 +117,8 @@ class ClusterState(AbstractRelationState[Data]):
     def external_node_connectivity(self, value: bool) -> None:
         """Sets the external-connectivity flag."""
         self.update({ClusterStateKeys.EXTERNAL_NODE_CONNECTIVITY.value: json.dumps(value)})
+
+    @property
+    def cluster_id(self) -> str | None:
+        """Returns the cluster ID."""
+        return self.relation_data.get(ClusterStateKeys.CLUSTER_ID.value, None)

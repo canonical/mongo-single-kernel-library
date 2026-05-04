@@ -118,7 +118,7 @@ class MongosOperator(OperatorProtocol, Object):
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
             etcd_relation_name=RelationNames.ETCD.value,
-            cluster_id="mongodb",
+            cluster_id=self.state.cluster.cluster_id,
             callback_targets={
                 RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
                 RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART: self.cluster_manager.update_mongos_and_restart_callback,

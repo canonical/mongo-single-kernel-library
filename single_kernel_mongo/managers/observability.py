@@ -86,7 +86,7 @@ class ObservabilityManager(Object):
         """The metrics specific to vault."""
         if not self.dependent.workload.workload_present:
             return {}
-        if not self.state.enable_encryption_at_rest and self.dependent.vault_manager.is_ready():
+        if self.dependent.vault_manager.is_degraded():
             return {}
 
         ca_data = "\n".join(

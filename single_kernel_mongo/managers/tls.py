@@ -378,7 +378,7 @@ class TLSManager(ManagerStatusProtocol):
         """Pre-checks on TLS certificates management."""
         if self.dependent.name == CharmKind.MONGOD:
             # For typing purposes
-            if self.state.enable_encryption_at_rest and not self.dependent.vault_manager.is_ready():  # type: ignore[attr-defined]
+            if self.dependent.vault_manager.is_degraded():
                 return TlsManagementState.ENCRYPTION_DEGRADED
         if self.dependent.refresh_in_progress and self.initial_integration():
             return TlsManagementState.UPGRADE_IN_PROGRESS

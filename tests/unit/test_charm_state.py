@@ -1,7 +1,11 @@
+import pytest
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.relations import (
+    PeerRelationNames,
+    RelationNames,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.utils.mongodb_users import (
     CharmedBackupUser,
@@ -9,6 +13,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedStatsUser,
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
 PEER_ADDR = {
@@ -70,6 +75,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
+    assert len(state.app_peer_data.cluster_id) == 8
 
 
 def test_unit_peer_data(
@@ -130,3 +136,115 @@ def test_is_shard_added_to_cluster_success(
     state.shard_state.shard_integrated = True
 
     assert state.is_shard_added_to_cluster()
+
+
+@pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
+def test_state_cluster_id_config_server_or_replica_set(
+    harness: Harness[MongoTestCharm], mongodb_name, role
+):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = role
+    state.app_peer_data.cluster_id = "1234"
+
+    assert state.cluster_id == state.app_peer_data.cluster_id
+    assert state.cluster_id == "1234"
+
+
+def test_state_cluster_id_shard(harness: Harness[MongoTestCharm], mongodb_name):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.cluster_id = "1234"
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {"cluster-id": "5678", "shard-integrated": "true"},
+    )
+
+    assert state.cluster_id == state.shard_state.cluster_id
+    assert state.cluster_id == "5678"
+
+
+def test_state_cluster_id_shard_is_none(harness: Harness[MongoTestCharm], mongodb_name):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.cluster_id = "1234"
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {"cluster-id": ""},
+    )
+
+    assert state.cluster_id == state.shard_state.cluster_id
+    assert state.cluster_id is None
+
+
+def test_state_cluster_id_shard_is_none_if_shard_is_not_integrated(
+    harness: Harness[MongoTestCharm], mongodb_name
+):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    rel_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.cluster_id = "1234"
+
+    harness.update_relation_data(
+        rel_id,
+        "config-server",
+        {"cluster-id": "5678", "shard-integrated": "false"},
+    )
+
+    assert state.cluster_id != state.shard_state.cluster_id
+    assert state.cluster_id is None
+
+
+def test_state_cluster_id_mongos(mongos_harness: Harness[MongosTestCharm], mongodb_name):
+    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    mongos_harness.set_leader(True)
+    state = mongos_harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.cluster_id = "1234"
+
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "mongodb",
+        {
+            "cluster-id": "5678",
+        },
+    )
+
+    assert state.cluster_id == state.cluster.cluster_id
+    assert state.cluster_id == "5678"
+
+
+def test_state_cluster_id_mongos_is_none(mongos_harness: Harness[MongosTestCharm], mongodb_name):
+    rel_id_cluster = mongos_harness.add_relation(RelationNames.CLUSTER.value, "mongodb")
+    mongos_harness.set_leader(True)
+    state = mongos_harness.charm.operator.state
+    state.app_peer_data.role = MongoDBRoles.SHARD
+    state.app_peer_data.cluster_id = "1234"
+
+    mongos_harness.update_relation_data(
+        rel_id_cluster,
+        "mongodb",
+        {
+            "cluster-id": "",
+        },
+    )
+
+    assert state.cluster_id == state.cluster.cluster_id
+    assert state.cluster_id is None

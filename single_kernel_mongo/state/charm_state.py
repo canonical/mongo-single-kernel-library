@@ -605,6 +605,19 @@ class CharmState(Object, StatusesStateProtocol):
             return None
         return f"{self.app_peer_data.replica_set}/{self.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
 
+    @property
+    def cluster_id(self) -> str | None:
+        """Returns the cluster ID."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return self.cluster.cluster_id
+
+        if self.is_role(MongoDBRoles.SHARD):
+            if self.shard_state.shard_integrated:
+                return self.shard_state.cluster_id
+            return None
+
+        return self.app_peer_data.cluster_id
+
     def get_subject_name(self) -> str:
         """Generate the subject name for CSR."""
         # In sharded MongoDB deployments it is a requirement that all subject names match across
