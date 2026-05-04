@@ -78,10 +78,10 @@ class LDAPManager(Object, ManagerStatusProtocol):
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
-        if self.dependent.name == CharmKind.MONGOD and self.dependent.vault_manager.is_degraded():
+        if self.dependent.name == CharmKind.MONGOD and self.dependent.vault_manager.is_degraded():  # type: ignore[attr-defined]
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.dependent.vault_manager.vault_state(),
+                self.dependent.vault_manager.vault_state(),  # type: ignore[attr-defined]
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly.")
         # Defer upon regular integration, but let's continue on an update.
