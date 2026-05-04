@@ -240,7 +240,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             charm=charm,
             peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
             etcd_relation_name=RelationNames.ETCD.value,
-            cluster_id=self.state.cluster_id,
+            cluster_id=self.state.get_cluster_id(),
             callback_targets={
                 RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
                 RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED: self.shard_manager.shard_restart_on_keyfile_callback,
@@ -380,10 +380,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
                 self.vault_manager.prepare_vault_agent(data)
 
-            if self.vault_manager.is_degraded():
+            if state := self.vault_manager.get_degraded_state():
                 logger.warning(
                     "Encryption at rest may be degraded. Vault Agent state: %s. This must be fixed first.",
-                    self.vault_manager.vault_state(),
+                    state,
                 )
                 return
         except ValueError as e:
@@ -557,7 +557,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 # This will get caught right after.
                 pass
 
-        if self.vault_manager.is_degraded():
+        if self.vault_manager.get_degraded_state():
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
@@ -679,10 +679,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.vault_manager.vault_state(),
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -809,7 +809,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
-        self.generate_cluster_id()
+        if not self.state.get_cluster_id() and (new_cluster_id := self._generate_cluster_id()):
+            self.state.set_cluster_id(new_cluster_id)
 
         if self.state.internal_user_passwords_are_initialized():
             return
@@ -828,30 +829,28 @@ class MongoDBOperator(OperatorProtocol, Object):
                 password = self.workload.generate_password()
                 self.state.set_user_password(user, password)
 
-    def generate_cluster_id(self):
+    def _generate_cluster_id(self):
         """Generate and persist a unique cluster identifier.
 
-        This method assigns a cluster ID to the application peer data if all
-        of the following conditions are met:
+        This ID is generated if all of the following conditions are met:
 
+        - Substrate is not k8s.
         - The current unit is the leader.
         - The application is a replica set or a config server.
-        - No cluster ID has been previously set.
         """
-        if not self.model.unit.is_leader():
-            return
-
         if self.substrate == Substrates.K8S:
-            return
+            return None
+
+        if not self.model.unit.is_leader():
+            return None
 
         if not (
             self.state.is_role(MongoDBRoles.CONFIG_SERVER)
             or self.state.is_role(MongoDBRoles.REPLICATION)
         ):
-            return
+            return None
 
-        if not self.state.app_peer_data.cluster_id:
-            self.state.app_peer_data.cluster_id = shortuuid.ShortUUID().random(length=8)
+        return shortuuid.ShortUUID().random(length=8)
 
     @override
     def new_peer(self) -> None:
@@ -861,10 +860,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         application in upgrade ?). Then we proceed to call the relation changed
         handler and update the list of related hosts.
         """
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.vault_manager.vault_state(),
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -900,10 +899,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.vault_manager.vault_state(),
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -967,10 +966,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handles the relation departed events."""
         if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
             return
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
-                self.vault_manager.vault_state(),
+                state,
             )
 
         if self.refresh_in_progress:
@@ -1009,10 +1008,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         If the removing unit is primary also allow it to step down and elect another unit as
         primary while it still has access to its storage.
         """
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
-                self.vault_manager.vault_state(),
+                state,
             )
         if self.refresh_in_progress:
             # We cannot defer and prevent a user from removing a unit, log a warning instead.
@@ -1093,10 +1092,10 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def update_status(self) -> None:  # noqa: C901
         """Status update Handler."""
-        if self.vault_manager.is_degraded():
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.vault_manager.vault_state(),
+                state,
             )
             return
 
@@ -1328,10 +1327,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
             )
 
-        if self.vault_manager.is_degraded():
-            state = self.vault_manager.vault_state()
+        if state := self.vault_manager.get_degraded_state():
             raise WorkloadServiceError(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                f"Encryption at rest may be degraded. Vault agent state: {state}. This must be fixed first."
             )
         try:
             should_restart = self.tls_manager.reconcile_tls_files()
@@ -1627,8 +1625,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.model.unit.is_leader():
             return PasswordManagementContext(PasswordManagementState.NOT_LEADER)
 
-        if self.vault_manager.is_degraded():
-            state = self.vault_manager.vault_state()
+        if state := self.vault_manager.get_degraded_state():
             return PasswordManagementContext(
                 PasswordManagementState.ENCRYPTION_NOT_WORKING,
                 f"Cannot update passwords while encryption at rest is not working. Vault state: {state}",

@@ -224,13 +224,3 @@ class AppPeerReplicaSet(AbstractRelationState[DataPeerData]):
     @feature_compatibility_version.setter
     def feature_compatibility_version(self, value: str):
         self.update({AppPeerDataKeys.FCV.value: value})
-
-    @property
-    def cluster_id(self) -> str | None:
-        """The cluster ID used for rollingops."""
-        return self.relation_data.get(AppPeerDataKeys.CLUSTER_ID.value, None)
-
-    @cluster_id.setter
-    def cluster_id(self, value: str):
-        """Sets the the cluster ID."""
-        self.update({AppPeerDataKeys.CLUSTER_ID.value: value})

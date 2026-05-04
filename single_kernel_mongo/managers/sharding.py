@@ -133,7 +133,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.EXT_CA_SECRET.value] = ext_tls_ca
 
-        relation_data[AppShardingComponentKeys.CLUSTER_ID.value] = self.state.cluster_id or ""
+        if cluster_id := self.state.get_cluster_id():
+            relation_data[AppShardingComponentKeys.CLUSTER_ID.value] = cluster_id
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -221,10 +222,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                     "Cannot add/remove shards while a backup/restore is in progress."
                 )
 
-        if self.dependent.vault_manager.is_degraded():
+        if state := self.dependent.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.dependent.vault_manager.vault_state(),
+                state,
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
 
@@ -545,10 +546,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if self.dependent.vault_manager.is_degraded():
+        if state := self.dependent.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
-                self.dependent.vault_manager.vault_state(),
+                state,
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:
@@ -623,8 +624,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             return
 
         keyfile = self.state.shard_state.keyfile
-        tls_ca = self.state.shard_state.internal_ca_secret
-        external_tls_ca = self.state.shard_state.external_ca_secret
 
         if keyfile is None:
             logger.info("Waiting for secrets from config-server")
@@ -634,7 +633,11 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.charm.unit.is_leader():
             self.sync_cluster_passwords(operator_password, backup_password)
 
-        self.update_member_auth(keyfile, tls_ca, external_tls_ca)
+        tls_ca = self.state.shard_state.internal_ca_secret
+        external_tls_ca = self.state.shard_state.external_ca_secret
+        cluster_id = self.state.shard_state.cluster_id
+
+        self.update_member_auth(keyfile, tls_ca, external_tls_ca, cluster_id)
 
         self.update_pbm_certificate_in_trust_store()
 
@@ -780,8 +783,29 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
+    def _update_cluster_id(self, new_cluster_id: str | None):
+        """Update the cluster ID in state.
+
+        If a new cluster ID is provided, it is stored in the state.
+        If ``None`` is provided, the existing cluster ID is removed.
+        """
+        if new_cluster_id is None:
+            self.state.remove_cluster_id()
+            return
+        self.state.set_cluster_id(new_cluster_id)
+
+    def cleanup_cluster_id(self) -> None:
+        """On relation-broken event, the cluster ID is removed."""
+        if not self.charm.unit.is_leader():
+            return
+        self.state.remove_cluster_id()
+
     def update_member_auth(
-        self, keyfile: str, peer_tls_ca: str | None, external_tls_ca: str | None
+        self,
+        keyfile: str,
+        peer_tls_ca: str | None,
+        external_tls_ca: str | None,
+        cluster_id: str | None,
     ) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = peer_tls_ca is not None
@@ -799,6 +823,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             # Sets the keyfile anyway
             if self.charm.unit.is_leader():
                 self.state.set_keyfile(keyfile)
+                self._update_cluster_id(cluster_id)
 
         if not cluster_auth_tls:
             logger.info("Cluster implements internal auth via keyfile.")

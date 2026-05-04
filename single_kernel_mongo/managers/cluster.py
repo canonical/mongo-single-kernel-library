@@ -128,7 +128,9 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
-        relation_data[ClusterStateKeys.CLUSTER_ID] = self.state.cluster_id or ""
+        if cluster_id := self.state.get_cluster_id():
+            relation_data[ClusterStateKeys.CLUSTER_ID] = cluster_id
+
         self.data_interface.update_relation_data(relation.id, relation_data)
 
     def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:
@@ -167,6 +169,12 @@ class ClusterProvider(Object):
             self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(
                 relation, relation_departing=True
             )
+
+    def cleanup_cluster_id(self) -> None:
+        """On relation-broken event, the cluster ID is removed."""
+        if not self.charm.unit.is_leader():
+            return
+        self.state.remove_cluster_id()
 
     def update_config_server_db(self) -> None:
         """Updates the config server DB URI in the mongos relation."""
@@ -321,6 +329,18 @@ class ClusterRequirer(Object):
         self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
         self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
 
+    def _update_cluster_id(self):
+        """Update the cluster ID in state.
+
+        If a new cluster ID is provided, it is stored in the state.
+        If ``None`` is provided, the existing cluster ID is removed.
+        """
+        new_cluster_id = self.state.cluster.cluster_id
+        if new_cluster_id is None:
+            self.state.remove_cluster_id()
+            return
+        self.state.set_cluster_id(new_cluster_id)
+
     def update_mongos_and_restart(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
@@ -331,11 +351,12 @@ class ClusterRequirer(Object):
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
-        if self.charm.unit.is_leader() and (
-            ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping
-        ):
-            logger.debug("Received a userToDNMapping, storing it in databag.")
-            self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+        if self.charm.unit.is_leader():
+            if ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping:
+                logger.debug("Received a userToDNMapping, storing it in databag.")
+                self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+
+            self._update_cluster_id()
 
         if not key_file_contents or not config_server_db_uri:
             raise WaitingForSecretsError("Waiting for keyfile or config server db uri")

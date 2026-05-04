@@ -99,6 +99,7 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""
         try:
+            self.manager.cleanup_cluster_id()
             self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))

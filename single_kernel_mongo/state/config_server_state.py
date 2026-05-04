@@ -46,6 +46,7 @@ SECRETS_FIELDS = [
     "int-ca-secret",
     "ext-ca-secret",
     "backup-ca-secret",
+    "cluster-id",
 ]
 
 

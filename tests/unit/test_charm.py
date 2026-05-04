@@ -908,9 +908,9 @@ def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
 @pytest.mark.skip_if_substrate("microk8s")
 def test_on_leader_elected_dont_rotate_cluster_id_already_set_vm(harness):
     harness.set_leader(True)
-    cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+    cluster_id = harness.charm.operator.state.get_cluster_id()
     harness.charm.on.leader_elected.emit()
-    new_cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+    new_cluster_id = harness.charm.operator.state.get_cluster_id()
 
     assert len(cluster_id) == 8
     assert cluster_id == new_cluster_id
@@ -919,9 +919,9 @@ def test_on_leader_elected_dont_rotate_cluster_id_already_set_vm(harness):
 @pytest.mark.skip_if_substrate("lxd")
 def test_on_leader_elected_cluster_id_is_none(harness):
     harness.set_leader(True)
-    cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+    cluster_id = harness.charm.operator.state.get_cluster_id()
     harness.charm.on.leader_elected.emit()
-    new_cluster_id = harness.charm.operator.state.app_peer_data.cluster_id
+    new_cluster_id = harness.charm.operator.state.get_cluster_id()
 
     assert cluster_id is None
     assert cluster_id == new_cluster_id

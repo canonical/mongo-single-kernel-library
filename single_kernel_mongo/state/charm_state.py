@@ -362,6 +362,7 @@ class CharmState(Object, StatusesStateProtocol):
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
                 ClusterStateKeys.EXT_CA_SECRET.value,
+                ClusterStateKeys.CLUSTER_ID.value,
             ],
         )
 
@@ -477,6 +478,22 @@ class CharmState(Object, StatusesStateProtocol):
     def get_keyfile(self) -> str | None:
         """Gets the keyfile content from the secret."""
         return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
+
+    def set_cluster_id(self, cluster_id_content: str) -> str:
+        """Sets the cluster id content in the secret."""
+        return self.secrets.set(
+            AppPeerDataKeys.CLUSTER_ID.value, cluster_id_content, Scope.APP
+        ).label
+
+    def get_cluster_id(self) -> str | None:
+        """Gets the cluster id content from the secret."""
+        if self.substrate == Substrates.K8S:
+            return None
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.CLUSTER_ID.value)
+
+    def remove_cluster_id(self) -> None:
+        """Remove the content of cluster id from the secret."""
+        self.secrets.remove(key=AppPeerDataKeys.CLUSTER_ID.value, scope=Scope.APP)
 
     @property
     def planned_units(self) -> int:
@@ -604,21 +621,6 @@ class CharmState(Object, StatusesStateProtocol):
         if not self.is_role(MongoDBRoles.CONFIG_SERVER):
             return None
         return f"{self.app_peer_data.replica_set}/{self.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
-
-    @property
-    def cluster_id(self) -> str | None:
-        """Returns the cluster ID."""
-        if self.substrate == Substrates.K8S:
-            return None
-        if self.charm_role.name == CharmKind.MONGOS:
-            return self.cluster.cluster_id
-
-        if self.is_role(MongoDBRoles.SHARD):
-            if self.shard_state.shard_integrated:
-                return self.shard_state.cluster_id
-            return None
-
-        return self.app_peer_data.cluster_id
 
     def get_subject_name(self) -> str:
         """Generate the subject name for CSR."""
