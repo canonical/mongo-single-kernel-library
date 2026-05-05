@@ -14,6 +14,7 @@ import time
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
+from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope
@@ -30,15 +31,17 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
     MongoPorts,
+    RollingOpsCallbackId,
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import BackupState, VaultConfigurationState
+from single_kernel_mongo.config.models import BackupState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
@@ -50,6 +53,7 @@ from single_kernel_mongo.exceptions import (
     ShardNotPlannedForRemovalError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
@@ -128,6 +132,9 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             relation_data[AppShardingComponentKeys.INT_CA_SECRET.value] = int_tls_ca
         if ext_tls_ca := self.state.tls.get_secret(internal=False, label_name=SECRET_CA_LABEL):
             relation_data[AppShardingComponentKeys.EXT_CA_SECRET.value] = ext_tls_ca
+
+        if cluster_id := self.state.get_cluster_id():
+            relation_data[AppShardingComponentKeys.CLUSTER_ID.value] = cluster_id
 
         self.data_interface.update_relation_data(relation.id, relation_data)
         self.data_interface.set_credentials(
@@ -215,13 +222,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                     "Cannot add/remove shards while a backup/restore is in progress."
                 )
 
-        if (
-            self.dependent.state.enable_encryption_at_rest
-            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.dependent.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
 
@@ -333,7 +337,7 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
                 charm_statuses["unit"].append(
                     ConfigServerStatuses.unreachable_shards(unreachable_shards)
                 )
-        except (ServerSelectionTimeoutError, OperationFailure):
+        except (ServerSelectionTimeoutError, OperationFailure, FileNotFoundError):
             return []
 
         return (
@@ -371,21 +375,24 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         self.charm.status_handler.set_running_status(
             ConfigServerStatuses.adding_shard(shard_name), scope="unit"
         )
-
-        with MongoConnection(self.state.mongos_config) as mongo:
-            try:
+        try:
+            with MongoConnection(self.state.mongos_config) as mongo:
                 mongo.add_shard(shard_name, hosts)
-            except OperationFailure as e:
-                if e.code == MongoErrorCodes.AUTHENTICATION_FAILED:
-                    logger.error(
-                        f"{shard_name} shard does not have the same auth as the config server."
-                    )
-                    raise ShardAuthError(shard_name)
-                logger.warning(f"Unhandled Operation Error {e.code}: {e}")
-                raise
-            except PyMongoError as e:
-                logger.error(f"Failed to add {shard_name} to cluster")
-                raise e
+        except OperationFailure as e:
+            if e.code == MongoErrorCodes.AUTHENTICATION_FAILED:
+                logger.error(
+                    f"{shard_name} shard does not have the same auth as the config server."
+                )
+                raise ShardAuthError(shard_name)
+            logger.warning(f"Unhandled Operation Error {e.code}: {e}")
+            raise
+        except PyMongoError as e:
+            logger.error(f"Failed to add {shard_name} to cluster")
+            raise e
+        except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
+            logger.warning("Failed to connect to mongos: %s", e)
+            raise NotReadyError
 
         # Say to the shard that it has been integrated
         self.data_interface.update_relation_data(
@@ -464,6 +471,10 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
+        except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
+            logger.warning("Failed to connect to cluster members: %s", e)
+            return False
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,
@@ -535,13 +546,10 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (status := self.dependent.get_relation_feasible_status(self.relation_name)) is not None:
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if (
-            self.dependent.state.enable_encryption_at_rest
-            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.dependent.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly")
         if self.dependent.refresh_in_progress:
@@ -616,8 +624,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             return
 
         keyfile = self.state.shard_state.keyfile
-        tls_ca = self.state.shard_state.internal_ca_secret
-        external_tls_ca = self.state.shard_state.external_ca_secret
 
         if keyfile is None:
             logger.info("Waiting for secrets from config-server")
@@ -627,9 +633,18 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.charm.unit.is_leader():
             self.sync_cluster_passwords(operator_password, backup_password)
 
-        self.update_member_auth(keyfile, tls_ca, external_tls_ca)
+        tls_ca = self.state.shard_state.internal_ca_secret
+        external_tls_ca = self.state.shard_state.external_ca_secret
+        cluster_id = self.state.shard_state.cluster_id
+
+        self.update_member_auth(keyfile, tls_ca, external_tls_ca, cluster_id)
 
         self.update_pbm_certificate_in_trust_store()
+
+        if self.dependent.rollingops_manager.is_waiting_callback(
+            RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED
+        ):
+            return
 
         if not self.dependent.mongo_manager.mongod_ready():
             logger.info("MongoDB is not ready")
@@ -639,6 +654,15 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.state.shard_state.shard_integrated:
             self.dependent.s3_backup_manager.configure_and_restart()
 
+        self._reconcile_shard_after_restart()
+
+    def _reconcile_shard_after_restart(self):
+        """Reconcile shard state after a unit restart.
+
+        This method resets the shard status to active/idle and, if executed on
+        the leader unit, propagates the necessary shard metadata to allow the
+        config-server to add the shard to the cluster.
+        """
         # By setting the status we ensure that the former statuses of this component are removed.
         self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
 
@@ -653,6 +677,38 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         # Store the mongos hosts on this side of the relation.
         self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
+
+    def shard_restart_on_keyfile_callback(self) -> OperationResult:
+        """Shard restart on keyfile callback."""
+        try:
+            self.dependent.restart_charm_services(force=True)
+        except WorkloadServiceError as e:
+            logger.warning("Non-deferrable error during mongod restart. %s", e)
+            return OperationResult.RELEASE
+        except DeferrableError as e:
+            logger.info("Deferrable error during mongod restart. %s", e)
+            return OperationResult.RETRY_RELEASE
+
+        self._reconcile_shard_after_restart()
+        return OperationResult.RELEASE
+
+    def async_shard_restart_on_key_file(self):
+        """Called if a changed in the keyfile is detected.
+
+        Request an async restart using the SHARD_RESTART_ON_KEYFILE_CHANGED callback.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
+        self.charm.state.statuses.add(
+            ShardStatuses.ADDING_TO_CLUSTER.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.dependent.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED
+        )
+        logger.info("Requested and async lock to shard restart on keyfile MongoDB.")
 
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """Update charmed-operator and charmed-backup user passwords when rotation occurs.
@@ -698,14 +754,14 @@ class ShardManager(Object, ManagerStatusProtocol):
         if (
             backup_tls_chain := self.state.shard_state.backup_ca_secret
         ) and not self.workload.exists(TRUST_STORE_PATH / TrustStoreFiles.PBM.value):
-            logger.debug("Adding certificate for PBM")
+            logger.info("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
             # We updated the configuration, so we restart PBM.
             self.dependent.s3_backup_manager.configure_and_restart(force=True)
         elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
             TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         ):
-            logger.debug("Removing certificate for PBM")
+            logger.info("Removing certificate for PBM")
             # If it is not in the databag, always remove it, it won't change a
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
@@ -727,8 +783,29 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
+    def _update_cluster_id(self, new_cluster_id: str | None):
+        """Update the cluster ID in state.
+
+        If a new cluster ID is provided, it is stored in the state.
+        If ``None`` is provided, the existing cluster ID is removed.
+        """
+        if new_cluster_id is None:
+            self.state.remove_cluster_id()
+            return
+        self.state.set_cluster_id(new_cluster_id)
+
+    def cleanup_cluster_id(self) -> None:
+        """On relation-broken event, the cluster ID is removed."""
+        if not self.charm.unit.is_leader():
+            return
+        self.state.remove_cluster_id()
+
     def update_member_auth(
-        self, keyfile: str, peer_tls_ca: str | None, external_tls_ca: str | None
+        self,
+        keyfile: str,
+        peer_tls_ca: str | None,
+        external_tls_ca: str | None,
+        cluster_id: str | None,
     ) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = peer_tls_ca is not None
@@ -746,6 +823,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             # Sets the keyfile anyway
             if self.charm.unit.is_leader():
                 self.state.set_keyfile(keyfile)
+                self._update_cluster_id(cluster_id)
 
         if not cluster_auth_tls:
             logger.info("Cluster implements internal auth via keyfile.")
@@ -758,7 +836,7 @@ class ShardManager(Object, ManagerStatusProtocol):
                 self.dependent.tls_events.refresh_certificates()
                 raise WaitingForCertificatesError()
             if keyfile_changed:
-                self.dependent.restart_charm_services(force=True)
+                self.async_shard_restart_on_key_file()
             return
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
@@ -940,6 +1018,10 @@ class ShardManager(Object, ManagerStatusProtocol):
             # check our ability to use connect to mongod
             with MongoConnection(self.state.mongo_config) as mongod:
                 mongod.get_replset_status()
+        except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
+            logger.warning("Failed to connect to cluster members: %s", e)
+            return False
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,

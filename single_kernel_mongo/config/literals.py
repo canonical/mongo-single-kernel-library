@@ -131,3 +131,11 @@ class RollingOpsBackend(StrEnum):
     """Identifiers of the sync lock backends used for rollingops."""
 
     STOP_REPLSET_MEMBER = "stop-replset-member"
+
+
+class RollingOpsCallbackId(StrEnum):
+    """Identifier of the callbacks used for rollingops."""
+
+    RESTART_CHARM_SERVICES = "restart-charm-services"
+    SHARD_RESTART_ON_KEYFILE_CHANGED = "shard-restart-on-keyfile-change"
+    UPDATE_MONGOS_AND_RESTART = "update-mongos-and-restart"

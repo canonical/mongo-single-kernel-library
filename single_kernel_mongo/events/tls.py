@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops import ConfigChangedEvent
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import EventBase, EventSource, Object
@@ -225,7 +226,11 @@ class TLSEventsHandler(Object):
         else:
             self.dependent.state.update_client_ca_secrets(provider_cert.ca.raw)
 
-        self.manager.enable_certificates_for_unit(internal)
+        try:
+            self.manager.enable_certificates_for_unit()
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+
         self._recompute_statuses()
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:

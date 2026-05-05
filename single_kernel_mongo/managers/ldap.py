@@ -23,7 +23,7 @@ from single_kernel_mongo.config.literals import (
     Substrates,
     TrustStoreFiles,
 )
-from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState, VaultConfigurationState
+from single_kernel_mongo.config.models import LDAP_CONFIG, LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import LdapStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
@@ -78,14 +78,12 @@ class LDAPManager(Object, ManagerStatusProtocol):
             raise DeferrableFailedHookChecksError("DB is not initialised")
         if self.state.is_role(MongoDBRoles.SHARD):
             raise InvalidLdapWithShardError("Cannot integrate LDAP with shard.")
-        if (
-            self.dependent.name == CharmKind.MONGOD
-            and self.dependent.state.enable_encryption_at_rest
-            and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
+        if self.dependent.name == CharmKind.MONGOD and (
+            state := self.dependent.vault_manager.get_degraded_state()  # type: ignore[attr-defined]
         ):
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise DeferrableFailedHookChecksError("Encryption at rest is not working properly.")
         # Defer upon regular integration, but let's continue on an update.
@@ -119,7 +117,11 @@ class LDAPManager(Object, ManagerStatusProtocol):
             self.dependent.ldap_events.restart_if_ready_event.emit()
 
     def restart_when_ready(self) -> None:
-        """Restarts when we are ready."""
+        """Request and async restart when we are ready.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if not self.state.db_initialised:
             return
 
@@ -129,7 +131,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             case LdapState.ACTIVE:
                 self.share_hash_with_mongos()
                 logger.info("Restarting mongodb server for LDAP integration")
-                self.dependent.restart_charm_services()
+                self.dependent.async_restart_charm_services(force=False)
                 self.state.statuses.set(
                     LdapStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name
                 )
@@ -148,13 +150,19 @@ class LDAPManager(Object, ManagerStatusProtocol):
                     )
 
     def clean_ldap_credentials_and_uri(self) -> None:
-        """Runs when the LDAP integration is broken."""
+        """Runs when the LDAP integration is broken.
+
+        Requests a lock to asynchronously restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         if self.charm.unit.is_leader():
             self.state.ldap.clean_databag()
             self.remove_hash_from_mongos()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
-            self.dependent.restart_charm_services()
+            self.dependent.async_restart_charm_services(force=False)
 
         self.state.statuses.clear(scope="unit", component=self.name)
         statuses = self.get_statuses(scope="unit", recompute=True)
@@ -193,7 +201,13 @@ class LDAPManager(Object, ManagerStatusProtocol):
             fd.write("\n".join(full_chain))
 
     def remove_ldap_certificates(self) -> None:
-        """Runs when the certificate is removed."""
+        """Runs when the certificate is removed.
+
+        Requests a lock to asynchronously restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
         self.state.ldap.clean_certificates()
         if self.charm.unit.is_leader():
             self.remove_hash_from_mongos()
@@ -207,7 +221,7 @@ class LDAPManager(Object, ManagerStatusProtocol):
             local_cert_file.unlink()
 
         if self.state.db_initialised:  # Don't restart if we haven't initialised the DB yet.
-            self.dependent.restart_charm_services()
+            self.dependent.async_restart_charm_services(force=False)
 
         statuses = self.get_statuses(scope="unit", recompute=True)
         self.state.statuses.clear(scope="unit", component=self.name)
@@ -387,3 +401,8 @@ class LDAPManager(Object, ManagerStatusProtocol):
             self.state.statuses.delete(
                 LdapStatuses.LDAP_SERVERS_MISMATCH.value, scope="unit", component=self.name
             )
+
+    def should_not_restart(self) -> bool:
+        """Mongo workload should not be restarted if the LDAP is in an inconsistent state."""
+        state = self.ldap_state()
+        return state == LdapState.LDAP_SERVERS_MISMATCH or state == LdapState.UNABLE_TO_BIND

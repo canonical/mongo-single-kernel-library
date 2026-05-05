@@ -31,6 +31,10 @@ class MongoDBStatuses(Enum):
         message="Waiting for mongodb-exporter to start...",
         check="MongoDB Exporter status check.",
     )
+    WAITING_FOR_RESTART = StatusObject(
+        status="waiting",
+        message="Waiting for MongoDB restart.",
+    )
     INVALID_SHARDING_REL = StatusObject(
         status="blocked",
         message="The sharding interface cannot be used by replica sets.",
@@ -97,6 +101,11 @@ class MongoDBStatuses(Enum):
         message="Waiting for lock to remove replica set.",
         running="blocking",
     )
+    RESTARTING = StatusObject(
+        status="maintenance",
+        message="Restarting MongoDB.",
+        running="blocking",
+    )
 
 
 class MongosStatuses(Enum):
@@ -116,6 +125,10 @@ class MongosStatuses(Enum):
         status="waiting",
         message="Waiting for mongos to start...",
         check="mongos process status check.",
+    )
+    WAITING_FOR_RESTART = StatusObject(
+        status="waiting",
+        message="Waiting for mongos restart.",
     )
     INVALID_REL = StatusObject(
         status="blocked",
@@ -184,6 +197,11 @@ class MongosStatuses(Enum):
     # Running statuses:
     STARTING_MONGOS = StatusObject(
         status="maintenance", message="Starting mongos.", running="blocking"
+    )
+    RESTARTING = StatusObject(
+        status="maintenance",
+        message="Restarting mongos.",
+        running="blocking",
     )
 
     @classmethod

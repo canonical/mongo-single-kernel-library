@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.charm import (
     RelationBrokenEvent,
     RelationChangedEvent,
@@ -153,6 +154,7 @@ class ShardEventHandler(Object):
             WaitingForCertificatesError,
             NotReadyError,
             FailedToUpdateCredentialsError,
+            RollingOpsNoRelationError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -172,9 +174,10 @@ class ShardEventHandler(Object):
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
+            self.manager.cleanup_cluster_id()
             self.manager.drain_shard_from_cluster(event.relation)
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-        except DeferrableFailedHookChecksError as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             self.manager.state.statuses.set(

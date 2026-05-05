@@ -10,7 +10,12 @@ import logging
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
-from charmlibs.rollingops import RollingOpsManager, RollingOpsSyncLockError
+import shortuuid
+from charmlibs.rollingops import (
+    OperationResult,
+    RollingOpsManager,
+    RollingOpsSyncLockError,
+)
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
@@ -26,6 +31,7 @@ from single_kernel_mongo.config.literals import (
     CharmKind,
     MongoPorts,
     RollingOpsBackend,
+    RollingOpsCallbackId,
     Scope,
     Substrates,
 )
@@ -34,7 +40,6 @@ from single_kernel_mongo.config.models import (
     BackupState,
     PasswordManagementContext,
     PasswordManagementState,
-    VaultConfigurationState,
 )
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
@@ -68,6 +73,7 @@ from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
+    DeferrableError,
     DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
     FailedToElectNewPrimaryError,
@@ -190,17 +196,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             container,
         )
 
-        stop_replset_sync_lock = StopReplsetSyncLockBackend(self.state)
-        self.rollingops_manager = RollingOpsManager(
-            charm=charm,
-            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS,
-            etcd_relation_name=None,
-            cluster_id=None,
-            callback_targets={},
-            sync_lock_targets={
-                RollingOpsBackend.STOP_REPLSET_MEMBER: stop_replset_sync_lock,
-            },
-        )
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.mongo_manager = MongoManager(
             self,
@@ -238,6 +233,21 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Vault Manager, which covers vault relation. This is used for encryption at rest.
         self.vault_manager = VaultManager(
             self, self.state, self.substrate, ExternalRequirerRelations.VAULT
+        )
+
+        stop_replset_sync_lock = StopReplsetSyncLockBackend(self.state)
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
+            etcd_relation_name=RelationNames.ETCD.value,
+            cluster_id=self.state.get_cluster_id(),
+            callback_targets={
+                RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
+                RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED: self.shard_manager.shard_restart_on_keyfile_callback,
+            },
+            sync_lock_targets={
+                RollingOpsBackend.STOP_REPLSET_MEMBER: stop_replset_sync_lock,
+            },
         )
 
         # Upgrades
@@ -370,12 +380,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
                 self.vault_manager.prepare_vault_agent(data)
 
-            if (
-                self.state.enable_encryption_at_rest
-                and (state := self.vault_manager.vault_state()) != VaultConfigurationState.ACTIVE
-            ):
+            if state := self.vault_manager.get_degraded_state():
                 logger.warning(
-                    f"Encryption at rest may be degraded. Vault Agent state: {state}. This must be fixed first."
+                    "Encryption at rest may be degraded. Vault Agent state: %s. This must be fixed first.",
+                    state,
                 )
                 return
         except ValueError as e:
@@ -549,7 +557,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 # This will get caught right after.
                 pass
 
-        if self.state.enable_encryption_at_rest and not self.vault_manager.is_ready():
+        if self.vault_manager.get_degraded_state():
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
@@ -647,6 +655,11 @@ class MongoDBOperator(OperatorProtocol, Object):
         To prevent a user from migrating a cluster, and causing the component to become
         unresponsive therefore causing a cluster failure, error the component. This prevents it
         from executing other hooks with a new role.
+
+        Request an async restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             logger.info("We haven't elected a leader yet.")
@@ -666,13 +679,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 "Invalid LDAP Query template, please update your config."
             )
 
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -698,7 +708,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # If we had an IP change, we must restart.
         if self.state.db_initialised:
-            self.restart_charm_services()
+            self.async_restart_charm_services(force=False)
 
         if not self.charm.unit.is_leader():
             return
@@ -799,6 +809,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.get_keyfile():
             self.state.set_keyfile(self.workload.generate_keyfile())
 
+        if not self.state.get_cluster_id() and (new_cluster_id := self._generate_cluster_id()):
+            self.state.set_cluster_id(new_cluster_id)
+
         if self.state.internal_user_passwords_are_initialized():
             return
 
@@ -816,6 +829,29 @@ class MongoDBOperator(OperatorProtocol, Object):
                 password = self.workload.generate_password()
                 self.state.set_user_password(user, password)
 
+    def _generate_cluster_id(self):
+        """Generate and persist a unique cluster identifier.
+
+        This ID is generated if all of the following conditions are met:
+
+        - Substrate is not k8s.
+        - The current unit is the leader.
+        - The application is a replica set or a config server.
+        """
+        if self.substrate == Substrates.K8S:
+            return None
+
+        if not self.model.unit.is_leader():
+            return None
+
+        if not (
+            self.state.is_role(MongoDBRoles.CONFIG_SERVER)
+            or self.state.is_role(MongoDBRoles.REPLICATION)
+        ):
+            return None
+
+        return shortuuid.ShortUUID().random(length=8)
+
     @override
     def new_peer(self) -> None:
         """Handle relation joined events.
@@ -824,13 +860,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         application in upgrade ?). Then we proceed to call the relation changed
         handler and update the list of related hosts.
         """
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -866,13 +899,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             raise WaitingForVaultError("Encryption at rest is not working properly.")
 
@@ -936,13 +966,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         """Handles the relation departed events."""
         if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
             return
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}.  The charm may be in a broken, unrecoverable state."
+                "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
+                state,
             )
 
         if self.refresh_in_progress:
@@ -981,13 +1008,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         If the removing unit is primary also allow it to step down and elect another unit as
         primary while it still has access to its storage.
         """
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}.  The charm may be in a broken, unrecoverable state."
+                "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
+                state,
             )
         if self.refresh_in_progress:
             # We cannot defer and prevent a user from removing a unit, log a warning instead.
@@ -1068,13 +1092,10 @@ class MongoDBOperator(OperatorProtocol, Object):
     @override
     def update_status(self) -> None:  # noqa: C901
         """Status update Handler."""
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             logger.warning(
-                f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                state,
             )
             return
 
@@ -1100,7 +1121,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             try:
                 self.perform_self_healing()
             except (ServerSelectionTimeoutError, OperationFailure) as e:
-                logger.warning(f"Failed to perform self healing: {e}")
+                logger.warning("Failed to perform self healing: %s", e)
             except ShardAuthError:
                 logger.warning("Failed to add shard")
             except NotDrainedError:
@@ -1297,21 +1318,72 @@ class MongoDBOperator(OperatorProtocol, Object):
         If we are running as config-server, we should update both mongod and mongos environments.
         """
         if not self.refresh or not self.refresh.workload_allowed_to_start:
-            raise WorkloadServiceError("Workload not allowed to start")
+            raise WorkloadServiceError("Workload not allowed to restart on refresh.")
         if not self.state.db_initialised:
-            raise WorkloadServiceError("Workload not allowed to start: DB not initialised")
+            raise WorkloadServiceError("Workload not allowed to restart: DB not initialised.")
+
+        if self.ldap_manager.should_not_restart():
+            raise DeferrableError(
+                "Workload not allowed to restart: LDAP is in an inconsistent state."
+            )
+
+        if state := self.vault_manager.get_degraded_state():
+            raise WorkloadServiceError(
+                f"Encryption at rest may be degraded. Vault agent state: {state}. This must be fixed first."
+            )
         try:
+            should_restart = self.tls_manager.reconcile_tls_files()
+            self.charm.status_handler.set_running_status(
+                MongoDBStatuses.RESTARTING.value, scope="unit"
+            )
+            force = force or should_restart
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
-            logger.error("An exception occurred when starting mongod agent, error: %s.", str(e))
+            raise DeferrableError from e
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
+        """Callback to be used as a rolling operation."""
+        self.charm.state.statuses.delete(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        try:
+            self.restart_charm_services(force=force)
+        except WorkloadServiceError as e:
+            logger.warning("Non-deferrable error during mongod restart. %s", e)
+            return OperationResult.RELEASE
+        except DeferrableError as e:
             self.charm.state.statuses.add(
-                MongoDBStatuses.WAITING_FOR_MONGODB_START.value,
+                MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
-            raise
+            logger.info("Deferrable error during mongod restart. %s", e)
+            return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
+
+    @override
+    def async_restart_charm_services(self, force: bool = False) -> None:
+        """Request to an async lock to restart.
+
+        All the exceptions are handled in the callback and retries are requested if necessary.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
+        self.charm.state.statuses.add(
+            MongoDBStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES,
+            kwargs={"force": force},
+        )
+        logger.info("Requested and async lock to restart MongoDB.")
 
     def _restart_related_services(self) -> None:
         """Restarts mongodb exporter and backup manager."""
@@ -1485,6 +1557,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             return [rev_status]
         return []
 
+    def is_waiting_for_rolling_operation(self) -> bool:
+        """Returns whether mongodb has pending rolling operations."""
+        return self.rollingops_manager.is_waiting()
+
     def get_statuses(self, scope: DPHScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901 # We know, this function is complex.
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
@@ -1496,6 +1572,9 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         if scope == "unit" and not self.workload.workload_present:
             return [CharmStatuses.MONGODB_NOT_INSTALLED.value]
+
+        if scope == "unit" and self.is_waiting_for_rolling_operation():
+            charm_statuses.append(MongoDBStatuses.WAITING_FOR_RESTART.value)
 
         if self.config.role == MongoDBRoles.INVALID:
             charm_statuses.append(MongoDBStatuses.INVALID_ROLE.value)
@@ -1546,11 +1625,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.model.unit.is_leader():
             return PasswordManagementContext(PasswordManagementState.NOT_LEADER)
 
-        if (
-            self.state.enable_encryption_at_rest
-            and (state := self.vault_manager.vault_state())  # type: ignore[attr-defined]
-            != VaultConfigurationState.ACTIVE
-        ):
+        if state := self.vault_manager.get_degraded_state():
             return PasswordManagementContext(
                 PasswordManagementState.ENCRYPTION_NOT_WORKING,
                 f"Cannot update passwords while encryption at rest is not working. Vault state: {state}",

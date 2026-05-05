@@ -16,6 +16,7 @@ from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
 from ops.hookcmds import Network, network_get
 from pymongo.errors import (
     AutoReconnect,
+    ConfigurationError,
     NotPrimaryError,
     OperationFailure,
     ServerSelectionTimeoutError,
@@ -361,6 +362,7 @@ class CharmState(Object, StatusesStateProtocol):
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
                 ClusterStateKeys.EXT_CA_SECRET.value,
+                ClusterStateKeys.CLUSTER_ID.value,
             ],
         )
 
@@ -476,6 +478,22 @@ class CharmState(Object, StatusesStateProtocol):
     def get_keyfile(self) -> str | None:
         """Gets the keyfile content from the secret."""
         return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
+
+    def set_cluster_id(self, cluster_id_content: str) -> str:
+        """Sets the cluster id content in the secret."""
+        return self.secrets.set(
+            AppPeerDataKeys.CLUSTER_ID.value, cluster_id_content, Scope.APP
+        ).label
+
+    def get_cluster_id(self) -> str | None:
+        """Gets the cluster id content from the secret."""
+        if self.substrate == Substrates.K8S:
+            return None
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.CLUSTER_ID.value)
+
+    def remove_cluster_id(self) -> None:
+        """Remove the content of cluster id from the secret."""
+        self.secrets.remove(key=AppPeerDataKeys.CLUSTER_ID.value, scope=Scope.APP)
 
     @property
     def planned_units(self) -> int:
@@ -715,6 +733,8 @@ class CharmState(Object, StatusesStateProtocol):
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
                 members = mongos.get_shard_members()
+        except FileNotFoundError:
+            return False
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,
@@ -723,7 +743,7 @@ class CharmState(Object, StatusesStateProtocol):
             ):
                 return False
             raise
-        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError):
+        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError, ConfigurationError):
             # Connection refused, - this occurs when internal membership is not in sync across the
             # cluster (i.e. TLS + KeyFile).
             return False

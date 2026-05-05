@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.charm import (
     RelationBrokenEvent,
     RelationChangedEvent,
@@ -17,15 +18,12 @@ from ops.charm import (
 )
 from ops.framework import Object
 
-from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
-    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
-    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -101,6 +99,7 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""
         try:
+            self.manager.cleanup_cluster_id()
             self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -169,50 +168,32 @@ class ClusterMongosEventHandler(Object):
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _handle_changed_secrets(self, event: SecretChangedEvent):
-        """SecretChanged event handler, which is used to propagate the updated passwords."""
+        """SecretChanged event handler, which is used to propagate the updated passwords.
+
+        The manager will request to asynchronously update the mongos configuration
+        and restart. All the exceptions are handled in the callback and
+        retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (DeferrableError, DeferrableFailedHookChecksError):
-            event.defer()
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except WaitingForSecretsError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
 
-        The manager will update the mongos configuration and restart it.
+        The manager will request to asynchronously update the mongos configuration
+        and restart. All the exceptions are handled in the callback and
+        retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
         """
         try:
-            self.manager.update_mongos_and_restart()
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
+            self.manager.async_update_mongos_and_restart()
+        except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except (WaitingForSecretsError, MissingCredentialsError) as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""

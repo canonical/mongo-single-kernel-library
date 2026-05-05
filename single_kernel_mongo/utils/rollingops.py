@@ -8,6 +8,7 @@ from charmlibs.rollingops import SyncLockBackend
 from tenacity import Retrying, retry_if_exception_type, stop_after_delay, stop_never, wait_fixed
 from tenacity.stop import stop_base
 
+from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class StopReplsetSyncLockBackend(SyncLockBackend):
     critical section to proceed.
     """
 
-    def __init__(self, state):
+    def __init__(self, state: CharmState):
         self.state = state
 
     def acquire(self, timeout: int | None) -> None:

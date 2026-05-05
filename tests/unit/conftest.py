@@ -100,6 +100,9 @@ def mock_rollingops_manager(mocker):
     manager.request_async_lock.return_value = None
     manager.acquire_sync_lock.return_value = nullcontext()
 
+    manager.is_waiting.return_value = False
+    manager.is_waiting_callback.return_value = False
+
     mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.RollingOpsManager",
         return_value=manager,
