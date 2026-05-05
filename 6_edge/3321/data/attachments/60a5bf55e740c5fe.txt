@@ -1,0 +1,43 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:19:20Z
+
+App                   Version  Status   Scale  Charm    Channel   Rev  Exposed  Message
+local-config-server   6.0.24   active       1  mongodb              0  no       
+local-shard           6.0.24   blocked      1  mongodb              1  no       Charm revision (1+bee30c3-dirty-locally built) is not up-to date with config-server (265).
+remote-config-server  6.0.24   waiting      1  mongodb  6/stable  265  no       Waiting for shards to upgrade/downgrade to revision 265.
+remote-shard          6.0.24   active       1  mongodb  6/stable  265  no       
+
+Unit                     Workload  Agent  Machine  Public address  Ports            Message
+local-config-server/0*   waiting   idle   2        10.222.240.141  27017-27018/tcp  Waiting for shards to upgrade/downgrade to revision 1+bee30c3-dirty-locally built.
+local-shard/0*           blocked   idle   3        10.222.240.4    27017/tcp        Charm revision (1+bee30c3-dirty-locally built) is not up-to date with config-server (265).
+remote-config-server/0*  waiting   idle   0        10.222.240.150  27017-27018/tcp  Waiting for shards to upgrade/downgrade to revision 265.
+remote-shard/0*          blocked   idle   1        10.222.240.131  27017/tcp        Charm revision mismatch.. Run `status-detail`: 0 action required; 1 additional statuses.
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.222.240.150  juju-3c055f-0  ubuntu@22.04  runnervmrc6n4  Running
+1        started  10.222.240.131  juju-3c055f-1  ubuntu@22.04  runnervmrc6n4  Running
+2        started  10.222.240.141  juju-3c055f-2  ubuntu@22.04  runnervmrc6n4  Running
+3        started  10.222.240.4    juju-3c055f-3  ubuntu@22.04  runnervmrc6n4  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:14:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:14:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-remote-config-server-0: 02:15:01 ERROR unit.remote-config-server/0.juju-log Unable to set params: ['vm.max_map_count']
+unit-remote-config-server-0: 02:15:01 ERROR unit.remote-config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+machine-1: 02:15:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:15:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:15:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-remote-shard-0: 02:16:21 ERROR unit.remote-shard/0.juju-log Unable to set params: ['vm.max_map_count']
+unit-remote-shard-0: 02:16:21 ERROR unit.remote-shard/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+machine-3: 02:16:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:16:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-local-config-server-0: 02:16:42 ERROR unit.local-config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-local-config-server-0: 02:16:42 ERROR unit.local-config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-local-shard-0: 02:17:13 ERROR unit.local-shard/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-local-shard-0: 02:17:13 ERROR unit.local-shard/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
