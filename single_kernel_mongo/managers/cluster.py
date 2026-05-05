@@ -129,7 +129,7 @@ class ClusterProvider(Object):
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
         if cluster_id := self.state.get_cluster_id():
-            relation_data[ClusterStateKeys.CLUSTER_ID] = cluster_id
+            relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
 
         self.data_interface.update_relation_data(relation.id, relation_data)
 
