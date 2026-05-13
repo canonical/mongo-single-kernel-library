@@ -1,0 +1,105 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Disabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Enabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] maintenance: Enabling TLS...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:15:18Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+config-server                      6.0.24   active       1  mongodb                                    0  no       
+mongos                             6.0.24   blocked      1  mongos                                     0  no       The mongos CA and Config-Server CA don't match.
+self-signed-certificates                    active       1  self-signed-certificates  latest/stable  264  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  264  no       
+shard-one                          6.0.24   active       1  mongodb                                    1  no       
+test-routing-application                    active       1  continuous-write                           0  no       
+
+Unit                                  Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*                      active    idle   0        10.81.209.99    27017-27018/tcp  Primary.
+self-signed-certificates-separate/0*  active    idle   4        10.81.209.233                    
+self-signed-certificates/0*           active    idle   3        10.81.209.22                     
+shard-one/0*                          active    idle   1        10.81.209.25    27017/tcp        Primary.
+test-routing-application/0*           active    idle   2        10.81.209.157                    
+  mongos/0*                           blocked   idle            10.81.209.157   27018/tcp        The mongos CA and Config-Server CA don't match.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.81.209.99   juju-45614e-0  ubuntu@22.04  runnervmrc6n4  Running
+1        started  10.81.209.25   juju-45614e-1  ubuntu@22.04  runnervmrc6n4  Running
+2        started  10.81.209.157  juju-45614e-2  ubuntu@22.04  runnervmrc6n4  Running
+3        started  10.81.209.22   juju-45614e-3  ubuntu@22.04  runnervmrc6n4  Running
+4        started  10.81.209.233  juju-45614e-4  ubuntu@22.04  runnervmrc6n4  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:42:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:42:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:43:42 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:43:42 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-1: 01:44:02 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:44:02 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:46:06 ERROR unit.shard-one/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="6/edge"', '--revision="147"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (147) from channel "6/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_147.snap?interactive=1&token=1778648400_cb14867904231366ab827c3321da802071cf89ea": net/http: timeout awaiting response headers)
+
+Latest logs:
+May 13 01:43:47 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:43:47 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:43:51 juju-45614e-1 snapd[4254]: storehelpers.go:914: cannot refresh: snap has no updates available: "core20", "lxd", "snapd"
+May 13 01:43:55 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:43:55 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:44:01 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:44:02 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:44:02 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:44:22 juju-45614e-1 snapd[4254]: api_snaps.go:536: Installing snap "charmed-mongodb" revision 147
+May 13 01:44:22 juju-45614e-1 groupadd[5900]: group added to /etc/group: name=snapd-range-524288-root, GID=524288
+May 13 01:44:22 juju-45614e-1 groupadd[5900]: group added to /etc/gshadow: name=snapd-range-524288-root
+May 13 01:44:22 juju-45614e-1 groupadd[5900]: new group: name=snapd-range-524288-root, GID=524288
+May 13 01:44:22 juju-45614e-1 useradd[5906]: new user: name=snapd-range-524288-root, UID=524288, GID=524288, home=/nonexistent, shell=/usr/bin/false, from=none
+May 13 01:44:22 juju-45614e-1 groupadd[5915]: group added to /etc/group: name=snap_daemon, GID=584788
+May 13 01:44:22 juju-45614e-1 groupadd[5915]: group added to /etc/gshadow: name=snap_daemon
+May 13 01:44:22 juju-45614e-1 groupadd[5915]: new group: name=snap_daemon, GID=584788
+May 13 01:44:22 juju-45614e-1 useradd[5921]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+May 13 01:44:27 juju-45614e-1 snapd[4254]: cache.go:243: removed 0 entries/    0 from downloads cache
+May 13 01:44:28 juju-45614e-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+May 13 01:46:06 juju-45614e-1 snapd[4254]: taskrunner.go:304: Change 5 task (Download snap "charmed-mongodb" (147) from channel "6/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_147.snap?interactive=1&token=1778648400_cb14867904231366ab827c3321da802071cf89ea": net/http: timeout awaiting response headers
+.
+unit-shard-one-0: 01:46:38 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:46:38 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 01:51:31 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:51:31 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 01:52:00 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 01:52:01 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:53:16 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:53:17 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:53:17 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:53:17 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:07:44 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:07:44 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-self-signed-certificates-0: 02:09:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "81415105-ded0-4bbf-8c03-04144845614e:r#19#mongos": settings 81415105-ded0-4bbf-8c03-04144845614e:r#19#mongos not found (not found)
+unit-mongos-0: 02:09:44 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "81415105-ded0-4bbf-8c03-04144845614e:r#19#self-signed-certificates": settings 81415105-ded0-4bbf-8c03-04144845614e:r#19#self-signed-certificates not found (not found)
+machine-4: 02:11:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:11:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 02:11:44 ERROR unit.mongos/0.juju-log certificates:20: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:11:45 ERROR unit.mongos/0.juju-log certificates:20: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:15:10 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:15:10 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:15:10 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
