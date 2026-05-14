@@ -12,6 +12,7 @@ High-level implementation details of MongoDB concepts like sharding and users in
 Sharding <sharding>
 Internal users <users>
 Advanced statuses <advanced-statuses>
+Rolling operations <rollingops>
 ```
 
 ## Security
