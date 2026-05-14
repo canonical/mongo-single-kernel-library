@@ -1,0 +1,125 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongodb-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Starting MongoDB.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:54:57Z
+
+App                                Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+config-server                      7.0.28   active      2  mongodb                                    0  no       
+self-signed-certificates                    active      1  self-signed-certificates  latest/stable  264  no       
+self-signed-certificates-separate           active      1  self-signed-certificates  latest/stable  264  no       
+shard-one                          7.0.28   active      3  mongodb                                    1  no       
+shard-tree                         7.0.28   active      1  mongodb                                    3  no       
+shard-two                          7.0.28   active      1  mongodb                                    2  no       
+
+Unit                                  Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*                      active    idle   0        10.51.178.6     27017-27018/tcp  
+config-server/1                       active    idle   1        10.51.178.64    27017-27018/tcp  Primary.
+self-signed-certificates-separate/0*  active    idle   7        10.51.178.24                     
+self-signed-certificates/0*           active    idle   6        10.51.178.65                     
+shard-one/0*                          blocked   idle   2        10.51.178.104   27017/tcp        Shard CA and config-server CA don't match.
+shard-one/1                           blocked   idle   3        10.51.178.138   27017/tcp        Shard CA and config-server CA don't match.
+shard-one/2                           blocked   idle   4        10.51.178.236   27017/tcp        Shard CA and config-server CA don't match.
+shard-tree/0*                         blocked   idle   8        10.51.178.80    27017/tcp        TLS must be enabled in shard, since it is enabled on the config-server in the cluster relation.
+shard-two/0*                          blocked   idle   5        10.51.178.240   27017/tcp        Shard CA and config-server CA don't match.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.51.178.6    juju-50b51e-0  ubuntu@24.04  github-runner  Running
+1        started  10.51.178.64   juju-50b51e-1  ubuntu@24.04  github-runner  Running
+2        started  10.51.178.104  juju-50b51e-2  ubuntu@24.04  github-runner  Running
+3        started  10.51.178.138  juju-50b51e-3  ubuntu@24.04  github-runner  Running
+4        started  10.51.178.236  juju-50b51e-4  ubuntu@24.04  github-runner  Running
+5        started  10.51.178.240  juju-50b51e-5  ubuntu@24.04  github-runner  Running
+6        started  10.51.178.65   juju-50b51e-6  ubuntu@22.04  github-runner  Running
+7        started  10.51.178.24   juju-50b51e-7  ubuntu@22.04  github-runner  Running
+8        started  10.51.178.80   juju-50b51e-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 02:31:46 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:31:46 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-1: 02:31:47 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:31:47 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:35:01 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:35:09 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:35:15 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:35:23 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+machine-8: 02:37:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 02:37:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-tree-0: 02:38:31 ERROR unit.shard-tree/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:38:31 ERROR unit.shard-tree/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:39:40 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:40:54 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:41:10 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:41:10 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:41:16 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:41:57 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:42:01 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:42:14 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:42:19 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:43:00 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:43:06 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:43:17 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:43:20 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:43:58 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:44:11 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:44:18 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:44:18 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:44:59 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:45:08 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:45:13 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:45:16 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:45:55 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:46:05 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:46:08 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:46:15 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:46:57 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:47:07 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:47:09 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:47:17 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:47:56 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:48:02 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:48:06 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:48:08 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:48:53 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:49:05 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:49:11 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:49:14 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:50:01 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:50:03 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:50:07 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:50:07 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:51:03 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:51:03 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:51:03 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:51:18 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:52:00 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:52:04 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:52:07 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:52:16 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:52:56 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:53:08 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:53:10 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:53:29 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:54:02 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:54:14 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:54:20 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:54:34 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
