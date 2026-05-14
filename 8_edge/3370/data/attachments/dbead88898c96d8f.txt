@@ -1,0 +1,118 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [executing] blocked: The sharding interface cannot be used by replica sets.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [executing] blocked: Invalid sharding relation.. Run `status-detail`: 1 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [idle] blocked: The sharding interface cannot be used by replica sets.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.21   unsupported  02:59:18Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active       1  application                                0  no       
+config-server             8.0.10   active       1  mongodb                                    0  no       
+config-server-two         8.0.10   active       1  mongodb                                    1  no       
+data-integrator                    blocked      1  data-integrator           latest/stable  362  no       Please specify either topic, index, database name, or prefix
+mongos                    8.0.10   blocked      1  mongos                                     0  no       The cluster relation with the config-server is missing.
+replication               8.0.10   blocked      1  mongodb                                    3  no       The sharding interface cannot be used by replica sets.
+s3-integrator                      blocked      1  s3-integrator             latest/edge    538  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  1/stable       586  no       
+shard-one                 8.0.10   active       1  mongodb                                    2  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+application/0*               active    idle   7        10.62.56.234                     
+config-server-two/0*         blocked   idle   1        10.62.56.248    27017-27018/tcp  Missing relation to shard(s).
+config-server/0*             blocked   idle   0        10.62.56.187    27017-27018/tcp  Shards: replication is unreachable.
+data-integrator/0*           blocked   idle   5        10.62.56.230                     Please specify either topic, index, database name, or prefix
+  mongos/0*                  blocked   idle            10.62.56.230    27018/tcp        The cluster relation with the config-server is missing.
+replication/0*               blocked   idle   6        10.62.56.2      27017/tcp        The sharding interface cannot be used by replica sets.
+s3-integrator/0*             blocked   idle   4        10.62.56.195                     Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   3        10.62.56.112                     
+shard-one/0*                 blocked   idle   2        10.62.56.227    27017/tcp        Missing relation to config-server.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.62.56.187  juju-8670e1-0  ubuntu@24.04  github-runner  Running
+1        started  10.62.56.248  juju-8670e1-1  ubuntu@24.04  github-runner  Running
+2        started  10.62.56.227  juju-8670e1-2  ubuntu@24.04  github-runner  Running
+3        started  10.62.56.112  juju-8670e1-3  ubuntu@24.04  github-runner  Running
+4        started  10.62.56.195  juju-8670e1-4  ubuntu@22.04  github-runner  Running
+5        started  10.62.56.230  juju-8670e1-5  ubuntu@24.04  github-runner  Running
+6        started  10.62.56.2    juju-8670e1-6  ubuntu@24.04  github-runner  Running
+7        started  10.62.56.234  juju-8670e1-7  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:32:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:32:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:33:12 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:33:12 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:46 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:33:46 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:34:32 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:34:32 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:34:33 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-3: 02:34:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:34:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:34:42 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:34:42 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-two-0: 02:34:53 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 02:34:53 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 02:34:53 ERROR unit.config-server-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-6: 02:35:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:35:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:35:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:35:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:35:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:35:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:35:25 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:35:25 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:35:25 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-replication-0: 02:36:46 ERROR unit.replication/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-replication-0: 02:36:46 ERROR unit.replication/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-replication-0: 02:36:46 ERROR unit.replication/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:41:03 ERROR unit.shard-one/0.juju-log sharding:28: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-config-server-0: 02:41:25 ERROR unit.config-server/0.juju-log database:30: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:41:25 ERROR unit.config-server/0.juju-log database:30: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:41:25 ERROR unit.shard-one/0.juju-log database:29: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:41:25 ERROR unit.shard-one/0.juju-log database:29: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:41:30 ERROR unit.config-server/0.juju-log database:30: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:41:30 ERROR unit.shard-one/0.juju-log database:29: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:42:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:42:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:42:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:42:20 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:
+unit-config-server-0: 02:42:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:42:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:42:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:42:24 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Cannot operate as a config-server when deployed as a bare replica set
+unit-shard-one-0: 02:42:33 ERROR unit.shard-one/0.juju-log database:29: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 02:42:33 ERROR unit.config-server/0.juju-log database:30: single_kernel_mongo.managers.mongodb_operator:Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 02:42:34 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#29#application": settings cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#29#application not found (not found)
+unit-replication-0: 02:47:27 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:47:27 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:47:27 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:47:27 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-shard-one-0: 02:47:39 ERROR unit.shard-one/0.juju-log sharding:32: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-one-0: 02:47:39 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#32#replication": settings cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#32#replication not found (not found)
+unit-replication-0: 02:47:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#32#shard-one": settings cfe95225-67ff-4bc2-8c0e-5bf1bd8670e1:r#32#shard-one not found (not found)
+unit-replication-0: 02:49:06 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 02:49:06 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 02:49:06 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 02:49:14 ERROR unit.replication/0.juju-log cluster:33: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-mongos-0: 02:49:36 ERROR unit.mongos/0.juju-log cluster:33: root:Can't delete secret for relation 27
+unit-shard-one-0: 02:51:27 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 02:51:27 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 02:51:27 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 02:51:43 ERROR unit.shard-one/0.juju-log cluster:34: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-mongos-0: 02:51:54 ERROR unit.mongos/0.juju-log cluster:34: root:Can't delete secret for relation 27
+unit-replication-0: 02:53:03 ERROR unit.replication/0.juju-log peer-certificates:36: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:53:08 ERROR unit.replication/0.juju-log client-certificates:37: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:58:12 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:58:12 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:58:12 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.mongodb_operator:Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 02:58:13 ERROR unit.replication/0.juju-log single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:58:26 ERROR unit.replication/0.juju-log client-certificates:37: single_kernel_mongo.managers.sharding:Cannot use a replica as a shard.
+unit-replication-0: 02:58:30 ERROR unit.replication/0.juju-log sharding:38: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
