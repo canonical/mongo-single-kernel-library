@@ -1,0 +1,756 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.21   unsupported  02:21:30Z
+
+App            Version  Status  Scale  Charm        Channel            Rev  Address         Exposed  Message
+config-server  7.0.28   active      3  mongodb-k8s  8-transition/edge  195  10.152.183.83   no       
+shard-one      7.0.28   active      3  mongodb-k8s  8-transition/edge  195  10.152.183.188  no       
+shard-two      7.0.28   active      3  mongodb-k8s  8-transition/edge  195  10.152.183.176  no       
+
+Unit              Workload     Agent  Address     Ports  Message
+config-server/0*  error        idle   10.1.53.14         hook failed: "config-server-relation-changed"
+config-server/1   waiting      idle   10.1.53.17         Waiting for mongod to start.... Run `status-detail`: 0 action required; 3 additional statuses.
+config-server/2   waiting      idle   10.1.53.20         Waiting for mongod to start.... Run `status-detail`: 0 action required; 3 additional statuses.
+shard-one/0*      maintenance  idle   10.1.53.33         Adding shard to config-server
+shard-one/1       maintenance  idle   10.1.53.39         Adding shard to config-server
+shard-one/2       maintenance  idle   10.1.53.37         Adding shard to config-server
+shard-two/0*      maintenance  idle   10.1.53.24         Adding shard to config-server
+shard-two/1       maintenance  idle   10.1.53.29         Adding shard to config-server
+shard-two/2       maintenance  idle   10.1.53.30         Adding shard to config-server
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 01:49:22 ERROR unit.config-server/0.juju-log config-server:13: Not reconfiguring: error=
+unit-shard-one-0: 01:49:23 ERROR unit.shard-one/0.juju-log database-peers:4: Not reconfiguring: error=
+unit-config-server-0: 01:49:26 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:49:26 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982565, 3), 'signature': {'hash': b'8D\x156\xe5\x0e\xd0\x1a\xd2\xe5_c\x83<\x07\xda! \x80\xb6', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982565, 3)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:49:27 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-0: 01:49:30 ERROR unit.shard-two/0.juju-log database-peers:8: Not reconfiguring: error=
+unit-config-server-0: 01:49:49 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:49:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:49:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:49:50 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:49:50 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982590, 1), 'signature': {'hash': b'~\xf1\x16\xeb\xf2"\xcc>\x8a\xa5\xe7o\xe4n\x184`\xe8\xb4`', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982590, 1)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:49:51 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:50:15 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:50:15 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:50:15 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:50:16 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:50:16 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982615, 4), 'signature': {'hash': b"\x8f\xbdt\x83\x8f\xd8'@\xcb$L\x14\xbfV\x80\x9b\xda@5*", 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982615, 4)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:50:17 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:50:52 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:50:52 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:50:52 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:50:52 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:50:53 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982651, 1), 'signature': {'hash': b'V\xc9\x19\x92O\x8f\xec`\xe2\x12\x92C1\xe5\xb1\x02\xef\xce\x91\xee', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982651, 1)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:50:53 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:51:49 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:51:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:51:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:51:49 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:51:49 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982708, 2), 'signature': {'hash': b'\x96C\x9b_`\x98\t"\\.\xac\xbdX,\x18\xb0\x06\x02\x84\xdf', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982708, 2)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:51:50 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:53:24 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:53:24 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:53:24 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:53:25 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:53:25 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982805, 1), 'signature': {'hash': b'h\x0bWX\t\x9e4P\x1ahu\xadI\xb3\xd4\x14\x97\xe8a\xc8', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982805, 1)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:53:26 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:56:18 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 01:56:18 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:56:18 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 01:56:18 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 01:56:18 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778982977, 2), 'signature': {'hash': b'\xa1\x83JL\xb5p\xba&\xe5\x00u\xfc\xca]\x90\xe1r\x11`Q', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778982977, 2)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 01:56:19 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:01:33 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 02:01:33 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:01:33 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:01:34 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:01:34 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778983293, 3), 'signature': {'hash': b'28\xf2\xbaA\xd9\xbfn7\x00Fa\x08\x1b\xd7\xff\xcf7}\xdf', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778983293, 3)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 02:01:35 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:06:49 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 02:06:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:06:49 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:06:50 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:06:50 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778983610, 2), 'signature': {'hash': b'\x04\xdad\xc2\xc2q\xe6\xa7\xbd\xd7f\xe2i \x05\xf8\x07\xe5\x80\xb6', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778983610, 2)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 02:06:51 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:12:05 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 02:12:05 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:12:05 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:12:06 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:12:06 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778983926, 1), 'signature': {'hash': b"K\xed\x05'e\xf2\xb6\xb3o\x0b\xae\xba\x0b\xbe\xf4N\x94>\xbd/", 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778983926, 1)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 02:12:07 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:17:21 ERROR unit.config-server/0.juju-log config-server:13: cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=None
+unit-config-server-0: 02:17:21 ERROR unit.config-server/0.juju-log config-server:13: Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:17:21 ERROR unit.config-server/0.juju-log config-server:13: Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: Command createUser requires authentication
+, stderr=
+unit-config-server-0: 02:17:22 ERROR unit.config-server/0.juju-log config-server:13: shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:17:22 ERROR unit.config-server/0.juju-log config-server:13: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 362, in add_shard
+    mongo.add_shard(shard_name, hosts)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 405, in add_shard
+    self.client.admin.command("addShard", shard_url)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 938, in command
+    return self._command(
+           ^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/database.py", line 778, in _command
+    return conn.command(
+           ^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/helpers.py", line 47, in inner
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/pool.py", line 398, in command
+    return command(
+           ^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/pymongo/helpers_shared.py", line 284, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Authentication failed., full error: {'ok': 0.0, 'errmsg': 'Authentication failed.', 'code': 18, 'codeName': 'AuthenticationFailed', '$clusterTime': {'clusterTime': Timestamp(1778984242, 1), 'signature': {'hash': b'm\xaa\x1f$\xfe\xb8\xf1\x95\xd7FEj\xb4\xee\xbd{S\x10\xe8\x14', 'keyId': 7640671850929848343}}, 'operationTime': Timestamp(1778984242, 1)}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/events/lifecycle.py", line 234, in on_relation_joined
+    self.dependent.new_peer()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 628, in new_peer
+    self.update_related_hosts()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 901, in update_related_hosts
+    self.config_server_manager.add_shards()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 338, in add_shards
+    self.add_shard(relation)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/sharding.py", line 368, in add_shard
+    raise ShardAuthError(shard_name)
+single_kernel_mongo.exceptions.ShardAuthError: shard-one
+unit-config-server-0: 02:17:23 ERROR juju.worker.uniter.operation hook "config-server-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
