@@ -1,0 +1,64 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [executing] blocked: Missing relation to config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m tests.integration.helpers.sharding:sharding.py:166 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  04:26:40Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  8.0.10   active      2  mongodb-k8s             0  10.152.183.249  no       
+shard-one      8.0.10   active      2  mongodb-k8s             1  10.152.183.90   no       
+shard-tree     8.0.10   active      2  mongodb-k8s             3  10.152.183.60   no       
+
+Unit              Workload  Agent  Address     Ports  Message
+config-server/0*  active    idle   10.1.53.17         Primary.
+config-server/1   active    idle   10.1.53.19         
+shard-one/0*      active    idle   10.1.53.27         Primary.
+shard-one/1       active    idle   10.1.53.29         
+shard-tree/0*     active    idle   10.1.53.49         Primary.
+shard-tree/1      active    idle   10.1.53.53         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 03:46:15 ERROR unit.shard-one/0.juju-log sharding:20: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-0: 03:46:27 ERROR unit.shard-two/0.juju-log sharding:21: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-one-0: 03:46:49 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e8028ae116e6a651e1f55, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0006339609999486129>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.003668350999987524>]>
+unit-shard-one-0: 03:46:54 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e802d1053792525fe0d7d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0010716770000271936>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.004323012999975617>]>
+unit-shard-one-0: 03:46:59 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e8032f7fef3fbdbd2db8c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.001308891999997286>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0007630539998899621>]>
+unit-config-server-0: 03:47:01 ERROR unit.config-server/0.juju-log config-server:20: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1779335220, 2), \'signature\': {\'hash\': b\'\\x0c\\xe0&\\x8e\\x7f\\xd4\\xde-J\\xb6\\xad:\\x92\\xfe\\xd2\\x86\\x0c\\x7f\\x8a\\xa7\', \'keyId\': 7642183370180395032}}, \'operationTime\': Timestamp(1779335220, 2)}')
+unit-shard-one-0: 03:47:06 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e80395ee9f4673fdcf99e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005736200000683311>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005520069998965482>]>
+unit-shard-two-0: 03:47:11 ERROR unit.shard-two/0.juju-log database-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e803eca04d92c3cb32f0c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010093529999721795>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006572560000677186>]>
+unit-shard-one-0: 03:47:11 ERROR unit.shard-one/0.juju-log sharding:20: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e803e6d414f74bc015f84, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006025529999078572>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009696350000467646>]>
+unit-shard-two-0: 03:47:16 ERROR unit.shard-two/0.juju-log status-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e8043ab7aa3386b593428, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006732199999532895>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.000576735000095141>]>
+unit-shard-tree-0: 03:47:36 ERROR unit.shard-tree/0.juju-log sharding:22: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-tree-0: 03:48:09 ERROR unit.shard-tree/0.juju-log database-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e8078e9796131c4f3217d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016189770001346915>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0018388080000022455>]>
+unit-shard-tree-0: 03:48:13 ERROR unit.shard-tree/0.juju-log rollingops-peers:19: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e807c08581647c59daae7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-tree-0.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009418330000698916>, <ServerDescription ('shard-tree-1.shard-tree-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007740910000393342>]>
+unit-shard-tree-0: 03:54:05 ERROR unit.shard-tree/0.juju-log sharding:22: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-0: 03:54:05 ERROR unit.shard-two/0.juju-log sharding:21: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-config-server-0: 03:54:15 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 03:54:15 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 03:56:18 ERROR unit.config-server/0.juju-log single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 03:57:05 ERROR unit.shard-two/1.juju-log sharding:21: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 04:07:08 ERROR unit.shard-tree/1.juju-log sharding:22: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 04:11:57 ERROR unit.shard-two/0.juju-log sharding:23: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-1: 04:15:57 ERROR unit.shard-two/1.juju-log sharding:23: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-1: 04:22:33 ERROR unit.shard-two/1.juju-log single_kernel_mongo.managers.mongodb_operator:Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a0e88883b8ea8a25940fb87, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSGhost, rtt: 0.0005123890000504616>]>
+controller-0: 04:22:54 ERROR juju.worker.caasapplicationprovisioner.runner exited "shard-two": building app "shard-two" config: getting OCI image resources: unable to fetch OCI image resources for shard-two: application "shard-two" dying or dead
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
