@@ -6,9 +6,11 @@ By default, Charmed MongoDB coordinates rolling operations only within each appl
 To enable coordination across the entire MongoDB cluster, integrate each MongoDB application
 with [Charmed etcd](https://charmhub.io/charmed-etcd).
 
-## Prerequisites
+## Pre-requisite
 
-- A Charmed MongoDB VM cluster deployment
+You'll need a Charmed MongoDB VM cluster deployment using at least the following revisions:
+    - Charmed MongoDB - Revision 335 or higher
+    - Charmed Mongos - Revision 144 or higher
 
 Cluster-wide coordination is not currently supported for Kubernetes charms.
 
@@ -38,10 +40,10 @@ For sharded deployments, integrate every participating application:
 ```{tab-item} VM
 :sync: vm
 
-    juju integrate config-server charmed-etcd
-    juju integrate shard-one charmed-etcd
-    juju integrate shard-two charmed-etcd
-    juju integrate mongos charmed-etcd
+    juju integrate config-server:etcd charmed-etcd:etcd-client
+    juju integrate shard-one:etcd charmed-etcd:etcd-client
+    juju integrate shard-two:etcd charmed-etcd:etcd-client
+    juju integrate mongos:etcd charmed-etcd:etcd-client
 ```
 
 Once the cluster is fully integrated, disruptive operations such as restarts or scale-downs

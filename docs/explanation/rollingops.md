@@ -4,6 +4,11 @@
 Disruptive operations such as restarting or scaling down MongoDB units are performed in a
 rolling fashion to preserve service availability.
 
+```{note}
+Rolling operations are enabled starting with Charmed MongoDB revision 335 and Charmed Mongos revision 144.
+Versions at or above these revisions use the rolling operations behavior described in this document.
+```
+
 By default, Charmed MongoDB coordinates rolling operations within each application. For VM
 deployments, stronger cluster-wide coordination is available by integrating all MongoDB
 applications with [Charmed etcd](https://charmhub.io/charmed-etcd).
