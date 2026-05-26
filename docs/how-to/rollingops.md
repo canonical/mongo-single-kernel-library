@@ -45,6 +45,7 @@ For sharded deployments, integrate every participating application:
     juju integrate shard-two:etcd charmed-etcd:etcd-client
     juju integrate mongos:etcd charmed-etcd:etcd-client
 ```
+````
 
 Once the cluster is fully integrated, disruptive operations such as restarts or scale-downs
 are coordinated across the cluster, ensuring that only one unit performs the operation at a
