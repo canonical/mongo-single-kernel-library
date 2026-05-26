@@ -30,6 +30,7 @@ class AppPeerDataKeys(str, Enum):
     # Shared
     ROLE = "role"
     FCV = "feature-compatibility-version"
+    CLUSTER_ID = "cluster-id"
 
     # Mongos
     DATABASE = "database"

@@ -1,7 +1,10 @@
+import pytest
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
-from single_kernel_mongo.config.relations import PeerRelationNames
+from single_kernel_mongo.config.relations import (
+    PeerRelationNames,
+)
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.utils.mongodb_users import (
     CharmedBackupUser,
@@ -9,6 +12,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedStatsUser,
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
+from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
 PEER_ADDR = {
@@ -48,7 +52,7 @@ def test_users_secrets(harness: Harness[MongoTestCharm], mongodb_name: str):
     )
 
 
-def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
+def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name, substrate: Substrate):
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
     harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
     harness.set_leader(True)
@@ -70,6 +74,10 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name):
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
+    if substrate == "lxd":
+        assert len(state.get_cluster_id()) == 8
+    else:
+        assert state.get_cluster_id() is None
 
 
 def test_unit_peer_data(
@@ -130,3 +138,61 @@ def test_is_shard_added_to_cluster_success(
     state.shard_state.shard_integrated = True
 
     assert state.is_shard_added_to_cluster()
+
+
+@pytest.mark.parametrize(
+    "role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION, MongoDBRoles.SHARD]
+)
+def test_state_cluster_id_in_app_data(
+    harness: Harness[MongoTestCharm], mongodb_name, substrate: Substrate, role
+):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = role
+    state.set_cluster_id("1234")
+
+    if substrate == "lxd":
+        assert state.get_cluster_id() == "1234"
+    else:
+        assert state.get_cluster_id() is None
+
+
+@pytest.mark.parametrize(
+    "role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION, MongoDBRoles.SHARD]
+)
+def test_state_cluster_id_is_none_in_app_data(
+    harness: Harness[MongoTestCharm], mongodb_name, substrate: Substrate, role
+):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    state.app_peer_data.role = role
+    state.remove_cluster_id()
+
+    assert state.get_cluster_id() is None
+
+
+def test_state_cluster_id_mongos_stored_in_app_peer_data(
+    mongos_harness: Harness[MongosTestCharm], mongodb_name, substrate: Substrate
+):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.db_initialised = True
+    state = mongos_harness.charm.operator.state
+    state.set_cluster_id("1234")
+
+    if substrate == "lxd":
+        assert state.get_cluster_id() == "1234"
+    else:
+        assert state.get_cluster_id() is None
+
+
+def test_state_cluster_id_mongos_is_none(mongos_harness: Harness[MongosTestCharm], mongodb_name):
+    mongos_harness.set_leader(True)
+    mongos_harness.charm.operator.state.db_initialised = True
+    state = mongos_harness.charm.operator.state
+    state.remove_cluster_id()
+
+    assert state.get_cluster_id() is None

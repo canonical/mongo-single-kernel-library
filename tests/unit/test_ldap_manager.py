@@ -12,7 +12,6 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.models import LdapState
 from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
-from single_kernel_mongo.config.statuses import CharmStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
@@ -226,7 +225,7 @@ def test_ldap_on_remove_clean_data(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
@@ -272,7 +271,7 @@ def test_on_certificate_removed_clean_certs(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exists", return_value=True)
     mocker.patch(
@@ -317,7 +316,7 @@ def test_ldap_full_integration_cycle(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
@@ -406,8 +405,8 @@ def test_ldap_unable_to_bind_defers(
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
-    mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
@@ -446,21 +445,7 @@ def test_ldap_unable_to_bind_defers(
     )
 
     defer.assert_called()
-
-    mocker.patch(
-        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
-        return_value=LdapState.ACTIVE,
-    )
-    mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.get_statuses",
-        return_value=[CharmStatuses.ACTIVE_IDLE.value],
-    )
-
-    harness.charm.on.update_status.emit()
-    harness.evaluate_status()
-
-    # All is good, we are green
-    assert harness.model.unit.status == ActiveStatus("")
+    mock_restart.assert_not_called()
 
 
 def test_ldaps_not_enabled(
@@ -470,7 +455,7 @@ def test_ldaps_not_enabled(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")

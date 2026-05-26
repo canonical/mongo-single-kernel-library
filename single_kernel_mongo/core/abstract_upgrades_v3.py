@@ -11,7 +11,6 @@ from tenacity import RetryError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import CharmKind
-from single_kernel_mongo.config.models import VaultConfigurationState
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.exceptions import FailedToMovePrimaryError
 from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
@@ -150,13 +149,10 @@ class MongoDBRefresh(charm_refresh.CharmSpecificCommon, abc.ABC):
         if not self.state.db_initialised:
             return
         if self.dependent.name == CharmKind.MONGOD:
-            if (
-                self.dependent.state.enable_encryption_at_rest
-                and (state := self.dependent.vault_manager.vault_state())  # type: ignore[attr-defined]
-                != VaultConfigurationState.ACTIVE
-            ):
+            if state := self.dependent.vault_manager.get_degraded_state():
                 logger.error(
-                    f"Encryption at rest may be degraded. Vault agent state: {state.value}. This must be fixed first."
+                    "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
+                    state,
                 )
                 raise charm_refresh.PrecheckFailed("Encryption at rest is not working properly.")
             if not self.dependent.mongo_manager.mongod_ready():

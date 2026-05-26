@@ -419,3 +419,15 @@ class VaultManager(Object, ManagerStatusProtocol):
             return
         if scope == "app" or scope == "both":
             self.state.statuses.clear(component=self.name, scope="app")
+
+    def get_degraded_state(self) -> VaultConfigurationState | None:
+        """Return a VaultConfigurationState if is is in degraded state.
+
+        The system is considered degraded when encryption-at-rest is enabled
+        but the Vault configuration is not in an active state.
+        """
+        if not self.state.enable_encryption_at_rest:
+            return None
+        if (state := self.vault_state()) != VaultConfigurationState.ACTIVE:
+            return state
+        return None

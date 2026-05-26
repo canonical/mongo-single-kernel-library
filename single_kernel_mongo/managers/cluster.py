@@ -9,12 +9,17 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
+from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
 from ops.model import Relation
 from pymongo.errors import PyMongoError
 
-from single_kernel_mongo.config.literals import Scope, Substrates
+from single_kernel_mongo.config.literals import (
+    RollingOpsCallbackId,
+    Scope,
+    Substrates,
+)
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     CharmStatuses,
@@ -25,8 +30,11 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
+    MissingConfigServerError,
+    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
@@ -120,6 +128,9 @@ class ClusterProvider(Object):
         if ldap_user_to_dn_mapping := self.state.ldap.ldap_user_to_dn_mapping:
             relation_data[ClusterStateKeys.LDAP_USER_TO_DN_MAPPING.value] = ldap_user_to_dn_mapping
 
+        if cluster_id := self.state.get_cluster_id():
+            relation_data[ClusterStateKeys.CLUSTER_ID.value] = cluster_id
+
         self.data_interface.update_relation_data(relation.id, relation_data)
 
     def update_keyfile_and_hosts_on_mongos(self, relation: Relation) -> None:
@@ -158,6 +169,12 @@ class ClusterProvider(Object):
             self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(
                 relation, relation_departing=True
             )
+
+    def cleanup_cluster_id(self) -> None:
+        """On relation-broken event, the cluster ID is removed."""
+        if not self.charm.unit.is_leader():
+            return
+        self.state.remove_cluster_id()
 
     def update_config_server_db(self) -> None:
         """Updates the config server DB URI in the mongos relation."""
@@ -312,22 +329,34 @@ class ClusterRequirer(Object):
         self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
         self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
 
+    def _update_cluster_id(self):
+        """Update the cluster ID in state.
+
+        If a new cluster ID is provided, it is stored in the state.
+        If ``None`` is provided, the existing cluster ID is removed.
+        """
+        new_cluster_id = self.state.cluster.cluster_id
+        if new_cluster_id is None:
+            self.state.remove_cluster_id()
+            return
+        self.state.set_cluster_id(new_cluster_id)
+
     def update_mongos_and_restart(self) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
 
-        # Wait for
         if not self.state.cluster.username or not self.state.cluster.password:
             raise WaitingForSecretsError("Waiting for username and password.")
 
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
 
-        if self.charm.unit.is_leader() and (
-            ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping
-        ):
-            logger.debug("Received a userToDNMapping, storing it in databag.")
-            self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+        if self.charm.unit.is_leader():
+            if ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping:
+                logger.debug("Received a userToDNMapping, storing it in databag.")
+                self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
+
+            self._update_cluster_id()
 
         if not key_file_contents or not config_server_db_uri:
             raise WaitingForSecretsError("Waiting for keyfile or config server db uri")
@@ -337,11 +366,12 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            self.charm.status_handler.set_running_status(
-                MongosStatuses.STARTING_MONGOS.value, scope="unit"
-            )
-
-            self.dependent.restart_charm_services()
+            try:
+                self.dependent.restart_charm_services(force=False)
+            except MissingConfigServerError as e:
+                raise NonDeferrableFailedHookChecksError from e
+            except WorkloadServiceError as e:
+                raise DeferrableError from e
 
             # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
             if not self.dependent.is_mongos_running():
@@ -351,7 +381,7 @@ class ClusterRequirer(Object):
                     scope="unit",
                     component=self.dependent.name,
                 )
-                raise DeferrableError
+                raise DeferrableError("Mongos is not running.")
 
         self.state.statuses.set(
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
@@ -365,11 +395,53 @@ class ClusterRequirer(Object):
 
         self.dependent.ldap_manager.update_hash_status()
 
+    def update_mongos_and_restart_callback(self) -> OperationResult:
+        """Callback use during update mongos and restart rolling operation."""
+        try:
+            self.update_mongos_and_restart()
+            return OperationResult.RELEASE
+        except (
+            DeferrableError,
+            DeferrableFailedHookChecksError,
+        ) as e:
+            logger.info("Deferrable error during mongos update and restart. %s", e)
+            return OperationResult.RETRY_RELEASE
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info("Non deferrable error during mongos update and restart. %s", e)
+            return OperationResult.RELEASE
+        except (WaitingForSecretsError, MissingCredentialsError) as e:
+            logger.info("Skipping mongos update and restart: %s", e)
+            self.state.statuses.add(
+                MongosStatuses.WAITING_FOR_SECRETS.value,
+                scope="unit",
+                component=self.charm.name,
+            )
+            return OperationResult.RELEASE
+
+    def async_update_mongos_and_restart(self):
+        """Async update mongos and restart.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
+        self.state.statuses.add(
+            MongosStatuses.WAITING_FOR_MONGOS_START.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
+        self.dependent.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART,
+        )
+        logger.info("Requested and async lock to update Mongos and restart.")
+
     def handle_secret_changed(self, secret_label: str | None) -> None:
         """If the certificates are rotated for example, handle it immediately.
 
         Changes in secrets do not re-trigger a relation changed event, so it is necessary to listen
         to secret changes events.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
         """
         if not secret_label:
             return
@@ -386,7 +458,7 @@ class ClusterRequirer(Object):
             return
 
         # This will take care of updating everything that needs updating
-        self.update_mongos_and_restart()
+        self.async_update_mongos_and_restart()
 
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
         """Proceeds on relation broken."""

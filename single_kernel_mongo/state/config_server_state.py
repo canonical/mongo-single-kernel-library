@@ -32,6 +32,7 @@ class AppShardingComponentKeys(str, Enum):
     RS_HOSTS = "rs-hosts"
     AUTH_UPDATED = "auth-updated"
     SHARD_INTEGRATED = "shard-integrated"
+    CLUSTER_ID = "cluster-id"
 
     # We don't use those except to check if we've received credentials
     USERNAME = "username"  # nosec: B105
@@ -45,6 +46,7 @@ SECRETS_FIELDS = [
     "int-ca-secret",
     "ext-ca-secret",
     "backup-ca-secret",
+    "cluster-id",
 ]
 
 
@@ -168,6 +170,14 @@ class AppShardingComponentState(AbstractRelationState[Data]):
     def shard_integrated(self, value: bool) -> None:
         """Sets the shard integrated flag."""
         self.update({AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(value)})
+
+    @property
+    def cluster_id(self) -> str | None:
+        """Returns the cluster ID."""
+        if not self.relation:
+            return None
+
+        return self.relation_data.get(AppShardingComponentKeys.CLUSTER_ID.value, None)
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):

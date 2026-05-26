@@ -106,7 +106,9 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     assert "during an upgrade" in err.value.args[0]
 
 
-def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str):
+def test_share_secret_to_mongos(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str, substrate: Substrate
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
@@ -128,6 +130,10 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongod
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
+    if substrate == "lxd":
+        assert len(data.get("cluster-id")) == 8
+    else:
+        assert data.get("cluster-id") is None
 
 
 def test_share_secret_to_mongos_also_shares_ldap_config(
@@ -144,7 +150,7 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     valid_mapping = [
@@ -334,9 +340,11 @@ def test_cluster_requirer_update_mongos_and_restart(
             "config-server-db": "mongodb/2.2.2.2:27017",
             "username": "charmed-operator",
             "password": "password",  # nosec: B105
+            "cluster-id": "cluster",
         },
     )
 
+    manager.update_mongos_and_restart()
     statuses = mongos_harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=mongos_harness.charm.operator.name
     )
@@ -356,11 +364,13 @@ def test_cluster_requirer_update_mongos_and_restart(
                 data["uris"]
                 == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
             )
+            assert mongos_harness.charm.operator.state.get_cluster_id() == "cluster"
         else:
             # on k8s, the router generates the password and user ids.
             assert data["username"] == f"relation-{relation.id}"
             assert len(data["password"]) == 32
             assert data["endpoints"] == "mongos-k8s-0.mongos-k8s-endpoints"
+            assert mongos_harness.charm.operator.state.get_cluster_id() is None
         assert data["database"] == "test-db"
 
 
