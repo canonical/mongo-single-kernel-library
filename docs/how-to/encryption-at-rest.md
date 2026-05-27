@@ -5,7 +5,6 @@ myst:
 ---
 
 (encryption-at-rest)=
-
 # How to configure encryption at rest
 
 Data at rest encryption should be used when your data is highly valuable. It should be used with data in transit encryption (TLS), and adequate policies to protect accounts.
