@@ -50,4 +50,4 @@ async def integrate_shard_with_etcd(
     apps: list[str],
 ) -> None:
     for app in apps:
-        await ops_test.model.integrate(f"{app}:etcd", ETCD_APP_NAME)
+        await ops_test.model.integrate(f"{app}:etcd", f"{ETCD_APP_NAME}:etcd-client")
