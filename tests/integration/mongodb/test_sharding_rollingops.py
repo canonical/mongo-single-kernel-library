@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
+from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT, read_remote_file
 from tests.integration.helpers.rollingops import (
     ETCD_APP_NAME,
     deploy_etcd,
@@ -20,10 +20,7 @@ from tests.integration.helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.tls import (
-    PEER_TLS_RELATION_NAME,
-    TLS_CERTIFICATES_APP_NAME,
-)
+from tests.integration.helpers.tls import integrate_apps_with_tls
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
@@ -70,6 +67,7 @@ async def test_integrate_shard_with_etcd(ops_test: OpsTest) -> None:
     await integrate_shard_with_etcd(ops_test, CLUSTER_COMPONENTS)
 
     await ops_test.model.wait_for_idle(
+        status="active",
         apps=CLUSTER_COMPONENTS + [ETCD_APP_NAME],
         idle_period=20,
         timeout=DEPLOYMENT_TIMEOUT,
@@ -77,7 +75,9 @@ async def test_integrate_shard_with_etcd(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_enable_tls_in_shard_using_rolling_ops(ops_test: OpsTest) -> None:
+async def test_enable_tls_in_shard_using_rolling_ops(
+    ops_test: OpsTest, substrate: Substrate
+) -> None:
     """Enable TLS for shard components and verify rolling ops etcd lock acquisition.
 
     Integrates TLS certificates for all cluster components and verifies that
@@ -91,9 +91,7 @@ async def test_enable_tls_in_shard_using_rolling_ops(ops_test: OpsTest) -> None:
          owner=53a5e2f6-7c0e-4017-8a36-c61093fa17ab-config-server4-0]
         __main__: Lock granted using lease 278b9e4abfac811b.
     """
-    for app in CLUSTER_COMPONENTS:
-        await ops_test.model.integrate(TLS_CERTIFICATES_APP_NAME, f"{app}:{PEER_TLS_RELATION_NAME}")
-
+    await integrate_apps_with_tls(ops_test, CLUSTER_COMPONENTS, peer=True, client=False)
     tls_start_time = datetime.now()
 
     await ops_test.model.wait_for_idle(
@@ -106,10 +104,7 @@ async def test_enable_tls_in_shard_using_rolling_ops(ops_test: OpsTest) -> None:
     for app_name in CLUSTER_COMPONENTS:
         app = ops_test.model.applications[app_name]
         for unit in app.units:
-            ssh_command = ["ssh", unit.name, "sudo", "cat", log_file_path]
-            return_code, stdout, stderr = await ops_test.juju(*ssh_command)
-
-            assert return_code == 0, f"Failed to read log file on {unit.name}: {stderr}"
+            stdout = await read_remote_file(ops_test, substrate, unit.name, log_file_path)
             assert stdout.strip(), f"Log file {log_file_path} is empty on {unit.name}"
             logger.info(f"{unit.name}: {log_file_path} size: {len(stdout)} bytes")
 
