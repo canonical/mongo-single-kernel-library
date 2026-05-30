@@ -1,0 +1,443 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] blocked: Missing relation to config-server.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+[32mINFO    [0m tests.integration.helpers.sharding:sharding.py:166 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.23   unsupported  03:01:42Z
+
+App            Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+config-server  8.0.10   active      2  mongodb             0  no       
+shard-one      8.0.10   active      2  mongodb             1  no       
+shard-tree     8.0.10   active      2  mongodb             3  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*  active    idle   0        10.104.85.140   27017-27018/tcp  Primary.
+config-server/1   active    idle   1        10.104.85.203   27017-27018/tcp  
+shard-one/0*      active    idle   2        10.104.85.111   27017/tcp        
+shard-one/1       active    idle   3        10.104.85.205   27017/tcp        Primary.
+shard-tree/0*     active    idle   6        10.104.85.148   27017/tcp        Primary.
+shard-tree/1      active    idle   7        10.104.85.31    27017/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.104.85.140  juju-eacfb4-0  ubuntu@24.04  github-runner  Running
+1        started  10.104.85.203  juju-eacfb4-1  ubuntu@24.04  github-runner  Running
+2        started  10.104.85.111  juju-eacfb4-2  ubuntu@24.04  github-runner  Running
+3        started  10.104.85.205  juju-eacfb4-3  ubuntu@24.04  github-runner  Running
+6        started  10.104.85.148  juju-eacfb4-6  ubuntu@24.04  github-runner  Running
+7        started  10.104.85.31   juju-eacfb4-7  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:21:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:21:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:21:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:21:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:21:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:21:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:21:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:21:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:22:20 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:22:20 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:22:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 02:22:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:23:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 02:23:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:23:13 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:23:13 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 02:23:13 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-config-server-1: 02:23:14 ERROR unit.config-server/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:23:14 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 02:23:15 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 02:23:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:23:16 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:23:17 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+machine-7: 02:23:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:23:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-1: 02:23:56 ERROR unit.shard-one/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:23:56 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:23:57 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 02:24:02 ERROR unit.shard-tree/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 505, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 318, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 169, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 468, in define_workloads_and_config_managers
+    self.vault_config_manager = VaultConfigManager(
+                                ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/config.py", line 281, in __init__
+    self.workload: VaultAgentWorkload = get_vault_agent_workload_for_substrate(substrate)(
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/workload/vault_agent_workload.py", line 73, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/vm_workload.py", line 47, in __init__
+    self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 02:24:03 ERROR juju.worker.uniter.operation hook "temp-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 02:24:06 ERROR unit.shard-tree/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 505, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 318, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 169, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 468, in define_workloads_and_config_managers
+    self.vault_config_manager = VaultConfigManager(
+                                ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/config.py", line 281, in __init__
+    self.workload: VaultAgentWorkload = get_vault_agent_workload_for_substrate(substrate)(
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/workload/vault_agent_workload.py", line 73, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/vm_workload.py", line 47, in __init__
+    self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-1: 02:24:07 ERROR juju.worker.uniter.operation hook "logs-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-1: 02:24:08 ERROR unit.shard-two/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 02:24:08 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 02:24:08 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-two-0: 02:24:08 ERROR unit.shard-two/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:24:08 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 02:24:09 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 02:24:11 ERROR unit.shard-tree/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 505, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 318, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 169, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 438, in define_workloads_and_config_managers
+    self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/workload/mongos_workload.py", line 26, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/vm_workload.py", line 47, in __init__
+    self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 02:24:12 ERROR juju.worker.uniter.operation hook "temp-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 02:24:14 ERROR unit.shard-tree/1.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 505, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 318, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/abstract_charm.py", line 80, in __init__
+    self.operator = self.operator_type(self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 169, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 435, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 26, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/vm_workload.py", line 47, in __init__
+    self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-1: 02:24:14 ERROR juju.worker.uniter.operation hook "logs-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 02:25:20 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 02:25:20 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 02:25:21 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 02:25:53 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:25:53 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:25:54 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-1: 02:26:04 ERROR unit.shard-tree/1.juju-log refresh-v-three:16: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:26:14 ERROR unit.shard-tree/1.juju-log database-peers:18: single_kernel_mongo.events.lifecycle:Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-0: 02:30:50 ERROR unit.config-server/0.juju-log config-server:20: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1780108249, 1), \'signature\': {\'hash\': b\'\\x8aQ\\xd7rc\\xb0\\xbdL\\x00\\xe7\\x84\\t\\x84\\xfb\\xea(r\\xe82\\xf5\', \'keyId\': 7645505093592154136}}, \'operationTime\': Timestamp(1780108249, 1)}')
+unit-shard-tree-0: 02:30:51 ERROR unit.shard-tree/0.juju-log database-peers:18: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bda17bfa2f340e06906, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSOther, rtt: 0.0017429360000278393>, <ServerDescription ('10.104.85.31', 27017) server_type: RSOther, rtt: 0.000828182999953242>]>
+unit-shard-two-0: 02:30:54 ERROR unit.shard-two/0.juju-log database-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bdc9683dc4072a6c1a0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSOther, rtt: 0.006280405999973482>, <ServerDescription ('10.104.85.199', 27017) server_type: RSOther, rtt: 0.0010174169999572769>]>
+unit-shard-tree-0: 02:30:59 ERROR unit.shard-tree/0.juju-log rollingops-peers:17: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4be27ec71ef0f17801b5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSOther, rtt: 0.0004960950000167941>, <ServerDescription ('10.104.85.31', 27017) server_type: RSOther, rtt: 0.001916907000008905>]>
+unit-shard-two-0: 02:31:01 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4be4e62f33890e400040, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSOther, rtt: 0.0004118479999988267>, <ServerDescription ('10.104.85.199', 27017) server_type: RSOther, rtt: 0.0009026039999753266>]>
+unit-shard-tree-0: 02:31:12 ERROR unit.shard-tree/0.juju-log rollingops-peers:17: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4befb35be413125db6cb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSOther, rtt: 0.00048046100005194603>, <ServerDescription ('10.104.85.31', 27017) server_type: RSOther, rtt: 0.0005210720000832225>]>
+unit-shard-two-0: 02:31:16 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bf34fa6e77b2aa893b8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSOther, rtt: 0.0010260599999583064>, <ServerDescription ('10.104.85.199', 27017) server_type: RSOther, rtt: 0.006678984000018318>]>
+unit-shard-tree-0: 02:31:19 ERROR unit.shard-tree/0.juju-log rollingops-peers:17: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bf6c389b8f0cd7090e5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSOther, rtt: 0.0004627749999599473>, <ServerDescription ('10.104.85.31', 27017) server_type: RSOther, rtt: 0.0004362849999779428>]>
+unit-shard-two-0: 02:31:21 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bf86189a8cde10cd90d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSOther, rtt: 0.0004746919998979138>, <ServerDescription ('10.104.85.199', 27017) server_type: RSOther, rtt: 0.0004910570000902226>]>
+unit-shard-tree-0: 02:31:25 ERROR unit.shard-tree/0.juju-log rollingops-peers:17: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bfc299caa92e908b428, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSSecondary, rtt: 0.0010923117999936949>, <ServerDescription ('10.104.85.31', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.104.85.31:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-two-0: 02:31:27 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4bfe55a9aa3bc0f81c6c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSSecondary, rtt: 0.0006111872000246877>, <ServerDescription ('10.104.85.199', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.104.85.199:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-tree-0: 02:31:32 ERROR unit.shard-tree/0.juju-log rollingops-peers:17: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4c0219178eb5ade1fedb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.148', 27017) server_type: RSSecondary, rtt: 0.00047877800000151183>, <ServerDescription ('10.104.85.31', 27017) server_type: RSSecondary, rtt: 0.0059011069999996835>]>
+unit-config-server-0: 02:31:32 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1780108291, 2), \'signature\': {\'hash\': b\'\\xe3h\\xbd\\xe3\\xeaT\\x80\\xce\\xe7\\xbc\\xd2\\xa15\\x1e\\x01\\x11\\xab\\xf9\\x0b\\x1e\', \'keyId\': 7645505093592154136}}, \'operationTime\': Timestamp(1780108291, 2)}')
+unit-shard-two-0: 02:31:33 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1a4c046bd85e0b47e17116, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.104.85.159', 27017) server_type: RSSecondary, rtt: 0.0031053000000156317>, <ServerDescription ('10.104.85.199', 27017) server_type: RSSecondary, rtt: 0.0007671219999565437>]>
+unit-config-server-0: 02:37:39 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 02:37:39 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 02:39:29 ERROR unit.shard-two/1.juju-log sharding:21: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 02:49:31 ERROR unit.shard-tree/1.juju-log sharding:22: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 02:54:39 ERROR unit.shard-two/0.juju-log sharding:23: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-1: 02:55:39 ERROR unit.shard-two/1.juju-log sharding:23: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-1: 02:55:42 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "2f9a5dab-9fc5-4dd3-8a72-32bdfceacfb4:r#23#config-server": settings 2f9a5dab-9fc5-4dd3-8a72-32bdfceacfb4:r#23#config-server not found (not found)
+unit-shard-two-0: 02:57:21 ERROR unit.shard-two/0.juju-log sharding:24: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 02:57:36 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+unit-shard-two-1: 03:01:20 ERROR unit.shard-two/1.juju-log sharding:24: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 03:01:25 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
