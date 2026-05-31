@@ -1,0 +1,163 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  02:25:48Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.111  no       
+mongodb-k8s       6.0.24   active      3  mongodb-k8s                      0  10.152.183.125  no       
+s3-integrator              active      1  s3-integrator     latest/edge  553  10.152.183.82   no       
+
+Unit                 Workload  Agent      Address       Ports  Message
+continuous-write/0*  active    idle       10.1.130.150         
+mongodb-k8s/0        active    idle       10.1.130.144         
+mongodb-k8s/1        active    idle       10.1.130.147         
+mongodb-k8s/2*       active    executing  10.1.130.148         Primary.
+s3-integrator/0*     active    idle       10.1.130.149         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-2: 02:05:01 ERROR unit.mongodb-k8s/2.juju-log database:7: Deferring _on_relation_event since: error=ServerSelectionTimeoutError('No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1b97491ab4924f7bf5c079, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription (\'mongodb-k8s-0.mongodb-k8s-endpoints\', 27017) server_type: RSSecondary, rtt: 0.009803061999946294>, <ServerDescription (\'mongodb-k8s-1.mongodb-k8s-endpoints\', 27017) server_type: RSSecondary, rtt: 0.01126086099998247>, <ServerDescription (\'mongodb-k8s-2.mongodb-k8s-endpoints\', 27017) server_type: Unknown, rtt: None>]>')
+unit-mongodb-k8s-2: 02:05:33 ERROR unit.mongodb-k8s/2.juju-log database:7: Deferring _on_relation_event since: error=ServerSelectionTimeoutError('No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1b9769b1951894659ef270, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription (\'mongodb-k8s-0.mongodb-k8s-endpoints\', 27017) server_type: RSSecondary, rtt: 0.0137637039999845>, <ServerDescription (\'mongodb-k8s-1.mongodb-k8s-endpoints\', 27017) server_type: RSSecondary, rtt: 0.009246669000049224>, <ServerDescription (\'mongodb-k8s-2.mongodb-k8s-endpoints\', 27017) server_type: Unknown, rtt: None>]>')
+unit-mongodb-k8s-2: 02:25:02 ERROR unit.mongodb-k8s/2.juju-log s3-credentials:5: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/s3.py", line 769, in _on_relation_changed
+    getattr(self.on, "credentials_changed").emit(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/backups.py", line 153, in _on_s3_credential_changed
+    self.manager.set_config_options(credentials=credentials)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/backups.py", line 588, in set_config_options
+    has_config = conn.client.admin["pbmConfig"].find_one()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/collection.py", line 1754, in find_one
+    for result in cursor.limit(-1):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1166, in __next__
+    return self.next()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1142, in next
+    if len(self._data) or self._refresh():
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1090, in _refresh
+    self._send_message(q)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 985, in _send_message
+    response = client._run_operation(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1956, in _run_operation
+    return self._retryable_read(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3027, in _read
+    self._server = self._get_server()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2975, in _get_server
+    return self._client._select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1851, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 428, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 402, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 298, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 359, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: No replica set members found yet, Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1b9bf984809a69de649357, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>]>
+unit-mongodb-k8s-2: 02:25:05 ERROR juju.worker.uniter.operation hook "s3-credentials-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 02:25:35 ERROR unit.mongodb-k8s/2.juju-log s3-credentials:5: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/data_platform_libs/v0/s3.py", line 769, in _on_relation_changed
+    getattr(self.on, "credentials_changed").emit(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/backups.py", line 153, in _on_s3_credential_changed
+    self.manager.set_config_options(credentials=credentials)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/backups.py", line 588, in set_config_options
+    has_config = conn.client.admin["pbmConfig"].find_one()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/collection.py", line 1754, in find_one
+    for result in cursor.limit(-1):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1166, in __next__
+    return self.next()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1142, in next
+    if len(self._data) or self._refresh():
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 1090, in _refresh
+    self._send_message(q)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/cursor.py", line 985, in _send_message
+    response = client._run_operation(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1956, in _run_operation
+    return self._retryable_read(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3027, in _read
+    self._server = self._get_server()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2975, in _get_server
+    return self._client._select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1851, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 428, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 402, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 298, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 359, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: No replica set members found yet, Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a1b9c1d187f256d2071c5bb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None>]>
+unit-mongodb-k8s-2: 02:25:37 ERROR juju.worker.uniter.operation hook "s3-credentials-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
