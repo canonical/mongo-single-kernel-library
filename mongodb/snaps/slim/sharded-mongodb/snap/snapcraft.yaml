@@ -1,0 +1,142 @@
+name: sharded-mongodb
+title: Sharded MongoDB
+base: core24 # the base snap is the execution environment for this snap
+version: "8.0.10-3" # just for humans, typically '1.2+git' or '1.3.2'
+summary: Sharded MongoDB in a snap. # 79 char long summary
+description: |
+  Sharded MongoDB packages a sharded MongoDB topology,
+  including mongod and mongos components and administration tools.
+  It delivers a self-contained, strictly confined Ubuntu snap for
+  sharded cluster deployments.
+
+license: Apache-2.0
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict
+platforms:
+  amd64:
+  arm64:
+
+website: https://github.com/canonical/mongodb-artifacts
+contact: https://github.com/canonical/mongodb-artifacts/issues/new
+issues: https://github.com/canonical/mongodb-artifacts/issues/new
+
+system-usernames:
+  snap_daemon: shared
+
+hooks:
+  post-refresh:
+    plugs:
+      - network
+      - network-bind
+  install:
+    plugs:
+      - network
+      - network-bind
+
+package-repositories:
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: https://ppa.launchpadcontent.net/data-platform/charmed-mongodb-8/ubuntu
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: |
+        https://ppa.launchpadcontent.net/data-platform/mongodb-shell/ubuntu
+
+slots:
+  logs:
+    interface: content
+    source:
+      read:
+        - $SNAP_COMMON/var/log/mongodb
+        - $SNAP_COMMON/var/log/mongos
+
+apps:
+  mongosh:
+    command: drop_priv.sh mongosh
+    plugs:
+      - network
+  mongobridge:
+    command: drop_priv.sh mongobridge
+  mongod-cli:
+    command: drop_priv.sh mongod
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  mongod:
+    command: start-mongod.sh
+    daemon: simple
+    install-mode: disable
+    restart-condition: always
+    restart-delay: 20s
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  mongodump:
+    command: drop_priv.sh mongodump
+    plugs:
+      - network
+      - network-bind
+  mongos:
+    daemon: simple
+    install-mode: disable
+    command: start-mongos.sh
+    restart-condition: always
+    restart-delay: 20s
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  # MongoDB Tools
+  mongoexport:
+    command: drop_priv.sh mongoexport
+  mongofiles:
+    command: drop_priv.sh mongofiles
+  mongoimport:
+    command: drop_priv.sh mongoimport
+  mongorestore:
+    command: drop_priv.sh mongorestore
+    plugs:
+      - network
+      - network-bind
+  mongostat:
+    command: drop_priv.sh mongostat
+  mongotop:
+    command: drop_priv.sh mongotop
+
+parts:
+  mongo-deb:
+    plugin: nil
+    stage-packages:
+      - percona-server-mongodb
+      - mongodb-shell
+      - util-linux
+    stage-snaps:
+      - yq
+    override-prime: |
+      craftctl default
+      LICENSE_LOC=usr/share/doc/percona-server-mongodb
+      zcat $CRAFT_PRIME/$LICENSE_LOC/LICENSE-Community.txt.gz \
+        > $CRAFT_PRIME/licenses/LICENSE-percona-server
+    organize:
+      usr/share/doc/mongodb-shell/copyright:
+        licenses/LICENSE-mongodb-shell
+  wrapper:
+    plugin: dump
+    source: snap/local
+  snap-license:
+    plugin: dump
+    source: .
+    source-type: local
+    stage:
+      - licenses/LICENSE-snap
+    organize:
+      LICENSE: licenses/LICENSE-snap

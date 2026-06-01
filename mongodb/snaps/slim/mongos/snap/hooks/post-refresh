@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# post-refresh hook for mongodb snap
+
+set -eux
+
+export CONF="${SNAP_DATA}/etc/mongod"
+export ETC="${SNAP_DATA}/etc/"
+export MONGOS_CONFIG_FILE="${CONF}/mongos.conf"
+export LOGS="${SNAP_COMMON}/var/log/mongodb"
+
+
+if [ ! -f $MONGOS_CONFIG_FILE ]; then
+    # Copy over the mongos.conf and create needed directories/files
+    echo "mongos configuration file does not exist."
+    echo "copying default config to ${MONGOS_CONFIG_FILE}"
+
+    # Grant permissions on $CONF
+    chown root:snap_daemon "$CONF"
+
+    cp "${SNAP}/etc/mongod.conf" "${MONGOS_CONFIG_FILE}"
+
+    # mongos.conf default values are not consistent with the snap directory system.
+    yq -i ".processManagement.fork = false" ${MONGOS_CONFIG_FILE}
+    yq -i ".systemLog.path = \"${LOGS}/mongod.log\"" ${MONGOS_CONFIG_FILE}
+    yq -i ".net.port = 27018" ${MONGOS_CONFIG_FILE}
+    yq -i "del(.storage)" ${MONGOS_CONFIG_FILE}
+
+    # Change ownership of snap directories to allow snap_daemon to read/write
+    chown -R 584788:root "${CONF}"
+fi
