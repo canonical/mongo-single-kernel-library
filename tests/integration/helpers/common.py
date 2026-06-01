@@ -1530,3 +1530,35 @@ async def delete_file_on_remote(
             stderr,
         )
     return
+
+
+async def read_remote_file(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+) -> str:
+    """Read a file on a remote unit and return its stdout.
+
+    Uses `juju ssh` for LXD (adds sudo) and `juju ssh --container` for
+    microk8s so callers don't need to duplicate the command construction.
+    Raises `ProcessError` when the command exits with a non-zero code.
+    """
+    if substrate == "microk8s":
+        cmd = ["ssh", "--container", container, unit_name, "cat", filepath]
+    else:
+        cmd = ["ssh", unit_name, "sudo", "cat", filepath]
+
+    return_code, stdout, stderr = await ops_test.juju(*cmd)
+
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            " ".join(cmd),
+            return_code,
+            stderr,
+        )
+
+    return stdout
