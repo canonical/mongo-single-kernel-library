@@ -16,6 +16,8 @@ concurrency:
 jobs:
   ci-tests:
     uses: ./.github/workflows/ci.yaml
+    permissions:
+      contents: write # Needed for Allure Report
     secrets: inherit
 
   release-part1:
@@ -94,4 +96,7 @@ jobs:
     with:
       version: ${{ needs.release-part1.outputs.git-tag }}
       base_branch: ${{ github.ref_name }}
+    permissions: # Needed to create PRs in dependent charm repos
+      contents: write
+      pull-requests: write
     secrets: inherit
