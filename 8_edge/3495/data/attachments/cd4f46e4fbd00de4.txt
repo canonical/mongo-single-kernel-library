@@ -1,0 +1,73 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: Primary.
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for MongoDB restart.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [executing] active: Primary.
+  shard-two/2 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.23   unsupported  03:15:21Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     8.0.10   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         8.0.10   active       3  mongodb                      1  no       
+shard-two         8.0.10   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.61.127.200   27017-27018/tcp  
+config-server/1      active    idle   1        10.61.127.26    27017-27018/tcp  Primary.
+config-server/2      active    idle   2        10.61.127.144   27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.61.127.254                    
+shard-one/0          active    idle   3        10.61.127.99    27017/tcp        Primary.
+shard-one/1          active    idle   4        10.61.127.65    27017/tcp        
+shard-one/2*         active    idle   5        10.61.127.72    27017/tcp        
+shard-two/0          active    idle   6        10.61.127.76    27017/tcp        
+shard-two/1          active    idle   7        10.61.127.36    27017/tcp        Primary.
+shard-two/2*         active    idle   8        10.61.127.212   27017/tcp        Primary.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.61.127.200  juju-c8f5bb-0  ubuntu@24.04  github-runner  Running
+1        started  10.61.127.26   juju-c8f5bb-1  ubuntu@24.04  github-runner  Running
+2        started  10.61.127.144  juju-c8f5bb-2  ubuntu@24.04  github-runner  Running
+3        started  10.61.127.99   juju-c8f5bb-3  ubuntu@24.04  github-runner  Running
+4        started  10.61.127.65   juju-c8f5bb-4  ubuntu@24.04  github-runner  Running
+5        started  10.61.127.72   juju-c8f5bb-5  ubuntu@24.04  github-runner  Running
+6        started  10.61.127.76   juju-c8f5bb-6  ubuntu@24.04  github-runner  Running
+7        started  10.61.127.36   juju-c8f5bb-7  ubuntu@24.04  github-runner  Running
+8        started  10.61.127.212  juju-c8f5bb-8  ubuntu@24.04  github-runner  Running
+9        started  10.61.127.254  juju-c8f5bb-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 03:12:36 ERROR unit.config-server/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7b7312a6b1d0 state=finished raised ClusterNotHealthyError>]
+unit-shard-one-2: 03:13:08 ERROR unit.shard-one/2.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x73ff68730b00 state=finished raised ClusterNotHealthyError>]
+machine-6: 03:13:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+machine-6: 03:13:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+machine-6: 03:13:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+machine-6: 03:13:27 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+machine-6: 03:13:33 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+machine-6: 03:13:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3e0189] "machine-6" cannot open api: unable to connect to API: dial tcp 10.61.127.75:17070: connect: network is unreachable
+unit-shard-two-2: 03:13:45 ERROR unit.shard-two/2.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x75c9a2558fe0 state=finished raised ClusterNotHealthyError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
