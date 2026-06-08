@@ -60,29 +60,34 @@ class MongoConfiguration:
         return self.hosts
 
     @property
-    def formatted_replset(self) -> dict:
+    def formatted_replset(self) -> dict[str, str]:
         """Formatted replicaSet parameter."""
         if self.replset:
             return {"replicaSet": quote_plus(self.replset)}
         return {}
 
     @property
-    def formatted_auth_source(self) -> dict:
+    def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
         if self.database != "admin":
             return ADMIN_AUTH_SOURCE
         return {}
 
     @property
-    def tls_config(self) -> dict:
+    def tls_config(self) -> dict[str, str]:
         """TLS Config."""
         if not self.tls_enabled:
             return {}
-        return {
+        config = {
             "tls": "true",
-            "tlsCertificateKeyFile": f"{self.tls_external_keyfile}",
             "tlsCaFile": f"{self.tls_external_ca}",
         }
+        # Edge case: MongoDB TLS with Unix Socket requires disabling client hostname verification.
+        # This is because the reported remote is the unix socket, which is not in the SANS list.
+        if len(self.hosts) == 1 and list(self.hosts)[0].endswith("27018.sock"):
+            config["tlsAllowInvalidHostnames"] = "true"
+
+        return config
 
     def _uri(self, tls: bool):
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
