@@ -15,7 +15,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote_plus, urlencode, quote
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires, DatabaseCreatedEvent
 from ops.charm import ActionEvent, CharmBase
@@ -167,8 +167,10 @@ class ContinuousWritesApplication(CharmBase):
             if port:
                 nodelist.append(f"{host}:{port}")
             else:
-                nodelist.append(f"{host}")
+                nodelist.append(quote(f"{host}", safe=""))
+
         hosts = ",".join(nodelist)
+
         return (
                 f"mongodb://{quote_plus(parsed_uri['username'])}:"
                     f"{quote_plus(parsed_uri['password'])}@"
