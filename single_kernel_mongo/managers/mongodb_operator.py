@@ -1340,6 +1340,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.config_manager.configure_and_restart(force=force)
             if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
                 self.mongos_config_manager.configure_and_restart(force=force)
+            self.s3_backup_manager.configure_and_restart(force=True)
         except WorkloadServiceError as e:
             raise DeferrableError from e
 
