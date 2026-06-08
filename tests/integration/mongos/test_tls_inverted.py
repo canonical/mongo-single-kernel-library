@@ -49,7 +49,7 @@ async def test_build_and_deploy(
     )
     if substrate == "lxd":
         await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].set_config(
-            {"external-connectivity": True}
+            {"external-connectivity": "false"}
         )
     await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
