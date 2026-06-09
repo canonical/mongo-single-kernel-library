@@ -160,7 +160,7 @@ class BackupConfigManager(CommonConfigManager):
             return
 
         if (
-            not self.state.tls.client_enabled
+            self.state.tls.client_enabled
             and self.state.charm.operator.rollingops_manager.is_waiting_callback(
                 callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES
             )
