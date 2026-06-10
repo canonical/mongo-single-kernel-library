@@ -153,16 +153,19 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator] = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = ROLES[self.substrate][self.name]
-        self.state = CharmState(
-            self.charm,
-            self.substrate,
-            self.role,
-        )
-
         container = (
             self.charm.unit.get_container(self.role.name)
             if self.substrate == Substrates.K8S
             else None
+        )
+        self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+            role=self.role, container=container
+        )
+        self.state = CharmState(
+            self.charm,
+            self.substrate,
+            self.role,
+            self.workload,
         )
 
         # Defined workloads and configs
@@ -432,9 +435,10 @@ class MongoDBOperator(OperatorProtocol, Object):
     def define_workloads_and_config_managers(self, container: Container | None) -> None:
         """Export all workload and config definition for readability."""
         # BEGIN: Define workloads.
-        self.workload = get_mongodb_workload_for_substrate(self.substrate)(
-            role=self.role, container=container
-        )
+        if not hasattr(self, "workload"):
+            self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+                role=self.role, container=container
+            )
         self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
         )
