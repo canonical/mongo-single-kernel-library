@@ -11,6 +11,7 @@ from ops.model import Unit
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.secrets import SecretCache
+from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import PrivateKey
 
 SECRET_KEY_LABEL = "key-secret"
@@ -39,11 +40,16 @@ class TLSState:
     component: Unit
 
     def __init__(
-        self, peer_relation: Relation | None, client_relation: Relation | None, secrets: SecretCache
+        self,
+        peer_relation: Relation | None,
+        client_relation: Relation | None,
+        secrets: SecretCache,
+        workload: WorkloadBase,
     ):
         self.peer_relation = peer_relation
         self.client_relation = client_relation
         self.secrets = secrets
+        self.workload = workload
 
     @property
     def peer_enabled(self) -> bool:
@@ -95,3 +101,10 @@ class TLSState:
         """Private key for the peer relation."""
         private_key_str = self.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
         return PrivateKey(private_key_str) if private_key_str else None
+
+    def is_enabling_client_tls(self) -> bool:
+        """Returns true if client TLS is being enabled."""
+        ca_path = self.workload.paths.ext_ca_file
+        if self.client_relation and not self.workload.exists(ca_path):
+            return True
+        return False

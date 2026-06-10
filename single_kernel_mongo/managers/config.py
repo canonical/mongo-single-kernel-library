@@ -22,7 +22,6 @@ from single_kernel_mongo.config.literals import (
     PBM_RESTART_DELAY,
     CharmKind,
     MongoPorts,
-    RollingOpsCallbackId,
     Substrates,
 )
 from single_kernel_mongo.config.models import (
@@ -159,16 +158,8 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("No password found.")
             return
 
-        if (
-            self.state.tls.client_enabled
-            and self.state.charm.operator.rollingops_manager.is_waiting_callback(
-                callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES
-            )
-            and not force
-        ):
-            logger.info(
-                "Not starting PBM yet. Waiting for TLS to be enabled to restart charm services."
-            )
+        if self.state.tls.is_enabling_client_tls():
+            logger.info("Not restarting PBM yet. Waiting for client TLS CA file to be reconciled.")
             return
 
         if (

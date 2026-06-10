@@ -382,6 +382,7 @@ class CharmState(Object, StatusesStateProtocol):
             peer_relation=self.peer_tls_relation,
             client_relation=self.client_tls_relation,
             secrets=self.secrets,
+            workload=self.charm.workload,
         )
 
     @property
