@@ -1,0 +1,96 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: Primary.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.23   unsupported  02:52:46Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     6.0.28   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         6.0.28   active       3  mongodb                      1  no       
+shard-two         6.0.28   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.187.251.25   27017-27018/tcp  Primary.
+config-server/1      active    idle   1        10.187.251.197  27017-27018/tcp  
+config-server/2      active    idle   2        10.187.251.130  27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.187.251.184                   
+shard-one/0          active    idle   3        10.187.251.206  27017/tcp        Primary.
+shard-one/1*         active    idle   4        10.187.251.15   27017/tcp        
+shard-one/2          active    idle   5        10.187.251.95   27017/tcp        
+shard-two/0*         active    idle   6        10.187.251.57   27017/tcp        Primary.
+shard-two/1          active    idle   7        10.187.251.233  27017/tcp        Primary.
+shard-two/2          active    idle   8        10.187.251.68   27017/tcp        
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.187.251.25   juju-f78bae-0  ubuntu@22.04  github-runner  Running
+1        started  10.187.251.197  juju-f78bae-1  ubuntu@22.04  github-runner  Running
+2        started  10.187.251.130  juju-f78bae-2  ubuntu@22.04  github-runner  Running
+3        started  10.187.251.206  juju-f78bae-3  ubuntu@22.04  github-runner  Running
+4        started  10.187.251.15   juju-f78bae-4  ubuntu@22.04  github-runner  Running
+5        started  10.187.251.95   juju-f78bae-5  ubuntu@22.04  github-runner  Running
+6        started  10.187.251.57   juju-f78bae-6  ubuntu@22.04  github-runner  Running
+7        started  10.187.251.233  juju-f78bae-7  ubuntu@22.04  github-runner  Running
+8        started  10.187.251.68   juju-f78bae-8  ubuntu@22.04  github-runner  Running
+9        started  10.187.251.184  juju-f78bae-9  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-1: 02:38:42 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a28ce3130ba9c8405d8e4f8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.187.251.15', 27017) server_type: RSSecondary, rtt: 0.001227460999871255>, <ServerDescription ('10.187.251.206', 27017) server_type: RSSecondary, rtt: 0.003458237999893754>, <ServerDescription ('10.187.251.95', 27017) server_type: RSSecondary, rtt: 0.00426349700001083>]>
+unit-shard-two-0: 02:45:03 ERROR unit.shard-two/0.juju-log status-peers:9: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a28cfae941d49547cd18a1f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.187.251.233', 27017) server_type: RSSecondary, rtt: 0.0015697049998379953>, <ServerDescription ('10.187.251.57', 27017) server_type: RSSecondary, rtt: 0.0025771460000214574>, <ServerDescription ('10.187.251.68', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a28ce56fa116a9e2194453a'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 204, 'lastCommittedOpTime': Timestamp(1781059480, 13), '$clusterTime': {'clusterTime': Timestamp(1781059497, 7), 'signature': {'hash': b'M\\x85vk\\xee7&e\\x14\\x07IK\\x11O\\xa9\\x03\\xee\\xf505', 'keyId': 7649580497865015323}}, 'operationTime': Timestamp(1781059480, 13)}")>]>
+unit-shard-two-0: 02:45:07 ERROR unit.shard-two/0.juju-log status-peers:9: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a28cfb2941d49547cd18a20, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.187.251.233', 27017) server_type: RSSecondary, rtt: 0.001478869000038685>, <ServerDescription ('10.187.251.57', 27017) server_type: RSSecondary, rtt: 0.0018497750002097746>, <ServerDescription ('10.187.251.68', 27017) server_type: RSSecondary, rtt: 0.0026058490002469625>]>
+unit-config-server-0: 02:50:15 ERROR unit.config-server/0.juju-log Cluster cannot read/write to replicas
+machine-7: 02:50:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 02:50:25 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:50:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:50:34 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:50:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:50:46 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+unit-shard-one-1: 02:50:47 ERROR unit.shard-one/1.juju-log Cluster cannot read/write to replicas
+machine-7: 02:50:53 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:51:03 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+machine-7: 02:51:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+unit-shard-two-0: 02:51:27 ERROR unit.shard-two/0.juju-log Cluster cannot read/write to replicas
+machine-7: 02:51:28 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [5b2053] "machine-7" cannot open api: unable to connect to API: dial tcp 10.187.251.117:17070: connect: network is unreachable
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
