@@ -420,7 +420,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                     "bindIp": f"{self.workload.paths.socket_path}",
                     "unixDomainSocket": {
                         "enabled": True,
-                        "filePermissions": "0660",
+                        "filePermissions": "0666",
                     },
                 },
             }

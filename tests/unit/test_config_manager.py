@@ -290,7 +290,7 @@ def test_mongos_config_manager(mocker):
             "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
             "unixDomainSocket": {
                 "enabled": True,
-                "filePermissions": "0660",
+                "filePermissions": "0666",
             },
         }
     }
@@ -326,7 +326,7 @@ def test_mongos_config_manager(mocker):
             "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
             "unixDomainSocket": {
                 "enabled": True,
-                "filePermissions": "0660",
+                "filePermissions": "0666",
             },
             "port": 27018,
         },
