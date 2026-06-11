@@ -164,9 +164,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             if self.substrate == Substrates.K8S
             else None
         )
-        self.workload = get_mongodb_workload_for_substrate(self.substrate)(
-            role=self.role, container=container
-        )
 
         # Defined workloads and configs
         self.define_workloads_and_config_managers(container)
@@ -435,6 +432,9 @@ class MongoDBOperator(OperatorProtocol, Object):
     def define_workloads_and_config_managers(self, container: Container | None) -> None:
         """Export all workload and config definition for readability."""
         # BEGIN: Define workloads.
+        self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+            role=self.role, container=container
+        )
         self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
         )

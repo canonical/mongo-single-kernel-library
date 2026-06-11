@@ -95,10 +95,10 @@ class MongosOperator(OperatorProtocol, Object):
         container = (
             self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
         )
+
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
         )
-
         self.mongos_config_manager = MongosConfigManager(
             self.config,
             self.workload,
