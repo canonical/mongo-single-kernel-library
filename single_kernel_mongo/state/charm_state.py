@@ -42,7 +42,7 @@ from single_kernel_mongo.core.structured_config import (
     MongoConfigModel,
     MongoDBRoles,
 )
-from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
+from single_kernel_mongo.core.workload import MongoPaths
 from single_kernel_mongo.exceptions import MissingCredentialsError
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
@@ -117,14 +117,12 @@ class CharmState(Object, StatusesStateProtocol):
         charm: AbstractMongoCharm[T, U],
         substrate: Substrates,
         charm_role: CharmSpec,
-        workload: WorkloadBase,
     ):
         super().__init__(parent=charm, key="charm_state")
         self.charm_role = charm_role
         self.charm = charm
         self.substrate: Substrates = substrate
         self.secrets = SecretCache(charm)
-        self.workload = workload
         self.peer_relation_name = charm.peer_rel_name.value
         self.ldap_peer_relation_name = PeerRelationNames.LDAP_PEERS.value
         self.statuses_relation_name = PeerRelationNames.STATUS_PEERS.value
@@ -384,7 +382,6 @@ class CharmState(Object, StatusesStateProtocol):
             peer_relation=self.peer_tls_relation,
             client_relation=self.client_tls_relation,
             secrets=self.secrets,
-            workload=self.workload,
         )
 
     @property

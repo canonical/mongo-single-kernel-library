@@ -158,8 +158,12 @@ class BackupConfigManager(CommonConfigManager):
             logger.info("No password found.")
             return
 
-        if self.state.tls.is_enabling_client_tls():
-            logger.info("Not restarting PBM yet. Waiting for client TLS CA file to be reconciled.")
+        if self.state.tls.client_enabled and not self.workload.exists(
+            self.workload.paths.ext_ca_file
+        ):
+            logger.info(
+                "Not restarting PBM yet. Waiting for client TLS CA file to be available in the workload."
+            )
             return
 
         if (

@@ -86,17 +86,17 @@ class MongosOperator(OperatorProtocol, Object):
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
         self.role = ROLES[self.substrate][self.name]
+        self.state = CharmState(
+            self.charm,
+            self.substrate,
+            self.role,
+        )
+
         container = (
             self.charm.unit.get_container(self.name) if self.substrate == Substrates.K8S else None
         )
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
-        )
-        self.state = CharmState(
-            self.charm,
-            self.substrate,
-            self.role,
-            self.workload,
         )
 
         self.mongos_config_manager = MongosConfigManager(
