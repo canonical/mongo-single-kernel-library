@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Installation hook for mongodb-server-replicaset snap
+
+set -eux
+
+export ETC="$SNAP_DATA"/etc
+export CONF="${SNAP_DATA}"/etc/mongod
+export DATA="${SNAP_COMMON}"/var/lib/mongodb
+export LOGS="${SNAP_COMMON}"/var/log/mongodb
+export RUN="${SNAP_COMMON}"/run
+export MONGO_CONFIG_FILE="${CONF}"/mongod.conf
+export PID_FILE="${RUN}/mongod.pid"
+export KEYFILE="${ETC}"/mongodb-keyfile
+export KEYFILE_CONFIG="$(dirname "${SNAP_DATA}")/current/etc/mongodb-keyfile"
+
+# Create the necessary parent directories 
+mkdir -p $DATA
+mkdir -p $LOGS
+mkdir -p $CONF
+mkdir -p $RUN
+
+# If we just created the directory, we set up permissions
+if [ stat -c '%u' "$DATA" == 0 ]; then
+    chmod -R 770 "${SNAP_COMMON}"
+    chmod 750 "${DATA}"
+fi
+
+# If we just created the directory, we set up permissions
+if [ stat -c '%u' "$LOGS" == 0 ]; then
+    chmod -R 770 "${SNAP_COMMON}"
+    chmod g+s "$LOGS"/*
+fi
+
+# If we just created the directory, we set up permissions
+if [ stat -c '%u' "$RUN" == 0 ]; then
+    chmod -R 770 "${SNAP_COMMON}"
+    chmod 750 "${RUN}"
+fi
+
+chown -R 584788:root "${SNAP_COMMON}"/*
+
+# Copy over the mongod.conf and create needed directories/files
+echo "mongod configuration file does not exist."
+echo "copying default config to ${MONGO_CONFIG_FILE}"
+cp -r ${SNAP}/etc/mongod.conf ${MONGO_CONFIG_FILE}
+
+# mongod.conf default values are not consistent with the snap directory system.
+yq -i ".processManagement.fork = false" ${MONGO_CONFIG_FILE}
+yq -i ".processManagement.pidFilePath = \"${PID_FILE}\"" "${MONGO_CONFIG_FILE}"
+yq -i ".systemLog.path = \"${LOGS}/mongod.log\"" ${MONGO_CONFIG_FILE}
+yq -i ".storage.dbPath = \"${DATA}\"" ${MONGO_CONFIG_FILE}
+yq -i ".security.keyFile = \"${KEYFILE_CONFIG}\"" ${MONGO_CONFIG_FILE}
+sed -i '/^#security:$/d' "${MONGO_CONFIG_FILE}"
+sed -i '/^security:$/i #security:' "${MONGO_CONFIG_FILE}"
+
+# Change ownership of snap directories to allow snap_daemon to read/write
+chown -R 584788:root "${SNAP_DATA}"/*
+
+if [ ! -s "${KEYFILE}" ]; then
+    "${SNAP}/usr/bin/setpriv" \
+        --clear-groups \
+        --reuid snap_daemon \
+        --regid snap_daemon \
+        -- \
+        bash -euo pipefail -c '. "${SNAP}/keyfile-common.sh"; generate_keyfile'
+fi

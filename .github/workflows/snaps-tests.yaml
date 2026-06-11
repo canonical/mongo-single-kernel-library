@@ -1,0 +1,60 @@
+name: Snap smoke tests
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  discover-snaps:
+    uses: ./.github/workflows/snaps-discover.yaml
+
+  build:
+    name: Build snap | ${{ matrix.snap.name }}
+    needs: discover-snaps
+    strategy:
+      fail-fast: false
+      matrix:
+        snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v49.0.2
+    with:
+      path-to-snap-project-directory: ${{ matrix.snap.path }}
+      artifact-prefix: packed-snap-${{ matrix.snap.name }}
+    permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
+      contents: read
+
+  smoke:
+    name: Smoke tests | ${{ matrix.snap.name }}
+    runs-on: ubuntu-latest
+    needs:
+      - discover-snaps
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install tox
+        run: python3 -m pip install tox
+
+      - name: Download snap artifact
+        uses: actions/download-artifact@v6
+        with:
+          pattern: packed-snap-${{ matrix.snap.name }}-*
+          merge-multiple: true
+
+      - name: Smoke Tests
+        working-directory: ${{ matrix.snap.path }}
+        run: tox run -e smoke
+
+    permissions:
+      contents: read

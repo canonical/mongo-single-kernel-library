@@ -1,0 +1,27 @@
+name: Discover snaps
+
+on:
+  workflow_call:
+    outputs:
+      snaps:
+        description: "Discovered snap path/name list"
+        value: ${{ jobs.discover-snaps.outputs.snaps }}
+
+jobs:
+  discover-snaps:
+    runs-on: ubuntu-latest
+    outputs:
+      snaps: ${{ steps.discover.outputs.snaps }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: discover
+        run: |
+          snaps=$(
+            find . -path '*/snap/snapcraft.yaml' \
+              | sed 's#/snap/snapcraft.yaml##' \
+              | jq -R '{path: ., name: (split("/")[-1])}' \
+              | jq -cs .
+          )
+
+          echo "snaps=$snaps" >> "$GITHUB_OUTPUT"

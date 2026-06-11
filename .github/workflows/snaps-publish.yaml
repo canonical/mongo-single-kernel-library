@@ -1,0 +1,52 @@
+name: Publish Snap
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - "[0-9]/[a-z]+"
+      - "8-transition/[a-z]+"
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  discover-snaps:
+    uses: ./.github/workflows/snaps-discover.yaml
+
+  build:
+    name: Build snap | ${{ matrix.snap.name }}
+    needs: discover-snaps
+    strategy:
+      fail-fast: false
+      matrix:
+        snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v49.0.2
+    with:
+      path-to-snap-project-directory: ${{ matrix.snap.path }}
+      artifact-prefix: packed-snap-${{ matrix.snap.name }}
+    permissions:
+      actions: read
+      contents: read
+
+  publish:
+    name: Publish Snap | ${{ matrix.snap.name }}
+    needs:
+      - discover-snaps
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap_edge.yaml@v49.0.2
+    with:
+      track: 8
+      path-to-snap-project-directory: ${{ matrix.snap.path }}
+      artifact-prefix: packed-snap-${{ matrix.snap.name }}
+    secrets:
+      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
+      contents: write  # Needed to create git tags
