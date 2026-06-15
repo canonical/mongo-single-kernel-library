@@ -58,7 +58,10 @@ def test_config_server_database_requested(
     assert data.get("charmed-operator-password") is not None
     assert data.get("charmed-backup-password") is not None
     assert data.get("host") == f'["{mongodb_hostname}"]'
-    assert len(data.get("cluster-id")) == 8
+    if substrate == "lxd":
+        assert len(data.get("cluster-id")) == 8
+    else:
+        assert data.get("cluster-id") is None
 
 
 def test_config_server_database_requested_failed_db_not_initialised(
@@ -410,7 +413,7 @@ def test_shard_manager_synchronise_cluster_invalid_role(harness: Harness[MongoTe
 
 
 def test_shard_manager_synchronise_cluster_secrets_success(
-    harness: Harness[MongoTestCharm], mocker
+    harness: Harness[MongoTestCharm], mocker, substrate
 ):
     manager = harness.charm.operator.shard_manager
 
@@ -451,7 +454,10 @@ def test_shard_manager_synchronise_cluster_secrets_success(
     mocked_update_member_auth.assert_called_with("deadbeef", None, None)
     mocked_sync.assert_called_with("test-operator", "test-backup")
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "true"
-    assert manager.state.get_cluster_id() == "secret:1234"
+    if substrate == "lxd":
+        assert manager.state.get_cluster_id() == "secret:1234"
+    else:
+        assert manager.state.get_cluster_id() is None
 
 
 def test_shard_manager_synchronise_cluster_secrets_no_keyfile(

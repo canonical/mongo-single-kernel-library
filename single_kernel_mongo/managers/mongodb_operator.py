@@ -834,9 +834,13 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         This ID is generated if all of the following conditions are met:
 
+        - Substrate is not k8s.
         - The current unit is the leader.
         - The application is a replica set or a config server.
         """
+        if self.substrate == Substrates.K8S:
+            return None
+
         if not self.model.unit.is_leader():
             return None
 
