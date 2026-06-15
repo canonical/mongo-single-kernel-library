@@ -58,10 +58,7 @@ def test_config_server_database_requested(
     assert data.get("charmed-operator-password") is not None
     assert data.get("charmed-backup-password") is not None
     assert data.get("host") == f'["{mongodb_hostname}"]'
-    if substrate == "lxd":
-        assert len(data.get("cluster-id")) == 8
-    else:
-        assert data.get("cluster-id") is None
+    assert len(data.get("cluster-id")) == 8
 
 
 def test_config_server_database_requested_failed_db_not_initialised(

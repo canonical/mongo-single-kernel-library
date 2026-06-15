@@ -130,10 +130,7 @@ def test_share_secret_to_mongos(
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
-    if substrate == "lxd":
-        assert len(data.get("cluster-id")) == 8
-    else:
-        assert data.get("cluster-id") is None
+    assert len(data.get("cluster-id")) == 8
 
 
 def test_share_secret_to_mongos_also_shares_ldap_config(
