@@ -59,7 +59,6 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
-    AppShardingComponentKeys,
     AppShardingComponentState,
     UnitShardingComponentState,
 )
@@ -642,60 +641,6 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def _update_ca_secrets(self, new_ca: str | None, cluster_key: str, sharding_key: str) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        # Only the leader can update the databag
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
-            return
-        for relation in self.cluster_relations:
-            if new_ca is None:
-                self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [cluster_key]
-                )
-            else:
-                self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {cluster_key: new_ca}
-                )
-        for relation in self.config_server_relation:
-            if new_ca is None:
-                self.config_server_data_interface.delete_relation_data(relation.id, [sharding_key])
-            else:
-                self.config_server_data_interface.update_relation_data(
-                    relation.id, {sharding_key: new_ca}
-                )
-
-    def _update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.REPLICATION):
-            return
-        for relation in self.client_relations:
-            if new_ca:
-                self.client_data_interface.set_tls(relation.id, "True")
-                self.client_data_interface.set_tls_ca(relation.id, new_ca)
-            else:
-                self.client_data_interface.set_tls(relation.id, "False")
-                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
-
-    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the peer CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.INT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.INT_CA_SECRET.value,
-        )
-
-    def update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the client CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.EXT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.EXT_CA_SECRET.value,
-        )
-        self._update_client_ca_secrets(new_ca=new_ca)
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""

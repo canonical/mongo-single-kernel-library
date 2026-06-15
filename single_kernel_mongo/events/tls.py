@@ -125,7 +125,7 @@ class TLSEventsHandler(Object):
 
     def refresh_certificates(self) -> None:
         """Trigger refresh TLS certificates event."""
-        logger.info(f"Requesting refresh certificates for unit: {self.charm.unit.name}.")
+        logger.info("Requesting refresh certificates for unit: %s.", self.charm.unit.name)
         self.refresh_tls_certificates_event.emit()
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
@@ -146,16 +146,18 @@ class TLSEventsHandler(Object):
 
         internal = event.relation.name == ExternalRequirerRelations.PEER_TLS.value
         logger.debug(
-            f"Disabling {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS for unit: {self.charm.unit.name}"
+            "Disabling %s TLS for unit: %s",
+            TLSType.PEER.value if internal else TLSType.CLIENT.value,
+            self.charm.unit.name,
         )
 
-        status = (
-            TLSStatuses.DISABLING_PEER_TLS.value
-            if internal
-            else TLSStatuses.DISABLING_CLIENT_TLS.value
-        )
+        status = TLSStatuses.DISABLING_PEER_TLS.value if internal else TLSStatuses.DISABLING_CLIENT_TLS.value
         self.charm.status_handler.set_running_status(status, scope="unit")
-        self.manager.disable_certificates_for_unit(internal)
+        try:
+            self.manager.disable_tls(internal)
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+
         # Recomputes the statuses for those components as the tls changes are impactful
         self._recompute_statuses()
 
@@ -174,7 +176,7 @@ class TLSEventsHandler(Object):
                 defer_event_with_info_log(logger, event, str(type(event)), state.value)
                 return
             case TlsManagementState.MONGOS_MISSING_CONFIG_SERVER:
-                logger.info(f"{state.value} Ignoring certificate.")
+                logger.info("%s Ignoring certificate.", state.value)
                 return
             case _:
                 pass
@@ -204,30 +206,13 @@ class TLSEventsHandler(Object):
             return
 
         logger.debug(
-            f"Received {TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate."
+            "Received %s certificate.", TLSType.PEER.value if internal else TLSType.CLIENT.value
         )
-
-        if not self.manager.certificate_and_private_key_match(
-            provider_cert.certificate, private_key, internal
-        ):
-            logger.error("Received certificate and private key do not match.")
-            return
-
-        self.manager.set_certificates(
-            secret_chain=[c.raw for c in provider_cert.chain],
-            certificate=provider_cert.certificate.raw,
-            csr=provider_cert.certificate_signing_request.raw,
-            ca=provider_cert.ca.raw,
-            private_key=private_key.raw,
-            internal=internal,
-        )
-        if internal:
-            self.dependent.state.update_peer_ca_secrets(provider_cert.ca.raw)
-        else:
-            self.dependent.state.update_client_ca_secrets(provider_cert.ca.raw)
 
         try:
-            self.manager.enable_certificates_for_unit()
+            self.manager.enable_tls(
+                internal=internal, provider_cert=provider_cert, private_key=private_key
+            )
         except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 

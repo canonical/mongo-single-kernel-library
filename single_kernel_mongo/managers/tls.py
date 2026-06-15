@@ -34,8 +34,13 @@ from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificat
     Certificate,
     CertificateRequestAttributes,
     PrivateKey,
+    ProviderCertificate,
 )
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.state.cluster_state import ClusterStateKeys
+from single_kernel_mongo.state.config_server_state import (
+    AppShardingComponentKeys,
+)
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
     SECRET_CERT_LABEL,
@@ -137,9 +142,9 @@ class TLSManager(ManagerStatusProtocol):
         """
         scope = TLSType.PEER.value if internal else TLSType.CLIENT.value
         if not self.state.tls.is_tls_enabled(internal):
-            logging.debug(f"{scope} TLS disabled.")
+            logger.debug("%s TLS is disabled.", scope)
             return None, None
-        logging.debug(f"{scope} TLS *enabled*, fetching data for CA and PEM files ")
+        logger.debug("%s TLS *enabled*, fetching data for CA and PEM files ", scope)
 
         ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
         chain = self.state.tls.get_secret(internal, SECRET_CHAIN_LABEL)
@@ -241,26 +246,66 @@ class TLSManager(ManagerStatusProtocol):
 
         return need_restart
 
-    def disable_certificates_for_unit(self, internal: bool):
-        """Disables the certificates on relation broken."""
+    def disable_tls(self, internal: bool):
+        """Disable TLS for the given scope and clear related state.
+
+        - Remove all TLS secrets for the chosen scope
+        - Propagate the removal of the CA secret to related relations
+        - Request a restart of charm services.
+
+        Args:
+            internal: True to disable peer TLS, False to disable client TLS.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early when
+                enabling certificates on this unit.
+        """
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_CSR_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
-        if internal:
-            self.state.update_peer_ca_secrets(new_ca=None)
-        else:
-            self.dependent.state.update_client_ca_secrets(new_ca=None)
+        self._propagate_ca_secrets(internal, new_ca=None)
+        self.dependent.async_restart_charm_services()
 
-        self.dependent.async_restart_charm_services(force=True)
+    def enable_tls(
+        self, internal: bool, provider_cert: ProviderCertificate, private_key: PrivateKey
+    ) -> None:
+        """Enable TLS for the given scope using the provided certificate.
 
-    def enable_certificates_for_unit(self):
-        """Enables the new certificates for this unit.
+        - Validate that the received certificate matches the provided private key
+        - Store the certificate data in state
+        - Propagate the CA secret to the appropriate relations
+        - Requests workload restart.
 
-        If conditions are met an async restart is requested. Certificates will be
-        written to disk in the restart callback.
+        Args:
+            internal: True for peer TLS, False for client TLS.
+            provider_cert: The provider certificate payload to install.
+            private_key: The private key corresponding to the provider certificate.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early when
+                enabling certificates on this unit.
+        """
+        if not self._certificate_and_private_key_match(
+            internal,
+            provider_cert.certificate,
+            private_key,
+        ):
+            logger.error("Received certificate and private key do not match.")
+            return
+
+        self._set_certificate_secrets(
+            internal=internal, provider_cert=provider_cert, private_key=private_key
+        )
+        self._propagate_ca_secrets(internal, new_ca=provider_cert.ca.raw)
+        self._request_charm_restart()
+
+    def _request_charm_restart(self):
+        """If conditions are met an async restart is requested.
+
+        Certificates will be written to disk in the restart callback.
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
@@ -282,16 +327,22 @@ class TLSManager(ManagerStatusProtocol):
             logger.info("Still waiting for a certificate, delaying restart.")
             return
 
-        self.dependent.async_restart_charm_services(force=True)
+        self.dependent.async_restart_charm_services()
 
+        # TODO: this is not the correct place for this. Now restart is async
         if self.state.is_role(MongoDBRoles.MONGOS):
             # After restarting, we update the certificates for all clients.
             self.dependent.share_connection_info()  # type: ignore[attr-defined]
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
-        """Deletes the certificates from the workload."""
+        """Deletes the certificates from the workload.
+
+        Args:
+            internal: True for peer TLS, False for client TLS.
+        """
         logger.info(
-            f"Deleting {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS certificates from filesystem"
+            "Deleting %s TLS certificates from filesystem",
+            TLSType.PEER.value if internal else TLSType.CLIENT.value,
         )
 
         path = (
@@ -312,9 +363,14 @@ class TLSManager(ManagerStatusProtocol):
                     file.unlink()
 
     def push_tls_files_to_workload(self, internal: bool) -> None:
-        """Pushes the TLS files on the workload."""
+        """Pushes the TLS files on the workload.
+
+        Args:
+            internal: True for peer TLS, False for client TLS.
+        """
         logger.info(
-            f"Pushing {TLSType.PEER.value if internal else TLSType.CLIENT.value} TLS certificates to filesystem"
+            "Pushing %s TLS certificates to filesystem",
+            TLSType.PEER.value if internal else TLSType.CLIENT.value,
         )
         ca, pem = self.get_tls_file_contents(internal=internal)
 
@@ -339,28 +395,30 @@ class TLSManager(ManagerStatusProtocol):
             self.state.paths.ext_pem_file.write_text(pem)
             self.state.paths.ext_pem_file.chmod(600)
 
-    def set_certificates(
-        self,
-        secret_chain: list[str] | None,
-        certificate: str | None,
-        csr: str | None,
-        ca: str | None,
-        private_key: str | None,
-        internal: bool,
+    def _set_certificate_secrets(
+        self, internal: bool, provider_cert: ProviderCertificate, private_key: PrivateKey
     ):
-        """Sets the certificates."""
+        """Persist TLS certificate payload into unit TLS state for the selected scope.
+
+        This helper does not write files to the workload.
+
+        Args:
+            internal: True for peer TLS, False for client TLS.
+            provider_cert: The provider certificate payload containing chain,
+                certificate, CSR, and CA data.
+            private_key: The private key corresponding to the provided certificate.
+        """
+        secret_chain = (
+            "\n".join([c.raw for c in provider_cert.chain]) if provider_cert.chain else None
+        )
+        self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, secret_chain)
+        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
         self.state.tls.set_secret(
-            internal,
-            SECRET_CHAIN_LABEL,
-            "\n".join(secret_chain) if secret_chain else None,
+            internal, SECRET_CSR_LABEL, provider_cert.certificate_signing_request.raw
         )
-        self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key)
-        self.state.tls.set_secret(internal, SECRET_CSR_LABEL, csr)
-        self.state.tls.set_secret(internal, SECRET_CERT_LABEL, certificate)
-        self.state.tls.set_secret(internal, SECRET_CA_LABEL, ca)
-        logger.info(
-            f"{TLSType.PEER.value if internal else TLSType.CLIENT.value} certificate secrets updated."
-        )
+        self.state.tls.set_secret(internal, SECRET_CERT_LABEL, provider_cert.certificate.raw)
+        self.state.tls.set_secret(internal, SECRET_CA_LABEL, provider_cert.ca.raw)
+        logger.info("%s certificate secrets updated.", TLSType.PEER.value if internal else TLSType.CLIENT.value)
 
     def is_certificate_available(self, internal: bool) -> bool:
         """Checks if we've received the expected certificate."""
@@ -416,11 +474,11 @@ class TLSManager(ManagerStatusProtocol):
         initial_client_private_key = self.state.tls.client_private_key
 
         if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
-            if peer_private_key := self.update_private_key(tls_peer_private_key_id, internal=True):
+            if peer_private_key := self._update_private_key(tls_peer_private_key_id, internal=True):
                 self.dependent.tls_events.peer_certificate._private_key = peer_private_key
 
         if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
-            if client_private_key := self.update_private_key(
+            if client_private_key := self._update_private_key(
                 tls_client_private_key_id, internal=False
             ):
                 self.dependent.tls_events.client_certificate._private_key = client_private_key
@@ -450,18 +508,19 @@ class TLSManager(ManagerStatusProtocol):
         if peer_private_key_updated or client_private_key_updated:
             self.dependent.tls_events.refresh_certificates()
 
-    def update_private_key(self, private_key_secret_id: str, internal: bool) -> PrivateKey | None:
+    def _update_private_key(self, private_key_secret_id: str, internal: bool) -> PrivateKey | None:
         """Stores the new private key in the relation."""
-        if private_key := self.read_and_validate_private_key(private_key_secret_id):
+        if private_key := self._read_and_validate_private_key(private_key_secret_id):
             self.state.tls.set_secret(internal, SECRET_KEY_LABEL, private_key.raw)
             return private_key
 
         logger.error(
-            f"Invalid {'peer' if internal else 'client'} private key provided, cannot update TLS certificates."
+            "Invalid %s private key provided, cannot update TLS certificates.",
+            "peer" if internal else "client",
         )
         return None
 
-    def read_and_validate_private_key(self, private_key_secret_id: str) -> PrivateKey | None:
+    def _read_and_validate_private_key(self, private_key_secret_id: str) -> PrivateKey | None:
         """Reads the private key from the secret and validates it."""
         try:
             secret_content = self.dependent.state.get_secret_from_id(private_key_secret_id).get(
@@ -472,7 +531,7 @@ class TLSManager(ManagerStatusProtocol):
             return None
 
         if secret_content is None:
-            logger.error(f"Secret {private_key_secret_id} does not contain a private key.")
+            logger.error("Secret %s does not contain a private key.", private_key_secret_id)
             return None
 
         try:
@@ -506,11 +565,11 @@ class TLSManager(ManagerStatusProtocol):
             return []
 
         if tls_peer_private_key_id := self.dependent.config.tls_peer_private_key_id:
-            if not self.update_private_key(tls_peer_private_key_id, internal=True):
+            if not self._update_private_key(tls_peer_private_key_id, internal=True):
                 charm_statuses.append(TLSStatuses.INVALID_PEER_PRIVATE_KEY.value)
 
         if tls_client_private_key_id := self.dependent.config.tls_client_private_key_id:
-            if not self.update_private_key(tls_client_private_key_id, internal=False):
+            if not self._update_private_key(tls_client_private_key_id, internal=False):
                 charm_statuses.append(TLSStatuses.INVALID_CLIENT_PRIVATE_KEY.value)
 
         return charm_statuses
@@ -523,8 +582,11 @@ class TLSManager(ManagerStatusProtocol):
             return True
         return False
 
-    def certificate_and_private_key_match(
-        self, certificate: Certificate, private_key: PrivateKey, internal: bool
+    def _certificate_and_private_key_match(
+        self,
+        internal: bool,
+        certificate: Certificate,
+        private_key: PrivateKey,
     ) -> bool:
         """Returns true if the certificate and the private key match.
 
@@ -537,9 +599,91 @@ class TLSManager(ManagerStatusProtocol):
         )
 
         if private_key_id:
-            config_private_key = self.read_and_validate_private_key(private_key_id)
+            config_private_key = self._read_and_validate_private_key(private_key_id)
             if config_private_key is not None and private_key != config_private_key:
                 logger.debug("Certificate private key does not match the config private key.")
                 return False
 
         return certificate.matches_private_key(private_key)
+
+    def _propagate_ca_secret_as_config_server(
+        self, new_ca: str | None, cluster_databag_key: str, sharding_databag_key: str
+    ) -> None:
+        """Update CA secrets in cluster and config-server relations.
+
+        This operation is restricted to the leader unit with CONFIG_SERVER role.
+
+        Args:
+            new_ca: The new CA certificate content. If None, removes the CA secret.
+            cluster_databag_key: The databag key for cluster relations.
+            sharding_databag_key: The databag key for config-server relations.
+        """
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+        for relation in self.state.cluster_relations:
+            if new_ca is None:
+                self.state.cluster_provider_data_interface.delete_relation_data(
+                    relation.id, [cluster_databag_key]
+                )
+            else:
+                self.state.cluster_provider_data_interface.update_relation_data(
+                    relation.id, {cluster_databag_key: new_ca}
+                )
+        for relation in self.state.config_server_relation:
+            if new_ca is None:
+                self.state.config_server_data_interface.delete_relation_data(
+                    relation.id, [sharding_databag_key]
+                )
+            else:
+                self.state.config_server_data_interface.update_relation_data(
+                    relation.id, {sharding_databag_key: new_ca}
+                )
+
+    def _propagate_client_ca_as_replicaset(self, new_ca: str | None) -> None:
+        """Update TLS CA secrets in client relations.
+
+        This operation is restricted to the leader unit with REPLICATION role.
+
+        Args:
+            new_ca: The CA certificate for enabling TLS. If None, disables TLS.
+        """
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.REPLICATION):
+            return
+        for relation in self.state.client_relations:
+            if new_ca:
+                self.state.client_data_interface.set_tls(relation.id, "True")
+                self.state.client_data_interface.set_tls_ca(relation.id, new_ca)
+            else:
+                self.state.client_data_interface.set_tls(relation.id, "False")
+                self.state.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
+
+    def _propagate_ca_secrets(self, internal: bool, new_ca: str | None) -> None:
+        """Update CA secrets across cluster, config-server, and client relations.
+
+        For peer TLS, updates the cluster and config-server relation.
+        For client TLS, also updates client relation TLS state.
+
+        Args:
+            internal: True for peer CA propagation, False for client CA.
+            new_ca: The CA certificate content to set. If None, removes the CA secret
+                and disables TLS for the affected relations.
+        """
+        cluster_databag_key = (
+            ClusterStateKeys.INT_CA_SECRET.value if internal else ClusterStateKeys.EXT_CA_SECRET.value
+        )
+        sharding_databag_key = (
+            AppShardingComponentKeys.INT_CA_SECRET.value
+            if internal
+            else AppShardingComponentKeys.EXT_CA_SECRET.value
+        )
+        self._propagate_ca_secret_as_config_server(
+            new_ca=new_ca,
+            cluster_databag_key=cluster_databag_key,
+            sharding_databag_key=sharding_databag_key,
+        )
+        if not internal:
+            self._propagate_client_ca_as_replicaset(new_ca=new_ca)
