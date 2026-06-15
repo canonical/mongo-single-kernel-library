@@ -99,7 +99,6 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""
         try:
-            self.manager.cleanup_cluster_id()
             self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -201,5 +200,8 @@ class ClusterMongosEventHandler(Object):
             self.manager.remove_users_and_cleanup_mongo(event.relation)
         except (DeferrableFailedHookChecksError, DeferrableError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
+        self.manager.cleanup_cluster_id()

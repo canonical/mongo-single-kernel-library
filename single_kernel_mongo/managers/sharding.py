@@ -635,9 +635,10 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         tls_ca = self.state.shard_state.internal_ca_secret
         external_tls_ca = self.state.shard_state.external_ca_secret
-        cluster_id = self.state.shard_state.cluster_id
 
-        self.update_member_auth(keyfile, tls_ca, external_tls_ca, cluster_id)
+        self._set_cluster_id()
+
+        self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
         self.update_pbm_certificate_in_trust_store()
 
@@ -783,14 +784,11 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
 
-    def _update_cluster_id(self, new_cluster_id: str | None):
-        """Update the cluster ID in state.
-
-        If a new cluster ID is provided, it is stored in the state.
-        If ``None`` is provided, the existing cluster ID is removed.
-        """
-        if new_cluster_id is None:
-            self.state.remove_cluster_id()
+    def _set_cluster_id(self):
+        """Take the cluster ID from the shard state and set it in the charm state."""
+        if not self.charm.unit.is_leader():
+            return
+        if not (new_cluster_id := self.state.shard_state.cluster_id):
             return
         self.state.set_cluster_id(new_cluster_id)
 
@@ -805,7 +803,6 @@ class ShardManager(Object, ManagerStatusProtocol):
         keyfile: str,
         peer_tls_ca: str | None,
         external_tls_ca: str | None,
-        cluster_id: str | None,
     ) -> None:
         """Updates the shard to have the same membership auth as the config-server."""
         cluster_auth_tls = peer_tls_ca is not None
@@ -823,7 +820,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             # Sets the keyfile anyway
             if self.charm.unit.is_leader():
                 self.state.set_keyfile(keyfile)
-                self._update_cluster_id(cluster_id)
 
         if not cluster_auth_tls:
             logger.info("Cluster implements internal auth via keyfile.")

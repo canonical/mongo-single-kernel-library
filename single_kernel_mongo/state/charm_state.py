@@ -486,8 +486,6 @@ class CharmState(Object, StatusesStateProtocol):
 
     def get_cluster_id(self) -> str | None:
         """Gets the cluster id content from the secret."""
-        if self.substrate == Substrates.K8S:
-            return None
         return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.CLUSTER_ID.value)
 
     def remove_cluster_id(self) -> None:

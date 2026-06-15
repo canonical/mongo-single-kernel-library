@@ -74,10 +74,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name, substrate
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
-    if substrate == "lxd":
-        assert len(state.get_cluster_id()) == 8
-    else:
-        assert state.get_cluster_id() is None
+    assert len(state.get_cluster_id()) == 8
 
 
 def test_unit_peer_data(
@@ -153,10 +150,7 @@ def test_state_cluster_id_in_app_data(
     state.app_peer_data.role = role
     state.set_cluster_id("1234")
 
-    if substrate == "lxd":
-        assert state.get_cluster_id() == "1234"
-    else:
-        assert state.get_cluster_id() is None
+    assert state.get_cluster_id() == "1234"
 
 
 @pytest.mark.parametrize(
@@ -183,10 +177,7 @@ def test_state_cluster_id_mongos_stored_in_app_peer_data(
     state = mongos_harness.charm.operator.state
     state.set_cluster_id("1234")
 
-    if substrate == "lxd":
-        assert state.get_cluster_id() == "1234"
-    else:
-        assert state.get_cluster_id() is None
+    assert state.get_cluster_id() == "1234"
 
 
 def test_state_cluster_id_mongos_is_none(mongos_harness: Harness[MongosTestCharm], mongodb_name):

@@ -353,6 +353,7 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     for relation in operator.state.client_relations:
         data = relation.data[mongos_harness.charm.app]
+        assert mongos_harness.charm.operator.state.get_cluster_id() == "cluster"
         if substrate == "lxd":
             assert data["username"] == "charmed-operator"
             assert data["password"] == "password"
@@ -364,13 +365,11 @@ def test_cluster_requirer_update_mongos_and_restart(
                 data["uris"]
                 == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
             )
-            assert mongos_harness.charm.operator.state.get_cluster_id() == "cluster"
         else:
             # on k8s, the router generates the password and user ids.
             assert data["username"] == f"relation-{relation.id}"
             assert len(data["password"]) == 32
             assert data["endpoints"] == "mongos-k8s-0.mongos-k8s-endpoints"
-            assert mongos_harness.charm.operator.state.get_cluster_id() is None
         assert data["database"] == "test-db"
 
 
