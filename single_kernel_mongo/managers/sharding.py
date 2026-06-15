@@ -608,12 +608,32 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
         )
 
-    def synchronise_cluster_secrets(self, relation: Relation, leaving: bool = False) -> None:
-        """Retrieves secrets from config-server and updates them within the shard."""
+    def update_config_server_certs(self, relation: Relation):
+        """Checks that we are in a valid state and store certificates."""
         try:
-            self.assert_pass_hook_checks(relation=relation, is_leaving=leaving)
+            self.assert_pass_sanity_hook_checks(is_leaving=False)
         except:
-            logger.info("Skipping relation changed event: hook checks did not pass.")
+            logger.info(
+                "[update_config_server_certs] Skipping relation changed event: hook checks did not pass."
+            )
+            raise
+
+        # This is the config server CA certificate. We'll use it to connect to the config server.
+        if external_tls_ca := self.state.shard_state.external_ca_secret:
+            self.workload.paths.config_server_ext_ca_file.write_text(external_tls_ca)
+        else:  # if we don't have a cert, we'll remove it
+            self.workload.paths.config_server_ext_ca_file.unlink(missing_ok=True)
+
+    def synchronize_user_passwords(self, relation: Relation):
+        """Updates the operator and backup users."""
+        if not self.charm.unit.is_leader():
+            return
+        try:
+            self.assert_pass_hook_checks(relation, is_leaving=False)
+        except:
+            logger.info(
+                "[synchronize_user_passwords] Skipping relation changed event: hook checks did not pass."
+            )
             raise
 
         operator_password = self.state.shard_state.operator_password
@@ -623,23 +643,38 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Missing secrets, returning.")
             return
 
+        # Let's start by updating the passwords, before any restart so they are in sync already.
+        if self.charm.unit.is_leader():
+            self.sync_cluster_passwords(operator_password, backup_password)
+
+    def synchronize_member_auth(self, relation: Relation):
+        """Updates the keyfile / CA certificates."""
+        try:
+            self.assert_pass_hook_checks(relation=relation, is_leaving=False)
+        except:
+            logger.info(
+                "[synchronize_member_auth] Skipping relation changed event: hook checks did not pass."
+            )
+            raise
         keyfile = self.state.shard_state.keyfile
 
         if keyfile is None:
             logger.info("Waiting for secrets from config-server")
             raise WaitingForSecretsError("Missing keyfile")
-
-        # Let's start by updating the passwords, before any restart so they are in sync already.
-        if self.charm.unit.is_leader():
-            self.sync_cluster_passwords(operator_password, backup_password)
-
         tls_ca = self.state.shard_state.internal_ca_secret
         external_tls_ca = self.state.shard_state.external_ca_secret
         cluster_id = self.state.shard_state.cluster_id
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca, cluster_id)
+        self._reconcile_shard_after_restart()
 
-        self.update_pbm_certificate_in_trust_store()
+    def handle_pbm(self, relation: Relation):
+        """Updates PBM certificates and restart if needed."""
+        try:
+            self.assert_pass_hook_checks(relation=relation, is_leaving=False)
+        except:
+            logger.info("[handle_pbm] Skipping relation changed event: hook checks did not pass.")
+            raise
 
         if self.dependent.rollingops_manager.is_waiting_callback(
             RollingOpsCallbackId.SHARD_RESTART_ON_KEYFILE_CHANGED
@@ -650,22 +685,22 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("MongoDB is not ready")
             raise NotReadyError
 
-        # We restart PBM only when the shard is integrated on the cluster side.
-        if self.state.shard_state.shard_integrated:
-            self.dependent.s3_backup_manager.configure_and_restart()
+        # Don't do anything if we're not properly integrated.
+        if not self.state.shard_state.shard_integrated:
+            return
 
-        self._reconcile_shard_after_restart()
+        # If we update the certs, we must restart
+        must_restart = self.update_pbm_certificate_in_trust_store()
+
+        # Always try to restart, forced if the certs are updated.
+        self.dependent.s3_backup_manager.configure_and_restart(force=must_restart)
 
     def _reconcile_shard_after_restart(self):
         """Reconcile shard state after a unit restart.
 
-        This method resets the shard status to active/idle and, if executed on
-        the leader unit, propagates the necessary shard metadata to allow the
-        config-server to add the shard to the cluster.
+        This method, when executed on the leader unit, propagates the necessary shard metadata
+        to allow the config-server to add the shard to the cluster.
         """
-        # By setting the status we ensure that the former statuses of this component are removed.
-        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
-
         if not self.charm.unit.is_leader():
             return
 
@@ -746,10 +781,12 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.update_pbm_certificate_in_trust_store()
 
-    def update_pbm_certificate_in_trust_store(self):
+    def update_pbm_certificate_in_trust_store(self) -> bool:
         """Retrieve the CA certificate for PBM and store it in the trust store if it exists.
 
         If the certificate does not exist, remove the existing file from the trust store.
+
+        Returns True if we must restart.
         """
         if (
             backup_tls_chain := self.state.shard_state.backup_ca_secret
@@ -757,8 +794,8 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Adding certificate for PBM")
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, backup_tls_chain)
             # We updated the configuration, so we restart PBM.
-            self.dependent.s3_backup_manager.configure_and_restart(force=True)
-        elif (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
+            return True
+        if (self.state.shard_state.backup_ca_secret is None) and self.workload.exists(
             TRUST_STORE_PATH / TrustStoreFiles.PBM.value
         ):
             logger.info("Removing certificate for PBM")
@@ -766,7 +803,8 @@ class ShardManager(Object, ManagerStatusProtocol):
             # thing if the file is not present, remove_ca_cert_from_trust_store will early return.
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             # We updated the configuration, so we restart PBM.
-            self.dependent.s3_backup_manager.configure_and_restart(force=True)
+            return True
+        return False
 
     def drain_shard_from_cluster(self, relation: Relation) -> None:
         """Waits for the shard to be fully drained from the cluster."""
@@ -885,6 +923,11 @@ class ShardManager(Object, ManagerStatusProtocol):
                 raise FailedToUpdateCredentialsError(
                     f"Failed to update credentials of {user.username}"
                 )
+
+        # No need to try to restart PBM if we're not fully integrated yet.
+        if not self.state.shard_state.shard_integrated:
+            return
+
         try:
             # after updating the password of the backup user, restart pbm with correct password
             self.dependent.s3_backup_manager.configure_and_restart()

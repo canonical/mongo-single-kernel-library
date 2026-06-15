@@ -162,9 +162,6 @@ class TLSEventsHandler(Object):
         except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
-        # Recomputes the statuses for those components as the tls changes are impactful
-        self._recompute_statuses()
-
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handler for the certificate available event.
 
@@ -219,7 +216,6 @@ class TLSEventsHandler(Object):
             )
         except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """On Config Changed, validate private keys and refresh certs if needed."""

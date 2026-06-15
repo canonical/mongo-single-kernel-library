@@ -742,8 +742,8 @@ class CharmState(Object, StatusesStateProtocol):
         if not auth_restrictions:
             auth_restrictions = []
         # TLS is considered enabled if we have client certificates AND they are on the file system.
-        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
         tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
@@ -779,8 +779,8 @@ class CharmState(Object, StatusesStateProtocol):
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
         # TLS is considered enabled if we have client certificates AND they are on the file system.
-        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
         tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             database=user.database_name,
             username=user.username,
@@ -823,8 +823,7 @@ class CharmState(Object, StatusesStateProtocol):
         """Mongos Configuration for the remote mongos server."""
         mongos_hosts = self.app_peer_data.mongos_hosts
         return self.mongos_config_for_user(
-            CharmedOperatorUser,
-            set(mongos_hosts),
+            CharmedOperatorUser, set(mongos_hosts), self.paths.config_server_ext_ca_file
         )
 
     @property

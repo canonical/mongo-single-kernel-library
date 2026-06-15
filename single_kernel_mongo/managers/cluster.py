@@ -429,6 +429,13 @@ class ClusterRequirer(Object):
             scope="unit",
             component=self.dependent.name,
         )
+
+        # This is the config server CA certificate. We'll use it to connect to the config server.
+        if external_tls_ca := self.state.cluster.external_ca_secret:
+            self.workload.paths.config_server_ext_ca_file.write_text(external_tls_ca)
+        else:  # if we don't have a cert, we'll remove it
+            self.workload.paths.config_server_ext_ca_file.unlink(missing_ok=True)
+
         self.dependent.rollingops_manager.request_async_lock(
             callback_id=RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART,
         )

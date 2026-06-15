@@ -481,7 +481,7 @@ class MongosOperator(OperatorProtocol, Object):
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
 
-    def recompute_statuses(self):
+    def recompute_statuses(self) -> None:
         """Recomputes and store all statuses."""
         scopes: list[StatusesScope] = ["unit"]
         if not self.charm.unit.is_leader():
