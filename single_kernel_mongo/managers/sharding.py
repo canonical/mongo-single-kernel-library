@@ -666,7 +666,6 @@ class ShardManager(Object, ManagerStatusProtocol):
         cluster_id = self.state.shard_state.cluster_id
 
         self.update_member_auth(keyfile, tls_ca, external_tls_ca, cluster_id)
-        self._reconcile_shard_after_restart()
 
     def handle_pbm(self, relation: Relation):
         """Updates PBM certificates and restart if needed."""
@@ -695,13 +694,17 @@ class ShardManager(Object, ManagerStatusProtocol):
         # Always try to restart, forced if the certs are updated.
         self.dependent.s3_backup_manager.configure_and_restart(force=must_restart)
 
-    def _reconcile_shard_after_restart(self):
+    def reconcile_shard_after_restart(self):
         """Reconcile shard state after a unit restart.
 
         This method, when executed on the leader unit, propagates the necessary shard metadata
         to allow the config-server to add the shard to the cluster.
         """
         if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
+        if not self.state.shard_relation:
             return
 
         # Let's send the IPs of our replicaset.
@@ -724,7 +727,6 @@ class ShardManager(Object, ManagerStatusProtocol):
             logger.info("Deferrable error during mongod restart. %s", e)
             return OperationResult.RETRY_RELEASE
 
-        self._reconcile_shard_after_restart()
         return OperationResult.RELEASE
 
     def async_shard_restart_on_key_file(self):

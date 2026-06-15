@@ -1343,6 +1343,16 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             raise DeferrableError from e
 
+        self.finalize_after_restart()
+
+    def finalize_after_restart(self) -> None:
+        """Run a series of code that should always run after a restart."""
+        # After a restart we can always recompute the shard manager statuses.
+        self.charm.status_handler._recompute_statuses_for_scope(
+            scope="unit", manager=self.shard_manager
+        )
+        self.shard_manager.reconcile_shard_after_restart()
+
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
         self.charm.state.statuses.delete(
@@ -1352,10 +1362,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         try:
             self.restart_charm_services(force=force)
-            # After a restart we can always recompute the shard manager statuses.
-            self.charm.status_handler._recompute_statuses_for_scope(
-                scope="unit", manager=self.shard_manager
-            )
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
