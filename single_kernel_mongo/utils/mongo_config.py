@@ -31,7 +31,6 @@ class MongoConfiguration:
         hosts: full set of hosts to connect to, needed for the URI.
         roles: set of roles for that user.
         tls_enabled: Is TLS enabled on that configuration?
-        tls_external_keyfile: The path of the tls external certificate
         tls_external_ca: The path of the tls external CA certificate
         port: The port used to connect
         replset: The replica set we connect to
@@ -45,7 +44,6 @@ class MongoConfiguration:
     hosts: set[str]
     roles: set[str]
     tls_enabled: bool
-    tls_external_keyfile: Path = Path("")
     tls_external_ca: Path = Path("")
     port: int | None = None
     replset: str | None = None
@@ -60,27 +58,26 @@ class MongoConfiguration:
         return self.hosts
 
     @property
-    def formatted_replset(self) -> dict:
+    def formatted_replset(self) -> dict[str, str]:
         """Formatted replicaSet parameter."""
         if self.replset:
             return {"replicaSet": quote_plus(self.replset)}
         return {}
 
     @property
-    def formatted_auth_source(self) -> dict:
+    def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
         if self.database != "admin":
             return ADMIN_AUTH_SOURCE
         return {}
 
     @property
-    def tls_config(self) -> dict:
+    def tls_config(self) -> dict[str, str]:
         """TLS Config."""
         if not self.tls_enabled:
             return {}
         return {
             "tls": "true",
-            "tlsCertificateKeyFile": f"{self.tls_external_keyfile}",
             "tlsCaFile": f"{self.tls_external_ca}",
         }
 
@@ -138,12 +135,11 @@ class MongoConfiguration:
 
 
 EMPTY_CONFIGURATION = MongoConfiguration(
-    "",
-    "",
-    "",
-    set(),
-    set(),
-    False,
-    Path(""),
-    Path(""),
+    database="",
+    username="",
+    password="",  # nosec: B106
+    hosts=set(),
+    roles=set(),
+    tls_enabled=False,
+    tls_external_ca=Path(""),
 )

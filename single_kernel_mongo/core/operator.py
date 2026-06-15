@@ -417,7 +417,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
-            raise Exception("Waiting for leader unit to generate keyfile contents")
+            raise Exception("Waiting to have a keyfile.")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
 

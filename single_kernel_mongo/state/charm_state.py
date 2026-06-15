@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
@@ -722,6 +723,7 @@ class CharmState(Object, StatusesStateProtocol):
         replset: str | None = None,
         standalone: bool = False,
         auth_restrictions: list[AuthRestrictions] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongodb-specific MongoConfiguration object for the provided user.
 
@@ -739,6 +741,9 @@ class CharmState(Object, StatusesStateProtocol):
             raise Exception("Invalid call: no host in user nor as a parameter.")
         if not auth_restrictions:
             auth_restrictions = []
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
         return MongoConfiguration(
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
@@ -747,8 +752,7 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_enabled=tls_enabled,
             tls_external_ca=self.paths.ext_ca_file,
             standalone=standalone,
             auth_restrictions=auth_restrictions,
@@ -758,6 +762,7 @@ class CharmState(Object, StatusesStateProtocol):
         self,
         user: MongoDBUser,
         hosts: set[str] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongos-specific MongoConfiguration object for the provided user.
 
@@ -773,6 +778,9 @@ class CharmState(Object, StatusesStateProtocol):
             hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
         return MongoConfiguration(
             database=user.database_name,
             username=user.username,
@@ -780,9 +788,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_enabled=tls_enabled,
+            tls_external_ca=tls_external_ca,
         )
 
     @property
@@ -815,7 +822,10 @@ class CharmState(Object, StatusesStateProtocol):
     def remote_mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the remote mongos server."""
         mongos_hosts = self.app_peer_data.mongos_hosts
-        return self.mongos_config_for_user(CharmedOperatorUser, set(mongos_hosts))
+        return self.mongos_config_for_user(
+            CharmedOperatorUser,
+            set(mongos_hosts),
+        )
 
     @property
     def mongos_config(self) -> MongoConfiguration:
@@ -825,14 +835,20 @@ class CharmState(Object, StatusesStateProtocol):
         username, password = self.get_user_credentials()
         database = self.app_peer_data.database
         port: int | None = MongoPorts.MONGOS_PORT.value
+
+        # VM Mongos without external connectivity is using the UNIX socket.
         if (
             self.charm_role.name == CharmKind.MONGOS
             and self.substrate == Substrates.VM
             and not self.app_peer_data.external_connectivity
         ):
             port = None
+
         if not username or not password:
             raise MissingCredentialsError("Missing credentials.")
+
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
 
         return MongoConfiguration(
             database=database,
@@ -842,8 +858,7 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_enabled=tls_enabled,
             tls_external_ca=self.paths.ext_ca_file,
         )
 

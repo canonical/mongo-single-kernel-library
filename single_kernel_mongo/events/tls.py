@@ -14,7 +14,7 @@ from ops import ConfigChangedEvent
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
 from ops.framework import EventBase, EventSource, Object
 
-from single_kernel_mongo.config.literals import CharmKind, TLSType
+from single_kernel_mongo.config.literals import TLSType
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import (
     MongosStatuses,
@@ -219,8 +219,7 @@ class TLSEventsHandler(Object):
             )
         except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-
-        self._recompute_statuses()
+        
 
     def _on_config_changed(self, event: ConfigChangedEvent) -> None:
         """On Config Changed, validate private keys and refresh certs if needed."""
@@ -237,14 +236,3 @@ class TLSEventsHandler(Object):
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, "set-private-key", f"{e}")
             return
-
-    def _recompute_statuses(self):
-        """Recomputes the statuses for those components as the tls changes are impactful."""
-        if self.dependent.name == CharmKind.MONGOD:
-            self.charm.status_handler._recompute_statuses_for_scope(
-                "unit", self.dependent.shard_manager
-            )
-        else:
-            self.charm.status_handler._recompute_statuses_for_scope("unit", self.dependent)
-            if self.charm.unit.is_leader():
-                self.charm.status_handler._recompute_statuses_for_scope("app", self.dependent)

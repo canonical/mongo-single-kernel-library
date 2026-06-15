@@ -19,7 +19,6 @@ from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
 from ops.model import Relation, Unit
-from pymongo.errors import PyMongoError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -191,11 +190,13 @@ class MongosOperator(OperatorProtocol, Object):
         if not refresh.workload_allowed_to_start:
             return
 
-        logger.info("Restarting workloads")
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
         self._configure_workloads()
-        self.start_charm_services()
+
+        if self.state.mongos_cluster_relation:
+            logger.info("Restarting workloads")
+            self.start_charm_services()
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:
@@ -255,10 +256,11 @@ class MongosOperator(OperatorProtocol, Object):
         self.mongos_config_manager.set_environment()
 
         # Instantiate the keyfile
-        try:
-            self.instantiate_keyfile()
-        except Exception:
-            logger.info("Not instantiating as we don't have a keyfile yet.")
+        if self.state.mongos_cluster_relation:
+            try:
+                self.instantiate_keyfile()
+            except Exception:
+                logger.info("Not instantiating as we don't have a keyfile yet.")
 
     @override
     def prepare_for_startup(self) -> None:
@@ -282,7 +284,6 @@ class MongosOperator(OperatorProtocol, Object):
         self._configure_workloads()
 
         if self.state.mongos_cluster_relation:
-            self.instantiate_keyfile()
             self.start_charm_services()
             return
 
@@ -329,9 +330,26 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
+            self.update_config_on_k8s()
+
+        # Always update connection information.
+        self.share_connection_info()
+
+        # If we had an IP change, we must restart.
+        if self.state.db_initialised:
+            self.async_restart_charm_services(force=False)
+
+    def update_config_on_k8s(self):
+        """Run the specific updates we might have to do on K8S."""
+        try:
             self.update_k8s_external_services()
-            self.tls_events.refresh_certificates()
-            self.share_connection_info()
+        except ApiError as e:  # Raised for k8s
+            logger.info("Failed to update k8s service: %s", e)
+
+        # Always update certs on k8s since the IP/external connectivity could change
+        self.tls_events.refresh_certificates()
+
+        self.share_connection_info()
 
     @override
     def prepare_storage(self) -> None:
@@ -454,6 +472,7 @@ class MongosOperator(OperatorProtocol, Object):
         )
         try:
             self.restart_charm_services(force=force)
+            self.recompute_statuses()
         except MissingConfigServerError as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
@@ -461,6 +480,16 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info("Deferrable error during mongos restart. %s", e)
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
+
+    def recompute_statuses(self):
+        """Recomputes and store all statuses."""
+        scopes: list[StatusesScope] = ["unit"]
+        if not self.charm.unit.is_leader():
+            scopes.append("app")
+        for scope in scopes:
+            statuses = self.get_statuses(scope=scope, recompute=True)
+            for status in statuses:
+                self.state.statuses.add(status, scope, self.name)
 
     @override
     def async_restart_charm_services(self, force: bool = False) -> None:
@@ -510,16 +539,9 @@ class MongosOperator(OperatorProtocol, Object):
             return
         if not self.charm.unit.is_leader():
             return
-        try:
-            self._share_configuration()
-        except PyMongoError as e:
-            raise DeferrableError(f"updating app relation data because of {e}")
-        except ApiError as e:  # Raised for k8s
-            if e.status.code == 404:
-                raise DeferrableError(
-                    "updating app relation data since service not found for more or one units"
-                )
-            raise
+
+        # Update the connection information.
+        self._share_configuration()
 
     def remove_connection_info(self) -> None:
         """Deletes the information from the client databag."""

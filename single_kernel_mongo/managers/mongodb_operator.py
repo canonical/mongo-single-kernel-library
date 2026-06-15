@@ -1352,6 +1352,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         try:
             self.restart_charm_services(force=force)
+            # After a restart we can always recompute the shard manager statuses.
+            self.charm.status_handler._recompute_statuses_for_scope(
+                scope="unit", manager=self.shard_manager
+            )
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
