@@ -418,7 +418,10 @@ class TLSManager(ManagerStatusProtocol):
         )
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, provider_cert.certificate.raw)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, provider_cert.ca.raw)
-        logger.info("%s certificate secrets updated.", TLSType.PEER.value if internal else TLSType.CLIENT.value)
+        logger.info(
+            "%s certificate secrets updated.",
+            TLSType.PEER.value if internal else TLSType.CLIENT.value,
+        )
 
     def is_certificate_available(self, internal: bool) -> bool:
         """Checks if we've received the expected certificate."""
@@ -673,7 +676,9 @@ class TLSManager(ManagerStatusProtocol):
                 and disables TLS for the affected relations.
         """
         cluster_databag_key = (
-            ClusterStateKeys.INT_CA_SECRET.value if internal else ClusterStateKeys.EXT_CA_SECRET.value
+            ClusterStateKeys.INT_CA_SECRET.value
+            if internal
+            else ClusterStateKeys.EXT_CA_SECRET.value
         )
         sharding_databag_key = (
             AppShardingComponentKeys.INT_CA_SECRET.value

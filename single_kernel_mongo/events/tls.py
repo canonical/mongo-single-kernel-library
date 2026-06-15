@@ -151,7 +151,11 @@ class TLSEventsHandler(Object):
             self.charm.unit.name,
         )
 
-        status = TLSStatuses.DISABLING_PEER_TLS.value if internal else TLSStatuses.DISABLING_CLIENT_TLS.value
+        status = (
+            TLSStatuses.DISABLING_PEER_TLS.value
+            if internal
+            else TLSStatuses.DISABLING_CLIENT_TLS.value
+        )
         self.charm.status_handler.set_running_status(status, scope="unit")
         try:
             self.manager.disable_tls(internal)
