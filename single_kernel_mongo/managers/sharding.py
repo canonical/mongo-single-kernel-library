@@ -859,7 +859,16 @@ class ShardManager(Object, ManagerStatusProtocol):
         external_auth_tls = external_tls_ca is not None
         peer_tls_integrated = self.state.peer_tls_relation is not None
         client_tls_integrated = self.state.client_tls_relation is not None
-        keyfile_changed = self.state.get_keyfile() != keyfile
+
+        # we want to check the keyfile on the file system against the keyfile we received to prevent
+        # race conditions (what if the leader had updated the keyfile in the secret first ?)
+        host_keyfile = "\n".join(
+            self.workload.read(self.workload.paths.keyfile)
+            if self.workload.exists(self.workload.paths.keyfile)
+            else []
+        )
+
+        keyfile_changed = host_keyfile.strip() != keyfile.strip()
 
         # Copy over keyfile regardless of whether the cluster uses TLS or or KeyFile for internal
         # membership authentication. If TLS is disabled on the cluster this enables the cluster to
