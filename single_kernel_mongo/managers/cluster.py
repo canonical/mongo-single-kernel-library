@@ -442,6 +442,8 @@ class ClusterRequirer(Object):
         """
         if not secret_label:
             return
+        if not self.state.db_initialised:
+            return
         if not (relation := self.state.mongos_cluster_relation):
             return
         # many secret changed events occur,only listen to the ones related to our interface
@@ -453,6 +455,8 @@ class ClusterRequirer(Object):
                 f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
             )
             return
+
+        self.assert_pass_hook_checks()
 
         # This will take care of updating everything that needs updating
         self.async_update_mongos_and_restart()

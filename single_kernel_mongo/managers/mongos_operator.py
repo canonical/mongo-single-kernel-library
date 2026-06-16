@@ -349,8 +349,6 @@ class MongosOperator(OperatorProtocol, Object):
         # Always update certs on k8s since the IP/external connectivity could change
         self.tls_events.refresh_certificates()
 
-        self.share_connection_info()
-
     @override
     def prepare_storage(self) -> None:
         """Nothing happens in this handler for mongos operators."""
