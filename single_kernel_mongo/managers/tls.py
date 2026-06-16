@@ -363,10 +363,15 @@ class TLSManager(ManagerStatusProtocol):
                     file.unlink()
 
     def push_tls_files_to_workload(self, internal: bool) -> None:
-        """Pushes the TLS files on the workload.
+        """Write current TLS certificate files to the workload filesystem.
+
+        Read the current TLS secrets from state and writes the
+        corresponding CA and PEM files into the workload paths.
+
+        For K8s, it also persists the client TLS files to the charm container.
 
         Args:
-            internal: True for peer TLS, False for client TLS.
+            internal: True to write peer TLS files, False to write client TLS files.
         """
         logger.info(
             "Pushing %s TLS certificates to filesystem",

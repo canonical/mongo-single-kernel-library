@@ -415,7 +415,7 @@ def test_shard_manager_synchronise_user_password_invalid_role(
 
 
 def test_shard_manager_synchronise_member_auth_invalid_role(
-    harness: Harness[MongoTestCharm], mocker
+    harness: Harness[MongoTestCharm], mocker, substrate
 ):
     manager = harness.charm.operator.shard_manager
 
@@ -474,11 +474,15 @@ def test_shard_manager_synchronise_member_auth_success(harness: Harness[MongoTes
 
     manager.synchronize_member_auth(relation)
 
-    mocked_update_member_auth.assert_called_with("deadbeef", None, None, "secret:1234")
+    mocked_update_member_auth.assert_called_with("deadbeef", None, None)
     mocked_sync.assert_called_with("test-operator", "test-backup")
 
     # The auth-updated flag should be set to True after the restart.
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "false"
+    if substrate == "lxd":
+        assert manager.state.get_cluster_id() == "secret:1234"
+    else:
+        assert manager.state.get_cluster_id() is None
 
 
 def test_shard_manager_synchronise_cluster_secrets_no_keyfile(

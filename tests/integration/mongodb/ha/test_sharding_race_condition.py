@@ -50,7 +50,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_ONE_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
     await deploy_charm(
@@ -59,7 +59,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_TWO_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
     await deploy_charm(
@@ -68,7 +68,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_THREE_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
 

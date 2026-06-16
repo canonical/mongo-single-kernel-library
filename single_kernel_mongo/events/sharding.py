@@ -217,11 +217,11 @@ class ShardEventHandler(Object):
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
-            self.manager.cleanup_cluster_id()
             self.manager.drain_shard_from_cluster(event.relation)
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except NonDeferrableFailedHookChecksError as e:
             self.manager.state.statuses.set(
                 ShardStatuses.MISSING_CONF_SERVER_REL.value,
@@ -230,3 +230,6 @@ class ShardEventHandler(Object):
             )
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
+
+        self.manager.cleanup_cluster_id()
