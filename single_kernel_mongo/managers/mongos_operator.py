@@ -485,9 +485,10 @@ class MongosOperator(OperatorProtocol, Object):
         if self.charm.unit.is_leader():
             scopes.append("app")
         for scope in scopes:
+            self.state.statuses.clear(scope=scope, component=self.name)
             statuses = self.get_statuses(scope=scope, recompute=True)
             for status in statuses:
-                self.state.statuses.add(status, scope, self.name)
+                self.state.statuses.add(status, scope=scope, component=self.name)
 
     @override
     def async_restart_charm_services(self, force: bool = False) -> None:
