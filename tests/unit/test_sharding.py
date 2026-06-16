@@ -437,7 +437,9 @@ def test_shard_manager_synchronise_member_auth_invalid_role(
     assert err.value.args[0] == "is only executed by shards"
 
 
-def test_shard_manager_synchronise_member_auth_success(harness: Harness[MongoTestCharm], mocker):
+def test_shard_manager_synchronise_member_auth_success(
+    harness: Harness[MongoTestCharm], mocker, substrate
+):
     manager = harness.charm.operator.shard_manager
 
     harness.set_leader(True)
