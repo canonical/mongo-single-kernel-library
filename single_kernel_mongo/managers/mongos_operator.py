@@ -484,7 +484,7 @@ class MongosOperator(OperatorProtocol, Object):
     def recompute_statuses(self) -> None:
         """Recomputes and store all statuses."""
         scopes: list[StatusesScope] = ["unit"]
-        if not self.charm.unit.is_leader():
+        if self.charm.unit.is_leader():
             scopes.append("app")
         for scope in scopes:
             statuses = self.get_statuses(scope=scope, recompute=True)
