@@ -151,8 +151,8 @@ def test_state_cluster_id_in_app_data(
     harness.set_leader(True)
     state = harness.charm.operator.state
     state.app_peer_data.role = role
-
     state.set_cluster_id("1234")
+
     if substrate == "lxd":
         assert state.get_cluster_id() == "1234"
     else:
