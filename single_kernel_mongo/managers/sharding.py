@@ -559,16 +559,16 @@ class ShardManager(Object, ManagerStatusProtocol):
             if not is_leaving:
                 raise DeferrableFailedHookChecksError("Upgrade in progress")
 
+    def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:
+        """Runs the pre-hooks checks, returns True if all pass."""
+        self.assert_pass_sanity_hook_checks(is_leaving=is_leaving)
+
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
         # computes the revision check.
         if self.dependent.cluster_version_checker.get_cluster_mismatched_revision_status():
             # The status will be added during the get status
             raise DeferrableFailedHookChecksError("Mismatched versions in the cluster")
-
-    def assert_pass_hook_checks(self, relation: Relation, is_leaving: bool = False) -> None:
-        """Runs the pre-hooks checks, returns True if all pass."""
-        self.assert_pass_sanity_hook_checks(is_leaving=is_leaving)
 
         # Edge case for DPE-4998
         # TODO: Remove this when https://github.com/canonical/operator/issues/1306 is fixed.
@@ -608,7 +608,7 @@ class ShardManager(Object, ManagerStatusProtocol):
             ShardStatuses.ADDING_TO_CLUSTER.value, scope="unit", component=self.name
         )
 
-    def update_config_server_certs(self, relation: Relation):
+    def update_config_server_certs(self):
         """Checks that we are in a valid state and store certificates."""
         try:
             self.assert_pass_sanity_hook_checks(is_leaving=False)
@@ -694,6 +694,8 @@ class ShardManager(Object, ManagerStatusProtocol):
         # Always try to restart, forced if the certs are updated.
         self.dependent.s3_backup_manager.configure_and_restart(force=must_restart)
 
+        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+
     def reconcile_shard_after_restart(self):
         """Reconcile shard state after a unit restart.
 
@@ -768,6 +770,9 @@ class ShardManager(Object, ManagerStatusProtocol):
 
         self.assert_pass_hook_checks(relation, is_leaving=False)
 
+        # Update the certificates, they are shared through a secret that can be updated.
+        self.update_config_server_certs()
+
         if self.charm.unit.is_leader():
             if self.data_requirer.fetch_my_relation_field(relation.id, "auth-updated") != "true":
                 return
@@ -781,7 +786,12 @@ class ShardManager(Object, ManagerStatusProtocol):
                 )
             self.sync_cluster_passwords(operator_password, backup_password)
 
-        self.update_pbm_certificate_in_trust_store()
+        if self.update_pbm_certificate_in_trust_store():
+            try:
+                # after updating the password of the backup user, restart pbm with correct password
+                self.dependent.s3_backup_manager.configure_and_restart()
+            except (NotPrimaryError, NotReadyError):
+                logger.info("Will retry to start pbm later.")
 
     def update_pbm_certificate_in_trust_store(self) -> bool:
         """Retrieve the CA certificate for PBM and store it in the trust store if it exists.

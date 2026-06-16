@@ -155,7 +155,7 @@ class ShardEventHandler(Object):
     def _store_certificates(self, event: RelationChangedEvent):
         """When we receive certificates, we want to store them immediately on the file system."""
         try:
-            self.manager.update_config_server_certs(event.relation)
+            self.manager.update_config_server_certs()
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
