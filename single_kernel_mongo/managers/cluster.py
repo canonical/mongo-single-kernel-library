@@ -377,6 +377,10 @@ class ClusterRequirer(Object):
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
         )
         if self.charm.unit.is_leader():
+            # Mongos handles also app statuses
+            self.state.statuses.set(
+                CharmStatuses.ACTIVE_IDLE.value, scope="app", component=self.dependent.name
+            )
             self.state.app_peer_data.db_initialised = True
             # In the K8S case, create the user
             self.update_users_for_k8s_routers()

@@ -76,10 +76,16 @@ class MongoConfiguration:
         """TLS Config."""
         if not self.tls_enabled:
             return {}
-        return {
+        config = {
             "tls": "true",
             "tlsCaFile": f"{self.tls_external_ca}",
         }
+        # Edge case: MongoDB TLS with Unix Socket requires disabling client hostname verification.
+        # This is because the reported remote is the unix socket, which is not in the SANS list.
+        if len(self.hosts) == 1 and list(self.hosts)[0].endswith("27018.sock"):
+            config["tlsAllowInvalidHostnames"] = "true"
+
+        return config
 
     def _uri(self, tls: bool):
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
