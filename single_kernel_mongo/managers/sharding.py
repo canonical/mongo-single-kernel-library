@@ -368,10 +368,6 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
 
-        self.state.statuses.delete(
-            ConfigServerStatuses.MISSING_CONF_SERVER_REL.value, scope="unit", component=self.name
-        )
-
         self.charm.status_handler.set_running_status(
             ConfigServerStatuses.adding_shard(shard_name), scope="unit"
         )

@@ -20,7 +20,7 @@ from ops.framework import Object
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import TrustStoreFiles
-from single_kernel_mongo.config.statuses import ShardStatuses
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     DeferrableFailedHookChecksError,
@@ -79,6 +79,11 @@ class ConfigServerEventHandler(Object):
         """Handle relation changed and relation broken events."""
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
+            self.manager.state.statuses.delete(
+                ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
         except (
             DeferrableFailedHookChecksError,
@@ -90,6 +95,11 @@ class ConfigServerEventHandler(Object):
             PyMongoError,
             OperationFailure,
         ) as e:
+            self.manager.state.statuses.add(
+                ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
