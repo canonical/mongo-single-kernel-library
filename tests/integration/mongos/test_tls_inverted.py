@@ -12,6 +12,7 @@ from tests.integration.helpers.common import (
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.mongos import (
+    MONGOS_CLIENT_APPLICATION,
     MONGOS_CLUSTER_COMPONENTS,
     assert_mongos_tls_enabled,
     build_cluster,
@@ -46,6 +47,10 @@ async def test_build_and_deploy(
         mongos_resource,
         application_path,
     )
+    if substrate == "lxd":
+        await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].set_config(
+            {"external-connectivity": "false"}
+        )
     await build_cluster(ops_test, substrate, integrate_with_mongos=True, integrate_with_client=True)
 
     config = {"ca-common-name": "Test CA"}

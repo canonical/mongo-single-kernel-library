@@ -15,7 +15,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote_plus, urlencode, quote
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires, DatabaseCreatedEvent
 from ops.charm import ActionEvent, CharmBase
@@ -67,7 +67,7 @@ class ContinuousWritesApplication(CharmBase):
         # Database related events
         self.database = DatabaseRequires(self, "mongodb", self.database_name)
         # Database related events
-        self.mongos_database = DatabaseRequires(self, "mongos", self.database_name, external_node_connectivity=True)
+        self.mongos_database = DatabaseRequires(self, "mongos", self.database_name, external_node_connectivity=self.config.get("external-connectivity"))
 
         self.framework.observe(self.database.on.database_created, self._on_database_created)
         self.framework.observe(self.mongos_database.on.database_created, self._on_database_created)
@@ -154,17 +154,29 @@ class ContinuousWritesApplication(CharmBase):
     # ==============
 
     def _build_tls_uri(self, uris: str) -> str:
-            parsed_uri = parse_uri(uris)
-            params = parsed_uri["options"]
-            params["tls"] = "true"
-            params["tlsCaFile"] = f"{CA_PATH}"
-            hosts = ",".join(f"{host}:{port}" for host, port in parsed_uri["nodelist"])
-            return (
-                    f"mongodb://{quote_plus(parsed_uri['username'])}:"
-                        f"{quote_plus(parsed_uri['password'])}@"
-                        f"{hosts}/{quote_plus(parsed_uri['database'])}?"
-                        f"{urlencode(params)}"
-                )
+        parsed_uri = parse_uri(uris)
+        params = parsed_uri["options"]
+        params["tls"] = "true"
+        params["tlsCaFile"] = f"{CA_PATH}"
+
+        if any("27018.sock" in host for host, _ in parsed_uri["nodelist"]):
+            params["tlsAllowInvalidHostnames"] = "true"
+
+        nodelist: list[str] = []
+        for host, port in parsed_uri["nodelist"]:
+            if port:
+                nodelist.append(f"{host}:{port}")
+            else:
+                nodelist.append(quote(f"{host}", safe=""))
+
+        hosts = ",".join(nodelist)
+
+        return (
+                f"mongodb://{quote_plus(parsed_uri['username'])}:"
+                    f"{quote_plus(parsed_uri['password'])}@"
+                    f"{hosts}/{quote_plus(parsed_uri['database'])}?"
+                    f"{urlencode(params)}"
+            )
 
     def _start_continuous_writes(
         self, starting_number: int, db_name: str, collection_name: str
