@@ -790,7 +790,7 @@ class ShardManager(Object, ManagerStatusProtocol):
         if self.update_pbm_certificate_in_trust_store():
             try:
                 # after updating the password of the backup user, restart pbm with correct password
-                self.dependent.s3_backup_manager.configure_and_restart()
+                self.dependent.s3_backup_manager.configure_and_restart(force=True)
             except (NotPrimaryError, NotReadyError):
                 logger.info("Will retry to start pbm later.")
 
