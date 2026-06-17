@@ -1,0 +1,1161 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongodb-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.24   unsupported  03:03:46Z
+
+App                                Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server                      8.0.10   active      2  mongodb-k8s                           0  10.152.183.32   no       
+self-signed-certificates                    active      1  self-signed-certificates  1/stable  586  10.152.183.234  no       
+self-signed-certificates-separate           active      1  self-signed-certificates  1/stable  586  10.152.183.190  no       
+shard-one                          8.0.10   active      3  mongodb-k8s                           1  10.152.183.164  no       
+shard-tree                         8.0.10   active      1  mongodb-k8s                           3  10.152.183.174  no       
+shard-two                          8.0.10   active      1  mongodb-k8s                           2  10.152.183.88   no       
+
+Unit                                  Workload  Agent  Address     Ports  Message
+config-server/0*                      blocked   idle   10.1.53.16         Shards: shard-one, shard-two are unreachable.
+config-server/1                       blocked   idle   10.1.53.18         Shards: shard-two, shard-one are unreachable.
+self-signed-certificates-separate/0*  active    idle   10.1.53.40         
+self-signed-certificates/0*           active    idle   10.1.53.39         
+shard-one/0*                          blocked   idle   10.1.53.25         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/1                           blocked   idle   10.1.53.33         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/2                           blocked   idle   10.1.53.32         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-tree/0*                         blocked   idle   10.1.53.45         Missing relation to config-server.
+shard-two/0*                          blocked   idle   10.1.53.38         Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 02:36:56 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:36:56Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:36:56Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:36:56Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:36:56Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:36:56Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:36:56Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:36:56 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:37:04 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:04Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:04Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:04Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:04Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:04Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:04Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:37:04 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:37:13 ERROR unit.config-server/1.juju-log client-certificates:16: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:13Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:13Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:13Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:13Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:13Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:35:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:35:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:13Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:37:13 ERROR unit.config-server/1.juju-log client-certificates:16: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:37:22 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:22Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:22Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:15.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:17.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:22Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:22Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:22Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:36:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:15.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:17.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:22Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:37:22 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:37:30 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:30Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:30Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:15.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:17.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:23.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:30.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:30Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:37:30Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:37:30Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:36:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:56.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:36:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:15.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:17.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:23.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:37:30.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:37:30Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:37:30 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-two-0: 02:38:39 ERROR unit.shard-two/0.juju-log sharding:22: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-one-0: 02:38:47 ERROR unit.shard-one/0.juju-log sharding:21: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-config-server-0: 02:39:22 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663960, 1), \'signature\': {\'hash\': b\'rF\\xfc\\xf9\\xfc\\xae\\xda\\xdc\\xd5\\x8a\\x14d\\xaf\\r\\x01\\x88\\x00z3 \', \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663960, 1)}')
+unit-config-server-0: 02:39:28 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663968, 1), \'signature\': {\'hash\': b"\\x08\\xfe\\x04&\\xc1\\xc7\\x97\\xa6\\x1d,\'\\xbfq\\xd82\\rc\\xfb\\x11f", \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663968, 1)}')
+unit-config-server-0: 02:39:28 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663968, 1), \'signature\': {\'hash\': b"\\x08\\xfe\\x04&\\xc1\\xc7\\x97\\xa6\\x1d,\'\\xbfq\\xd82\\rc\\xfb\\x11f", \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663968, 1)}')
+unit-config-server-0: 02:39:33 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663973, 1), \'signature\': {\'hash\': b"\\x04\\x05\\xceFh\\x17\\xad\'{\\xb3\\xccY\\x083\\xc9\\x8ew\\xb8Q\\x1b", \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663973, 1)}')
+unit-config-server-0: 02:39:34 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663973, 1), \'signature\': {\'hash\': b"\\x04\\x05\\xceFh\\x17\\xad\'{\\xb3\\xccY\\x083\\xc9\\x8ew\\xb8Q\\x1b", \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663973, 1)}')
+unit-config-server-0: 02:39:35 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781663974, 1), \'signature\': {\'hash\': b\'\\x12\\xdb\\xad\\x94w~Y8.\\xe0o\\xa9?\\xf0\\x93;\\xb9\\x1e\\xe06\', \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781663974, 1)}')
+unit-config-server-0: 02:40:02 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781664001, 1), \'signature\': {\'hash\': b"\\x9erE\'9\\xbf\\xaf\\x9c\\x00\\xe2\\xcd\\x1f\\xf0\\xcd3\\xdd0\\xa8\'P", \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781664001, 1)}')
+unit-config-server-0: 02:40:03 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781664003, 1), \'signature\': {\'hash\': b\'5\\xbf\\xa0:\\xc6\\xbc\\xfd\\xa7\\x8cbj\\xd8\\x06[\\x86H=\\x9cV\\xb5\', \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781664003, 1)}')
+unit-config-server-0: 02:40:04 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=59d80468-a678-4139-9b2e-593253a38036,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781664003, 1), \'signature\': {\'hash\': b\'5\\xbf\\xa0:\\xc6\\xbc\\xfd\\xa7\\x8cbj\\xd8\\x06[\\x86H=\\x9cV\\xb5\', \'keyId\': 7652186606710816782}}, \'operationTime\': Timestamp(1781664003, 1)}')
+unit-shard-one-0: 02:40:28 ERROR unit.shard-one/0.juju-log database-peers:5: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a32091ae6f31bd05a2f7e08, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000646669999923688>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000907822000044689>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004356130000360281>]>
+unit-shard-one-0: 02:40:32 ERROR unit.shard-one/0.juju-log rollingops-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a32091fa67019cabb05b05b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.00041606400009186473>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.000435654000057184>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006086629999799698>]>
+unit-shard-one-1: 02:57:32 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:57:32 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:57:33 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:57:33 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:57:37 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:57:37 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:57:38 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:57:41 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:57:42 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:57:43 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-config-server-1: 02:57:57 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:57:57Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:57:57Z INFO Most recent service output:
+    (...)
+    GitBranch: 
+    BuildTime: 
+    GoVersion: go1.24.4
+    2026-06-17T02:56:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:47.000+0000 I node: config-server/config-server-1.config-server-endpoints:27017
+    2026-06-17T02:56:47.000+0000 I conn level ReadConcern: majority; WriteConcern: majority
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:57:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:57:57Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:57:57Z INFO Most recent service output:
+    (...)
+    GitBranch: 
+    BuildTime: 
+    GoVersion: go1.24.4
+    2026-06-17T02:56:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:47.000+0000 I node: config-server/config-server-1.config-server-endpoints:27017
+    2026-06-17T02:56:47.000+0000 I conn level ReadConcern: majority; WriteConcern: majority
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:57:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:57:57 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:58:05 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:05Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:05Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:56:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:47.000+0000 I node: config-server/config-server-1.config-server-endpoints:27017
+    2026-06-17T02:56:47.000+0000 I conn level ReadConcern: majority; WriteConcern: majority
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:05Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:05Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:05Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:56:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:47.000+0000 I node: config-server/config-server-1.config-server-endpoints:27017
+    2026-06-17T02:56:47.000+0000 I conn level ReadConcern: majority; WriteConcern: majority
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:05Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:05 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:58:13 ERROR unit.config-server/1.juju-log client-certificates:26: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:13Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:13Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:13Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:13Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:13Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:56:47.000+0000 I listening for the commands
+    2026-06-17T02:56:52.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:56:57.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:13Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:13 ERROR unit.config-server/1.juju-log client-certificates:26: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:58:21 ERROR unit.config-server/1.juju-log peer-certificates:25: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:20Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:21Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:21Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:20Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:21Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:02.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:07.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:12.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:17.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:21Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:21 ERROR unit.config-server/1.juju-log peer-certificates:25: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-one-1: 02:58:21 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:58:22 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:58:22 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:58:22 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:22 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:58:23 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:23 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:58:23 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:58:27 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:58:27 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:58:27 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:58:27 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:28 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:28 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:58:31 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-config-server-1: 02:58:31 ERROR unit.config-server/1.juju-log client-certificates:26: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:31Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:31Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:31Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:31Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:31Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:22.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:27.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:32.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:31Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:31 ERROR unit.config-server/1.juju-log client-certificates:26: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-one-2: 02:58:31 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:58:31 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 02:58:31 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:32 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:58:33 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-config-server-1: 02:58:39 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:39Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:39Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:39Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:39Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:39Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:37.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:42.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:47.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:39Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:39 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:58:47 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:47Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:47Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:47Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:47Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:47Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:57:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:57:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:47Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:47 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:58:55 ERROR unit.config-server/1.juju-log status-peers:1: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:55Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:55Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:55Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:58:55Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:58:55Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:05.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:06.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:58:55Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:58:55 ERROR unit.config-server/1.juju-log status-peers:1: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:59:03 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:59:03Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:59:03Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:59:03Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:59:03Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:59:03Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:13.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:14.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:59:03Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:59:03 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:59:10 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:59:10Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:59:10Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:59:10Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-17T02:59:10Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-06-17T02:59:10Z INFO Most recent service output:
+    (...)
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:21.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:22.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:24.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:31.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:32.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:39.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:40.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:41.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:47.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:48.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:49.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:55.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:58:57.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:03.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:04.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-06-17T02:59:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-06-17T02:59:10Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:59:10 ERROR unit.config-server/1.juju-log rollingops-peers:4: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-one-0: 03:00:51 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:00:51 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:00:56 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:00:57 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:00:57 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:00:57 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:00:58 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:00:59 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:02 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:02 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:04 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:04 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:04 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:04 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:01:08 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 03:01:08 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:09 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:09 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:09 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:09 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:10 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:10 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:12 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 03:01:13 ERROR unit.shard-one/2.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:13 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 03:01:13 ERROR unit.shard-one/1.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:13 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:13 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:16 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 03:01:17 ERROR unit.shard-one/0.juju-log status-peers:6: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-tree-0: 03:03:44 ERROR unit.shard-tree/0.juju-log sharding:32: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
