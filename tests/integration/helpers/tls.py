@@ -20,7 +20,6 @@ from tests.integration.helpers.common import (
     MONGOS_PORT,
     ProcessError,
     external_cert_path,
-    external_pem_path,
     get_address_of_unit,
     get_application_relation_data,
     get_password,
@@ -119,7 +118,6 @@ async def mongo_tls_command(
     return (
         f'{mongosh(substrate)} "{uri}"  --eval "{status_command}"'
         f" --tls --tlsCAFile {external_cert_path(substrate)}"
-        f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
     )
 
 
