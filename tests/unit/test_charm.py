@@ -1142,7 +1142,7 @@ def test_connect_mongodb_exporter_success(
     harness.charm.on.mongod_pebble_ready.emit(container)
 
     password = harness.charm.operator.state.get_user_password(CharmedStatsUser)
-    uri_template = "mongodb://charmed-stats:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s&authenticationMechanism=SCRAM-SHA-256"
+    uri_template = "mongodb://charmed-stats:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s&authMechanism=SCRAM-SHA-256"
     env = harness.charm.operator.mongodb_exporter_config_manager.get_environment()
 
     assert env == uri_template.format(password=password, mongodb_hostname=mongodb_hostname)

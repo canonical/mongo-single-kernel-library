@@ -753,7 +753,7 @@ class CharmState(Object, StatusesStateProtocol):
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
             tls_enabled=tls_enabled,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_external_ca=tls_external_ca,
             standalone=standalone,
             auth_restrictions=auth_restrictions,
         )

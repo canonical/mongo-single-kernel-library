@@ -23,7 +23,14 @@ from data_platform_helpers.version_check import CrossAppVersionChecker, get_char
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
-from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    before_sleep_log,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -1053,6 +1060,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     (NotReadyError, RollingOpsSyncLockError, PyMongoError)
                 ),
                 reraise=True,
+                before_sleep=before_sleep_log(logger, logging.INFO),
             ):
                 with attempt:
                     with self.rollingops_manager.acquire_sync_lock(

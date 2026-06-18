@@ -67,9 +67,10 @@ class MongoConfiguration:
     @property
     def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
+        result = {"authMechanism": "SCRAM-SHA-256"}
         if self.database != "admin":
-            return ADMIN_AUTH_SOURCE
-        return {}
+            result |= ADMIN_AUTH_SOURCE
+        return result
 
     @property
     def tls_config(self) -> dict[str, str]:
