@@ -1,0 +1,162 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] maintenance: stopping charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+[32mINFO    [0m tests.integration.helpers.sharding:sharding.py:166 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.24   unsupported  05:04:39Z
+
+App            Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+config-server  8.0.10   active      2  mongodb             0  no       
+shard-one      8.0.10   active      2  mongodb             1  no       
+shard-tree     8.0.10   active      2  mongodb             3  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*  active    idle   0        10.97.250.42    27017-27018/tcp  Primary.
+config-server/1   active    idle   1        10.97.250.85    27017-27018/tcp  
+shard-one/0*      active    idle   2        10.97.250.19    27017/tcp        
+shard-one/1       active    idle   3        10.97.250.79    27017/tcp        Primary.
+shard-tree/0*     active    idle   6        10.97.250.86    27017/tcp        Primary.
+shard-tree/1      active    idle   7        10.97.250.136   27017/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.97.250.42   juju-b079a0-0  ubuntu@24.04  github-runner  Running
+1        started  10.97.250.85   juju-b079a0-1  ubuntu@24.04  github-runner  Running
+2        started  10.97.250.19   juju-b079a0-2  ubuntu@24.04  github-runner  Running
+3        started  10.97.250.79   juju-b079a0-3  ubuntu@24.04  github-runner  Running
+6        started  10.97.250.86   juju-b079a0-6  ubuntu@24.04  github-runner  Running
+7        started  10.97.250.136  juju-b079a0-7  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 04:21:30 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 04:21:30 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 04:21:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 04:21:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 04:22:00 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 04:22:00 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 04:22:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 04:22:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 04:22:34 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 04:22:34 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 04:22:45 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 04:22:45 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 04:22:47 ERROR juju.worker.proxyupdater failed to list systemd services: List failed (/bin/systemctl list-unit-files --no-legend --no-page -l -t service | grep -o -P '^\w[\S]*(?=\.service)'): error executing "/bin/systemctl": /bin/bash: /tmp/juju-exec3503477948/script.sh: No such file or directory; 
+machine-6: 04:23:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 04:23:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 04:23:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 04:23:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 04:23:27 ERROR unit.config-server/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 04:23:27 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 04:23:28 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-1: 04:23:36 ERROR unit.shard-one/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 04:23:36 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 04:23:36 ERROR unit.shard-one/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-config-server-1: 04:23:50 ERROR unit.config-server/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 04:23:50 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 04:23:51 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 04:23:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 04:23:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 04:23:54 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-two-1: 04:24:11 ERROR unit.shard-two/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 04:24:11 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 04:24:12 ERROR unit.shard-two/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-two-0: 04:24:20 ERROR unit.shard-two/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 04:24:20 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 04:24:21 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 04:24:58 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 04:24:58 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 04:24:58 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 04:24:58 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 04:24:59 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-1: 04:24:59 ERROR unit.shard-tree/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-tree-0: 04:31:56 ERROR unit.shard-tree/0.juju-log database-peers:16: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374bb8b51ec752fb75058, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0006239460001324915>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0005068099999334663>]>
+unit-shard-tree-0: 04:32:04 ERROR unit.shard-tree/0.juju-log database-peers:16: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374c3991b4d979dc8e26f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.000501052000117852>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0005192290000195499>]>
+unit-shard-tree-0: 04:32:05 ERROR unit.shard-tree/0.juju-log database-peers:16: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374c4991b4d979dc8e270, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0008445880000635952>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0004294540001410496>]>
+unit-config-server-0: 04:32:06 ERROR unit.config-server/0.juju-log config-server:20: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781757126, 1), \'signature\': {\'hash\': b\'\\x8c<GT\\xe1\\x8a\\xf8\\x89\\xdfH\\x04\\xf2\\xc5\\xefAC\\xa4q\\x90.\', \'keyId\': 7652586871893000195}}, \'operationTime\': Timestamp(1781757126, 1)}')
+unit-shard-tree-0: 04:32:12 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374ca415e573d08c7c93c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.000576805000036984>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0022308669999802078>]>
+unit-shard-tree-0: 04:32:13 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374cc415e573d08c7c93d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0016381579998778761>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0016375169998354977>]>
+unit-config-server-0: 04:32:27 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781757146, 2), \'signature\': {\'hash\': b\'\\xff\\x81\\xa9\\x1fX\\x9f\\xd0\\xdb\\xe8\\xf8\\x971\\xd3s\\x86s\\xd2\\xdc$\\xcf\', \'keyId\': 7652586871893000195}}, \'operationTime\': Timestamp(1781757146, 2)}')
+unit-shard-tree-0: 04:32:28 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374db6b794fdd2e296af9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0025316480000583397>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0005864199999905395>]>
+unit-shard-tree-0: 04:32:30 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374dd6b794fdd2e296afa, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0009431050000330288>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.002434702999835281>]>
+unit-shard-two-0: 04:32:37 ERROR unit.shard-two/0.juju-log database-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374e407d31467a7203fc1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.104', 27017) server_type: RSOther, rtt: 0.0008536210000329447>, <ServerDescription ('10.97.250.232', 27017) server_type: RSOther, rtt: 0.0014019929999449232>]>
+unit-shard-tree-0: 04:32:38 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374e5b4139027b01ed4d9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0006962950001252466>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0010008620001826785>]>
+unit-shard-tree-0: 04:32:40 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374e7b4139027b01ed4da, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSOther, rtt: 0.0007804109998232889>, <ServerDescription ('10.97.250.86', 27017) server_type: RSOther, rtt: 0.0013548829999763257>]>
+unit-config-server-0: 04:32:43 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-tree, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-tree\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1781757162, 3), \'signature\': {\'hash\': b\'\\x87\\xdb\\xc2\\r7\\x1e\\n<\\xbbdDU\\xf0k\\xeb\\xc9\\x06T\\x17\\xda\', \'keyId\': 7652586871893000195}}, \'operationTime\': Timestamp(1781757162, 3)}')
+unit-shard-two-0: 04:32:44 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374eb3a60c57a772e8f5c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.104', 27017) server_type: RSOther, rtt: 0.0010764050000489078>, <ServerDescription ('10.97.250.232', 27017) server_type: RSOther, rtt: 0.0030302570000912965>]>
+unit-shard-tree-0: 04:32:49 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374f055177c412c236764, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.97.250.136:27017: [Errno 104] Connection reset by peer (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.97.250.86', 27017) server_type: RSSecondary, rtt: 0.004548390599984486>]>
+unit-shard-tree-0: 04:32:51 ERROR unit.shard-tree/0.juju-log rollingops-peers:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374f255177c412c236765, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.97.250.136:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.97.250.86', 27017) server_type: RSSecondary, rtt: 0.0009246779998193233>]>
+unit-shard-two-0: 04:32:55 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374f557255c61ad597e14, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.104', 27017) server_type: RSOther, rtt: 0.0006043769999450888>, <ServerDescription ('10.97.250.232', 27017) server_type: RSOther, rtt: 0.0006077320001622866>]>
+unit-shard-tree-0: 04:32:59 ERROR unit.shard-tree/0.juju-log sharding:22: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374f922f19a5d00d68ce1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSSecondary, rtt: 0.0009990690000449831>, <ServerDescription ('10.97.250.86', 27017) server_type: RSSecondary, rtt: 0.0005576070000188338>]>
+unit-shard-tree-0: 04:33:00 ERROR unit.shard-tree/0.juju-log sharding:22: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374fb22f19a5d00d68ce2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.136', 27017) server_type: RSSecondary, rtt: 0.0008290040000247245>, <ServerDescription ('10.97.250.86', 27017) server_type: RSSecondary, rtt: 0.0022743030001493025>]>
+unit-shard-two-0: 04:33:02 ERROR unit.shard-two/0.juju-log rollingops-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3374fda2e6b0a89de3e622, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.104', 27017) server_type: RSSecondary, rtt: 0.0018664244000319741>, <ServerDescription ('10.97.250.232', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.97.250.232:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-two-0: 04:33:09 ERROR unit.shard-two/0.juju-log status-peers:12: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a33750422611813b97334b7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.97.250.104', 27017) server_type: RSSecondary, rtt: 0.0011761250000290602>, <ServerDescription ('10.97.250.232', 27017) server_type: RSSecondary, rtt: 0.001127102000054947>]>
+unit-config-server-0: 04:39:15 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.utils.mongo_connection:cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-0: 04:39:15 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 04:44:04 ERROR unit.shard-two/1.juju-log sharding:21: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 04:54:06 ERROR unit.shard-tree/1.juju-log sharding:22: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 04:56:47 ERROR unit.shard-two/0.juju-log sharding:23: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-1: 04:58:47 ERROR unit.shard-two/1.juju-log sharding:23: single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces:This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 05:00:27 ERROR unit.shard-two/0.juju-log sharding:24: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-4: 05:00:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+unit-shard-two-1: 05:04:16 ERROR unit.shard-two/1.juju-log sharding:24: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 05:04:21 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
