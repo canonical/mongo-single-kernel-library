@@ -30,6 +30,7 @@ from single_kernel_mongo.exceptions import (
     ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderEventHandlers,
@@ -178,6 +179,7 @@ class ShardEventHandler(Object):
         except (
             DeferrableFailedHookChecksError,
             FailedToUpdateCredentialsError,
+            WorkloadServiceError,
             NotReadyError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -207,7 +209,7 @@ class ShardEventHandler(Object):
         except (
             DeferrableFailedHookChecksError,
             NotReadyError,
-            FailedToUpdateCredentialsError,
+            WorkloadServiceError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
