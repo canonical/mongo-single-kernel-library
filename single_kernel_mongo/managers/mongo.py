@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 from urllib.parse import urlencode
 
 from dacite import from_dict
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
 from ops.model import Relation
@@ -32,7 +34,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
@@ -67,12 +69,14 @@ from single_kernel_mongo.utils.network_helpers import (
 )
 
 if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
 
-class MongoManager(Object, ManagerStatusProtocol):
+@final
+class MongoManager(Object, AbstractManagerStatus[CharmState]):
     """Manager for Mongo related operations."""
 
     def __init__(
@@ -83,11 +87,11 @@ class MongoManager(Object, ManagerStatusProtocol):
         substrate: Substrates,
     ) -> None:
         super().__init__(parent=dependent, key="managers")
-        self.name = "mongo"
-        self.charm = dependent.charm
-        self.workload = workload
-        self.state = state
-        self.substrate = substrate
+        self.name: str = "mongo"
+        self.charm: AbstractMongoCharm[MongoConfigModel, OperatorProtocol] = dependent.charm
+        self.workload: MainWorkloadType = workload
+        self.state: CharmState = state
+        self.substrate: Substrates = substrate
 
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)

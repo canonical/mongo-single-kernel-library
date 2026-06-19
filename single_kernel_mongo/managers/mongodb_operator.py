@@ -17,7 +17,10 @@ from charmlibs.rollingops import (
     RollingOpsSyncLockError,
 )
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+    ManagerStatusProtocol,
+)
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
 from ops.framework import Object
@@ -483,7 +486,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @property
     @override
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[ManagerStatusProtocol | AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (
             self,
@@ -1533,7 +1536,8 @@ class MongoDBOperator(OperatorProtocol, Object):
     @property
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
-        return self.state.planned_units == 0 and len(self.state.peers_units) == 0
+        # planned_units should be 0 when we're removing the last replica
+        return self.state.planned_units == 0
 
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""

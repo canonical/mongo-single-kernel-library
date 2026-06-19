@@ -12,7 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
-from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractStatusesState,
+    StatusesState,
+)
 from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
 from ops.hookcmds import Network, network_get
 from pymongo.errors import (
@@ -98,7 +101,7 @@ logger = logging.getLogger()
 
 
 @final
-class CharmState(Object, StatusesStateProtocol):
+class CharmState(Object, AbstractStatusesState):
     """The Charm State object.
 
     This object represents the charm state, including the different relations

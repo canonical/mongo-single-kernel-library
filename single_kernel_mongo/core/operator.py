@@ -25,7 +25,10 @@ import charm_refresh
 import jinja2
 from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+    ManagerStatusProtocol,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
@@ -125,7 +128,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
 
     @property
     @abstractmethod
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[ManagerStatusProtocol | AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components reporting statuses."""
         ...
 
