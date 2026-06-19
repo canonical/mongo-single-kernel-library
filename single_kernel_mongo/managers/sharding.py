@@ -824,10 +824,14 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
         if not (mongos_hosts := self.state.app_peer_data.mongos_hosts):
             return
+        self.effectively_drain_shard_from_cluster(mongos_hosts)
 
+    def effectively_drain_shard_from_cluster(self, mongos_hosts: list[str]):
+        """Effectively drains the shard from the cluster."""
         self.wait_for_draining(mongos_hosts)
 
-        self.state.app_peer_data.mongos_hosts = []
+        if self.charm.unit.is_leader():
+            self.state.app_peer_data.mongos_hosts = []
 
         self.state.statuses.set(
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name

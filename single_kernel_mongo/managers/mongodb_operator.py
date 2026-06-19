@@ -1043,7 +1043,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     ShardStatuses.DRAINING_SHARD.value, scope="unit"
                 )
                 mongos_hosts = self.state.shard_state.mongos_hosts
-                self.shard_manager.wait_for_draining(mongos_hosts)
+                self.shard_manager.effectively_drain_shard_from_cluster(mongos_hosts)
                 logger.info("Shard successfully drained storage.")
             return
 
