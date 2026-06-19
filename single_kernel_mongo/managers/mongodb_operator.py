@@ -1358,9 +1358,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def finalize_after_restart(self) -> None:
         """Run a series of code that should always run after a restart."""
         # After a restart we can always recompute the shard manager statuses.
-        self.charm.status_handler._recompute_statuses_for_scope(
-            scope="unit", manager=self.shard_manager
-        )
+        self.shard_manager.recompute_statuses_for_scope(scope="unit")
         self.shard_manager.reconcile_shard_after_restart()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:

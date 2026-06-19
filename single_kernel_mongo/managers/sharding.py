@@ -694,7 +694,13 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
         # Always try to restart, forced if the certs are updated.
         self.dependent.s3_backup_manager.configure_and_restart(force=must_restart)
 
-        self.state.statuses.set(ShardStatuses.ACTIVE_IDLE.value, scope="unit", component=self.name)
+    def recompute_statuses_for_scope(self, scope: Scope):
+        """Recomputes statuses for this scope."""
+        self.state.statuses.clear("unit", component=self.name)
+        statuses = self.get_statuses(scope, recompute=True)
+        logger.debug(f"Recomputed statuses for {scope=}: {statuses}")
+        for status in statuses:
+            self.state.statuses.add(status=status, scope=scope, component=self.name)
 
     def reconcile_shard_after_restart(self):
         """Reconcile shard state after a unit restart.
