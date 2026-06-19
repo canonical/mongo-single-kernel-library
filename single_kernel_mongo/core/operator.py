@@ -27,7 +27,6 @@ from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
     AbstractManagerStatus,
-    ManagerStatusProtocol,
 )
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
@@ -84,7 +83,11 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
+class OperatorProtocol(
+    AbstractManagerStatus[CharmState],
+    ABC,
+    Object,
+):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -128,7 +131,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
 
     @property
     @abstractmethod
-    def components(self) -> tuple[ManagerStatusProtocol | AbstractManagerStatus[CharmState], ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components reporting statuses."""
         ...
 

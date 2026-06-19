@@ -16,7 +16,9 @@ from typing import TYPE_CHECKING, final
 
 from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 from ops.model import Relation
@@ -75,7 +77,7 @@ logger = getLogger(__name__)
 
 
 @final
-class ConfigServerManager(Object, ManagerStatusProtocol):
+class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
     """Manage relations between the config server and the shard, on the config-server's side."""
 
     def __init__(
@@ -512,7 +514,8 @@ class ConfigServerManager(Object, ManagerStatusProtocol):
         return unreachable_hosts
 
 
-class ShardManager(Object, ManagerStatusProtocol):
+@final
+class ShardManager(Object, AbstractManagerStatus[CharmState]):
     """Manage relations between the config server and the shard, on the shard's side."""
 
     def __init__(

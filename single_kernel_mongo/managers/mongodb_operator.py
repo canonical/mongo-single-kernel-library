@@ -19,7 +19,6 @@ from charmlibs.rollingops import (
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
     AbstractManagerStatus,
-    ManagerStatusProtocol,
 )
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
@@ -486,7 +485,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @property
     @override
-    def components(self) -> tuple[ManagerStatusProtocol | AbstractManagerStatus[CharmState], ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (
             self,

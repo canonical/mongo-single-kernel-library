@@ -14,7 +14,9 @@ from typing import TYPE_CHECKING, final
 import charm_refresh
 from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
@@ -214,7 +216,7 @@ class MongosOperator(OperatorProtocol, Object):
         refresh.next_unit_allowed_to_refresh = True
 
     @property
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (self, self.tls_manager, self.ldap_manager, self.upgrades_status_manager)
 

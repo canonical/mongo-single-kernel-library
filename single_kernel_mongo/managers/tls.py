@@ -13,13 +13,13 @@ import base64
 import logging
 import re
 import socket
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, final
 
 from data_platform_helpers.advanced_statuses.models import (
     StatusObject,
 )
 from data_platform_helpers.advanced_statuses.protocol import (
-    ManagerStatusProtocol,
+    AbstractManagerStatus,
 )
 from data_platform_helpers.advanced_statuses.types import (
     Scope,
@@ -70,7 +70,8 @@ def _strip(x: str | None) -> str | None:
     return x.strip() if x else x
 
 
-class TLSManager(ManagerStatusProtocol):
+@final
+class TLSManager(AbstractManagerStatus[CharmState]):
     """Manager for building necessary files for mongodb."""
 
     def __init__(
