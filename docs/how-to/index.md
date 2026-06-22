@@ -14,7 +14,7 @@ Available deployment methods and operations to consider at deploy-time:
 
 Deploy <deploy/index>
 Manage persistent storage <manage-persistent-storage>
-````
+```
 
 ## Operations and maintenance
 
@@ -24,7 +24,7 @@ Essential operations to configure and manage a MongoDB cluster:
 :titlesonly:
 
 Scale replicas and shards <scale-replicas-and-shards>
-Enable cluster-wide rolling operations <enable-cluster-rolling-ops>
+Enable cluster-wide rolling ops <rolling-ops>
 Manage TLS encryption <tls/index>
 ````
 
