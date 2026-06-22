@@ -317,7 +317,7 @@ html_css_files = [
 
 html_js_files = [
     "https://assets.ubuntu.com/v1/287a5e8f-bundle.js",
-    "js/overwrite_links.js"
+    "overwrite_links.js"
 ]
 
 
