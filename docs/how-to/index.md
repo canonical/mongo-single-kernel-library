@@ -24,7 +24,7 @@ Essential operations to configure and manage a MongoDB cluster:
 :titlesonly:
 
 Scale replicas and shards <scale-replicas-and-shards>
-Enable cluster-wide rolling operations <enable-cluster-rolling-ops>
+Enable cluster-wide rolling operations <enable-cluster-rollingops>
 Manage TLS encryption <tls/index>
 ````
 
