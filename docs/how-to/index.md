@@ -14,7 +14,7 @@ Available deployment methods and operations to consider at deploy-time:
 
 Deploy <deploy/index>
 Manage persistent storage <manage-persistent-storage>
-````
+```
 
 ## Operations and maintenance
 
