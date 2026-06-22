@@ -1,4 +1,4 @@
-(enable-cluster-rollingops)=
+(enable-cluster-rolling-ops)=
 # Enable cluster-wide rolling operations
 
 By default, Charmed MongoDB coordinates rolling operations only within each application.
