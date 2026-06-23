@@ -14,7 +14,7 @@ Available deployment methods and operations to consider at deploy-time:
 
 Deploy <deploy/index>
 Manage persistent storage <manage-persistent-storage>
-````
+```
 
 ## Operations and maintenance
 
@@ -26,7 +26,7 @@ Essential operations to configure and manage a MongoDB cluster:
 Scale replicas and shards <scale-replicas-and-shards>
 Enable cluster-wide rolling operations <enable-cluster-rolling-ops>
 Manage TLS encryption <tls/index>
-````
+```
 
 Connect to an application and manage user credentials and authentication:
 
@@ -36,7 +36,7 @@ Connect to an application and manage user credentials and authentication:
 Manage client connections <manage-client-connections>
 Manage passwords <manage-passwords>
 Enable LDAP <enable-ldap>
-````
+```
 
 ### Back up and restore
 
