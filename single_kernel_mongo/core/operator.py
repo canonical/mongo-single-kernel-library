@@ -25,7 +25,9 @@ import charm_refresh
 import jinja2
 from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
@@ -81,7 +83,11 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
+class OperatorProtocol(
+    AbstractManagerStatus[CharmState],
+    ABC,
+    Object,
+):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -125,7 +131,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
 
     @property
     @abstractmethod
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components reporting statuses."""
         ...
 
@@ -417,7 +423,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
-            raise Exception("Waiting for leader unit to generate keyfile contents")
+            raise Exception("Waiting to have a keyfile.")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
 

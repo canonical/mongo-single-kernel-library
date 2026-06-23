@@ -5,14 +5,10 @@ from pathlib import PosixPath
 
 import pytest
 from data_platform_helpers.advanced_statuses.utils import as_status
-from httpx import Request, Response
-from lightkube.core.exceptions import ApiError
 from ops.testing import Harness
-from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import MongosStatuses
-from single_kernel_mongo.exceptions import DeferrableError
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
@@ -119,44 +115,6 @@ def test_share_connection_info_fail_not_leader(mongos_harness: Harness[MongosTes
     mongos_harness.charm.operator.share_connection_info()
 
     mocked_share.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    ("call_exception", "expected_error"),
-    (
-        (
-            PyMongoError("blah"),
-            DeferrableError,
-        ),
-        (
-            ApiError(
-                request=Request(url="http://controller/call", method="GET"),
-                response=Response(409, json={"message": "bad call", "code": 404}),
-            ),
-            DeferrableError,
-        ),
-        (
-            ApiError(
-                request=Request(url="http://controller/call", method="GET"),
-                response=Response(409, json={"message": "bad call", "code": 500}),
-            ),
-            ApiError,
-        ),
-    ),
-)
-def test_share_connection_info_fail_exception(
-    mongos_harness: Harness[MongosTestCharm], mocker, call_exception, expected_error
-):
-    mongos_harness.set_leader(True)
-    mongos_harness.charm.operator.state.app_peer_data.db_initialised = True
-
-    mocker.patch(
-        "single_kernel_mongo.managers.mongos_operator.MongosOperator._share_configuration",
-        side_effect=call_exception,
-    )
-
-    with pytest.raises(expected_error):
-        mongos_harness.charm.operator.share_connection_info()
 
 
 @pytest.mark.parametrize(

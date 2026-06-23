@@ -4,7 +4,9 @@ import logging
 
 import charm_refresh
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase, WaitingStatus
 
@@ -18,7 +20,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 logger = logging.getLogger()
 
 
-class MongoDBUpgradesStatusManager(ManagerStatusProtocol):
+class MongoDBUpgradesStatusManager(AbstractManagerStatus[CharmState]):
     """Manage upgrades statuses but nothing else."""
 
     name: str = "upgrades"

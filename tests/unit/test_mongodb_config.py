@@ -15,10 +15,13 @@ def test_configuration_ok():
     config = MongoConfigurationFactory.build()
     assert config.formatted_hosts == {"127.0.0.1:27017"}
     assert config.formatted_replset == {"replicaSet": "cafebabe"}
-    assert config.formatted_auth_source == {"authSource": "admin"}
+    assert config.formatted_auth_source == {
+        "authSource": "admin",
+        "authMechanism": "SCRAM-SHA-256",
+    }
 
     assert config.uri == (
-        "mongodb://charmed-operator:deadbeef@127.0.0.1:27017/abadcafe?replicaSet=cafebabe&authSource=admin"
+        "mongodb://charmed-operator:deadbeef@127.0.0.1:27017/abadcafe?replicaSet=cafebabe&authMechanism=SCRAM-SHA-256&authSource=admin"
     )
 
     assert config.supported_roles == []
@@ -55,10 +58,13 @@ def test_valid_formatted():
     config = MongoConfigurationFactory.build(database="admin", replset=None, port=None)
 
     assert config.formatted_replset == {}
-    assert config.formatted_auth_source == {}
+    assert config.formatted_auth_source == {"authMechanism": "SCRAM-SHA-256"}
     assert config.formatted_hosts == {LOCALHOST}
 
 
 def test_standalone():
     config = MongoConfigurationFactory.build(standalone=True)
-    assert config.uri == "mongodb://charmed-operator:deadbeef@localhost:27017/?authSource=admin"
+    assert (
+        config.uri
+        == "mongodb://charmed-operator:deadbeef@localhost:27017/?authMechanism=SCRAM-SHA-256&authSource=admin"
+    )

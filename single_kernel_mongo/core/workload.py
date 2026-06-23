@@ -84,6 +84,11 @@ class MongoPaths:
         return Path(f"{self.conf_path}/external-ca.crt")
 
     @property
+    def config_server_ext_ca_file(self) -> Path:
+        """External connectivity CA file."""
+        return Path(f"{self.conf_path}/config-server-external-ca.crt")
+
+    @property
     def int_pem_file(self) -> Path:
         """Internal connectivity PEM file."""
         return Path(f"{self.conf_path}/internal-cert.pem")

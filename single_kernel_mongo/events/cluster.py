@@ -177,8 +177,10 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except RollingOpsNoRelationError as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.

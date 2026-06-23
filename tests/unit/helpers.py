@@ -16,7 +16,6 @@ class MongoConfigurationFactory(factory.Factory):
     password = "deadbeef"
     roles: set[str] = set()
     tls_enabled = False
-    tls_external_keyfile = Path("")
     tls_external_ca = Path("")
     port = MongoPorts.MONGODB_PORT
     replset = "cafebabe"

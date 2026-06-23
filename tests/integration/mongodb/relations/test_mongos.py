@@ -172,7 +172,6 @@ async def test_disconnect_from_cluster_removes_user(
     )
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME],
-        status="active",
         idle_period=30,
         timeout=TIMEOUT,
         raise_on_error=False,

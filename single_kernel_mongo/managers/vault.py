@@ -13,7 +13,9 @@ from typing import TYPE_CHECKING, Literal, final, override
 
 import hvac
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 
@@ -47,7 +49,7 @@ VAULT_CA_SUBJECT = "Vault Agent self signed CA"
 
 
 @final
-class VaultManager(Object, ManagerStatusProtocol):
+class VaultManager(Object, AbstractManagerStatus[CharmState]):
     """Manager for the vault relation and workload."""
 
     state: CharmState
