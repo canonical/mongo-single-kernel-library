@@ -69,7 +69,7 @@ juju deploy mongodb --channel=8/edge --config enable-encryption-at-rest=True
 ````{tab-item} K8s
 :sync: k8s
 ```shell
-juju deploy mongodb-k8s vault --channel=8/edge --trust --config enable-encryption-at-rest=True
+juju deploy mongodb-k8s --channel=8/edge --trust --config enable-encryption-at-rest=True
 ```
 ````
 `````

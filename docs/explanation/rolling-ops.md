@@ -1,4 +1,4 @@
-(rollingops)=
+(rolling-ops)=
 # Rolling operations
 
 Disruptive operations such as restarting or scaling down MongoDB units are performed in a
