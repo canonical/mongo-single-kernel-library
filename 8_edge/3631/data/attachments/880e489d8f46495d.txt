@@ -1,0 +1,85 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for MongoDB restart.
+  shard-two/1 [executing] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: Primary.
+  shard-two/1 [executing] active: 
+  shard-two/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: Primary.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.24   unsupported  02:45:05Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     8.0.10   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         8.0.10   active       3  mongodb                      1  no       
+shard-two         8.0.10   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.172.171.83   27017-27018/tcp  
+config-server/1      active    idle   1        10.172.171.182  27017-27018/tcp  Primary.
+config-server/2      active    idle   2        10.172.171.134  27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.172.171.138                   
+shard-one/0          active    idle   3        10.172.171.236  27017/tcp        Primary.
+shard-one/1*         active    idle   4        10.172.171.174  27017/tcp        
+shard-one/2          active    idle   5        10.172.171.103  27017/tcp        
+shard-two/0          active    idle   6        10.172.171.84   27017/tcp        Primary.
+shard-two/1*         active    idle   7        10.172.171.60   27017/tcp        Primary.
+shard-two/2          active    idle   8        10.172.171.238  27017/tcp        
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.172.171.83   juju-90bc92-0  ubuntu@24.04  github-runner  Running
+1        started  10.172.171.182  juju-90bc92-1  ubuntu@24.04  github-runner  Running
+2        started  10.172.171.134  juju-90bc92-2  ubuntu@24.04  github-runner  Running
+3        started  10.172.171.236  juju-90bc92-3  ubuntu@24.04  github-runner  Running
+4        started  10.172.171.174  juju-90bc92-4  ubuntu@24.04  github-runner  Running
+5        started  10.172.171.103  juju-90bc92-5  ubuntu@24.04  github-runner  Running
+6        started  10.172.171.84   juju-90bc92-6  ubuntu@24.04  github-runner  Running
+7        started  10.172.171.60   juju-90bc92-7  ubuntu@24.04  github-runner  Running
+8        started  10.172.171.238  juju-90bc92-8  ubuntu@24.04  github-runner  Running
+9        started  10.172.171.138  juju-90bc92-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:17:56 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:17:57 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-shard-two-1: 02:18:19 ERROR unit.shard-two/1.juju-log database-peers:10: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3e6a8f670a8fc31020d3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.172.171.238', 27017) server_type: RSSecondary, rtt: 0.0004553129999749217>, <ServerDescription ('10.172.171.60', 27017) server_type: RSOther, rtt: 0.0004703649999555637>, <ServerDescription ('10.172.171.84', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3d55439ae49f1395dbab'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 10518}")>]>
+unit-shard-two-1: 02:18:24 ERROR unit.shard-two/1.juju-log rollingops-peers:14: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3e6f85a874bba365c881, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.172.171.238', 27017) server_type: RSSecondary, rtt: 0.00047673500012024306>, <ServerDescription ('10.172.171.60', 27017) server_type: RSOther, rtt: 0.0004313469999033259>, <ServerDescription ('10.172.171.84', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3d55439ae49f1395dbab'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 5384}")>]>
+unit-shard-two-1: 02:18:29 ERROR unit.shard-two/1.juju-log status-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3e7422d835a48754b60c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.172.171.238', 27017) server_type: RSSecondary, rtt: 0.00046683100003974687>, <ServerDescription ('10.172.171.60', 27017) server_type: RSOther, rtt: 0.0004150730001128977>, <ServerDescription ('10.172.171.84', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3d55439ae49f1395dbab'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 462}")>]>
+unit-shard-two-1: 02:18:34 ERROR unit.shard-two/1.juju-log status-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3e793025530ea3c80e46, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.172.171.238', 27017) server_type: RSOther, rtt: 0.0004465199999685865>, <ServerDescription ('10.172.171.60', 27017) server_type: RSSecondary, rtt: 0.0041763849999369995>, <ServerDescription ('10.172.171.84', 27017) server_type: RSSecondary, rtt: 0.0006211820000316948>]>
+unit-shard-two-1: 02:18:40 ERROR unit.shard-two/1.juju-log status-peers:11: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3e7f597067cd00288e33, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.172.171.238', 27017) server_type: RSOther, rtt: 0.0020419630000105826>, <ServerDescription ('10.172.171.60', 27017) server_type: RSSecondary, rtt: 0.0008101450000594923>, <ServerDescription ('10.172.171.84', 27017) server_type: RSSecondary, rtt: 0.0010399799998594972>]>
+machine-9: 02:21:18 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-9: 02:21:18 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:41:42 ERROR unit.config-server/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7a2081a655b0 state=finished raised ClusterNotHealthyError>]
+unit-shard-one-1: 02:42:16 ERROR unit.shard-one/1.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7fc578411c40 state=finished raised ClusterNotHealthyError>]
+machine-6: 02:42:40 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+machine-6: 02:42:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [425282] "machine-6" cannot open api: unable to connect to API: dial tcp 10.172.171.30:17070: connect: network is unreachable
+machine-6: 02:42:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [425282] "machine-6" cannot open api: unable to connect to API: dial tcp 10.172.171.30:17070: connect: network is unreachable
+unit-shard-two-1: 02:42:49 ERROR unit.shard-two/1.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x7b60f326e0f0 state=finished raised ClusterNotHealthyError>]
+machine-6: 02:42:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [425282] "machine-6" cannot open api: unable to connect to API: dial tcp 10.172.171.30:17070: connect: network is unreachable
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
