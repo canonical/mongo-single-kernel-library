@@ -1,0 +1,120 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongodb-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Starting MongoDB.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.24   unsupported  02:23:34Z
+
+App                                Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+config-server                      7.0.34   active      2  mongodb                                    0  no       
+self-signed-certificates                    active      1  self-signed-certificates  latest/stable  264  no       
+self-signed-certificates-separate           active      1  self-signed-certificates  latest/stable  264  no       
+shard-one                          7.0.34   active      3  mongodb                                    1  no       
+shard-tree                         7.0.34   active      1  mongodb                                    3  no       
+shard-two                          7.0.34   active      1  mongodb                                    2  no       
+
+Unit                                  Workload  Agent      Machine  Public address  Ports            Message
+config-server/0                       active    executing  0        10.143.165.233  27017-27018/tcp  Primary.
+config-server/1*                      active    executing  1        10.143.165.106  27017-27018/tcp  
+self-signed-certificates-separate/0*  active    idle       7        10.143.165.12                    
+self-signed-certificates/0*           active    idle       6        10.143.165.104                   
+shard-one/0*                          blocked   idle       2        10.143.165.32   27017/tcp        Shard CA and config-server CA don't match.
+shard-one/1                           blocked   idle       3        10.143.165.155  27017/tcp        Shard CA and config-server CA don't match.
+shard-one/2                           blocked   idle       4        10.143.165.74   27017/tcp        Shard CA and config-server CA don't match.
+shard-tree/0*                         blocked   idle       8        10.143.165.210  27017/tcp        Missing relation to config-server.
+shard-two/0*                          blocked   idle       5        10.143.165.78   27017/tcp        Shard CA and config-server CA don't match.
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.143.165.233  juju-bb3800-0  ubuntu@24.04  github-runner  Running
+1        started  10.143.165.106  juju-bb3800-1  ubuntu@24.04  github-runner  Running
+2        started  10.143.165.32   juju-bb3800-2  ubuntu@24.04  github-runner  Running
+3        started  10.143.165.155  juju-bb3800-3  ubuntu@24.04  github-runner  Running
+4        started  10.143.165.74   juju-bb3800-4  ubuntu@24.04  github-runner  Running
+5        started  10.143.165.78   juju-bb3800-5  ubuntu@24.04  github-runner  Running
+6        started  10.143.165.104  juju-bb3800-6  ubuntu@22.04  github-runner  Running
+7        started  10.143.165.12   juju-bb3800-7  ubuntu@22.04  github-runner  Running
+8        started  10.143.165.210  juju-bb3800-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:45:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:45:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:45:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:45:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:45:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:45:49 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:45:49 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:45:51 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:45:51 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:46:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:46:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:46:36 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:46:36 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:46:38 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:46:38 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:46:39 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:46:39 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-2: 01:46:47 ERROR unit.shard-one/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-2: 01:46:47 ERROR unit.shard-one/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 01:46:49 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 01:46:49 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:46:59 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:46:59 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-6: 01:52:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:52:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:53:33 ERROR unit.config-server/0.juju-log certificates:12: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:53:34 ERROR unit.config-server/0.juju-log certificates:12: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-1: 01:53:34 ERROR unit.shard-one/1.juju-log certificates:13: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-1: 01:53:34 ERROR unit.config-server/1.juju-log certificates:12: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:53:34 ERROR unit.shard-one/0.juju-log certificates:13: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-2: 01:53:34 ERROR unit.shard-one/2.juju-log certificates:13: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-two-0: 01:53:34 ERROR unit.shard-two/0.juju-log certificates:14: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-1: 01:53:34 ERROR unit.config-server/1.juju-log certificates:12: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:53:35 ERROR unit.shard-one/0.juju-log certificates:13: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-1: 01:53:35 ERROR unit.shard-one/1.juju-log certificates:13: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 01:53:35 ERROR unit.shard-one/2.juju-log certificates:13: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-two-0: 01:53:35 ERROR unit.shard-two/0.juju-log certificates:14: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:56:27 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b394a5f13780550a1cd1c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b39437b4e3a7111aef8d8'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11218}")>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0005579770001986617>, <ServerDescription ('10.143.165.74', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3944b6c206a150587459'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12475}")>]>
+unit-shard-one-0: 01:56:31 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b394e5f13780550a1cd1d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b39437b4e3a7111aef8d8'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 7079}")>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0008248980000189476>, <ServerDescription ('10.143.165.74', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3944b6c206a150587459'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8339}")>]>
+unit-shard-one-0: 01:56:36 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b39525f13780550a1cd1e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b39437b4e3a7111aef8d8'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 3459}")>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0008389689999148686>, <ServerDescription ('10.143.165.74', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3944b6c206a150587459'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4214}")>]>
+unit-shard-one-0: 01:56:40 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b39575f13780550a1cd1f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0007728099999440019>, <ServerDescription ('10.143.165.74', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a3b3944b6c206a150587459'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 39}")>]>
+unit-shard-one-0: 01:56:44 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b395b5f13780550a1cd20, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: RSSecondary, rtt: 0.000853860999995959>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0005383780001011473>, <ServerDescription ('10.143.165.74', 27017) server_type: RSSecondary, rtt: 0.000707081999962611>]>
+unit-shard-one-0: 01:58:04 ERROR unit.shard-one/0.juju-log sharding:15: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b39ab00e4c8ecab0db6d5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: RSSecondary, rtt: 0.0004659790001824149>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.00043416199991952453>, <ServerDescription ('10.143.165.74', 27017) server_type: RSSecondary, rtt: 0.0007485739999992802>]>
+unit-shard-one-0: 01:58:08 ERROR unit.shard-one/0.juju-log sharding:15: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b39af00e4c8ecab0db6d6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: RSSecondary, rtt: 0.00045561399997495755>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0006839359998593864>, <ServerDescription ('10.143.165.74', 27017) server_type: RSSecondary, rtt: 0.0012981489999219775>]>
+machine-7: 02:01:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 02:01:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 02:06:38 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:06:38 ERROR unit.shard-one/2.juju-log certificates:17: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:06:38 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:06:38 ERROR unit.shard-one/2.juju-log certificates:17: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:07:09 ERROR unit.shard-one/0.juju-log database-peers:4: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3bccf6baa92265377240, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.143.165.155:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0007168049999108916>, <ServerDescription ('10.143.165.74', 27017) server_type: RSSecondary, rtt: 0.0006957939999665541>]>
+unit-shard-one-0: 02:07:12 ERROR unit.shard-one/0.juju-log status-peers:6: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a3b3bcfe679ebab22d78bbf, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.143.165.155', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.143.165.155:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.143.165.32', 27017) server_type: RSSecondary, rtt: 0.0006824339998274809>, <ServerDescription ('10.143.165.74', 27017) server_type: RSSecondary, rtt: 0.0004901059999156132>]>
+unit-shard-one-1: 02:07:19 ERROR unit.shard-one/1.juju-log certificates:17: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:07:19 ERROR unit.shard-one/1.juju-log certificates:17: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-self-signed-certificates-0: 02:12:53 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "af033487-a741-42c8-8920-697c8abb3800:r#12#config-server": settings af033487-a741-42c8-8920-697c8abb3800:r#12#config-server not found (not found)
+unit-config-server-1: 02:17:12 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:17:12 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-config-server-1: 02:17:12 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:17:12 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:19:56 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:20:11 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:20:15 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:20:15 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+machine-8: 02:21:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 02:21:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-tree-0: 02:22:11 ERROR unit.shard-tree/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:22:11 ERROR unit.shard-tree/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
