@@ -1,7 +1,7 @@
 (explanation)=
 # Explanation
 
-This section contains additional context about key concepts and the design behind Charmed MongoDB.
+This section contains some additional context about key concepts and the design behind Charmed MongoDB.
 
 ## Architecture and design
 
