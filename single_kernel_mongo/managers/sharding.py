@@ -842,6 +842,7 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
         self.state.statuses.set(
             ShardStatuses.SHARD_DRAINED.value, scope="unit", component=self.name
         )
+        self.cleanup_cluster_id()
 
     def _set_cluster_id(self):
         """Take the cluster ID from the shard state and set it in the charm state."""

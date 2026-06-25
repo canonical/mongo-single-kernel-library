@@ -27,6 +27,7 @@ from single_kernel_mongo.exceptions import (
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
+    RelationBrokenDuringScaleDownError,
     ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
@@ -234,7 +235,11 @@ class ShardEventHandler(Object):
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
+        except RelationBrokenDuringScaleDownError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
         except NonDeferrableFailedHookChecksError as e:
+            self.manager.cleanup_cluster_id()
             self.manager.state.statuses.set(
                 ShardStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="unit",
@@ -243,5 +248,3 @@ class ShardEventHandler(Object):
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             return
-
-        self.manager.cleanup_cluster_id()

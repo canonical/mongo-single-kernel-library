@@ -20,6 +20,7 @@ from single_kernel_mongo.exceptions import (
     WaitingForCertificatesError,
     WaitingForSecretsError,
 )
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import CharmedBackupUser, CharmedOperatorUser
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
@@ -208,8 +209,9 @@ def test_config_server_update_ca_secret(harness: Harness[MongoTestCharm]):
     harness.update_relation_data(
         rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
     )
+    manager.state.tls.set_secret(internal=True, label_name=SECRET_CA_LABEL, contents="newca")
 
-    manager.dependent.tls_manager._propagate_ca_secrets(internal=True, new_ca="newca")
+    manager.dependent.tls_manager._propagate_ca_secrets()
 
     assert manager.data_interface.as_dict(rel_id).get("int-ca-secret") == "newca"
 

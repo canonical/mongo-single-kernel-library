@@ -466,7 +466,14 @@ class ClusterRequirer(Object):
         self.async_update_mongos_and_restart()
 
     def remove_users_and_cleanup_mongo(self, relation: Relation) -> None:
-        """Proceeds on relation broken."""
+        """Proceeds on relation broken.
+
+        Raises:
+            DeferrableError
+            RelationBrokenDuringScaleDownError
+            DeferrableFailedHookChecksError
+            WorkloadServiceError
+        """
         self.dependent.assert_proceed_on_broken_event(relation)
         try:
             self.remove_users_for_k8s_routers(relation)

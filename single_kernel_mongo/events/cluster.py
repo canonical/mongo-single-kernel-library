@@ -23,7 +23,9 @@ from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -200,10 +202,10 @@ class ClusterMongosEventHandler(Object):
         """On relation broken event, we cleanup the users and mongos instance."""
         try:
             self.manager.remove_users_and_cleanup_mongo(event.relation)
-        except (DeferrableFailedHookChecksError, DeferrableError) as e:
+            self.manager.cleanup_cluster_id()
+        except (DeferrableFailedHookChecksError, DeferrableError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
-        except NonDeferrableFailedHookChecksError as e:
+        except RelationBrokenDuringScaleDownError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             return
-        self.manager.cleanup_cluster_id()

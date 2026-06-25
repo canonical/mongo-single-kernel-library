@@ -193,6 +193,10 @@ class NonDeferrableFailedHookChecksError(Exception):
     """Raised when we failed to pass hook checks and we should skip."""
 
 
+class RelationBrokenDuringScaleDownError(NonDeferrableFailedHookChecksError):
+    """Raised when relation-broken is emitted because this unit is scaling down."""
+
+
 class DeferrableError(Exception):
     """Raised for all deferrable errors."""
 

@@ -52,7 +52,7 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
 )
 from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1.systemd import (
@@ -242,7 +242,7 @@ class OperatorProtocol(
             )
 
         if self.state.is_scaling_down(relation.id):
-            raise NonDeferrableFailedHookChecksError(
+            raise RelationBrokenDuringScaleDownError(
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
 
