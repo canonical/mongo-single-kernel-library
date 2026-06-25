@@ -206,8 +206,18 @@ class TLSManager(AbstractManagerStatus[CharmState]):
             expected_pem
         )
 
-    def reconcile_tls_files(self) -> bool:
-        """Ensure TLS files on disk match the current TLS secret state."""
+    def reconcile_tls(self) -> bool:
+        """Reconcile TLS relation data and workload files with the current secret state.
+
+        - Propagate the stored CA secrets to related applications (if config-server
+          or replica set)
+        - Ensure the TLS files on disk are created, updated, or removed to match the
+          current TLS secrets.
+
+        Returns:
+            True if workload TLS files changed and services need a restart.
+        """
+        self._propagate_ca_secrets()
         need_restart = False
         for internal in (True, False):
             has_secrets = self._has_tls_secrets(internal)
@@ -244,7 +254,6 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         """Disable TLS for the given scope and clear related state.
 
         - Remove all TLS secrets for the chosen scope
-        - Propagate the removal of the CA secret to related relations
         - Request a restart of charm services.
 
         Args:
@@ -260,7 +269,6 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         self.state.tls.set_secret(internal, SECRET_CHAIN_LABEL, None)
         self.state.tls.set_secret(internal, SECRET_KEY_LABEL, None)
 
-        self._propagate_ca_secrets(internal, new_ca=None)
         self.dependent.async_restart_charm_services()
 
     def enable_tls(
@@ -270,7 +278,6 @@ class TLSManager(AbstractManagerStatus[CharmState]):
 
         - Validate that the received certificate matches the provided private key
         - Store the certificate data in state
-        - Propagate the CA secret to the appropriate relations
         - Requests workload restart.
 
         Args:
@@ -293,7 +300,6 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         self._set_certificate_secrets(
             internal=internal, provider_cert=provider_cert, private_key=private_key
         )
-        self._propagate_ca_secrets(internal, new_ca=provider_cert.ca.raw)
         self._request_charm_restart()
 
     def _request_charm_restart(self):
@@ -322,11 +328,6 @@ class TLSManager(AbstractManagerStatus[CharmState]):
             return
 
         self.dependent.async_restart_charm_services()
-
-        # TODO: this is not the correct place for this. Now restart is async
-        if self.state.is_role(MongoDBRoles.MONGOS):
-            # After restarting, we update the certificates for all clients.
-            self.dependent.share_connection_info()  # type: ignore[attr-defined]
 
     def delete_certificates_from_workload(self, internal: bool) -> None:
         """Deletes the certificates from the workload.
@@ -663,31 +664,28 @@ class TLSManager(AbstractManagerStatus[CharmState]):
                 self.state.client_data_interface.set_tls(relation.id, "False")
                 self.state.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
 
-    def _propagate_ca_secrets(self, internal: bool, new_ca: str | None) -> None:
+    def _propagate_ca_secrets(self) -> None:
         """Update CA secrets across cluster, config-server, and client relations.
 
         For peer TLS, updates the cluster and config-server relation.
         For client TLS, also updates client relation TLS state.
-
-        Args:
-            internal: True for peer CA propagation, False for client CA.
-            new_ca: The CA certificate content to set. If None, removes the CA secret
-                and disables TLS for the affected relations.
         """
-        cluster_databag_key = (
-            ClusterStateKeys.INT_CA_SECRET.value
-            if internal
-            else ClusterStateKeys.EXT_CA_SECRET.value
-        )
-        sharding_databag_key = (
-            AppShardingComponentKeys.INT_CA_SECRET.value
-            if internal
-            else AppShardingComponentKeys.EXT_CA_SECRET.value
-        )
-        self._propagate_ca_secret_as_config_server(
-            new_ca=new_ca,
-            cluster_databag_key=cluster_databag_key,
-            sharding_databag_key=sharding_databag_key,
-        )
-        if not internal:
-            self._propagate_client_ca_as_replicaset(new_ca=new_ca)
+        for internal in (True, False):
+            new_ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
+            cluster_databag_key = (
+                ClusterStateKeys.INT_CA_SECRET.value
+                if internal
+                else ClusterStateKeys.EXT_CA_SECRET.value
+            )
+            sharding_databag_key = (
+                AppShardingComponentKeys.INT_CA_SECRET.value
+                if internal
+                else AppShardingComponentKeys.EXT_CA_SECRET.value
+            )
+            self._propagate_ca_secret_as_config_server(
+                new_ca=new_ca,
+                cluster_databag_key=cluster_databag_key,
+                sharding_databag_key=sharding_databag_key,
+            )
+            if not internal:
+                self._propagate_client_ca_as_replicaset(new_ca=new_ca)

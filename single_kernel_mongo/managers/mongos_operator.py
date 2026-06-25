@@ -448,7 +448,7 @@ class MongosOperator(OperatorProtocol, Object):
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
             )
         try:
-            should_restart = self.tls_manager.reconcile_tls_files()
+            should_restart = self.tls_manager.reconcile_tls()
             force = force or should_restart
             self.charm.status_handler.set_running_status(
                 MongosStatuses.RESTARTING.value, scope="unit"
@@ -462,6 +462,11 @@ class MongosOperator(OperatorProtocol, Object):
                 component=self.name,
             )
             raise
+        self.finalize_after_restart()
+
+    def finalize_after_restart(self) -> None:
+        """Run a series of code that should always run after a restart."""
+        self.share_connection_info()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""

@@ -1342,7 +1342,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Encryption at rest may be degraded. Vault agent state: {state}. This must be fixed first."
             )
         try:
-            should_restart = self.tls_manager.reconcile_tls_files()
+            should_restart = self.tls_manager.reconcile_tls()
             self.charm.status_handler.set_running_status(
                 MongoDBStatuses.RESTARTING.value, scope="unit"
             )

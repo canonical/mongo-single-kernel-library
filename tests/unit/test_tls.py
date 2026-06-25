@@ -13,7 +13,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
 )
-from single_kernel_mongo.state.tls_state import SECRET_KEY_LABEL
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
@@ -744,6 +744,25 @@ def test_tls_config_changed(
     )
 
     spied.assert_called()
+
+
+def test_reconcile_tls_files_propagates_ca_secrets(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation("database", "client-app")
+        harness.update_relation_data(relation_id, "client-app", {"database": "client-db"})
+    manager.state.tls.set_secret(internal=True, label_name=SECRET_CA_LABEL, contents="int-ca")
+    manager.state.tls.set_secret(internal=False, label_name=SECRET_CA_LABEL, contents="ext-ca")
+
+    manager.reconcile_tls()
+
+    relation_data = harness.get_relation_data(relation_id, harness.charm.app.name)
+    assert relation_data["tls"] == "True"
+    assert relation_data["tls-ca"] == "ext-ca"
 
 
 def test_tls_config_changed_invalid_key(
