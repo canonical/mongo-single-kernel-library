@@ -1,0 +1,115 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-saad  concierge-lxd  test-ldap-k8s-cloud-95eh/default  3.6.24   unsupported  03:04:25Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.179  no       
+glauth-utils                       active      1  glauth-utils              latest/edge     50  10.152.183.104  no       
+postgresql-k8s            14.23    active      1  postgresql-k8s            14/stable      925  10.152.183.46   no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.99   no       
+traefik-k8s               2.11.49  active      1  traefik-k8s               latest/stable  333  10.152.183.200  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address     Ports  Message
+glauth-k8s/0*                active    idle   10.1.53.22         
+glauth-utils/0*              active    idle   10.1.53.16         
+postgresql-k8s/0*            active    idle   10.1.53.15         Primary
+self-signed-certificates/0*  active    idle   10.1.53.20         
+traefik-k8s/0*               active    idle   10.1.53.19         Serving at http://10.64.140.43
+
+Offer                  Application  Charm       Rev  Connected  Endpoint      Interface             Role
+ldap-cert-integration  glauth-k8s   glauth-k8s  56   0/0        send-ca-cert  certificate_transfer  provider
+ldap-integration       glauth-k8s   glauth-k8s  56   0/0        ldap          ldap                  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 02:43:08 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 02:43:37 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-traefik-k8s-0: 02:43:50 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:50 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:51 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:51 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:53 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:53 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:54 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:54 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:55 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:55 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:56 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 02:43:56 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-glauth-k8s-0: 02:43:59 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-saad...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Reset test-ldap-saad completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-saad to die...
+[31m[1mERROR   [0m juju.model:__init__.py:1388 Error in watcher
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 1379, in _all_watcher
+    old_obj, new_obj = self.state.apply_delta(entity)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 287, in apply_delta
+    entity = self.get_entity(delta.entity, delta.get_id())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 311, in get_entity
+    return entity_class(
+           ^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/action.py", line 11, in __init__
+    self._status = self.data["status"]
+                   ~~~~~~~~~^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-12315' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "365a1040-9db4-44a7-8197-03fe17c4c95d"')>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "365a1040-9db4-44a7-8197-03fe17c4c95d"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-95eh...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.24   unsupported  03:05:34Z
+
+SAAS                   Status      Store          URL
+ldap-cert-integration  terminated  concierge-lxd  admin/test-ldap-saad.ldap-cert-integration
+ldap-integration       terminated  concierge-lxd  admin/test-ldap-saad.ldap-integration
+
+App      Version  Status       Scale  Charm    Channel  Rev  Exposed  Message
+mongodb           maintenance      3  mongodb             0  no       Installing MongoDB...
+
+Unit        Workload     Agent      Machine  Public address  Ports  Message
+mongodb/0*  maintenance  executing  0        10.88.35.174           (install) Installing MongoDB...
+mongodb/1   waiting      executing  1        10.88.35.226           agent initialising
+mongodb/2   waiting      executing  2        10.88.35.179           agent initialising
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.88.35.174  juju-29bf68-0  ubuntu@22.04  github-runner  Running
+1        started  10.88.35.226  juju-29bf68-1  ubuntu@22.04  github-runner  Running
+2        started  10.88.35.179  juju-29bf68-2  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 03:04:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 03:04:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:05:19 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 03:05:19 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:05:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 03:05:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
