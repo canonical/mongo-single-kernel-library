@@ -7,9 +7,12 @@ set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: mongos.set-keyfile KEY
+Usage:
+  mongos.set-keyfile KEY
+  mongodb-server-sharded.get-keyfile | mongos.set-keyfile
 
-Set the MongoDB internal-authentication keyfile to KEY.
+Set the MongoDB internal-authentication keyfile from either the KEY argument or
+standard input.
 
 The same keyfile value must be shared by every member of the sharded cluster.
 Run this with sudo; the helper writes the keyfile as the snap_daemon user that
@@ -18,6 +21,7 @@ runs mongos.
 Example:
   key="$(sudo snap run mongodb-server-sharded.get-keyfile)"
   sudo snap run mongos.set-keyfile "$key"
+  sudo snap run mongodb-server-sharded.get-keyfile | sudo snap run mongos.set-keyfile
 EOF
 }
 
@@ -30,8 +34,8 @@ esac
 
 . "${SNAP}/keyfile-common.sh"
 
-if [ "$#" -ne 1 ]; then
-    echo "set-keyfile: expected exactly one KEY argument" >&2
+if [ "$#" -gt 1 ]; then
+    echo "set-keyfile: expected at most one KEY argument" >&2
     usage >&2
     exit 1
 fi
@@ -45,11 +49,14 @@ if [ "$(id -u)" = "0" ]; then
         "${SNAP}/set-keyfile.sh" "$@"
 fi
 
-if [ -z "$1" ]; then
-    echo "set-keyfile: KEY must not be empty" >&2
+if [ "$#" -eq 1 ]; then
+    printf '%s\n' "$1" | write_keyfile
+elif [ ! -t 0 ]; then
+    write_keyfile
+else
+    echo "set-keyfile: expected KEY argument or stdin" >&2
+    usage >&2
     exit 1
 fi
-
-printf '%s\n' "$1" | write_keyfile
 
 echo "Keyfile stored at ${KEYFILE}" >&2

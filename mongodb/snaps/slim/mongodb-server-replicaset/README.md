@@ -98,6 +98,13 @@ Set the keyfile from a shell value:
 sudo snap run mongodb-server-replicaset.set-keyfile "$key"
 ```
 
+You can also pipe the key directly between machines. For example, with Multipass
+VMs named `replica-1` and `replica-2`:
+
+```bash
+multipass exec replica-1 -- sudo snap run mongodb-server-replicaset.get-keyfile | multipass exec replica-2 -- sudo snap run mongodb-server-replicaset.set-keyfile
+```
+
 The stored keyfile is owned by `snap_daemon` and has `400` permissions.
 
 ## Getting command help

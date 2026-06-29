@@ -13,6 +13,7 @@ mongodb-artifacts/
 ├── README.md
 └── mongodb/
     ├── snaps/
+    |   ├── charmed/ # Snap for Charmed MongoDB Operator
     │   └── slim/
     │       ├── mongodb-server-replicaset/ # Snap for a MongoDB replica set deployment.
     │       └── mongodb-server-sharded/ # Snap for a full MongoDB sharded deployment that includes both `mongod` and `mongos`.

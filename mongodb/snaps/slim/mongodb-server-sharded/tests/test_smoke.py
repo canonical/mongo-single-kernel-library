@@ -60,6 +60,21 @@ def test_get_and_set_keyfile():
         stored.stdout == f"{explicit_key}\n"
     ), "set-keyfile did not store explicit key"
 
+    stdin_key = "test-keyfile-value-from-stdin"
+    subprocess.run(
+        ["sudo", "snap", "run", f"{name}.set-keyfile"],
+        check=True,
+        input=f"{stdin_key}\n",
+        text=True,
+    )
+    stored = subprocess.run(
+        f"sudo snap run {name}.get-keyfile".split(),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert stored.stdout == f"{stdin_key}\n", "set-keyfile did not store stdin key"
+
     subprocess.run(
         [
             "sudo",

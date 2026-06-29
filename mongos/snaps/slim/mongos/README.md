@@ -46,6 +46,13 @@ Set the keyfile in `mongos`:
 sudo snap run mongos.set-keyfile "$key"
 ```
 
+You can also pipe the key directly between machines. For example, with Multipass
+VMs named `config-server` and `mongos`:
+
+```bash
+multipass exec config-server -- sudo snap run mongodb-server-sharded.get-keyfile | multipass exec mongos -- sudo snap run mongos.set-keyfile
+```
+
 The keyfile is stored securely at `/var/snap/mongos/current/etc/mongodb-keyfile`.
 The `mongos.conf` already reference this keyfile, so it does not need to be set using the `mongos-args`.
 

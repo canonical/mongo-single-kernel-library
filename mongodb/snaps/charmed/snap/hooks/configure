@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -eux
+
+PBM_CONFIG_FILE="${SNAP_DATA}/etc/pbm/pbm_config.yaml"
+export PBM_MONGODB_URI="$(snapctl get pbm-uri)"
+
+# It is required that PBM have a config file to start, however using a config file is not
+# recommended since the config file shows sensitive information such as access + secret keys.
+"${SNAP}"/usr/bin/setpriv \
+    --clear-groups \
+    --reuid snap_daemon \
+    --regid snap_daemon -- \
+    bash -c 'echo "# this file is to be left empty. Changes in this file will be ignored." > "${SNAP_DATA}/etc/pbm/pbm_config.yaml"'
+

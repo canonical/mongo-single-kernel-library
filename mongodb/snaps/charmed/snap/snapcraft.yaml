@@ -1,0 +1,211 @@
+name: charmed-mongodb
+title: Charmed MongoDB
+base: core24 # the base snap is the execution environment for this snap
+version: "8.0.10-4" # just for humans, typically '1.2+git' or '1.3.2'
+summary: MongoDB in a snap. # 79 char long summary
+description: |
+  MongoDB is a source-available cross-platform
+  document-oriented database program. Classified
+  as a NoSQL database program, MongoDB uses JSON
+  -like documents with optional schemas.
+
+license: Apache-2.0
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict
+platforms:
+  amd64:
+  arm64:
+
+website: https://github.com/canonical/charmed-mongodb-snap
+contact: https://github.com/canonical/charmed-mongodb-snap/issues/new
+issues: https://github.com/canonical/charmed-mongodb-snap/issues/new
+
+system-usernames:
+  snap_daemon: shared
+
+hooks:
+  post-refresh:
+    plugs:
+      - network
+      - network-bind
+  install:
+    plugs:
+      - network
+      - network-bind
+  configure:
+    plugs:
+      - network
+      - network-bind
+
+package-repositories:
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: https://ppa.launchpadcontent.net/data-platform/charmed-mongodb-8/ubuntu
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: |
+        https://ppa.launchpadcontent.net/data-platform/percona-backup-mongodb/ubuntu
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: |
+        https://ppa.launchpadcontent.net/data-platform/mongodb-exporter/ubuntu
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 6676E3F1A76ADBE4488944BF7D1A96D4BF78C79E
+    url: |
+        https://ppa.launchpadcontent.net/data-platform/mongodb-shell/ubuntu
+
+slots:
+  logs:
+    interface: content
+    source:
+      read:
+        - $SNAP_COMMON/var/log/mongodb
+        - $SNAP_COMMON/var/log/mongos
+        - $SNAP_COMMON/var/log/pbm
+
+environment:
+  LDAPCONF: $SNAP_DATA/etc/ldap/ldap.conf
+
+apps:
+  mongosh:
+    command: drop_priv.sh mongosh
+    plugs:
+      - network
+  mongobridge:
+    command: drop_priv.sh mongobridge
+  mongod:
+    command: start-mongod.sh
+    daemon: simple
+    install-mode: disable
+    restart-condition: always
+    restart-delay: 20s
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  mongodump:
+    command: drop_priv.sh mongodump
+    plugs:
+      - network
+      - network-bind
+  mongod-cli:
+    command: drop_priv.sh mongod
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  mongoexport:
+    command: drop_priv.sh mongoexport
+  mongofiles:
+    command: drop_priv.sh mongofiles
+  mongoimport:
+    command: drop_priv.sh mongoimport
+  mongorestore:
+    command: drop_priv.sh mongorestore
+    plugs:
+      - network
+      - network-bind
+  mongos:
+    daemon: simple
+    install-mode: disable
+    command: start-mongos.sh
+    restart-condition: always
+    restart-delay: 20s
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  mongostat:
+    command: drop_priv.sh mongostat
+  mongotop:
+    command: drop_priv.sh mongotop
+  mongodb-exporter:
+    daemon: simple
+    install-mode: disable
+    # wrapper is used to run mongodb-exporter as snap_daemon user
+    # and pass the URI via `snapctl`.
+    command: start-mongodb-exporter.sh
+    restart-condition: always
+    restart-delay: 20s
+    plugs:
+      - network
+      - network-bind
+  pbm:
+    # pbm cli uses an environment variable for the URI which is set
+    # by `snapctl.` According to the snap docs the recommended way
+    # to access thi is via a wrapper script
+    command: drop_priv.sh pbm
+    plugs:
+      - network
+      - network-bind
+  pbm-agent:
+    daemon: simple
+    install-mode: disable
+    # pbm-agent requires a variable for the mongodb uri,
+    # environment variables are not available to snap daemons,
+    # so they must be passed/loaded via `snapctl`. Handling of
+    # this variable is done via a wrapper
+    command: start-pbm-agent.sh
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+  vault-agent:
+    daemon: simple
+    install-mode: disable
+    command: start-vault-agent.sh
+    plugs:
+      - network
+      - network-bind
+    slots:
+      - logs
+parts:
+  mongo-deb:
+    plugin: nil
+    stage-packages:
+      - percona-server-mongodb
+      - percona-backup-mongodb
+      - util-linux
+      - libldap-common
+      - mongodb-exporter
+      - libc6
+      - libgssapi-krb5-2
+      - mongodb-shell
+    stage-snaps:
+      - yq
+      - vault
+    override-prime: |
+      craftctl default
+      LICENSE_LOC=usr/share/doc/percona-server-mongodb
+      zcat $CRAFT_PRIME/$LICENSE_LOC/LICENSE-Community.txt.gz \
+        > $CRAFT_PRIME/licenses/LICENSE-percona-server
+    organize:
+      usr/share/doc/percona-backup-mongodb/copyright:
+        licenses/LICENSE-percona-backup-mongodb
+      usr/share/doc/mongodb-exporter/copyright:
+        licenses/LICENSE-mongodb-exporter
+      usr/share/doc/mongodb-shell/copyright:
+        licenses/LICENSE-mongodb-shell
+  wrapper:
+    plugin: dump
+    source: snap/local
+  snap-license:
+    plugin: dump
+    source: .
+    source-type: local
+    stage:
+      - licenses/LICENSE-snap
+    organize:
+      LICENSE: licenses/LICENSE-snap
