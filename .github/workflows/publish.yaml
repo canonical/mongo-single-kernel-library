@@ -1,0 +1,92 @@
+name: Publish artifacts
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - 8-24.04/edge
+  workflow_dispatch:
+
+env:
+  # Store channel the rocks stage their snaps from. Each rock stages the snap
+  # of the same name, so the rock build below picks up the revision published
+  # in this same run, once it is live on the channel.
+  CHANNEL: 8/edge
+
+jobs:
+  discover-rocks:
+    uses: ./.github/workflows/rocks-discover.yaml
+
+  discover-snaps:
+    uses: ./.github/workflows/snaps-discover.yaml
+
+  # 1. Record the revision currently live on the store before publishing, for
+  #    every snap that has a matching rock (same name). The wait step uses this
+  #    to tell when the new revision has propagated.
+  snapshot-current-snap-revisions:
+    name: Snapshot current snap revisions
+    needs:
+      - discover-rocks
+      - discover-snaps
+    runs-on: ubuntu-latest
+    outputs:
+      current-revisions: ${{ steps.current-revisions.outputs.current-revisions }}
+    env:
+      ROCKS: ${{ needs.discover-rocks.outputs.rocks }}
+      SNAPS: ${{ needs.discover-snaps.outputs.snaps }}
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - id: current-revisions
+        run: .github/scripts/snapshot-current-snap-revisions.sh
+
+  # 2. Build and publish all snaps to the channel first.
+  publish-snaps:
+    name: Publish snaps
+    needs: snapshot-current-snap-revisions
+    uses: ./.github/workflows/snaps-publish.yaml
+    secrets: inherit
+    permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
+      contents: write  # Needed to create git tags
+
+
+  # 3. Wait until every snap that backs a rock has a newer revision live on the
+  #    channel, for every architecture the rocks are built for.
+  wait-for-snap-revision:
+    name: Wait for new snap revisions
+    needs:
+      - snapshot-current-snap-revisions
+      - publish-snaps
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CURRENT_REVISIONS: ${{ needs.snapshot-current-snap-revisions.outputs.current-revisions }}
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Poll store until newer revisions appear
+        run: .github/scripts/wait-for-snap-revisions.sh
+
+  # 4. Build, test, scan and publish the rocks. Publish only happens if build,
+  #    test and Trivy scan all pass (inside rocks-publish.yaml).
+  publish-rock:
+    name: Build, test and publish rocks
+    needs: wait-for-snap-revision
+    uses: ./.github/workflows/rocks-publish.yaml
+    secrets: inherit
+    permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
+      packages: write  # Needed to publish to GitHub Container Registry
+      contents: write  # Needed to create git tags

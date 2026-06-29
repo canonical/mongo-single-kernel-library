@@ -1,0 +1,133 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: mongodb-server-sharded # the name of your rock
+base: ubuntu@24.04 # the base environment for this rock
+version: "8.0.10-4" # just for humans. Semantic versioning is recommended
+summary: Sharded MongoDB server in a rock. # 79 char long summary
+description: |
+  Sharded MongoDB server packages a sharded MongoDB topology,
+  including mongod and mongos components and administration tools.
+license: Apache-2.0 # your application's SPDX license
+services:
+  mongod:
+    summary: Start mongod
+    override: replace
+    startup: enabled
+    command: "/bin/bash /bin/start-mongod.sh"
+  mongos:
+    summary: Start mongos
+    override: replace
+    # mongos is started on demand (e.g. "docker run <image> start mongos"),
+    # so the default container only runs mongod.
+    startup: disabled
+    command: "/bin/bash /bin/start-mongos.sh"
+
+run-user: _daemon_
+
+platforms: # The platforms this rock should be built on and run on
+  amd64:
+  arm64:
+
+parts:
+  mongo-snap:
+    plugin: nil
+    stage-snaps:
+      - mongodb-server-sharded/8/edge
+    stage-packages:
+      - libssh-4
+      - libbrotli1
+      # Provides openssl for keyfile generation/rotation
+      - openssl
+  non-root-user:
+    plugin: nil
+    after: [mongo-snap]
+    build-packages:
+      - yq
+    override-prime: |
+      craftctl default
+
+      conf="etc/mongod"
+      mongo_config_file="${conf}/mongod.conf"
+      mongos_config_file="${conf}/mongos.conf"
+
+      mkdir -p $CRAFT_PRIME/$conf
+      cp $CRAFT_STAGE/etc/mongod.conf "${mongo_config_file}"
+
+      # Common mongod base config
+      yq -i '.processManagement.fork = false' "${mongo_config_file}"
+      yq -i '.security.keyFile = "/etc/mongod/mongodb-keyfile"' \
+        "${mongo_config_file}"
+      # Set the security placeholder in the right place
+      sed -i '/^#security:$/d' "${mongo_config_file}"
+      sed -i '/^security:$/i #security:' "${mongo_config_file}"
+
+      # Derive mongos config from mongod config
+      cp "${mongo_config_file}" "${mongos_config_file}"
+
+      # mongos-specific changes
+      yq -i '.processManagement.pidFilePath = "/var/run/mongos.pid"' \
+        "${mongos_config_file}"
+      yq -i '.net.port = 27018' "${mongos_config_file}"
+      yq -i 'del(.storage)' "${mongos_config_file}"
+      yq -i '.systemLog.path = "/var/log/mongodb/mongos.log"' \
+        "${mongos_config_file}"
+
+      rm -f "$CRAFT_PRIME/etc/mongod.conf"
+
+      chown -R 584792:584792 "${conf}"
+
+      install -d -o 584792 -g 584792 -m 770 \
+        var/lib/mongodb \
+        var/log/mongodb \
+        etc/mongod \
+        run
+
+
+      # Data/log dirs are root-owned in the base; services run as _daemon_.
+      chown -R 584792:584792 \
+        "$CRAFT_PRIME/var/lib/mongodb" "$CRAFT_PRIME/var/log/mongodb"
+
+      # The PID files are stored in `/var/run`
+      mkdir -p "$CRAFT_PRIME/run"
+      chown 584792:584792 "$CRAFT_PRIME/run"
+
+      # enable security monitoring
+      rocks=usr/share/rocks/
+      mkdir -p ${rocks}
+
+      ## for deb packages
+      declare -a arr=()
+      arr+=('${db:Status-Abbrev},')
+      arr+=('${binary:Package},')
+      arr+=('${Version},')
+      arr+=('${source:Package},')
+      arr+=('${Source:Version}\n')
+
+      (echo "# os-release" && cat /etc/os-release) > ${rocks}/dpkg-query
+      dpkg-query -f "${arr[*]}" -W >> ${rocks}/dpkg.query
+
+      # for snap packages;
+      cp snap.mongodb-server-sharded/manifest.yaml ${rocks}
+      cp snap.mongodb-server-sharded/snapcraft.yaml ${rocks}
+
+  rock-license:
+    plugin: dump
+    source: licenses
+    organize:
+      LICENSE-rock: licenses/LICENSE-rock
+
+  entry:
+    plugin: dump
+    source: scripts
+    organize:
+      start-mongod.sh: bin/start-mongod.sh
+      start-mongos.sh: bin/start-mongos.sh
+      keyfile-common.sh: bin/keyfile-common.sh
+      get-keyfile.sh: bin/get-keyfile
+      set-keyfile.sh: bin/set-keyfile
+    stage:
+      - bin/start-mongod.sh
+      - bin/start-mongos.sh
+      - bin/keyfile-common.sh
+      - bin/get-keyfile
+      - bin/set-keyfile

@@ -16,7 +16,9 @@ mongodb-artifacts/
     │   └── slim/
     │       ├── mongodb-server-replicaset/ # Snap for a MongoDB replica set deployment.
     │       └── mongodb-server-sharded/ # Snap for a full MongoDB sharded deployment that includes both `mongod` and `mongos`.
-    └── rocks/  # future MongoDB rocks
+    └── rocks/
+        └── slim/
+            └── mongodb-server-sharded/ # Rock for a full MongoDB sharded deployment that includes both `mongod` and `mongos`.
 └── mongos/
     ├── snaps/
     │   └── slim/
@@ -26,7 +28,11 @@ mongodb-artifacts/
 
 ## Getting started
 
-To work on a specific snap, change into the appropriate subdirectory and use `snapcraft` to build it:
+This repository contains packaging artifacts for MongoDB in both Snap and Rock formats.
+To work on an artifact, clone the repository and change into the appropriate subdirectory.
+Each artifact includes its own `README.md` and `CONTRIBUTING.md` with build and usage instructions.
+
+Snaps (example):
 
 ```bash
 git clone https://github.com/canonical/mongodb-artifacts.git
@@ -34,13 +40,13 @@ cd mongodb-artifacts/mongodb/snaps/slim/<snap-name>
 snapcraft pack
 ```
 
-For development builds, install the generated snap with `--devmode`:
+Rocks (example):
 
 ```bash
-sudo snap install ./<snap-name>*.snap --devmode
+git clone https://github.com/canonical/mongodb-artifacts.git
+cd mongodb-artifacts/mongodb/rocks/slim/<rock-name>
+rockcraft pack
 ```
-
-Each snap also includes its own `README.md` and `CONTRIBUTING.md` with installation, usage, and build instructions.
 
 ## Project & Community
 

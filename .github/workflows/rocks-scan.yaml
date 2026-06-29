@@ -1,0 +1,104 @@
+name: Rock Trivy Security Scanner
+
+on:
+  workflow_call:
+    inputs:
+      rocks:
+        required: true
+        type: string
+      artifact-prefix:
+        default: packed-rock
+        required: false
+        type: string
+
+jobs:
+  scan:
+    name: Trivy scan | ${{ matrix.rock.name }} | ${{ matrix.platform }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(inputs.rocks) }}
+        platform:
+          - amd64
+          - arm64
+    permissions:
+      actions: read
+      contents: read
+      security-events: write  # Required for uploading Trivy SARIF results
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Prepare scan metadata
+        id: scan-metadata
+        env:
+          ARTIFACT_PREFIX: ${{ inputs.artifact-prefix }}
+          PLATFORM: ${{ matrix.platform }}
+          ROCK_NAME: ${{ matrix.rock.name }}
+        run: |
+          echo "artifact_pattern=${ARTIFACT_PREFIX}*${PLATFORM}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${PLATFORM}" >> "$GITHUB_OUTPUT"
+          echo "scan_suffix=${PLATFORM}" >> "$GITHUB_OUTPUT"
+
+      - name: Install required dependencies
+        run: |
+          sudo snap install rockcraft --classic --edge
+
+      - name: Download built rock
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ steps.scan-metadata.outputs.artifact_pattern }}
+          merge-multiple: true
+
+      - name: Import locally
+        run: |
+          ROCK_FILE=$(find . -type f -name '*.rock' | head -n1)
+          if [ -z "$ROCK_FILE" ]; then
+            echo 'No .rock package found in workspace'
+            exit 1
+          fi
+
+          NAME="${{ matrix.rock.name }}"
+          IMAGE_TAG="${{ steps.scan-metadata.outputs.image_tag }}"
+          IMAGE_REF="trivy/${NAME}:${IMAGE_TAG}"
+
+          sudo rockcraft.skopeo --insecure-policy \
+            copy \
+            "oci-archive:${ROCK_FILE}" \
+            "docker-daemon:${IMAGE_REF}"
+
+          echo "IMAGE_REF=${IMAGE_REF}" >> "$GITHUB_ENV"
+          echo "ROCK_NAME=${NAME}" >> "$GITHUB_ENV"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          format: sarif
+          output: trivy-results-${{ matrix.rock.name }}-${{ steps.scan-metadata.outputs.scan_suffix }}.sarif
+          severity: MEDIUM,HIGH,CRITICAL
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results-${{ matrix.rock.name }}-${{ steps.scan-metadata.outputs.scan_suffix }}.sarif
+
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: image
+          format: spdx-json
+          output: dependency-results-${{ matrix.rock.name }}-${{ steps.scan-metadata.outputs.scan_suffix }}.sbom.json
+          image-ref: ${{ env.IMAGE_REF }}
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          severity: MEDIUM,HIGH,CRITICAL
+          scanners: vuln
+
+      - name: Upload trivy report as a Github artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sbom-report-${{ matrix.rock.name }}-${{ steps.scan-metadata.outputs.scan_suffix }}
+          path: dependency-results-${{ matrix.rock.name }}-${{ steps.scan-metadata.outputs.scan_suffix }}.sbom.json
+          retention-days: 90

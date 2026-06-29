@@ -1,0 +1,110 @@
+summary: Full sharded cluster - config server, shard and mongos with keyfile auth
+
+execute: |
+  set -euo pipefail
+
+  IMAGE=mongodb-server-sharded:spreadtest
+  PREFIX="${SPREAD_TASK//\//_}"
+  NET="${PREFIX}-net"
+  CONFIG_SERVER="${PREFIX}-configsvr"
+  SHARD="${PREFIX}-shard1"
+  MONGOS="${PREFIX}-mongos"
+  CONFIG_SERVER_VOL="${PREFIX}-configsvr-data"
+  SHARD_VOL="${PREFIX}-shard1-data"
+  ADMIN_PWD="adminpassword"
+  URI="mongodb://admin:${ADMIN_PWD}@127.0.0.1:27018/admin"
+
+  # Block until the mongod/mongos in $1 answers ping. Remaining args are the
+  # mongosh connection target (e.g. "--port 27019" or a connection URI).
+  wait_ping() {
+    local container="$1"
+    # shift the connection args so "$@" is just the mongosh connection target
+    shift
+    for _ in $(seq 1 45); do
+      if docker exec "$container" mongosh "$@" --quiet \
+          --eval 'db.runCommand({ping: 1}).ok' | grep -qx 1; then
+        return 0
+      fi
+      sleep 2
+    done
+    echo "timed out waiting for $container"
+    return 1
+  }
+
+  # Block until the replica set member in $1 (on port $2) becomes primary.
+  wait_primary() {
+    for _ in $(seq 1 45); do
+      if docker exec "$1" mongosh --port "$2" --quiet \
+          --eval 'db.hello().isWritablePrimary' | grep -qx true; then
+        return 0
+      fi
+      sleep 2
+    done
+    echo "no primary elected on $1:$2"
+    return 1
+  }
+
+  echo "=== Setting up docker network ==="
+  docker network create "$NET"
+
+  echo "=== Starting config server ==="
+  docker run -d --name "$CONFIG_SERVER" --network "$NET" \
+    -v "$CONFIG_SERVER_VOL:/var/lib/mongodb" \
+    -e MONGOD_ARGS="--configsvr --replSet configrs --port 27019 --bind_ip 0.0.0.0" \
+    "$IMAGE"
+  wait_ping "$CONFIG_SERVER" --port 27019
+  mongod_state="$(docker exec "$CONFIG_SERVER" pebble services mongod | awk '$1 == "mongod" {print $3}')"
+  test "$mongod_state" = "active"
+  KEYFILE_CONTENT="$(docker exec "$CONFIG_SERVER" get-keyfile)"
+  docker exec "$CONFIG_SERVER" mongosh --port 27019 --quiet \
+    --eval "rs.initiate({_id: 'configrs', configsvr: true, members: [{_id: 0, host: '${CONFIG_SERVER}:27019'}]})"
+  wait_primary "$CONFIG_SERVER" 27019
+
+  echo "=== Creating admin user on config server ==="
+  docker exec "$CONFIG_SERVER" mongosh --port 27019 --quiet \
+    --eval "db.getSiblingDB('admin').createUser({user: 'admin', pwd: '${ADMIN_PWD}', roles: [{role: 'root', db: 'admin'}]})"
+
+  echo "=== Starting shard server ==="
+  docker run -d --name "$SHARD" --network "$NET" \
+    -v "$SHARD_VOL:/var/lib/mongodb" \
+    -e MONGOD_ARGS="--shardsvr --replSet shard1rs --port 27017 --bind_ip 0.0.0.0" \
+    "$IMAGE"
+  wait_ping "$SHARD" --port 27017
+  docker exec "$SHARD" set-keyfile "$KEYFILE_CONTENT"
+  docker restart "$SHARD"
+  wait_ping "$SHARD" --port 27017
+  mongod_state="$(docker exec "$SHARD" pebble services mongod | awk '$1 == "mongod" {print $3}')"
+  test "$mongod_state" = "active"
+  docker exec "$SHARD" mongosh --port 27017 --quiet \
+    --eval "rs.initiate({_id: 'shard1rs', members: [{_id: 0, host: '${SHARD}:27017'}]})"
+  wait_primary "$SHARD" 27017
+
+  echo "=== Starting mongos query router ==="
+  docker run -d --name "$MONGOS" --network "$NET" \
+    -e MONGOS_ARGS="--configdb configrs/${CONFIG_SERVER}:27019 --bind_ip 0.0.0.0" \
+    "$IMAGE" start mongos
+  docker exec "$MONGOS" set-keyfile "$KEYFILE_CONTENT"
+  docker restart "$MONGOS"
+  wait_ping "$MONGOS" "$URI"
+  mongod_state="$(docker exec "$MONGOS" pebble services mongos | awk '$1 == "mongos" {print $3}')"
+  test "$mongod_state" = "active"
+
+  echo "=== Adding shard and verifying cluster ==="
+  docker exec "$MONGOS" mongosh "$URI" --quiet \
+    --eval "sh.addShard('shard1rs/${SHARD}:27017').ok" | grep -qx 1
+  docker exec "$MONGOS" mongosh "$URI" --quiet --eval "sh.status()" | grep -q shard1rs
+
+  echo "=== Testing write and read through mongos ==="
+  docker exec "$MONGOS" mongosh "$URI" --quiet \
+    --eval "db.getSiblingDB('itest').items.insertOne({_id: 1, v: 'hello'})"
+  docker exec "$MONGOS" mongosh "$URI" --quiet \
+    --eval "db.getSiblingDB('itest').items.findOne({_id: 1}).v" | grep -q hello
+
+restore: |
+  set +u
+
+  PREFIX="${SPREAD_TASK//\//_}"
+
+  docker rm -f "${PREFIX}-mongos" "${PREFIX}-shard1" "${PREFIX}-configsvr" || true
+  docker volume rm "${PREFIX}-configsvr-data" "${PREFIX}-shard1-data" || true
+  docker network rm "${PREFIX}-net" || true

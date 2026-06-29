@@ -15,12 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install yq
+        run: sudo apt-get update && sudo apt-get install --yes yq
+
       - id: discover
         run: |
           snaps=$(
             find . -path '*/snap/snapcraft.yaml' \
-              | sed 's#/snap/snapcraft.yaml##' \
-              | jq -R '{path: ., name: (split("/")[-1])}' \
+              | while read -r snapcraft_file; do
+                  path="${snapcraft_file%/snap/snapcraft.yaml}"
+                  name=$(yq -r '.name' "$snapcraft_file")
+                  jq -n --arg path "$path" --arg name "$name" \
+                    '{path: $path, name: $name}'
+                done \
               | jq -cs .
           )
 

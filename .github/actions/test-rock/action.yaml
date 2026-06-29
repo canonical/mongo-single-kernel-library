@@ -1,0 +1,53 @@
+name: Test rock
+description: Set up Rockcraft and LXD, then run spread tests.
+
+inputs:
+  rock-name:
+    description: Rock name used for log artifact naming.
+    required: true
+  rock-path:
+    description: Path to the rock directory.
+    required: true
+  runner:
+    description: Runner label used for log artifact naming.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rockcraft
+      shell: bash
+      run: sudo snap install rockcraft --classic
+
+    - name: Set up LXD
+      uses: canonical/setup-lxd@v0.1.2
+
+    - name: Allow runner to use LXD
+      shell: bash
+      run: sudo usermod --append --groups lxd "$USER"
+
+    # `rockcraft test` packs the rock and runs the spread suites against it.
+    # Fail if no spread.yaml is found.
+    - name: Run spread tests
+      shell: bash
+      working-directory: ${{ inputs.rock-path }}
+      run: |
+        if [ ! -f spread.yaml ]; then
+          echo "No spread.yaml in ${{ inputs.rock-path }}; failing."
+          exit 1
+        fi
+        sg lxd -c "rockcraft test"
+
+    - name: Rockcraft logs
+      if: ${{ success() || failure() }}
+      shell: bash
+      run: cat ~/.local/state/rockcraft/log/* || true
+
+    - name: Upload Rockcraft logs
+      if: ${{ success() || failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: rockcraft-logs-${{ inputs.rock-name }}-${{ inputs.runner }}
+        path: ~/.local/state/rockcraft/log/*
+        if-no-files-found: ignore
+        retention-days: 14

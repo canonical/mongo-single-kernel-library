@@ -1,0 +1,87 @@
+name: Publish rocks to GHCR
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  discover-rocks:
+    uses: ./.github/workflows/rocks-discover.yaml
+
+  build:
+    name: Build rock | ${{ matrix.rock.name }}
+    needs: discover-rocks
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(needs.discover-rocks.outputs.rocks) }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v49.0.2
+    with:
+      path-to-rock-directory: ${{ matrix.rock.path }}
+      artifact-prefix: packed-rock-${{ matrix.rock.name }}
+    permissions:
+      actions: read # Needed for GitHub API call to get workflow version
+      contents: read
+
+  test:
+    name: Test rock | ${{ matrix.rock.name }} | ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    needs:
+      - discover-rocks
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(needs.discover-rocks.outputs.rocks) }}
+        runner:
+          - ubuntu-24.04       # amd64
+          - ubuntu-24.04-arm   # arm64
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test rock
+        uses: ./.github/actions/test-rock
+        with:
+          rock-name: ${{ matrix.rock.name }}
+          rock-path: ${{ matrix.rock.path }}
+          runner: ${{ matrix.runner }}
+
+  # The build job already uploaded the artifact so we can use it for the trivy scan
+  scan:
+    name: Trivy scan
+    needs:
+      - discover-rocks
+      - build
+      - test
+    uses: ./.github/workflows/rocks-scan.yaml
+    with:
+      rocks: ${{ needs.discover-rocks.outputs.rocks }}
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    secrets: inherit
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+  publish:
+    name: Publish rock  | ${{ matrix.rock.name }}
+    needs:
+      - discover-rocks
+      - build
+      - test
+      - scan
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(needs.discover-rocks.outputs.rocks) }}
+    uses: canonical/data-platform-workflows/.github/workflows/release_rock_edge.yaml@v49.0.2
+    with:
+      path-to-rock-directory: ${{ matrix.rock.path }}
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
+      packages: write  # Needed to publish to GitHub Container Registry
+      contents: write  # Needed to create git tags

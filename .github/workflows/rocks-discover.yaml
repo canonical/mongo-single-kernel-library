@@ -1,0 +1,34 @@
+name: Discover rocks
+
+on:
+  workflow_call:
+    outputs:
+      rocks:
+        description: "Discovered rock path/name list"
+        value: ${{ jobs.discover-rocks.outputs.rocks }}
+
+jobs:
+  discover-rocks:
+    runs-on: ubuntu-latest
+    outputs:
+      rocks: ${{ steps.discover.outputs.rocks }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install yq
+        run: sudo apt-get update && sudo apt-get install --yes yq
+
+      - id: discover
+        run: |
+          rocks=$(
+            find . -path '*/rockcraft.yaml' \
+              | while read -r rockcraft_file; do
+                  path="${rockcraft_file%/rockcraft.yaml}"
+                  name=$(yq -r '.name' "$rockcraft_file")
+                  jq -n --arg path "$path" --arg name "$name" \
+                    '{path: $path, name: $name}'
+                done \
+              | jq -cs .
+          )
+
+          echo "rocks=$rocks" >> "$GITHUB_OUTPUT"

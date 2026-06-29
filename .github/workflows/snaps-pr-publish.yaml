@@ -1,19 +1,16 @@
-name: Snap smoke tests
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+name: Snap test and publish to a branch on PR
 
 on:
-  pull_request:
   workflow_call:
-  workflow_dispatch:
+    secrets:
+      SNAP_STORE_TOKEN_EDGE:
+        required: true
 
 jobs:
   discover-snaps:
     uses: ./.github/workflows/snaps-discover.yaml
 
-  build:
+  build-snaps:
     name: Build snap | ${{ matrix.snap.name }}
     needs: discover-snaps
     strategy:
@@ -25,20 +22,22 @@ jobs:
       path-to-snap-project-directory: ${{ matrix.snap.path }}
       artifact-prefix: packed-snap-${{ matrix.snap.name }}
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
+      actions: read # Needed for GitHub API call to get workflow version
       contents: read
 
-  smoke:
+  test-snaps:
     name: Smoke tests | ${{ matrix.snap.name }}
     runs-on: ubuntu-latest
     needs:
       - discover-snaps
-      - build
+      - build-snaps
     strategy:
       fail-fast: false
       matrix:
         snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -56,5 +55,23 @@ jobs:
         working-directory: ${{ matrix.snap.path }}
         run: tox run -e smoke
 
+  publish-snaps:
+    name: Publish snap to PR branch | ${{ matrix.snap.name }}
+    needs:
+      - discover-snaps
+      - build-snaps
+      - test-snaps
+    strategy:
+      fail-fast: false
+      matrix:
+        snap: ${{ fromJSON(needs.discover-snaps.outputs.snaps) }}
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap_pr.yaml@v49.0.2
+    with:
+      track: 8
+      path-to-snap-project-directory: ${{ matrix.snap.path }}
+      artifact-prefix: packed-snap-${{ matrix.snap.name }}
+    secrets:
+      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
     permissions:
+      actions: read   # Needed for GitHub API call to get workflow version
       contents: read

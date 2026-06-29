@@ -1,0 +1,76 @@
+# Build and test rocks against snaps published from a pull request.
+# Each rock is retargeted to the PR snap channel, tested on amd64 and arm64,
+# uploaded as a packed-rock artifact, and scanned by Trivy before the workflow passes.
+# Example of the uploaded artifact: packed-rock-mongodb-server-sharded--platform-amd
+
+name: Rock tests on PR
+
+on:
+  workflow_call:
+    inputs:
+      snap-channel:
+        description: Snap Store channel the rocks should stage snaps from.
+        required: true
+        type: string
+
+jobs:
+  discover-rocks:
+    uses: ./.github/workflows/rocks-discover.yaml
+
+  test-rocks:
+    name: Build and test rock | ${{ matrix.rock.name }} | ${{ matrix.runner.label }}
+    runs-on: ${{ matrix.runner.label }}
+    needs: discover-rocks
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(needs.discover-rocks.outputs.rocks) }}
+        runner:
+          - label: ubuntu-24.04       # amd64
+            platform: amd64
+          - label: ubuntu-24.04-arm   # arm64
+            platform: arm64
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install yq
+        run: sudo apt-get update && sudo apt-get install --yes yq
+
+      - name: Point rock stage snaps at PR branch
+        env:
+          ROCK_NAME: ${{ matrix.rock.name }}
+          ROCKCRAFT_FILE: ${{ matrix.rock.path }}/rockcraft.yaml
+          SNAP_CHANNEL: ${{ inputs.snap-channel }}
+        run: .github/scripts/retarget-rock-stage-snaps.sh
+
+      - name: Test rock
+        uses: ./.github/actions/test-rock
+        with:
+          rock-name: ${{ matrix.rock.name }}
+          rock-path: ${{ matrix.rock.path }}
+          runner: ${{ matrix.runner.label }}
+
+      # The spread test builds the rock and we upload the artifact
+      - name: Upload rock for Trivy
+        uses: actions/upload-artifact@v4
+        with:
+          name: packed-rock-${{ matrix.rock.name }}--platform-${{ matrix.runner.platform }}
+          path: ${{ matrix.rock.path }}/*.rock
+          if-no-files-found: error
+
+  scan-rocks:
+    name: Trivy scan
+    needs:
+      - discover-rocks
+      - test-rocks
+    uses: ./.github/workflows/rocks-scan.yaml
+    with:
+      rocks: ${{ needs.discover-rocks.outputs.rocks }}
+    secrets: inherit
+    permissions:
+      actions: read
+      contents: read
+      security-events: write

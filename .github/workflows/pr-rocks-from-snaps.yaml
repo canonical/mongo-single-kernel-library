@@ -1,0 +1,83 @@
+name: Artifacts PR tests - Rocks from Snaps
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+
+env:
+  CHANNEL: 8/edge/pr-${{ github.event.pull_request.number }}
+
+jobs:
+  discover-rocks:
+    uses: ./.github/workflows/rocks-discover.yaml
+
+  discover-snaps:
+    uses: ./.github/workflows/snaps-discover.yaml
+
+  # 1. Record the revision currently live on the store for the given branch
+  snapshot-current-snap-revisions:
+    name: Snapshot current PR snap revisions
+    needs:
+      - discover-rocks
+      - discover-snaps
+    runs-on: ubuntu-latest
+    outputs:
+      current-revisions: ${{ steps.current-revisions.outputs.current-revisions }}
+    env:
+      ROCKS: ${{ needs.discover-rocks.outputs.rocks }}
+      SNAPS: ${{ needs.discover-snaps.outputs.snaps }}
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - id: current-revisions
+        run: .github/scripts/snapshot-current-snap-revisions.sh
+
+  # 2. Build and publish the snaps to a branch
+  publish-pr-snaps:
+    name: Publish snaps to PR branch
+    needs: snapshot-current-snap-revisions
+    uses: ./.github/workflows/snaps-pr-publish.yaml
+    secrets:
+      SNAP_STORE_TOKEN_EDGE: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    permissions:
+      actions: read
+      contents: read
+
+  # 3. Wait until the new revisions are available
+  wait-for-snap-revision:
+    name: Wait for PR snap revisions
+    needs:
+      - snapshot-current-snap-revisions
+      - publish-pr-snaps
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CURRENT_REVISIONS: ${{ needs.snapshot-current-snap-revisions.outputs.current-revisions }}
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Poll store until newer revisions appear
+        run: .github/scripts/wait-for-snap-revisions.sh
+
+  # 4. Build the rock using the snap in the branch and test it
+  test-pr-rocks:
+    name: Test rocks using PR snaps
+    needs: wait-for-snap-revision
+    uses: ./.github/workflows/rocks-pr-tests.yaml
+    with:
+      snap-channel: 8/edge/pr-${{ github.event.pull_request.number }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write

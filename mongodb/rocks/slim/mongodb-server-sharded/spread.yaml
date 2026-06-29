@@ -1,0 +1,32 @@
+project: mongodb-server-sharded
+
+backends:
+  craft:
+    type: craft
+    systems:
+      - ubuntu-24.04:
+
+suites:
+  spread/tests/:
+    summary: Sharded MongoDB rock integration tests
+
+    prepare: |
+      # For 'rockcraft.skopeo'
+      snap install rockcraft --classic --edge
+      snap install docker
+
+      # Wait for docker daemon to come online
+      apt install -y retry
+      retry --times=10 --delay 2 -- docker run hello-world
+
+      # Load the rock built by 'rockcraft test' into docker
+      rockcraft.skopeo --insecure-policy copy "oci-archive:$CRAFT_ARTIFACT" docker-daemon:mongodb-server-sharded:spreadtest
+    restore: |
+      docker image rm --force mongodb-server-sharded:spreadtest
+
+exclude:
+  - .git
+  - .tox
+  - mongodb-keyfile
+
+kill-timeout: 1h

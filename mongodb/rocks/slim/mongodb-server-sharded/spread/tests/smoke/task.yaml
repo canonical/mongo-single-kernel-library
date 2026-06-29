@@ -1,0 +1,64 @@
+summary: Smoke test - mongod starts, helper command and config are correct
+
+execute: |
+  set -euo pipefail
+
+  IMAGE=mongodb-server-sharded:spreadtest
+  CONTAINER="${SPREAD_TASK//\//_}"
+  KEY_CONSUMER="${CONTAINER}_key_consumer"
+
+  echo "=== Testing mongod and mongos PID and log file paths ==="
+  docker run --rm "$IMAGE" exec cat /etc/mongod/mongod.conf | grep -q '/var/run/mongod.pid'
+  docker run --rm "$IMAGE" exec cat /etc/mongod/mongod.conf | grep -q '/var/log/mongodb/mongod.log'
+  docker run --rm "$IMAGE" exec cat /etc/mongod/mongos.conf | grep -q '/var/run/mongos.pid'
+  docker run --rm "$IMAGE" exec cat /etc/mongod/mongos.conf | grep -q '/var/log/mongodb/mongos.log'
+
+  echo "=== Testing mongos binary availability ==="
+  docker run --rm "$IMAGE" exec mongos --version | grep -qi mongos
+
+  echo "=== Testing set-keyfile/get-keyfile round-trip ==="
+  # set-keyfile requires either an explicit key value or non-empty stdin.
+  if docker run --rm "$IMAGE" exec set-keyfile; then
+    echo "set-keyfile succeeded without a key"
+    exit 1
+  fi
+
+  # A default _daemon_ container runs mongod, which stays up and accepts connections.
+  echo "=== Testing mongod connectivity ==="
+  docker run -d --name "$CONTAINER" "$IMAGE"
+  ok=0
+  for _ in $(seq 1 30); do
+    if docker exec "$CONTAINER" mongosh --port 27017 --quiet \
+        --eval 'db.runCommand({ping: 1}).ok' | grep -qx 1; then
+      ok=1
+      break
+    fi
+    sleep 2
+  done
+  test "$ok" -eq 1
+
+  echo "=== Testing keyfile is auto-generated with correct ownership/mode ==="
+  permissions="$(docker exec "$CONTAINER" stat -c '%a %u %g' /etc/mongod/mongodb-keyfile)"
+  test "$permissions" = "400 584792 584792"
+
+  echo "=== Testing generated keyfile can be copied to another container ==="
+  keyfile_content="$(docker exec "$CONTAINER" get-keyfile)"
+  docker run -d --name "$KEY_CONSUMER" "$IMAGE"
+  docker exec "$CONTAINER" get-keyfile | docker exec -i "$KEY_CONSUMER" set-keyfile
+  stored="$(docker exec "$KEY_CONSUMER" get-keyfile)"
+  test "$stored" = "$keyfile_content"
+  permissions="$(docker exec "$KEY_CONSUMER" stat -c '%a %u %g' /etc/mongod/mongodb-keyfile)"
+  test "$permissions" = "400 584792 584792"
+
+  echo "=== Testing mongod service state ==="
+  mongod_state="$(docker exec "$CONTAINER" pebble services mongod | awk '$1 == "mongod" {print $3}')"
+  test "$mongod_state" = "active"
+
+  # mongos is the on-demand query router. In a default container it is defined
+  # but not started (it needs a config server, covered by the cluster test).
+  echo "=== Testing mongos service state ==="
+  mongos_state="$(docker exec "$CONTAINER" pebble services mongos | awk '$1 == "mongos" {print $3}')"
+  test "$mongos_state" = "inactive"
+
+restore: |
+  docker rm -f "${SPREAD_TASK//\//_}" "${SPREAD_TASK//\//_}_key_consumer" || true
