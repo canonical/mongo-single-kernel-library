@@ -1,0 +1,598 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:33:19Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server             8.0.10   active      2  mongodb-k8s                           0  10.152.183.82   no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.196  no       
+shard-one                 8.0.10   active      3  mongodb-k8s                           1  10.152.183.118  no       
+shard-two                 8.0.10   active      1  mongodb-k8s                           2  10.152.183.168  no       
+
+Unit                         Workload     Agent      Address     Ports  Message
+config-server/0*             blocked      idle       10.1.53.17         Shards: shard-two is unreachable.
+config-server/1              blocked      idle       10.1.53.21         Shards: shard-two is unreachable.
+self-signed-certificates/0*  active       idle       10.1.53.46         
+shard-one/0*                 active       idle       10.1.53.29         Primary.
+shard-one/1                  active       idle       10.1.53.36         
+shard-one/2                  active       idle       10.1.53.38         
+shard-two/0*                 maintenance  executing  10.1.53.45         Adding shard to config-server. Run `status-detail`: 0 action required; 1 additional statuses.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 02:16:58 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:16:58Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:16:58Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:48.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:16:58Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:16:58Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:16:58Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:48.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:16:58Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:16:58 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:17:08 ERROR unit.config-server/1.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:08Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:08Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:48.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:08Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:08Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:08Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:48.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:08Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:17:08 ERROR unit.config-server/1.juju-log single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:17:18 ERROR unit.config-server/1.juju-log rollingops-peers:1: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:18Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:18Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:09.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:12.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:18Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:18Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:18Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:15:53.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:15:58.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:03.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:09.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:12.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:18Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:17:18 ERROR unit.config-server/1.juju-log rollingops-peers:1: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-1: 02:17:26 ERROR unit.config-server/1.juju-log rollingops-peers:1: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:26Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:26Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:09.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:12.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:19.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:26.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:26Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-01T02:17:26Z INFO Service "pbm-agent" already stopped.
+----- Logs from task 1 -----
+2026-07-01T02:17:26Z INFO Most recent service output:
+    (...)
+    2026-07-01T02:16:08.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:13.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:18.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:23.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:28.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:33.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:38.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:43.000+0000 E [agentCheckup] check storage connection: unable to get storage: get config: get: mongo: no documents in result
+    2026-07-01T02:16:58.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:16:59.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:00.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:02.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:08.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:09.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:10.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:12.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:18.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:19.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+    2026-07-01T02:17:26.000+0000 E Exit: connect to PBM: create mongo connection: invalid connection string option: open /etc/mongod/external-ca.crt: no such file or directory
+2026-07-01T02:17:26Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-1: 02:17:26 ERROR unit.config-server/1.juju-log rollingops-peers:1: single_kernel_mongo.managers.config:Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-shard-two-0: 02:18:42 ERROR unit.shard-two/0.juju-log sharding:22: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-one-0: 02:18:51 ERROR unit.shard-one/0.juju-log sharding:21: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-config-server-0: 02:19:11 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872351, 1), \'signature\': {\'hash\': b\'4\\x890Y\\x0660\\x95\\xc8G\\x96\\xea\\xcf\\x93\\x95\\x10\\x08\\x11\\x86\\x1d\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872351, 1)}')
+unit-config-server-0: 02:19:19 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872358, 3), \'signature\': {\'hash\': b\'\\xdb\\xf0\\xb9\\x06\\xb3M\\xd5\\xb0^\\t\\x03\\x81\\xd7\\xf9\\xd8\\x84oUJ\\xf9\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872358, 3)}')
+unit-config-server-0: 02:19:20 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872358, 3), \'signature\': {\'hash\': b\'\\xdb\\xf0\\xb9\\x06\\xb3M\\xd5\\xb0^\\t\\x03\\x81\\xd7\\xf9\\xd8\\x84oUJ\\xf9\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872358, 3)}')
+unit-config-server-0: 02:19:27 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872366, 1), \'signature\': {\'hash\': b"\\x8a`\\xb0~\\xc8\\xd6\\xf4\\x90\\x8a\\xe6\\x04\\x81\'\\x19s\\r\\xd8\\x87\\n\\xfa", \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872366, 1)}')
+unit-config-server-0: 02:19:28 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872367, 1), \'signature\': {\'hash\': b\'#v\\xf0^\\x14\\x94\\xf2\\xe9\\x83`0\\xdf\\xa4z/<\\xb3\\x05j\\xb1\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872367, 1)}')
+unit-shard-two-0: 02:19:30 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:19:30Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-01T02:12:41.841Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:41.842Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:13:18.514Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:13:18.514Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:16:47.309Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:16:47.309Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:30.660Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:30.660Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:19:30Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:19:30Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-01T02:12:41.841Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:41.842Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:13:18.514Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:13:18.514Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:16:47.309Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:16:47.309Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:30.660Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:30.660Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:19:30Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-shard-one-0: 02:19:44 ERROR unit.shard-one/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:19:44Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-01T02:12:13.035Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:13.035Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:12:44.027Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:44.027Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:16:51.754Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:16:51.754Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:44.029Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:44.030Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:19:44Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:19:44Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-01T02:12:13.035Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:13.035Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:12:44.027Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:12:44.027Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:16:51.754Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:16:51.754Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:44.029Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:44.030Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:19:44Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:19:49 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872388, 3), \'signature\': {\'hash\': b\'q\\xfb\\xa8r\\x06XAj\\xef\\xf2\\xfe$\\xd7\\x08\\xa6\\xb0\\x05\\x04/~\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872388, 3)}')
+unit-config-server-0: 02:19:59 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872398, 3), \'signature\': {\'hash\': b\'\\xdb\\xcc\\x80[d\\x9fV\\xd5\\n\\x91 \\xeeWP\\x0c\\xad\\x96\\x15N\\xaa\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872398, 3)}')
+unit-config-server-0: 02:19:59 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872398, 3), \'signature\': {\'hash\': b\'\\xdb\\xcc\\x80[d\\x9fV\\xd5\\n\\x91 \\xeeWP\\x0c\\xad\\x96\\x15N\\xaa\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872398, 3)}')
+unit-config-server-0: 02:20:19 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872418, 3), \'signature\': {\'hash\': b\'\\x82:\\xff\\xe3\\x9fl\\xcc\\xf8\\t\\x18\\x02\\xd4S\\xd7D\\xfa\\x9cG\\xc5N\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872418, 3)}')
+unit-config-server-0: 02:20:20 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872418, 3), \'signature\': {\'hash\': b\'\\x82:\\xff\\xe3\\x9fl\\xcc\\xf8\\t\\x18\\x02\\xd4S\\xd7D\\xfa\\x9cG\\xc5N\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872418, 3)}')
+unit-config-server-0: 02:20:20 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=173de6db-1c45-4d61-8b90-06ae20ef46c7,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872418, 3), \'signature\': {\'hash\': b\'\\x82:\\xff\\xe3\\x9fl\\xcc\\xf8\\t\\x18\\x02\\xd4S\\xd7D\\xfa\\x9cG\\xc5N\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872418, 3)}')
+unit-shard-one-0: 02:20:33 ERROR unit.shard-one/0.juju-log database-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a447970492177c7f98f9d8b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006995799999458541>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4478bbbd52c61bfc64ed94'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14059}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.00043636500004140544>]>
+unit-shard-one-0: 02:20:38 ERROR unit.shard-one/0.juju-log database-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4479740994b6949507b607, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005931099999543221>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.00042076099998666905>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006898359999922832>]>
+unit-config-server-0: 02:20:39 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872438, 3), \'signature\': {\'hash\': b\'\\x17"\\xbdB3\\xb0q\\xb2\\xd2\\xd3\\xfc\\x199k\\x96,\\x1e\\xab\\xa1\\x8d\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872438, 3)}')
+unit-shard-one-0: 02:20:39 ERROR unit.shard-one/0.juju-log database-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4479760994b6949507b608, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0019443080000201007>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0021071219998702873>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0014311679999536864>]>
+unit-config-server-0: 02:21:02 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872461, 2), \'signature\': {\'hash\': b\'\\xc2o\\x91t\\xb4\\xc7\\xd2Ay\\xa0\\xab\\xd1\\xcc\\x8f\\x1ae\\xb1\\xccb\\x05\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872461, 2)}')
+unit-config-server-0: 02:21:21 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872480, 2), \'signature\': {\'hash\': b\'\\x1e"\\xf4\\xf4< rR\\xa0;\\\'\\x80=\\xdd\\xfc\\xefY\\xad?@\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872480, 2)}')
+unit-config-server-0: 02:21:40 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872499, 2), \'signature\': {\'hash\': b\'\\x15V=\\xe0V_\\x9c\\x12\\\\:\\xe3" \\x89\\xf0\\xd5{r\\xcfX\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872499, 2)}')
+unit-shard-two-0: 02:21:46 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:21:46Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:19:31.239Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:31.241Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:32.427Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:32.427Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:34.658Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:34.658Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:39.055Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:39.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:47.848Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:47.849Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:20:05.107Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:20:05.108Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:20:36.708Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:20:36.709Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:08.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:08.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:39.113Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:39.113Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:46.611Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:46.611Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:21:46Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:21:46Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:19:31.239Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:31.241Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:32.427Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:32.427Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:34.658Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:34.658Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:39.055Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:39.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:19:47.848Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:19:47.849Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:20:05.107Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:20:05.108Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:20:36.708Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:20:36.709Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:08.656Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:08.656Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:39.113Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:39.113Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:21:46.611Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:21:46.611Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:21:46Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:21:58 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872518, 2), \'signature\': {\'hash\': b\'c1\\xc9\\xc1\\xbc[\\xbd\\xb5\\x857v)\\xa7:\\xdf\\x07o1\\x93\\xc0\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872518, 2)}')
+unit-config-server-0: 02:22:24 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872544, 2), \'signature\': {\'hash\': b\'@\\x92_\\xfeJ\\x13\\xbc?\\x96\\x9f$0H\\xedy\\x9a\\xa1\\xb0<A\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872544, 2)}')
+unit-shard-two-0: 02:23:57 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:23:57Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:22:03.231Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:03.231Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:10.213Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:10.213Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:19.520Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:19.520Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:40.504Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:40.504Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:52.519Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:52.519Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:11.732Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:11.733Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:24.933Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:24.934Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:43.844Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:43.844Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:57.306Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:57.306Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:57.661Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:57.661Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:23:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:23:57Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:22:03.231Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:03.231Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:10.213Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:10.213Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:19.520Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:19.520Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:40.504Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:40.504Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:22:52.519Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:22:52.519Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:11.732Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:11.733Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:24.933Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:24.934Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:43.844Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:43.844Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:57.306Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:57.306Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:23:57.661Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:23:57.661Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:23:57Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:24:09 ERROR unit.config-server/0.juju-log status-peers:3: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872648, 2), \'signature\': {\'hash\': b\'\\x0f\\xf6\\xb0\\x03\\x86\\xad\\x9d\\x83\\xa6%[\\xc2|\\x95W\\x12#w[C\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872648, 2)}')
+unit-config-server-0: 02:24:27 ERROR unit.config-server/0.juju-log status-peers:3: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872666, 4), \'signature\': {\'hash\': b\'\\xca\\xda<\\xd7\\xc9\\xb08\\x9e\\x07\\x1b\\x13U]<\\x9f\\x9b\\x1f\\xa1u\\xdf\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872666, 4)}')
+unit-config-server-0: 02:26:57 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782872817, 1), \'signature\': {\'hash\': b\'\\x99q\\x9f\\xa3\\xad\\xb1x\\x84\\x99\\xe0\\xf8L\\x01\\xb0\\xbb\\x94JX\\x00\\x10\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782872817, 1)}')
+unit-shard-two-0: 02:28:14 ERROR unit.shard-two/0.juju-log single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:28:14Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:26:53.766Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:26:53.766Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:06.632Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:06.633Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:11.409Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:11.409Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:26.511Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:26.511Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:37.390Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:37.390Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:43.788Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:43.789Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:58.864Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:58.864Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:09.813Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:09.814Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:13.906Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:13.906Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:14.390Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:14.390Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:28:14Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2613, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-01T02:28:14Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-01T02:26:53.766Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:26:53.766Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:06.632Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:06.633Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:11.409Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:11.409Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:26.511Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:26.511Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:37.390Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:37.390Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:43.788Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:43.789Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:27:58.864Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:27:58.864Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:09.813Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:09.814Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:13.906Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:13.906Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-01T02:28:14.390Z"},"s":"W",  "c":"CONTROL",  "id":29117,   "ctx":"main","msg":"The storage.journal.enabled option and the corresponding --journal and --nojournal command-line options have no effect in this version of Percona Server for MongoDB. Journaling is always enabled. Please remove those options from the config","tags":["startupWarnings"]}
+    {"t":{"$date":"2026-07-01T02:28:14.390Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"main","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+2026-07-01T02:28:14Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:31:37 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1782873097, 1), \'signature\': {\'hash\': b\'\\x97*=4\\xb3G{_/\\xcf\\x92\\xfed$\\xde\\x12\\x01\\r\\xcb\\xe4\', \'keyId\': 7657376533522153496}}, \'operationTime\': Timestamp(1782873097, 1)}')
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
