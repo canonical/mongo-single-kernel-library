@@ -13,7 +13,14 @@ from platform import machine
 from shutil import copyfile
 
 from ops import Container
-from tenacity import retry, retry_if_exception_type, retry_if_result, stop_after_attempt, wait_fixed
+from tenacity import (
+    Retrying,
+    retry,
+    retry_if_exception_type,
+    retry_if_result,
+    stop_after_attempt,
+    wait_fixed,
+)
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -44,7 +51,9 @@ class VMWorkload(WorkloadBase):
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+            with attempt:
+                self.mongod_snap = snap.SnapCache()[SNAP_NAME]
 
     @property
     @override
