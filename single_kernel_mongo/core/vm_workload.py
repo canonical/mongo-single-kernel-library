@@ -51,7 +51,7 @@ class VMWorkload(WorkloadBase):
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(5)):
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(10)):
             with attempt:
                 self.mongod_snap = snap.SnapCache()[SNAP_NAME]
 
