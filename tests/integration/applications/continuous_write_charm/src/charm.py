@@ -208,10 +208,11 @@ class ContinuousWritesApplication(CharmBase):
     def _stop_continuous_writes(self, db_name: str, collection_name: str) -> int | None:
         """Stop continuous writes to the MongoDB cluster and return the last written value."""
         if not self._database_config:
-            logger.warning("No database configured.")
+            logger.warning("No database configured when stopping continuous writes.")
             return None
 
         if not self.app_peer_data.get(self.proc_id_key(db_name, collection_name)):
+            logger.warning("Missing proc id when stopping continuous writes.")
             return None
 
         # Send a SIGTERM to the process and wait for the process to exit
@@ -363,6 +364,7 @@ class ContinuousWritesApplication(CharmBase):
     def _on_stop_continuous_writes_action(self, event: ActionEvent) -> None:
         """Handle the stop continuous writes action event."""
         if not self._database_config:
+            logger.warning("No database configured when stopping continuous writes.")
             return event.set_results({"writes": -1})
 
         db_name = event.params.get("db-name") or DATABASE_NAME
