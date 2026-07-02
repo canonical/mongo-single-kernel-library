@@ -144,7 +144,7 @@ class BackupConfigManager(CommonConfigManager):
     def configure_and_restart(self, force: bool = False):
         """Sets up PBM with right configuration and restarts it."""
         if not self.workload.workload_present:
-            logger.info("PBM cannot be configured and restarted:Workload is not present.")
+            logger.info("PBM cannot be configured and restarted: Workload is not present.")
             return
         if not self.state.db_initialised:
             logger.info("PBM cannot be configured and restarted: DB is not initialised.")
@@ -155,7 +155,7 @@ class BackupConfigManager(CommonConfigManager):
             return
 
         if not self.state.get_user_password(CharmedBackupUser):
-            logger.info("PBM cannot be configured and restarted:No password found.")
+            logger.info("PBM cannot be configured and restarted: No password found.")
             return
 
         if (
