@@ -7,8 +7,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     REGULAR_ROLES,
     RoleNames,
 )
-
-from .helpers import MongoConfigurationFactory
+from tests.unit.helpers import MongoConfigurationFactory
 
 
 def test_configuration_ok():

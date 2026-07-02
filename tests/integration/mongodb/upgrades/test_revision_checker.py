@@ -5,10 +5,14 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.helpers.common import (
+    DEPLOYMENT_TIMEOUT,
+    TIMEOUT,
+    check_app_status,
+    deploy_charm,
+)
 from tests.integration.helpers.sharding import CONFIG_SERVER_REL_NAME, SHARD_REL_NAME
-
-from ...helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT, check_app_status, deploy_charm
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 LOCAL_SHARD_APP_NAME = "local-shard"
 REMOTE_SHARD_APP_NAME = "remote-shard"

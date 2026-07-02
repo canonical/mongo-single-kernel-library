@@ -7,9 +7,9 @@ from typing import Any
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import get_app_name
-from ..helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
-from ..helpers.types import Substrate
+from tests.integration.helpers.common import get_app_name
+from tests.integration.helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
+from tests.integration.helpers.types import Substrate
 
 ORIGINAL_RESTART_DELAY = 5
 

@@ -3,8 +3,7 @@ import pymongo
 import pytest
 
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
-
-from .helpers import MongoConfigurationFactory
+from tests.unit.helpers import MongoConfigurationFactory
 
 
 @pytest.fixture

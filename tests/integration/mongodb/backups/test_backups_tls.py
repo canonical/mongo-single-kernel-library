@@ -8,13 +8,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from ...helpers.backups import (
+from tests.integration.helpers.backups import (
     S3_APP_NAME,
     S3_ENDPOINT,
     count_logical_backups,
     insert_unwanted_data,
 )
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     UNIT_IDS,
@@ -25,7 +25,7 @@ from ...helpers.common import (
     get_app_name,
     is_relation_joined,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 

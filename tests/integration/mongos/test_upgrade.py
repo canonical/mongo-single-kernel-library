@@ -7,10 +7,15 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import MONGOS_APP_NAME, find_unit, get_juju_status, get_unit_id
-from ..helpers.mongos import build_cluster, deploy_cluster_components
-from ..helpers.types import Substrate
-from ..helpers.upgrade import refresh_charm
+from tests.integration.helpers.common import (
+    MONGOS_APP_NAME,
+    find_unit,
+    get_juju_status,
+    get_unit_id,
+)
+from tests.integration.helpers.mongos import build_cluster, deploy_cluster_components
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger()
 
