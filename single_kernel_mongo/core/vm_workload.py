@@ -53,6 +53,7 @@ class VMWorkload(WorkloadBase):
         super().__init__(role, container)
         for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(10)):
             with attempt:
+                logger.info(f"Attempting to load snap {SNAP_NAME}...")
                 self.mongod_snap = snap.SnapCache()[SNAP_NAME]
 
     @property
