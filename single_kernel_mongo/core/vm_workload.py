@@ -12,6 +12,7 @@ from pathlib import Path
 from platform import machine
 from shutil import copyfile
 
+import charmlibs.snap as snap
 from ops import Container
 from tenacity import (
     Retrying,
@@ -35,7 +36,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
 logger = getLogger(__name__)

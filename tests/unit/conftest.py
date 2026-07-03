@@ -7,10 +7,10 @@ import ops.testing
 import pytest
 import tomllib
 import yaml
+from charmlibs.snap import Snap, SnapState
 from ops.hookcmds import Network
 from ops.testing import Context, Harness
 
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
 from tests.integration.helpers.types import Substrate
 
 CONFIG = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/config.yaml").read_text()))
@@ -237,7 +237,7 @@ def mongod_ready(mocker):
 @pytest.fixture(autouse=True)
 def mock_snap_cache(mocker):
     mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapCache.__getitem__",
+        "charmlibs.snap.SnapCache.__getitem__",
         return_value=Snap(
             "charmed-mongodb",
             state=SnapState.Available,
@@ -258,7 +258,7 @@ def setup_secrets(harness: Harness) -> None:
 def short_mock_fs_interactions(mocker, substrate: Substrate) -> None:
     if substrate == "lxd":
         mocker.patch(
-            "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.present",
+            "charmlibs.snap.Snap.present",
             new_callable=mocker.PropertyMock,
             return_value=True,
         )
