@@ -1,0 +1,36 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] active: Primary.
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups:test_backups.py:441 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-07-04T02:20:25Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:20:30Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.24   no       
+mongodb-k8s       6.0.28   active      3  mongodb-k8s                      0  10.152.183.108  no       
+s3-integrator              active      1  s3-integrator     latest/edge  569  10.152.183.185  no       
+
+Unit                 Workload     Agent      Address       Ports  Message
+continuous-write/0*  active       idle       10.1.174.212         
+mongodb-k8s/0*       maintenance  idle       10.1.174.206         Backup started/running, backup id: '2026-07-04T02:20:25Z'
+mongodb-k8s/1        active       executing  10.1.174.210         
+mongodb-k8s/2        active       executing  10.1.174.208         
+s3-integrator/0*     active       idle       10.1.174.211         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-new-mongodb-aws-1: 02:10:38 ERROR unit.new-mongodb-aws/1.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a486b9d7ae1f5d56746e139, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-1.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.001948417000221525>]>
+unit-new-mongodb-aws-0: 02:10:38 ERROR unit.new-mongodb-aws/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a486b9d0215f22fb90a4f9a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('new-mongodb-aws-0.new-mongodb-aws-endpoints', 27017) server_type: RSGhost, rtt: 0.000759787999868422>]>
+unit-new-mongodb-gcp-0: 02:15:49 ERROR unit.new-mongodb-gcp/0.juju-log s3-credentials:17: cmd failed - cmd=/usr/bin//pbm config --set storage.type=gcs --set storage.gcs.credentials.hmacAccessKey=xxx --set storage.gcs.bucket=data-charms-testing --set storage.gcs.prefix=mongodb-k8s/2b16fbf5-e80a-4f11-a92c-275cdb2ae52d --set storage.gcs.credentials.hmacSecret=xxx, stdout=Error: another operation in progress, Resync storage/6a486cd5f3c6b8637a501556 [new-mongodb-gcp/new-mongodb-gcp-0.new-mongodb-gcp-endpoints:27017]
+, stderr=None
+unit-new-mongodb-gcp-0: 02:15:49 ERROR unit.new-mongodb-gcp/0.juju-log s3-credentials:17: Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/6a486cd5f3c6b8637a501556 [new-mongodb-gcp/new-mongodb-gcp-0.new-mongodb-gcp-endpoints:27017]\n', 'stderr': ''}
+controller-0: 02:19:26 ERROR juju.worker.caasapplicationprovisioner.runner exited "new-mongodb-gcp": cannot reconcile dead units in dying application: setting provisiong state for application "new-mongodb-gcp": application "new-mongodb-gcp" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
