@@ -203,6 +203,7 @@ class ContinuousWritesApplication(CharmBase):
         )
 
         # Store the continuous writes process id in stored state to be able to stop it later
+        logger.info(f"Storing process id {proc.pid} for {self.proc_id_key(db_name, collection_name)}")
         self.app_peer_data[self.proc_id_key(db_name, collection_name)] = str(proc.pid)
 
     def _stop_continuous_writes(self, db_name: str, collection_name: str) -> int | None:
@@ -217,6 +218,7 @@ class ContinuousWritesApplication(CharmBase):
 
         # Send a SIGTERM to the process and wait for the process to exit
         try:
+            logger.info("Sending SIGTERM to process %s", self.app_peer_data[self.proc_id_key(db_name, collection_name)])
             os.kill(
                 int(self.app_peer_data[self.proc_id_key(db_name, collection_name)]), signal.SIGTERM
             )
@@ -265,6 +267,7 @@ class ContinuousWritesApplication(CharmBase):
 
         # Store the continuous reads process id in stored state to be able to stop it later
         self.app_peer_data[self.read_proc_id_key(db_name, collection_name)] = str(proc.pid)
+        logger.info(f"Storing process id {proc.pid} for {self.read_proc_id_key(db_name, collection_name)}")
 
     def _stop_continuous_reads(self, db_name: str, collection_name: str) -> tuple[int | None, list[str]]:
         """Stop continuous reads to the MongoDB cluster and return the number of successful reads."""
@@ -278,6 +281,7 @@ class ContinuousWritesApplication(CharmBase):
 
         # Send a SIGTERM to the process and wait for the process to exit
         try:
+            logger.info("Sending SIGTERM to process %s", self.app_peer_data[self.read_proc_id_key(db_name, collection_name)])
             os.kill(
                 int(self.app_peer_data[self.read_proc_id_key(db_name, collection_name)]), signal.SIGTERM
             )
@@ -355,6 +359,7 @@ class ContinuousWritesApplication(CharmBase):
     def _on_start_continuous_writes_action(self, event) -> None:
         """Handle the start continuous writes action event."""
         if not self._database_config:
+            logger.warning("No database configured when starting continuous writes.")
             return
 
         db_name = event.params.get("db-name") or self.database_name
@@ -376,6 +381,7 @@ class ContinuousWritesApplication(CharmBase):
     def _on_start_continuous_reads_action(self, event) -> None:
         """Handle the start continuous reads action event."""
         if not self._database_config:
+            logger.warning("No database configured when starting continuous reads.")
             return
 
         db_name = event.params.get("db-name") or self.database_name
@@ -385,6 +391,7 @@ class ContinuousWritesApplication(CharmBase):
     def _on_stop_continuous_reads_action(self, event: ActionEvent) -> None:
         """Handle the stop continuous reads action event."""
         if not self._database_config:
+            logger.warning("No database configured when stopping continuous reads.")
             return event.set_results({"reads": -1, "failed-reads": []})
 
         db_name = event.params.get("db-name") or self.database_name
