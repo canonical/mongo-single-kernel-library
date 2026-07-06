@@ -91,6 +91,32 @@ def test_unit_peer_data(
     assert state.unit_peer_data.internal_address == mongodb_hostname
 
 
+def test_local_auth_restrictions_use_peer_database_addresses(
+    harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
+):
+    if substrate != "lxd":
+        pytest.skip("Auth restrictions are only applied on VMs.")
+
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/2")  # type: ignore
+    harness.charm.operator.state.unit_peer_data.database_address = "172.31.15.253"
+    harness.update_relation_data(
+        rel.id,  # type: ignore
+        f"{mongodb_name}/1",
+        {"database-address": "172.31.24.68"},
+    )
+    harness.update_relation_data(
+        rel.id,  # type: ignore
+        f"{mongodb_name}/2",
+        {"database-address": "172.31.47.55"},
+    )
+
+    assert harness.charm.operator.state.local_auth_restrictions[1]["clientSource"] == [
+        "172.31.0.0/16"
+    ]
+
+
 def test_mongodb_status_user(harness: Harness[MongoTestCharm]):
     harness.set_leader(True)
     state = harness.charm.operator.state
