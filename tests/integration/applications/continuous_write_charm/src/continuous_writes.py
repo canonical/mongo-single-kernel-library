@@ -46,6 +46,8 @@ def continous_writes(
     except:
         with open(last_written_filename(db_name, coll_name), "w") as fd:
             fd.write(str(-1))
+        with open("error.log", mode="a") as fd:
+            fd.write(f"{err}\n")
         return
 
     while run:
@@ -74,6 +76,10 @@ def continous_writes(
             with open("error.log", mode="a") as fd:
                 fd.write(f"{err}\n")
             continue
+        except Exception as err:
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
+            raise
         finally:
             client.close()
 
