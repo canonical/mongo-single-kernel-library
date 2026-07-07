@@ -927,6 +927,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
+            self.mongo_manager.reconcile_local_auth_restrictions()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(

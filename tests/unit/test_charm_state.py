@@ -113,7 +113,8 @@ def test_local_auth_restrictions_use_peer_database_addresses(
     )
 
     assert harness.charm.operator.state.local_auth_restrictions[1]["clientSource"] == [
-        "172.31.0.0/16"
+        "10.0.0.0/24",
+        "172.31.0.0/16",
     ]
 
 

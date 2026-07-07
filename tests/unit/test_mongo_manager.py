@@ -10,6 +10,7 @@ from single_kernel_mongo.utils.mongo_connection import NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
     CharmedBackupUser,
+    CharmedLogRotateUser,
     CharmedOperatorUser,
     CharmedStatsUser,
 )
@@ -83,11 +84,29 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
         config.supported_roles,
         auth_restrictions=[
             {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
-            {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
+            {"clientSource": ["10.0.0.0/24"], "serverAddress": ["10.0.0.0/24"]},
         ],
     )
 
     assert harness.charm.operator.state.app_peer_data.is_user_created(user.username)
+
+
+def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], mocker):
+    harness.set_leader(True)
+    state = harness.charm.operator.state
+    for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
+        state.app_peer_data.set_user_created(user.username)
+
+    mock_update = mocker.patch(
+        "single_kernel_mongo.utils.mongo_connection.MongoConnection.update_user_auth_restrictions",
+    )
+
+    harness.charm.operator.mongo_manager.reconcile_local_auth_restrictions()
+
+    assert mock_update.call_count == 3
+    for call in mock_update.call_args_list:
+        config = call.args[0]
+        assert config.auth_restrictions == state.local_auth_restrictions
 
 
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):

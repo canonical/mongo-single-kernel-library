@@ -88,7 +88,12 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     RoleNames,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, ip_addresses
+from single_kernel_mongo.utils.network_helpers import (
+    cidrs,
+    get_cidr_for_ip_list,
+    ip_addresses,
+    merge_cidrs,
+)
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -703,11 +708,28 @@ class CharmState(Object, AbstractStatusesState):
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
+        peer_client_sources = cidrs(self.peer_network().bind_addresses)
+
+        peer_database_addresses = [
+            unit.database_address for unit in self.units if unit.database_address
+        ]
+
+        if peer_database_addresses:
+            try:
+                peer_client_sources.append(get_cidr_for_ip_list(peer_database_addresses))
+            except ValueError:
+                logger.warning(
+                    "Failed to compute peer auth CIDR from peer database addresses: %s",
+                    peer_database_addresses,
+                )
+
+        peer_client_sources = merge_cidrs(peer_client_sources)
+
         return [
             AuthRestrictions(clientSource=[LOCALHOST], serverAddress=[LOCALHOST]),
             AuthRestrictions(
-                clientSource=cidrs(self.peer_network().bind_addresses),
-                serverAddress=cidrs(self.peer_network().bind_addresses),
+                clientSource=peer_client_sources,
+                serverAddress=peer_client_sources,
             ),
         ]
 
