@@ -1,0 +1,1264 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] maintenance: Adding shard to config-server...
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] maintenance: Adding shard to config-server...
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+  shard-two/1 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] maintenance: Draining shard shard-two...
+  config-server/1 [idle] active: Primary.
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.sharding:sharding.py:163 Expecting ['shard-one'], got {'shard-one'}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.25   unsupported  02:56:15Z
+
+App            Version  Status  Scale  Charm    Channel  Rev  Exposed  Message
+config-server  6.0.28   active      2  mongodb             0  no       
+shard-one      6.0.28   active      2  mongodb             1  no       
+shard-tree     6.0.28   active      2  mongodb             3  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0   active    idle   0        10.142.54.160   27017-27018/tcp  
+config-server/1*  active    idle   1        10.142.54.54    27017-27018/tcp  Primary.
+shard-one/0*      active    idle   2        10.142.54.252   27017/tcp        Primary.
+shard-one/1       active    idle   3        10.142.54.2     27017/tcp        
+shard-tree/0*     active    idle   6        10.142.54.4     27017/tcp        
+shard-tree/1      active    idle   7        10.142.54.235   27017/tcp        Primary.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.142.54.160  juju-d0b12f-0  ubuntu@22.04  github-runner  Running
+1        started  10.142.54.54   juju-d0b12f-1  ubuntu@22.04  github-runner  Running
+2        started  10.142.54.252  juju-d0b12f-2  ubuntu@22.04  github-runner  Running
+3        started  10.142.54.2    juju-d0b12f-3  ubuntu@22.04  github-runner  Running
+6        started  10.142.54.4    juju-d0b12f-6  ubuntu@22.04  github-runner  Running
+7        started  10.142.54.235  juju-d0b12f-7  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 01:54:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:54:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:54:14 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:54:14 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:54:26 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:54:26 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:54:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:54:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-two-1: 01:55:01 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 256, in define_workloads_and_config_managers
+    self.logrotate_config_manager = LogRotateConfigManager(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 171, in __init__
+    self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/log_rotate_workload.py", line 29, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-1: 01:55:02 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-1: 01:55:09 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-1: 01:55:10 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-0: 01:55:12 ERROR unit.shard-tree/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 01:55:13 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-1: 01:55:15 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:55:15 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 01:55:20 ERROR unit.shard-tree/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 256, in define_workloads_and_config_managers
+    self.logrotate_config_manager = LogRotateConfigManager(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 171, in __init__
+    self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/log_rotate_workload.py", line 29, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 01:55:21 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-1: 01:55:22 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-1: 01:55:22 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+machine-2: 01:55:29 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:55:29 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-tree-0: 01:55:33 ERROR unit.shard-tree/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 01:55:33 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-0: 01:55:36 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:55:36 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-0: 01:55:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:55:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:55:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:55:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-two-1: 01:55:45 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 240, in define_workloads_and_config_managers
+    self.mongos_workload = get_mongos_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongos_workload.py", line 26, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-1: 01:55:45 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-one-0: 01:55:48 ERROR unit.shard-one/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-one-0: 01:55:48 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-one-0: 01:55:55 ERROR unit.shard-one/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-one-0: 01:55:55 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:55:56 ERROR unit.config-server/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-0: 01:55:56 ERROR unit.shard-tree/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 256, in define_workloads_and_config_managers
+    self.logrotate_config_manager = LogRotateConfigManager(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 171, in __init__
+    self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/log_rotate_workload.py", line 29, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-config-server-0: 01:55:56 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-0: 01:55:56 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 01:55:57 ERROR unit.shard-tree/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-1: 01:55:58 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:56:02 ERROR unit.config-server/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-config-server-0: 01:56:03 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 01:56:04 ERROR unit.shard-tree/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-1: 01:56:04 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-one-0: 01:56:06 ERROR unit.shard-one/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-one-0: 01:56:07 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 01:56:13 ERROR unit.config-server/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 237, in define_workloads_and_config_managers
+    self.workload = get_mongodb_workload_for_substrate(self.substrate)(
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/mongodb_workload.py", line 25, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-config-server-0: 01:56:14 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-tree-1: 01:56:17 ERROR unit.shard-tree/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 263, in define_workloads_and_config_managers
+    self.mongodb_exporter_config_manager = MongoDBExporterConfigManager(
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 220, in __init__
+    self.workload = get_mongodb_exporter_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/monitor_workload.py", line 26, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-tree-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-tree-1: 01:56:17 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-two-1: 01:56:27 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 149, in __init__
+    self.define_workloads_and_config_managers(container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 256, in define_workloads_and_config_managers
+    self.logrotate_config_manager = LogRotateConfigManager(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 171, in __init__
+    self.workload: LogRotateWorkload = get_logrotate_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/log_rotate_workload.py", line 29, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-two-1: 01:56:27 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-shard-one-0: 01:56:31 ERROR unit.shard-one/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 957, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 525, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.10/urllib/request.py", line 634, in http_response
+    response = self.parent.error(
+  File "/usr/lib/python3.10/urllib/request.py", line 563, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.10/urllib/request.py", line 643, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1034, in __getitem__
+    snap = self._snap_map[snap_name] = self._load_info(snap_name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1083, in _load_info
+    info = self._snap_client.get_snap_information(name)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 983, in get_snap_information
+    return self._request("GET", "find", {"name": name})[0]  # type: ignore
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 909, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 969, in _request_raw
+    raise SnapAPIError(body, code, status, message) from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapAPIError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 164, in __init__
+    self.backup_manager = BackupManager(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/backups.py", line 149, in __init__
+    self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/workload/backup_workload.py", line 38, in __init__
+    super().__init__(role, container)
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 46, in __init__
+    self.mongod_snap = snap.SnapCache()[self.snap.name]
+  File "/var/lib/juju/agents/unit-shard-one-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/lib/charms/operator_libs_linux/v2/snap.py", line 1036, in __getitem__
+    raise SnapNotFoundError(f"Snap '{snap_name}' not found!") from e
+single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapNotFoundError: Snap 'charmed-mongodb' not found!
+unit-shard-one-0: 01:56:31 ERROR juju.worker.uniter.operation hook "mongodb-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+machine-3: 01:57:16 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:57:16 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-1: 01:58:12 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 01:58:12 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:58:13 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:58:13 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 01:58:19 ERROR unit.shard-two/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-1: 01:58:19 ERROR unit.shard-two/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 01:58:26 ERROR unit.shard-one/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 01:59:54 ERROR unit.shard-tree/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 01:59:54 ERROR unit.shard-tree/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:00:06 ERROR unit.shard-tree/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 02:00:06 ERROR unit.shard-tree/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-1: 02:00:06 ERROR unit.shard-tree/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:00:08 ERROR unit.shard-tree/1.juju-log ldap-peers:13: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:00:10 ERROR unit.shard-tree/1.juju-log ldap-peers:13: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:00:12 ERROR unit.shard-tree/1.juju-log upgrade-version-a:15: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:00:14 ERROR unit.shard-tree/1.juju-log status-peers:12: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-tree-1: 02:00:15 ERROR unit.shard-tree/1.juju-log upgrade-version-a:15: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 02:00:42 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 02:00:42 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 02:00:45 ERROR unit.shard-one/1.juju-log status-peers:4: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-1: 02:00:47 ERROR unit.shard-one/1.juju-log database-peers:6: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-1: 02:00:49 ERROR unit.shard-one/1.juju-log database-peers:6: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-1: 02:00:51 ERROR unit.shard-one/1.juju-log ldap-peers:5: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-two-0: 02:09:08 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fc30964d2e6412a2bd4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.142.54.201:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0008362849998775346>]>
+unit-shard-two-0: 02:09:13 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fc70964d2e6412a2bd5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0008744329998080502>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0015162360000431363>]>
+unit-shard-one-0: 02:09:15 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fcafc61c7ffb459d55e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.2', 27017) server_type: RSSecondary, rtt: 0.002328804999933709>, <ServerDescription ('10.142.54.252', 27017) server_type: RSSecondary, rtt: 0.0010833959997853526>]>
+unit-shard-tree-0: 02:09:16 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fca31b4a2be164dffd1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: RSSecondary, rtt: 0.0015046690000417584>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0012367659999199532>]>
+unit-shard-two-0: 02:09:17 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fcc0964d2e6412a2bd6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc40ee7df1a8f0adbc1'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13852}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005098350000025675>]>
+unit-shard-one-0: 02:09:20 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fcffc61c7ffb459d55f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.2', 27017) server_type: RSSecondary, rtt: 0.0017819340000642114>, <ServerDescription ('10.142.54.252', 27017) server_type: RSSecondary, rtt: 0.0025076940000872128>]>
+unit-shard-tree-0: 02:09:20 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fcf31b4a2be164dffd2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc8afef25341cf26582'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12530}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0022376980000444746>]>
+unit-shard-two-0: 02:09:21 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd00964d2e6412a2bd7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc40ee7df1a8f0adbc1'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 9657}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0019190300001810101>]>
+unit-shard-one-0: 02:09:24 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd3fc61c7ffb459d560, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.2', 27017) server_type: RSSecondary, rtt: 0.0006526499998926738>, <ServerDescription ('10.142.54.252', 27017) server_type: RSSecondary, rtt: 0.001221673000145529>]>
+unit-shard-tree-0: 02:09:24 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd331b4a2be164dffd3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc8afef25341cf26582'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8366}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0006123489999936282>]>
+unit-shard-two-0: 02:09:25 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd40964d2e6412a2bd8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc40ee7df1a8f0adbc1'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 5528}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0009266609999940556>]>
+unit-shard-tree-0: 02:09:28 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd731b4a2be164dffd4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc8afef25341cf26582'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4237}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0007529799997882947>]>
+unit-shard-two-0: 02:09:29 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fd80964d2e6412a2bd9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc40ee7df1a8f0adbc1'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 1376}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0014692449999529344>]>
+unit-shard-tree-0: 02:09:32 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fdb31b4a2be164dffd5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fc8afef25341cf26582'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 516}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0033735029999206745>]>
+unit-shard-two-0: 02:09:34 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fdc0964d2e6412a2bda, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.142.54.201:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.001984008000135873>]>
+unit-shard-tree-0: 02:09:37 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fe031b4a2be164dffd6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: RSSecondary, rtt: 0.00174851400015541>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.001525350000065373>]>
+unit-shard-two-0: 02:09:38 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fe10964d2e6412a2bdb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0006639059999997698>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006797999999434978>]>
+unit-shard-tree-0: 02:09:41 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c5fe431b4a2be164dffd7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: RSSecondary, rtt: 0.00164219399994181>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0020392909998463438>]>
+unit-config-server-1: 02:10:07 ERROR unit.config-server/1.juju-log config-server:18: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-tree, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-tree\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1783390207, 3), \'signature\': {\'hash\': b\'\\x7f%\\xfd\\x94[\\xbb\\xcd2H\\x8b\\xe8\\xa7\\x9e\\x16\\xf5\\xd9\\xe0\\xb3g\\xc1\', \'keyId\': 7659598895629991945}}, \'operationTime\': Timestamp(1783390207, 3)}')
+unit-shard-one-0: 02:10:13 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c600485eadf182a7da938, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.2', 27017) server_type: RSSecondary, rtt: 0.0006236860001536115>, <ServerDescription ('10.142.54.252', 27017) server_type: RSSecondary, rtt: 0.0006772169999749167>]>
+unit-shard-tree-0: 02:10:14 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6005d55accd61608a9d4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fdd47db5bd5a4df6741'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11868}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0006511980000141193>]>
+unit-shard-one-0: 02:10:17 ERROR unit.shard-one/0.juju-log sharding:16: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c600885eadf182a7da939, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.2', 27017) server_type: RSSecondary, rtt: 0.0015731510000023263>, <ServerDescription ('10.142.54.252', 27017) server_type: RSSecondary, rtt: 0.0008074510001279123>]>
+unit-shard-tree-0: 02:10:18 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6009d55accd61608a9d5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fdd47db5bd5a4df6741'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 7728}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0014644880000105331>]>
+unit-shard-two-0: 02:10:22 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c600d5bd61569ecc5b7de, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0008085139998001978>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0004999709999538027>]>
+unit-shard-tree-0: 02:10:22 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c600dd55accd61608a9d6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fdd47db5bd5a4df6741'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 3611}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0012790100001893734>]>
+unit-config-server-1: 02:10:25 ERROR unit.config-server/1.juju-log config-server:18: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-tree, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-tree\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1783390225, 2), \'signature\': {\'hash\': b\'z0:\\x9f\\xab\\xe3\\xeb\\xbf\\xb6\\xcf\\x06~\\xdcFr\\x8em\\x17*o\', \'keyId\': 7659598895629991945}}, \'operationTime\': Timestamp(1783390225, 2)}')
+unit-shard-two-0: 02:10:26 ERROR unit.shard-two/0.juju-log sharding:17: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c60115bd61569ecc5b7df, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0006850889999441279>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007545519999894168>]>
+unit-shard-tree-0: 02:10:26 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6011d55accd61608a9d7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c5fdd47db5bd5a4df6741'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 0}")>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0011515579999468173>]>
+unit-shard-tree-0: 02:10:30 ERROR unit.shard-tree/0.juju-log sharding:18: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6015d55accd61608a9d8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.235', 27017) server_type: RSSecondary, rtt: 0.0009236660000624397>, <ServerDescription ('10.142.54.4', 27017) server_type: RSSecondary, rtt: 0.0011478129999886733>]>
+unit-config-server-1: 02:19:45 ERROR unit.config-server/1.juju-log config-server:18: cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-1: 02:19:45 ERROR unit.config-server/1.juju-log config-server:18: Deferring _on_relation_event for shards interface since: error=cannot remove shard shard-tree from cluster, another shard is draining
+unit-config-server-1: 02:23:53 ERROR unit.config-server/1.juju-log cannot remove shard shard-tree from cluster, another shard is draining
+unit-shard-two-1: 02:24:40 ERROR unit.shard-two/1.juju-log sharding:17: This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-tree-1: 02:35:43 ERROR unit.shard-tree/1.juju-log sharding:18: This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 02:37:36 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c666f2a302c4413db2b98, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0007274320000760781>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005522490000657854>]>
+unit-shard-two-0: 02:37:40 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66732a302c4413db2b99, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c666c705683ebd7cb6f12'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13171, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391852, 9), 'signature': {'hash': b'\\xf0Hv\\x82\\xc470O\\xe7\\x92\\x16\\xbcw\\xf9\\x01*\\xa1w\\x1f1', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.001047220999680576>]>
+unit-shard-two-0: 02:37:44 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66772a302c4413db2b9a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c666c705683ebd7cb6f12'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 9056, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391852, 9), 'signature': {'hash': b'\\xf0Hv\\x82\\xc470O\\xe7\\x92\\x16\\xbcw\\xf9\\x01*\\xa1w\\x1f1', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0012251889997969556>]>
+unit-shard-two-0: 02:37:49 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c667b2a302c4413db2b9b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c666c705683ebd7cb6f12'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4933, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391852, 9), 'signature': {'hash': b'\\xf0Hv\\x82\\xc470O\\xe7\\x92\\x16\\xbcw\\xf9\\x01*\\xa1w\\x1f1', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006428140000025451>]>
+unit-shard-two-0: 02:37:53 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66802a302c4413db2b9c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c666c705683ebd7cb6f12'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 799, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391852, 9), 'signature': {'hash': b'\\xf0Hv\\x82\\xc470O\\xe7\\x92\\x16\\xbcw\\xf9\\x01*\\xa1w\\x1f1', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006316379999589117>]>
+unit-shard-two-0: 02:37:57 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66842a302c4413db2b9d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0007459290000042529>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.000823867000235623>]>
+unit-shard-two-0: 02:38:01 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66882a302c4413db2b9e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6682b5ac4d287a94cfe5'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12447, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391874, 9), 'signature': {'hash': b'9\\x9a\\xb9%\\xd6\\x13](=\\xd8\\xe1\\xbb?\\xc9\\xe1\\x93\\x9dcCU', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006136409997452574>]>
+unit-shard-two-0: 02:38:05 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c668c2a302c4413db2b9f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6682b5ac4d287a94cfe5'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8327, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391882, 1), 'signature': {'hash': b'\\x80\\xce\\xf1J\\x14P|S\\x9b\\xb2\\xae,Cd\\xe1A5\\xd4k\\xde', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0008041369997044967>]>
+unit-shard-two-0: 02:38:09 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66902a302c4413db2ba0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6682b5ac4d287a94cfe5'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4215, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391882, 1), 'signature': {'hash': b'\\x80\\xce\\xf1J\\x14P|S\\x9b\\xb2\\xae,Cd\\xe1A5\\xd4k\\xde', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0010362159996475384>]>
+unit-shard-two-0: 02:38:13 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66942a302c4413db2ba1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6682b5ac4d287a94cfe5'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 89, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783391882, 1), 'signature': {'hash': b'\\x80\\xce\\xf1J\\x14P|S\\x9b\\xb2\\xae,Cd\\xe1A5\\xd4k\\xde', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391828, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0008237060001192731>]>
+unit-shard-two-0: 02:38:40 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66af319c6d3ce7fa0197, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0005690949997188>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0008032259997889923>]>
+unit-config-server-1: 02:38:41 ERROR unit.config-server/1.juju-log config-server:19: Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-two, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-two\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1783391920, 2), \'signature\': {\'hash\': b\'\\xcc\\x92\\x94\\xf6\\x9c\\xb9\\xff\\xe5\\x1c,\\x83A\\x99z\\xcb\\x95W\\xae\\x86\\x9b\', \'keyId\': 7659598895629991945}}, \'operationTime\': Timestamp(1783391920, 2)}')
+unit-shard-two-0: 02:38:44 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66b3319c6d3ce7fa0198, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c669570615f5f18d9de00'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14117, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391924, 2), 'signature': {'hash': b'\\xa0{/\\x93\\xa9v\\xdc\\xfcL\\xcb\\x95a\\xe1\\xf0\\xcd\\n\\xb3n9\\xd8', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007150129999899946>]>
+unit-shard-two-0: 02:38:48 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66b7319c6d3ce7fa0199, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c669570615f5f18d9de00'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 9996, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391924, 2), 'signature': {'hash': b'\\xa0{/\\x93\\xa9v\\xdc\\xfcL\\xcb\\x95a\\xe1\\xf0\\xcd\\n\\xb3n9\\xd8', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006846379997114127>]>
+unit-shard-two-0: 02:38:52 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66bb319c6d3ce7fa019a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c669570615f5f18d9de00'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 5889, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391924, 2), 'signature': {'hash': b'\\xa0{/\\x93\\xa9v\\xdc\\xfcL\\xcb\\x95a\\xe1\\xf0\\xcd\\n\\xb3n9\\xd8', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005686340000465862>]>
+unit-shard-two-0: 02:38:57 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66c0319c6d3ce7fa019b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c669570615f5f18d9de00'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 1774, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391924, 2), 'signature': {'hash': b'\\xa0{/\\x93\\xa9v\\xdc\\xfcL\\xcb\\x95a\\xe1\\xf0\\xcd\\n\\xb3n9\\xd8', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006793600000492006>]>
+unit-shard-two-0: 02:39:01 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66c4319c6d3ce7fa019c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0019508779996613157>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0020283039998503227>]>
+unit-shard-two-0: 02:39:05 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66c8319c6d3ce7fa019d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c66c360ca805f53e2e51b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12544, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391939, 10), 'signature': {'hash': b'\\xcc\\x0f\\xd4n\\x08\\xdeW\\xbf\\xdc\\xdb\\x85\\x12{\\xc5kk\\xae\\x95\\x0e\\x86', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005466200000228127>]>
+unit-shard-two-0: 02:39:09 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66cc319c6d3ce7fa019e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c66c360ca805f53e2e51b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8421, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391945, 2), 'signature': {'hash': b'?\\xc6\\x8dZa\\xd1\\x17KQ\\x9c \\x19\\x853\\x16\\x7f\\x03\\xd2&z', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.000635333999980503>]>
+unit-shard-two-0: 02:39:13 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66d0319c6d3ce7fa019f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c66c360ca805f53e2e51b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4317, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391945, 2), 'signature': {'hash': b'?\\xc6\\x8dZa\\xd1\\x17KQ\\x9c \\x19\\x853\\x16\\x7f\\x03\\xd2&z', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006494340000244847>]>
+unit-shard-two-0: 02:39:17 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66d4319c6d3ce7fa01a0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c66c360ca805f53e2e51b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 190, 'lastCommittedOpTime': Timestamp(1783391923, 1), '$clusterTime': {'clusterTime': Timestamp(1783391945, 2), 'signature': {'hash': b'?\\xc6\\x8dZa\\xd1\\x17KQ\\x9c \\x19\\x853\\x16\\x7f\\x03\\xd2&z', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783391923, 1)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0009556650002195965>]>
+unit-shard-two-0: 02:39:21 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66d8319c6d3ce7fa01a1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0009736910001265642>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007032149997030501>]>
+unit-shard-two-0: 02:39:49 ERROR unit.shard-two/0.juju-log sharding:19: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c66f3056e94aa0db8db2a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0006106859996179992>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.000530857000285323>]>
+unit-shard-two-1: 02:44:45 ERROR unit.shard-two/1.juju-log sharding:19: This operation (update_relation_data()) can only be performed by the leader unit
+unit-shard-two-0: 02:48:16 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c68ef463c39335ae16e95, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0018708280003920663>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005271810000522237>]>
+unit-shard-two-0: 02:48:20 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c68f3463c39335ae16e96, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c68ebd6dc9abbf2ec020f'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12925, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392491, 2), 'signature': {'hash': b'\\x9c\\xad\\x8f\\xebtCO\\x93\\xf2\\x0e\\xc0\\x9a\\x0f3`\\x0f\\x8d\\x0c\\xf1*', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.000781061999987287>]>
+unit-shard-two-0: 02:48:24 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c68f7463c39335ae16e97, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c68ebd6dc9abbf2ec020f'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8816, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392491, 2), 'signature': {'hash': b'\\x9c\\xad\\x8f\\xebtCO\\x93\\xf2\\x0e\\xc0\\x9a\\x0f3`\\x0f\\x8d\\x0c\\xf1*', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006662499999947613>]>
+unit-shard-two-0: 02:48:28 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c68fb463c39335ae16e98, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c68ebd6dc9abbf2ec020f'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4712, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392491, 2), 'signature': {'hash': b'\\x9c\\xad\\x8f\\xebtCO\\x93\\xf2\\x0e\\xc0\\x9a\\x0f3`\\x0f\\x8d\\x0c\\xf1*', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0004909670001325139>]>
+unit-shard-two-0: 02:48:32 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c68ff463c39335ae16e99, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c68ebd6dc9abbf2ec020f'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 610, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392491, 2), 'signature': {'hash': b'\\x9c\\xad\\x8f\\xebtCO\\x93\\xf2\\x0e\\xc0\\x9a\\x0f3`\\x0f\\x8d\\x0c\\xf1*', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005299250001371547>]>
+unit-shard-two-0: 02:48:36 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6903463c39335ae16e9a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0005714280000574945>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007543819997408718>]>
+unit-shard-two-0: 02:48:40 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6907463c39335ae16e9b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'6a4c6900c86b4fa7da466a8b\'), \'counter\': 4}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 11618, \'lastCommittedOpTime\': Timestamp(0, 0), \'$clusterTime\': {\'clusterTime\': Timestamp(1783392513, 1), \'signature\': {\'hash\': b\'\\xfck>ia\\x9b\\x12\\x0f\\xf8\\xf3\\xac"\\x8e\\xae\\x03\\xfb\\xce\\xf4\\x02\\xfb\', \'keyId\': 7659598895629991945}}, \'operationTime\': Timestamp(1783392469, 10)}')>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.000612840000030701>]>
+unit-shard-two-0: 02:48:44 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c690b463c39335ae16e9c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6900c86b4fa7da466a8b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 7509, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392521, 1), 'signature': {'hash': b'\\x7fupyT\\x8c\\xfd-}z\\x1d8A\\xe9\\x9a\\xeb%\\xed$0', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.00068111200016574>]>
+unit-shard-two-0: 02:48:49 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c690f463c39335ae16e9d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4c6900c86b4fa7da466a8b'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 3391, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1783392521, 1), 'signature': {'hash': b'\\x7fupyT\\x8c\\xfd-}z\\x1d8A\\xe9\\x9a\\xeb%\\xed$0', 'keyId': 7659598895629991945}}, 'operationTime': Timestamp(1783392469, 10)}")>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0008678330000293499>]>
+unit-shard-two-0: 02:48:53 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c6914463c39335ae16e9e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.142.54.201:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0006899049999447016>]>
+unit-shard-two-0: 02:49:20 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c692f8dfbb631e0640245, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0008618639999440347>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007326390000343963>]>
+unit-shard-two-0: 02:49:24 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c69338dfbb631e0640246, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0015939620002427546>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0010495249998712097>]>
+unit-shard-two-0: 02:49:28 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c69378dfbb631e0640247, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0005797399999210029>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0005684930001734756>]>
+unit-shard-two-0: 02:49:52 ERROR unit.shard-two/0.juju-log sharding:20: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4c694f01df229e74928e96, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.142.54.201', 27017) server_type: RSSecondary, rtt: 0.0008174259996849287>, <ServerDescription ('10.142.54.25', 27017) server_type: RSSecondary, rtt: 0.0007345829999394482>]>
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-5: 02:55:26 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

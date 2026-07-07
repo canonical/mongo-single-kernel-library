@@ -1,0 +1,71 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [executing] active: 
+  mongodb-k8s/1 [executing] active: 
+  mongodb-k8s/2 [executing] active: Primary.
+[32mINFO    [0m integration.mongodb.backups.test_backups:test_backups.py:441 Create backup result backup_result.results={'backup-status': 'backup started. backup id: 2026-07-07T02:49:50Z', 'return-code': 0}
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:49:56Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Address         Exposed  Message
+continuous-write           active      1  continuous-write                 0  10.152.183.247  no       
+mongodb-k8s       6.0.28   active      3  mongodb-k8s                      0  10.152.183.112  no       
+s3-integrator              active      1  s3-integrator     latest/edge  572  10.152.183.99   no       
+
+Unit                 Workload     Agent      Address       Ports  Message
+continuous-write/0*  active       idle       10.1.174.214         
+mongodb-k8s/0        active       executing  10.1.174.206         
+mongodb-k8s/1        active       executing  10.1.174.213         
+mongodb-k8s/2*       maintenance  idle       10.1.174.209         Backup started/running, backup id: '2026-07-07T02:49:50Z'
+s3-integrator/0*     active       idle       10.1.174.212         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-new-mongodb-aws-0: 02:41:21 ERROR unit.new-mongodb-aws/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3422, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-new-mongodb-aws-0/network-get', 'database-peers', '-r', '11', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 215, in __init__
+    self.observability_manager = ObservabilityManager(self, self.state, self.substrate)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/observability.py", line 62, in __init__
+    jobs=self.mongo_scrape_config(),
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/observability.py", line 86, in mongo_scrape_config
+    f"{self.state.unit_peer_data.internal_address}:{OBSERVABILITY_CONFIG.mongodb_exporter_port}"
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 268, in unit_peer_data
+    bind_address=str(self.bind_address),
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 506, in bind_address
+    bind_address = binding.network.bind_address
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 1052, in network
+    self._network = self._network_get(self.name, self._relation_id)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 1045, in _network_get
+    return Network(self._backend.network_get(name, relation_id))
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3730, in network_get
+    network = self._run(*cmd, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-new-mongodb-aws-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3424, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR relation 11 not found (not found)
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
