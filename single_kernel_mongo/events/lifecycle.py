@@ -183,8 +183,9 @@ class LifecycleEventsHandler(Object):
         try:
             self.dependent.install_workloads()
         except (ContainerNotReadyError, WorkloadServiceError) as e:
-            logger.error(f"Error occurred while installing workloads: {e}")
-            raise
+            logger.info("Not ready to start. %s", e)
+            event.defer()
+            return
 
     def on_leader_elected(self, event: LeaderElectedEvent):
         """Leader elected event."""

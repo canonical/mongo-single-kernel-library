@@ -119,7 +119,9 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
         }
     }
     assert client_tls_parameters == {}
-    assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
+    assert cluster_ips == {
+        "security": {"clusterIpSourceAllowlist": ["10.0.0.0/24", "127.0.0.1/32"]}
+    }
 
     assert (
         all_params
@@ -128,7 +130,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
-                "clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"],
+                "clusterIpSourceAllowlist": ["10.0.0.0/24", "127.0.0.1/32"],
                 "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
             },
             "setParameter": {"processUmask": "037"},

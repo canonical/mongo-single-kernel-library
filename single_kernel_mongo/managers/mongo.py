@@ -207,6 +207,19 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         self.state.app_peer_data.set_user_created(user.username)
 
+    def reconcile_local_auth_restrictions(self) -> None:
+        """Update auth restrictions for internal users that connect locally."""
+        with MongoConnection(self.state.mongo_config) as mongo:
+            for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
+                if not self.state.app_peer_data.is_user_created(user.username):
+                    continue
+
+                config = self.state.mongodb_config_for_user(
+                    user, auth_restrictions=self.state.local_auth_restrictions
+                )
+                logger.info("Updating auth restrictions for %s user.", user.username)
+                mongo.update_user_auth_restrictions(config)
+
     def reconcile_mongo_users_and_dbs(
         self,
         relation: Relation,

@@ -179,6 +179,14 @@ class MongoConnection:
             roles=config.supported_roles,
         )
 
+    def update_user_auth_restrictions(self, config: MongoConfiguration):
+        """Update authentication restrictions on database."""
+        self.client.admin.command(
+            "updateUser",
+            value=config.username,
+            authenticationRestrictions=config.auth_restrictions,
+        )
+
     def set_user_password(self, username: str, password: str):
         """Update the password."""
         self.client.admin.command(

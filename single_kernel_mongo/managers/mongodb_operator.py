@@ -894,6 +894,9 @@ class MongoDBOperator(OperatorProtocol, Object):
             # We can use either manager, what matters is the BackupConfigManager below
             self.s3_backup_manager.configure_and_restart()
 
+        if self.state.db_initialised:
+            self.async_restart_charm_services(force=False)
+
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
@@ -915,6 +918,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
+            self.mongo_manager.reconcile_local_auth_restrictions()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(

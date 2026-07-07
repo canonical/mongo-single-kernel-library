@@ -12,6 +12,7 @@ from pathlib import Path
 from platform import machine
 from shutil import copyfile
 
+import charmlibs.snap as snap
 from ops import Container
 from tenacity import (
     Retrying,
@@ -35,7 +36,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
 logger = getLogger(__name__)
@@ -53,8 +53,10 @@ class VMWorkload(WorkloadBase):
         super().__init__(role, container)
         for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(10)):
             with attempt:
-                logger.info(f"Attempting to load snap {SNAP_NAME}...")
                 self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+        logger.debug(
+            f"Snap {SNAP_NAME} fetched after {attempt.retry_state.attempt_number - 1} retries."
+        )
 
     @property
     @override
