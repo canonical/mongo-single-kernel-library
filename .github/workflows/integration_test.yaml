@@ -98,6 +98,10 @@ jobs:
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
     steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
       - name: (GitHub hosted) Free up disk space
         timeout-minutes: 3
         if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
