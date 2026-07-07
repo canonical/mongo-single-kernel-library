@@ -132,13 +132,13 @@ class ContinuousWritesApplication(CharmBase):
             data.get("endpoints"),
             data.get("replset"),
             data.get("uris"),
-            data.get("tls")
+            data.get("tls") or "False"
         )
 
         if None in [username, password, endpoints, uris]:
             return {}
 
-        if tls:
+        if tls.lower() == "true":
             uris = self._build_tls_uri(uris)
 
         return {
