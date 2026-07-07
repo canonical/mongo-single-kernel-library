@@ -90,13 +90,10 @@ def test_unit_peer_data(
 
     assert state.unit_peer_data.internal_address == mongodb_hostname
 
-
+@pytest.mark.skip_if_substrate("microk8s")
 def test_local_auth_restrictions_use_peer_database_addresses(
     harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
 ):
-    if substrate != "lxd":
-        pytest.skip("Auth restrictions are only applied on VMs.")
-
     rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
     harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
     harness.add_relation_unit(rel.id, f"{mongodb_name}/2")  # type: ignore
