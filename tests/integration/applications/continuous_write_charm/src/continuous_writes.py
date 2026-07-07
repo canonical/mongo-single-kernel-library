@@ -43,7 +43,7 @@ def continous_writes(
         test_collection = db[coll_name]
         test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
         client.close()
-    except:
+    except as err:
         with open(last_written_filename(db_name, coll_name), "w") as fd:
             fd.write(str(-1))
         with open("error.log", mode="a") as fd:
