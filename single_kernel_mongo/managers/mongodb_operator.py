@@ -894,6 +894,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             # We can use either manager, what matters is the BackupConfigManager below
             self.s3_backup_manager.configure_and_restart()
 
+        # If the IPs in the peer relatio changed we need to upda the config file
         if self.state.db_initialised:
             self.async_restart_charm_services(force=False)
 
