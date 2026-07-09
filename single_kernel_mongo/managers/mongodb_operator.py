@@ -893,10 +893,14 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongodb_exporter_config_manager.configure_and_restart()
             # We can use either manager, what matters is the BackupConfigManager below
             self.s3_backup_manager.configure_and_restart()
-
-        # If the IPs in the peer relatio changed we need to upda the config file
-        if self.state.db_initialised:
-            self.async_restart_charm_services(force=False)
+            try:
+                allowlist = self.config_manager.cluster_ip_source_allowlist
+                self.config_manager.sync_cluster_ip_source_allowlist_to_file()
+            except (NotReadyError, PyMongoError) as e:
+                logger.error("Failed to update cluster IP source allowlist: error=%s", e)
+                self.state.statuses.add(
+                    MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
+                )
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
@@ -919,7 +923,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
-            self.mongo_manager.reconcile_local_auth_restrictions()
+            self.mongo_manager.update_users_local_auth_restrictions()
+            self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(

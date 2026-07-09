@@ -1312,6 +1312,58 @@ def test_mongodb_relation_joined_all_replicas_not_ready_are_added(
     mocked_add_replset_member.assert_called()
 
 
+def test_peer_changed_updates_cluster_ip_source_allowlist(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+    mocker.patch(
+        "single_kernel_mongo.managers.vault.VaultManager.get_degraded_state", return_value=None
+    )
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.update_users_local_auth_restrictions")
+    mock_update = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
+
+    harness.charm.operator.peer_changed()
+
+    mock_update.assert_called_once_with(
+        harness.charm.operator.config_manager.cluster_ip_source_allowlist
+    )
+    mock_sync.assert_called_once()
+
+
+def test_non_leader_peer_changed_does_not_update_runtime_cluster_ip_source_allowlist(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.set_leader(False)
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+    mock_update = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
+
+    harness.charm.operator.peer_changed()
+
+    mock_update.assert_not_called()
+    mock_sync.assert_called_once()
+
+
 def test_reconfigure_not_already_initialised(
     harness,
     mocker,

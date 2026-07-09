@@ -552,8 +552,29 @@ class MongoDBConfigManager(MongoConfigManager):
         if self.state.is_cluster_component:
             cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
 
-        # Deduplicate and collapse overlapping networks
         return {"security": {"clusterIpSourceAllowlist": merge_cidrs(cidrs_list)}}
+
+    @property
+    def cluster_ip_source_allowlist(self) -> list[str]:
+        """Return the computed cluster IP source allowlist."""
+        return self.cluster_ips["security"]["clusterIpSourceAllowlist"]
+
+    def sync_cluster_ip_source_allowlist_to_file(self) -> None:
+        """Persist cluster IP source allowlist changes without restarting MongoDB."""
+        current_config_file = "\n".join(self.workload.read(self.file))
+        current_config_file_content = safe_load(current_config_file) or {}
+
+        new_allowlist = self.cluster_ip_source_allowlist
+        current_security_config = current_config_file_content.get("security") or {}
+        current_allowlist = current_security_config.get("clusterIpSourceAllowlist")
+
+        if current_allowlist == new_allowlist:
+            return
+
+        logger.info("Cluster IP source allowlist changed. Writing the new config.")
+        current_config_file_content.setdefault("security", {})
+        current_config_file_content["security"]["clusterIpSourceAllowlist"] = new_allowlist
+        self.workload.write(self.file, safe_dump(current_config_file_content))
 
     @property
     def db_path_argument(self) -> dict[str, Any]:

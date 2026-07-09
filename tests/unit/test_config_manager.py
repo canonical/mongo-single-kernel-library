@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from ops.hookcmds import Network
 from ops.model import Relation
-from yaml import safe_dump
+from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS, VM_PATH
@@ -156,6 +156,59 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock.assert_called_once_with(
         Path(f"{VM_PATH['mongod']['CONF']}/mongod.conf"), safe_dump(all_params)
     )
+
+
+def test_sync_cluster_ip_source_allowlist_to_file(mocker):
+    mock_write = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
+    mock_read = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.read")
+
+    mock_state = mocker.MagicMock(CharmState)
+    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.tls = mocker.MagicMock(TLSState)
+    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
+    mock_state.vault_relation = None
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [
+                        {"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}
+                    ],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
+    mock_state.is_role = lambda role: False
+    mock_state.is_cluster_component = False
+    manager = MongoDBConfigManager(MongoDBCharmConfig(), mock_state, VMMongoDBWorkload(VM_MONGOD, None))
+
+    mock_read.return_value = safe_dump(
+        {"security": {"clusterIpSourceAllowlist": ["10.0.0.0/24"]}}
+    ).splitlines()
+    manager.sync_cluster_ip_source_allowlist_to_file()
+    mock_write.assert_not_called()
+
+    mock_read.return_value = safe_dump(
+        {
+            "net": {"bindIp": "10.0.0.1,127.0.0.1"},
+            "security": {"clusterIpSourceAllowlist": ["10.0.1.0/24"]},
+        }
+    ).splitlines()
+    manager.sync_cluster_ip_source_allowlist_to_file()
+
+    written_config = safe_load(mock_write.call_args.args[1])
+    assert written_config == {
+        "net": {"bindIp": "10.0.0.1,127.0.0.1"},
+        "security": {"clusterIpSourceAllowlist": ["10.0.0.0/24"]},
+    }
 
 
 def test_mongodb_ldap_config(mocker):

@@ -101,7 +101,7 @@ def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], moc
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.update_user_auth_restrictions",
     )
 
-    harness.charm.operator.mongo_manager.reconcile_local_auth_restrictions()
+    harness.charm.operator.mongo_manager.update_users_local_auth_restrictions()
 
     assert mock_update.call_count == 3
     for call in mock_update.call_args_list:
@@ -110,6 +110,19 @@ def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], moc
             {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
             {"clientSource": ["10.0.0.0/24"], "serverAddress": ["10.0.0.0/24"]},
         ]
+
+
+def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mocker):
+    mock_connection = mocker.patch("single_kernel_mongo.managers.mongo.MongoConnection")
+    mock_update = mock_connection.return_value.__enter__.return_value.set_cluster_ip_source_allowlist
+
+    harness.charm.operator.mongo_manager.update_cluster_ip_source_allowlist(["10.0.0.0/24"])
+
+    config = mock_connection.call_args.args[0]
+    assert config.username == CharmedOperatorUser.username
+    assert config == harness.charm.operator.state.mongo_config
+    assert mock_connection.call_args.kwargs == {}
+    mock_update.assert_called_once_with(["10.0.0.0/24"])
 
 
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):

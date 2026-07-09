@@ -207,7 +207,7 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         self.state.app_peer_data.set_user_created(user.username)
 
-    def reconcile_local_auth_restrictions(self) -> None:
+    def update_users_local_auth_restrictions(self) -> None:
         """Update auth restrictions for internal users that connect locally."""
         with MongoConnection(self.state.mongo_config) as mongo:
             for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
@@ -219,6 +219,12 @@ class MongoManager(Object, ManagerStatusProtocol):
                 )
                 logger.info("Updating auth restrictions for %s user.", user.username)
                 mongo.update_user_auth_restrictions(config)
+
+    def update_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
+        """Update the cluster IP source allowlist at runtime."""
+        logger.info("Updating cluster IP source allowlist %s", allowlist)
+        with MongoConnection(self.state.mongo_config) as mongo:
+            mongo.set_cluster_ip_source_allowlist(allowlist)
 
     def reconcile_mongo_users_and_dbs(
         self,

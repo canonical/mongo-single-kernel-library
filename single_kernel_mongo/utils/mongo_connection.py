@@ -187,6 +187,12 @@ class MongoConnection:
             authenticationRestrictions=config.auth_restrictions,
         )
 
+    def set_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
+        """Update the cluster IP source allowlist at runtime."""
+        self.client.admin.command(
+            {"setParameter": 1, "clusterIpSourceAllowlist": allowlist},
+        )
+
     def set_user_password(self, username: str, password: str):
         """Update the password."""
         self.client.admin.command(
