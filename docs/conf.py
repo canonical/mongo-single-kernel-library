@@ -44,6 +44,7 @@ copyright = f"{datetime.date.today().year}"
 
 html_title = project + " 8" + " documentation"
 
+version_slug = f"{os.environ.get('READTHEDOCS_VERSION', 'local')}"
 
 # Documentation website URL
 #
@@ -52,7 +53,7 @@ html_title = project + " 8" + " documentation"
 # NOTE: The Open Graph Protocol (OGP) enhances page display in a social graph
 #       and is used by social media platforms; see https://ogp.me/
 
-ogp_site_url = "https://canonical-charmed-mongodb.readthedocs-hosted.com/"
+ogp_site_url = f"https://canonical.com/data/mongodb/docs/{version_slug}/"
 
 
 # Preview name of the documentation website
@@ -178,7 +179,7 @@ html_theme_options = {
 # TODO: If your documentation is hosted on https://docs.ubuntu.com/,
 #       uncomment and update as needed.
 
-# slug = ''
+slug = 'data/mongodb/docs'  # Use the slug pattern from your URL pattern dropdown
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
@@ -186,7 +187,7 @@ html_theme_options = {
 
 # Use RTD canonical URL to ensure duplicate pages have a specific canonical URL
 
-html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
+html_baseurl = f"https://canonical.com/data/mongodb/docs/{version_slug}/"
 
 # sphinx-sitemap uses html_baseurl to generate the full URL for each page:
 
@@ -211,7 +212,7 @@ sitemap_excludes = [
 # Template and asset locations #
 ################################
 
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
 templates_path = ["_templates"]
 
 
@@ -317,6 +318,7 @@ html_css_files = [
 
 html_js_files = [
     "https://assets.ubuntu.com/v1/287a5e8f-bundle.js",
+    "overwrite_links.js"
 ]
 
 
