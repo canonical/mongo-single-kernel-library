@@ -1,0 +1,111 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: charmed-mongodb # the name of your rock
+base: ubuntu@24.04 # the base environment for this rock
+version: "8.0.10-4" # just for humans. Semantic versioning is recommended
+summary: MongoDB in a rock. # 79 char long summary
+description: |
+  MongoDB is a source-available cross-platform
+  document-oriented database program. Classified
+  as a NoSQL database program, MongoDB uses JSON
+  -like documents with optional schemas.
+license: Apache-2.0 # your application's SPDX license
+services:
+  mongod:
+    summary: Start Mongod
+    override: replace
+    startup: enabled
+    command: "/bin/bash /bin/start.sh"
+  vault-agent:
+    summary: Vault Agent layer
+    override: replace
+    startup: disabled
+    command: "/bin/bash /bin/start-vault-agent.sh"
+    user: mongodb
+    group: mongodb
+
+platforms: # The platforms this rock should be built on and run on
+  amd64:
+  arm64:
+
+parts:
+  mongo-snap:
+    plugin: nil
+    stage-snaps:
+      - charmed-mongodb/8/edge
+      - yq
+    overlay-packages:
+      - ca-certificates
+    stage-packages:
+      - libssh-4
+      - libbrotli1
+      - logrotate
+      - libldap-common
+  non-root-user:
+    plugin: nil
+    after: [mongo-snap]
+    override-overlay: |
+      groupadd -g  584788 mongodb
+      useradd -M -r -g mongodb -u 584788 mongodb
+    override-prime: |
+      craftctl default
+
+      # Give permission and create the required directories
+      mkdir -p $CRAFT_PRIME/data/db
+      chmod 0755 $CRAFT_PRIME/data/db
+      chown -R 584788:584788 $CRAFT_PRIME/data/db
+
+      conf="etc/mongod"
+      mongo_config_file="${conf}/mongod.conf"
+      mongos_config_file="${conf}/mongos.conf"
+
+      mkdir -p $CRAFT_PRIME/$conf
+      cp $CRAFT_PRIME/etc/mongod.conf "${mongo_config_file}"
+      cp $CRAFT_PRIME/etc/mongod.conf "${mongos_config_file}"
+
+      yq -i ".processManagement.fork = false" "${mongo_config_file}"
+      yq -i ".processManagement.fork = false" "${mongos_config_file}"
+      yq -i ".net.port = 27018" "${mongos_config_file}"
+      yq -i "del(.storage)" "${mongos_config_file}"
+
+      chown -R 584788:584788 "${conf}"
+
+      # enable security monitoring
+      rocks=usr/share/rocks/
+      mkdir -p ${rocks}
+
+      ## for deb packages
+      declare -a arr=()
+      arr+=('${db:Status-Abbrev},')
+      arr+=('${binary:Package},')
+      arr+=('${Version},')
+      arr+=('${source:Package},')
+      arr+=('${Source:Version}\n')
+
+      (echo "# os-release" && cat /etc/os-release) > ${rocks}/dpkg-query
+      dpkg-query -f "${arr[*]}" -W >> ${rocks}/dpkg.query
+
+      # for snap packages
+      cp snap.charmed-mongodb/manifest.yaml ${rocks}
+      cp snap.charmed-mongodb/snapcraft.yaml ${rocks}
+
+  rock-license:
+    plugin: dump
+    source: licenses
+    organize:
+      LICENSE-rock: licenses/LICENSE-rock
+      usr/share/doc/logrotate/copyright: licenses/COPYRIGHT-logrotate
+
+  entry:
+    plugin: dump
+    source: scripts
+    organize:
+      start.sh: bin/start.sh
+      start-mongod.sh: bin/start-mongod.sh
+      start-mongos.sh: bin/start-mongos.sh
+      start-vault-agent.sh: bin/start-vault-agent.sh
+    stage:
+      - bin/start.sh
+      - bin/start-mongod.sh
+      - bin/start-mongos.sh
+      - bin/start-vault-agent.sh

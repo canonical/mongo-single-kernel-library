@@ -1,0 +1,32 @@
+summary: Replica set operator integration test
+
+execute: |
+  set -eux
+
+  export PATH="/snap/bin:$PATH:$(pipx environment --value PIPX_BIN_DIR)"
+
+  dump_debug() {
+    set +e
+
+    log_dir="$(dirname "$CRAFT_ARTIFACT")/spread-logs/replica-set"
+    mkdir -p "$log_dir"
+
+    juju status --relations --storage -m concierge-microk8s:testing \
+      > "$log_dir/juju-status.txt" 2>&1
+    juju debug-log --replay --no-tail -m concierge-microk8s:testing \
+      > "$log_dir/juju-debug-log.txt" 2>&1
+    {
+      microk8s kubectl get pods --all-namespaces --output wide
+      microk8s kubectl get events --all-namespaces --sort-by=.lastTimestamp
+      microk8s kubectl describe pods --all-namespaces
+    } > "$log_dir/microk8s-state.txt" 2>&1
+
+    printf "Spread diagnostics written to %s\n" "$log_dir"
+  }
+
+  cd "$SPREAD_PATH/operator"
+  tox -e integration -- tests/integration/test_charm.py --model testing || {
+    exit_code="$?"
+    dump_debug
+    exit "$exit_code"
+  }

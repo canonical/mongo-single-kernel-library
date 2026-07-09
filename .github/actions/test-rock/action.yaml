@@ -51,3 +51,12 @@ runs:
         path: ~/.local/state/rockcraft/log/*
         if-no-files-found: ignore
         retention-days: 14
+
+    - name: Upload spread diagnostics
+      if: ${{ success() || failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: spread-diagnostics-${{ inputs.rock-name }}-${{ inputs.runner }}
+        path: ${{ inputs.rock-path }}/spread-logs/**
+        if-no-files-found: ignore
+        retention-days: 14

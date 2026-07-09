@@ -18,6 +18,7 @@ mongodb-artifacts/
     │       ├── mongodb-server-replicaset/ # Snap for a MongoDB replica set deployment.
     │       └── mongodb-server-sharded/ # Snap for a full MongoDB sharded deployment that includes both `mongod` and `mongos`.
     └── rocks/
+        ├── charmed/ # Rock for Charmed MongoDB Operator
         └── slim/
             └── mongodb-server-sharded/ # Rock for a full MongoDB sharded deployment that includes both `mongod` and `mongos`.
 └── mongos/

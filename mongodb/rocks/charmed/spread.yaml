@@ -1,0 +1,119 @@
+project: charmed-mongodb
+
+backends:
+  craft:
+    type: craft
+    systems:
+      - ubuntu-24.04:
+
+suites:
+  spread/tests/:
+    summary: Charmed MongoDB rock operator integration tests
+    prepare: |
+      set -eux
+
+      apt-get update
+      apt-get install -y \
+        build-essential \
+        git \
+        libldap-dev \
+        libsasl2-dev \
+        pipx \
+        python3-dev \
+        python3-pip
+
+      snap list charmcraft || snap install charmcraft --classic
+      snap list concierge || snap install concierge --classic
+      snap list docker || snap install docker
+      snap list rockcraft || snap install rockcraft --classic
+      snap list yq || snap install yq --classic
+
+      export PATH="/snap/bin:$PATH:$(pipx environment --value PIPX_BIN_DIR)"
+
+      pipx install tox
+      pipx ensurepath
+
+      cd "$SPREAD_PATH"
+
+      OPERATOR_BRANCH="8/edge"
+      OPERATOR_REPO="https://github.com/canonical/mongodb-k8s-operator.git"
+
+      ROCK_FILE="$(basename "$CRAFT_ARTIFACT")"
+      ROCK_NAME="${ROCK_FILE%%_*}"
+      ROCK_APP_VERSION="${ROCK_FILE#"${ROCK_NAME}_"}"
+      ROCK_APP_VERSION="${ROCK_APP_VERSION%_*}"
+      ROCK_VERSION="${ROCK_APP_VERSION%%-*}"
+      ROCK_IMAGE="ghcr.io/canonical/${ROCK_NAME}:spreadtest"
+      ROCK_DIGEST="$(rockcraft.skopeo inspect \
+        --format '{{.Digest}}' \
+        "oci-archive:${CRAFT_ARTIFACT}")"
+      ROCK_IMAGE_SOURCE="ghcr.io/canonical/${ROCK_NAME}@${ROCK_DIGEST}"
+
+      # Load the rock built by 'rockcraft test' into Docker.
+      rockcraft.skopeo --insecure-policy copy \
+        "oci-archive:${CRAFT_ARTIFACT}" \
+        "docker-daemon:${ROCK_IMAGE}"
+
+      # Juju deploys the charm workload into MicroK8s, which uses containerd
+      # rather than Docker. Keep a local tarball of the same image tag so each
+      # spread task can import it into MicroK8s before running pytest.
+      docker save \
+        "$ROCK_IMAGE" \
+        --output "$SPREAD_PATH/${ROCK_NAME}-spreadtest.tar"
+
+      git clone \
+        --single-branch \
+        --branch "$OPERATOR_BRANCH" \
+        "$OPERATOR_REPO" \
+        operator
+      IMAGE_RESOURCE_PATH=".resources.mongodb-image.\"upstream-source\""
+      yq -i \
+        "${IMAGE_RESOURCE_PATH} = \"${ROCK_IMAGE_SOURCE}\"" \
+        operator/metadata.yaml
+      printf "%s\n" "$ROCK_VERSION" > operator/workload_version
+
+      cd operator
+      CRAFT_PLATFORM="ubuntu@24.04:$(dpkg --print-architecture)" \
+        charmcraft pack --destructive-mode -v
+    prepare-each: |
+      set -eux
+
+      export PATH="/snap/bin:$PATH:$(pipx environment --value PIPX_BIN_DIR)"
+      export CONCIERGE_JUJU_CHANNEL="3.6/stable"
+      export CONCIERGE_MICROK8S_CHANNEL="1.35-strict/stable"
+
+      concierge prepare --trace -c "$SPREAD_PATH/operator/concierge.yaml"
+      juju set-model-constraints arch="$(dpkg --print-architecture)"
+
+      ROCK_FILE="$(basename "$CRAFT_ARTIFACT")"
+      ROCK_NAME="${ROCK_FILE%%_*}"
+      ROCK_DIGEST="$(rockcraft.skopeo inspect \
+        --format '{{.Digest}}' \
+        "oci-archive:${CRAFT_ARTIFACT}")"
+      ROCK_IMAGE="ghcr.io/canonical/${ROCK_NAME}:spreadtest"
+      ROCK_IMAGE_SOURCE="ghcr.io/canonical/${ROCK_NAME}@${ROCK_DIGEST}"
+
+      microk8s ctr image import \
+        --digests \
+        "$SPREAD_PATH/${ROCK_NAME}-spreadtest.tar"
+      microk8s ctr images tag \
+        --force \
+        "$ROCK_IMAGE" \
+        "$ROCK_IMAGE_SOURCE"
+    restore-each: |
+      export PATH="/snap/bin:$PATH:$(pipx environment --value PIPX_BIN_DIR)"
+
+      juju destroy-model \
+        --force \
+        --no-wait \
+        --destroy-storage \
+        --no-prompt \
+        concierge-microk8s:testing || true
+      juju kill-controller --no-prompt concierge-microk8s || true
+
+exclude:
+  - .git
+  - .tox
+  - operator
+
+kill-timeout: 3h
