@@ -6,6 +6,7 @@
 
 import subprocess
 from collections.abc import Mapping
+from functools import cached_property
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
