@@ -1,0 +1,67 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.25   unsupported  02:26:41Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     6.0.28   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         6.0.28   active       3  mongodb                      1  no       
+shard-two         6.0.28   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0      active    idle   0        10.192.36.142   27017-27018/tcp  
+config-server/1*     active    idle   1        10.192.36.149   27017-27018/tcp  Primary.
+config-server/2      active    idle   2        10.192.36.48    27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.192.36.40                     
+shard-one/0*         active    idle   3        10.192.36.178   27017/tcp        
+shard-one/1          active    idle   4        10.192.36.70    27017/tcp        Primary.
+shard-one/2          active    idle   5        10.192.36.137   27017/tcp        
+shard-two/0*         active    idle   6        10.192.36.157   27017/tcp        Primary.
+shard-two/1          active    idle   7        10.192.36.50    27017/tcp        
+shard-two/2          active    idle   8        10.192.36.221   27017/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.192.36.142  juju-816345-0  ubuntu@22.04  github-runner  Running
+1        started  10.192.36.149  juju-816345-1  ubuntu@22.04  github-runner  Running
+2        started  10.192.36.48   juju-816345-2  ubuntu@22.04  github-runner  Running
+3        started  10.192.36.178  juju-816345-3  ubuntu@22.04  github-runner  Running
+4        started  10.192.36.70   juju-816345-4  ubuntu@22.04  github-runner  Running
+5        started  10.192.36.137  juju-816345-5  ubuntu@22.04  github-runner  Running
+6        started  10.192.36.157  juju-816345-6  ubuntu@22.04  github-runner  Running
+7        started  10.192.36.50   juju-816345-7  ubuntu@22.04  github-runner  Running
+8        started  10.192.36.221  juju-816345-8  ubuntu@22.04  github-runner  Running
+9        started  10.192.36.40   juju-816345-9  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:08:57 ERROR unit.shard-one/0.juju-log status-peers:5: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f02b89aa64f2099509dd5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.137', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.192.36.137:27017: [Errno 104] Connection reset by peer (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.192.36.178', 27017) server_type: RSSecondary, rtt: 0.0011012519998985226>, <ServerDescription ('10.192.36.70', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a4f0263f7e96d3437f08155'), 'counter': 9}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 484, 'lastCommittedOpTime': Timestamp(1783562921, 33), '$clusterTime': {'clusterTime': Timestamp(1783562933, 18), 'signature': {'hash': b'\\x14\\x9c\\x88{\\x85=7\\xf4\\n:9&B\\x0f\\x8bb\\x05\\xf5q/', 'keyId': 7660337380896800786}}, 'operationTime': Timestamp(1783562921, 33)}")>]>
+unit-shard-one-0: 02:09:01 ERROR unit.shard-one/0.juju-log status-peers:5: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f02bc9aa64f2099509dd6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.137', 27017) server_type: RSSecondary, rtt: 0.0019148720002704067>, <ServerDescription ('10.192.36.178', 27017) server_type: RSSecondary, rtt: 0.002408672999990813>, <ServerDescription ('10.192.36.70', 27017) server_type: RSSecondary, rtt: 0.0019425330001467955>]>
+unit-shard-one-0: 02:11:22 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f0349e17f31809e12f4ae, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.137', 27017) server_type: RSSecondary, rtt: 0.0018627940003170806>, <ServerDescription ('10.192.36.178', 27017) server_type: RSSecondary, rtt: 0.0013104949998705706>, <ServerDescription ('10.192.36.70', 27017) server_type: RSSecondary, rtt: 0.004163544999755686>]>
+unit-shard-one-0: 02:11:27 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f034de17f31809e12f4af, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.137', 27017) server_type: RSSecondary, rtt: 0.0031707469997854787>, <ServerDescription ('10.192.36.178', 27017) server_type: RSSecondary, rtt: 0.0010374769999543787>, <ServerDescription ('10.192.36.70', 27017) server_type: RSSecondary, rtt: 0.0010769059999802266>]>
+unit-shard-two-0: 02:16:15 ERROR unit.shard-two/0.juju-log status-peers:11: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f046e1c1532fb13cdfc82, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.157', 27017) server_type: RSSecondary, rtt: 0.002461221999965346>, <ServerDescription ('10.192.36.221', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'6a4f0350a4ac29b0aaebcce8\'), \'counter\': 5}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 2880, \'lastCommittedOpTime\': Timestamp(1783563361, 16), \'$clusterTime\': {\'clusterTime\': Timestamp(1783563369, 29), \'signature\': {\'hash\': b\'\\xe0\\xeb\\xbd\\xf0\\x18\\x92\\x87&9\\xb2\\xe4\\xf4S\\xdbZ\\xdd"^Gt\', \'keyId\': 7660337380896800786}}, \'operationTime\': Timestamp(1783563361, 16)}')>, <ServerDescription ('10.192.36.50', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError('The server is in quiesce mode and will shut down, full error: {\'topologyVersion\': {\'processId\': ObjectId(\'6a4f0415a2ecd9259e78f3c1\'), \'counter\': 9}, \'ok\': 0.0, \'errmsg\': \'The server is in quiesce mode and will shut down\', \'code\': 91, \'codeName\': \'ShutdownInProgress\', \'remainingQuiesceTimeMillis\': 2337, \'lastCommittedOpTime\': Timestamp(1783563361, 16), \'$clusterTime\': {\'clusterTime\': Timestamp(1783563369, 29), \'signature\': {\'hash\': b\'\\xe0\\xeb\\xbd\\xf0\\x18\\x92\\x87&9\\xb2\\xe4\\xf4S\\xdbZ\\xdd"^Gt\', \'keyId\': 7660337380896800786}}, \'operationTime\': Timestamp(1783563361, 16)}')>]>
+unit-shard-two-0: 02:16:19 ERROR unit.shard-two/0.juju-log status-peers:11: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a4f04721c1532fb13cdfc83, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.192.36.157', 27017) server_type: RSSecondary, rtt: 0.0014169959999890125>, <ServerDescription ('10.192.36.221', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.192.36.221:27017: [Errno 104] Connection reset by peer (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.192.36.50', 27017) server_type: RSSecondary, rtt: 0.0011348930001986446>]>
+unit-config-server-1: 02:24:59 ERROR unit.config-server/1.juju-log Cluster cannot read/write to replicas
+unit-shard-one-0: 02:25:24 ERROR unit.shard-one/0.juju-log Cluster cannot read/write to replicas
+machine-7: 02:25:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [3754ff] "machine-7" cannot open api: unable to connect to API: dial tcp 10.192.36.25:17070: connect: network is unreachable
+unit-shard-two-0: 02:25:48 ERROR unit.shard-two/0.juju-log Cluster cannot read/write to replicas
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
