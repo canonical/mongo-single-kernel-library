@@ -142,7 +142,7 @@ class MongoDBUser(BaseModel):
 CharmedOperatorUser = MongoDBUser(
     username=InternalUsernames.CHARMED_OPERATOR,
     database_name=SystemDBS.ADMIN,
-    roles={RoleNames.ADMIN},
+    roles={RoleNames.DEFAULT},
 )
 
 CharmedStatsUser = MongoDBUser(

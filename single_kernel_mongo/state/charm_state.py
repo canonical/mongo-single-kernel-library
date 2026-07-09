@@ -87,9 +87,7 @@ from single_kernel_mongo.utils.mongodb_users import (
 )
 from single_kernel_mongo.utils.network_helpers import (
     cidrs,
-    get_cidr_for_ip_list,
     ip_addresses,
-    merge_cidrs,
 )
 
 if TYPE_CHECKING:
@@ -755,6 +753,11 @@ class CharmState(Object, StatusesStateProtocol):
 
         return self.app_peer_data.replica_set in members
 
+    @property
+    def peer_database_addresses(self) -> list[str]:
+        """Return the database addresses published by all peer units."""
+        return [unit.database_address for unit in self.units if unit.database_address]
+
     # BEGIN: Configuration accessors
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
@@ -766,15 +769,9 @@ class CharmState(Object, StatusesStateProtocol):
         ]
 
         if peer_database_addresses:
-            try:
-                peer_client_sources.append(get_cidr_for_ip_list(peer_database_addresses))
-            except ValueError:
-                logger.warning(
-                    "Failed to compute peer auth CIDR from peer database addresses: %s",
-                    peer_database_addresses,
-                )
+            peer_client_sources.extend(peer_database_addresses)
 
-        peer_client_sources = merge_cidrs(peer_client_sources)
+        peer_client_sources = sorted(set(peer_client_sources))
 
         return [
             AuthRestrictions(clientSource=[LOCALHOST], serverAddress=[LOCALHOST]),

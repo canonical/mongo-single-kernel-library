@@ -561,13 +561,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
+        # Publish this unit's address before waiting for every planned unit.
+        self.update_ips_in_databag()
+        if len(self.state.peer_database_addresses) < self.state.planned_units:
+            raise ContainerNotReadyError("Waiting for peer database addresses")
+
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
         # allowing that event to run.
         self._configure_workloads()
-
-        # Write IPs in databag
-        self.update_ips_in_databag()
 
         logger.info("Starting MongoDB.")
         self.charm.status_handler.set_running_status(
@@ -893,14 +895,13 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.mongodb_exporter_config_manager.configure_and_restart()
             # We can use either manager, what matters is the BackupConfigManager below
             self.s3_backup_manager.configure_and_restart()
+            self.config_manager.sync_cluster_ip_source_allowlist_to_file()
             try:
                 allowlist = self.config_manager.cluster_ip_source_allowlist
-                self.config_manager.sync_cluster_ip_source_allowlist_to_file()
+                self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
             except (NotReadyError, PyMongoError) as e:
                 logger.error("Failed to update cluster IP source allowlist: error=%s", e)
-                self.state.statuses.add(
-                    MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
-                )
+
 
         # only leader should configure replica set and we should do it only if
         # the replica set is initialised.
@@ -924,7 +925,6 @@ class MongoDBOperator(OperatorProtocol, Object):
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
             self.mongo_manager.update_users_local_auth_restrictions()
-            self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(

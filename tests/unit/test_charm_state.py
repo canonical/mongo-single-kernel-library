@@ -91,6 +91,24 @@ def test_unit_peer_data(
     assert state.unit_peer_data.internal_address == mongodb_hostname
 
 
+def test_peer_database_addresses(
+    harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
+):
+    rel = harness.charm.model.get_relation(PeerRelationNames.PEERS.value)
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")  # type: ignore
+    harness.charm.operator.state.unit_peer_data.database_address = "10.0.0.1"
+    harness.update_relation_data(
+        rel.id,  # type: ignore
+        f"{mongodb_name}/1",
+        {"database-address": "10.0.0.2"},
+    )
+
+    assert set(harness.charm.operator.state.peer_database_addresses) == {
+        "10.0.0.1",
+        "10.0.0.2",
+    }
+
+
 @pytest.mark.skip_if_substrate("microk8s")
 def test_local_auth_restrictions_use_peer_database_addresses(
     harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
@@ -111,8 +129,10 @@ def test_local_auth_restrictions_use_peer_database_addresses(
     )
 
     assert harness.charm.operator.state.local_auth_restrictions[1]["clientSource"] == [
-        "10.0.0.0/24",
-        "172.31.0.0/16",
+        "10.0.0.1/24",
+        "172.31.15.253",
+        "172.31.24.68",
+        "172.31.47.55",
     ]
 
 

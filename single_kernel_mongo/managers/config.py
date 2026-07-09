@@ -39,7 +39,7 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedLogRotateUser,
     CharmedStatsUser,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, get_cidr_for_ip_list, merge_cidrs
+from single_kernel_mongo.utils.network_helpers import cidrs
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
@@ -531,13 +531,7 @@ class MongoDBConfigManager(MongoConfigManager):
             unit.database_address for unit in self.state.units if unit.database_address
         ]
         if peer_database_addresses:
-            try:
-                cidrs_list.append(get_cidr_for_ip_list(peer_database_addresses))
-            except ValueError:
-                logger.warning(
-                    "Failed to compute peer auth CIDR from peer database addresses: %s",
-                    peer_database_addresses,
-                )
+            cidrs_list.extend(peer_database_addresses)
         # The config server should include the CIDR for the shards
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
@@ -552,7 +546,7 @@ class MongoDBConfigManager(MongoConfigManager):
         if self.state.is_cluster_component:
             cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
 
-        return {"security": {"clusterIpSourceAllowlist": merge_cidrs(cidrs_list)}}
+        return {"security": {"clusterIpSourceAllowlist": sorted(set(cidrs_list))}}
 
     @property
     def cluster_ip_source_allowlist(self) -> list[str]:

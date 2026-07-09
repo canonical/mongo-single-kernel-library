@@ -120,8 +120,9 @@ def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mo
 
     config = mock_connection.call_args.args[0]
     assert config.username == CharmedOperatorUser.username
-    assert config == harness.charm.operator.state.mongo_config
-    assert mock_connection.call_args.kwargs == {}
+    assert config.hosts == {"localhost"}
+    assert config.standalone is True
+    assert mock_connection.call_args.kwargs == {"direct": True}
     mock_update.assert_called_once_with(["10.0.0.0/24"])
 
 
