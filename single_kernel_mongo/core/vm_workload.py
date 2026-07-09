@@ -52,7 +52,7 @@ class VMWorkload(WorkloadBase):
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
 
-    @property
+    @cached_property
     def mongod_snap(self) -> snap.Snap:
         """Return the MongoDB snap."""
         for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(10)):
