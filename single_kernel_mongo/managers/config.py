@@ -527,11 +527,7 @@ class MongoDBConfigManager(MongoConfigManager):
         """The allowed cluster IPs."""
         # Always include IPs from the local peer relation
         cidrs_list = cidrs(self.state.peer_network().bind_addresses)
-        peer_database_addresses = [
-            unit.database_address for unit in self.state.units if unit.database_address
-        ]
-        if peer_database_addresses:
-            cidrs_list.extend(peer_database_addresses)
+        cidrs_list.extend(self.state.peer_database_addresses)
         # The config server should include the CIDR for the shards
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
@@ -546,6 +542,7 @@ class MongoDBConfigManager(MongoConfigManager):
         if self.state.is_cluster_component:
             cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
 
+        # Deduplicate the list
         return {"security": {"clusterIpSourceAllowlist": sorted(set(cidrs_list))}}
 
     @property
@@ -553,12 +550,11 @@ class MongoDBConfigManager(MongoConfigManager):
         """Return the computed cluster IP source allowlist."""
         return self.cluster_ips["security"]["clusterIpSourceAllowlist"]
 
-    def sync_cluster_ip_source_allowlist_to_file(self) -> None:
+    def sync_cluster_ip_source_allowlist_to_file(self, new_allowlist: list[str]) -> None:
         """Persist cluster IP source allowlist changes without restarting MongoDB."""
         current_config_file = "\n".join(self.workload.read(self.file))
         current_config_file_content = safe_load(current_config_file) or {}
 
-        new_allowlist = self.cluster_ip_source_allowlist
         current_security_config = current_config_file_content.get("security") or {}
         current_allowlist = current_security_config.get("clusterIpSourceAllowlist")
 

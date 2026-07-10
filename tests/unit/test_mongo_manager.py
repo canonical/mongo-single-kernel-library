@@ -84,7 +84,7 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
         config.supported_roles,
         auth_restrictions=[
             {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
-            {"clientSource": ["10.0.0.0/24"], "serverAddress": ["10.0.0.0/24"]},
+            {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
         ],
     )
 
@@ -108,13 +108,15 @@ def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], moc
         config = call.args[0]
         assert config.auth_restrictions == [
             {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
-            {"clientSource": ["10.0.0.0/24"], "serverAddress": ["10.0.0.0/24"]},
+            {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
         ]
 
 
 def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mocker):
     mock_connection = mocker.patch("single_kernel_mongo.managers.mongo.MongoConnection")
-    mock_update = mock_connection.return_value.__enter__.return_value.set_cluster_ip_source_allowlist
+    mock_update = (
+        mock_connection.return_value.__enter__.return_value.set_cluster_ip_source_allowlist
+    )
 
     harness.charm.operator.mongo_manager.update_cluster_ip_source_allowlist(["10.0.0.0/24"])
 

@@ -9,7 +9,6 @@ from single_kernel_mongo.utils.network_helpers import (
     cidrs,
     get_cidr_for_ip_list,
     ip_addresses,
-    merge_cidrs,
 )
 
 
@@ -74,15 +73,3 @@ def test_cidrs():
         }
     )
     assert cidrs(network.bind_addresses) == ["10.0.0.1/24", "10.0.1.1/24"]
-
-
-def test_merge_cidrs_collapses_overlapping_networks():
-    assert merge_cidrs(["172.31.0.0/16", "172.31.0.0/20", "252.0.0.0/12"]) == [
-        "172.31.0.0/16",
-        "252.0.0.0/12",
-    ]
-    assert merge_cidrs(["10.0.0.1/24", "10.0.0.0/24"]) == ["10.0.0.0/24"]
-    assert merge_cidrs(["10.0.0.1/32", "2001:db8::1/128"]) == [
-        "10.0.0.1/32",
-        "2001:db8::1/128",
-    ]

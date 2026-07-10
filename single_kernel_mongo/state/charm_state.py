@@ -755,22 +755,19 @@ class CharmState(Object, StatusesStateProtocol):
 
     @property
     def peer_database_addresses(self) -> list[str]:
-        """Return the database addresses published by all peer units."""
-        return [unit.database_address for unit in self.units if unit.database_address]
+        """Return the database addresses published by remote peer units."""
+        return [
+            unit.database_address
+            for unit in self.units
+            if unit.name != self.unit_peer_data.name and unit.database_address
+        ]
 
     # BEGIN: Configuration accessors
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
         peer_client_sources = cidrs(self.peer_network().bind_addresses)
-
-        peer_database_addresses = [
-            unit.database_address for unit in self.units if unit.database_address
-        ]
-
-        if peer_database_addresses:
-            peer_client_sources.extend(peer_database_addresses)
-
+        peer_client_sources.extend(self.peer_database_addresses)
         peer_client_sources = sorted(set(peer_client_sources))
 
         return [

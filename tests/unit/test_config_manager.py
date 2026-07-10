@@ -119,9 +119,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
         }
     }
     assert client_tls_parameters == {}
-    assert cluster_ips == {
-        "security": {"clusterIpSourceAllowlist": ["10.0.0.0/24", "127.0.0.1/32"]}
-    }
+    assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
 
     assert (
         all_params
@@ -130,7 +128,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
-                "clusterIpSourceAllowlist": ["10.0.0.0/24", "127.0.0.1/32"],
+                "clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"],
                 "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
             },
             "setParameter": {"processUmask": "037"},
@@ -177,9 +175,7 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
                 {
                     "mac-address": "aa:bb",
                     "interface-name": "eth0",
-                    "addresses": [
-                        {"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}
-                    ],
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
                 }
             ],
             "egress-subnets": ["127.0.0.0/24"],
@@ -188,12 +184,14 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
     )
     mock_state.is_role = lambda role: False
     mock_state.is_cluster_component = False
-    manager = MongoDBConfigManager(MongoDBCharmConfig(), mock_state, VMMongoDBWorkload(VM_MONGOD, None))
+    manager = MongoDBConfigManager(
+        MongoDBCharmConfig(), mock_state, VMMongoDBWorkload(VM_MONGOD, None)
+    )
 
     mock_read.return_value = safe_dump(
         {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24"]}}
     ).splitlines()
-    manager.sync_cluster_ip_source_allowlist_to_file()
+    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
     mock_write.assert_not_called()
 
     mock_read.return_value = safe_dump(
@@ -202,7 +200,7 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
             "security": {"clusterIpSourceAllowlist": ["10.0.1.0/24"]},
         }
     ).splitlines()
-    manager.sync_cluster_ip_source_allowlist_to_file()
+    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
 
     written_config = safe_load(mock_write.call_args.args[1])
     assert written_config == {

@@ -7,7 +7,7 @@
 import os
 import subprocess  # nosec: B404
 from collections.abc import Sequence
-from ipaddress import collapse_addresses, ip_address, ip_network
+from ipaddress import ip_address, ip_network
 
 from ops import Relation
 from ops.hookcmds import BindAddress, Network, network_get
@@ -50,19 +50,6 @@ def get_host_public_ip() -> set[str]:
         return set()
 
     return {output.stdout.strip()}
-
-
-def merge_cidrs(cidr_list: Sequence[str]) -> list[str]:
-    """Collapse overlapping or redundant CIDRs into the minimal set."""
-    if not cidr_list:
-        return []
-
-    networks = [ip_network(cidr, strict=False) for cidr in cidr_list]
-    collapsed_networks = [
-        *collapse_addresses(network for network in networks if network.version == 4),
-        *collapse_addresses(network for network in networks if network.version == 6),
-    ]
-    return [str(network) for network in collapsed_networks]
 
 
 def get_cidr_for_ip_list(ip_list: list[str]) -> str:

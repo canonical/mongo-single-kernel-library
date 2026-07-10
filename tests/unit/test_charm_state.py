@@ -104,7 +104,6 @@ def test_peer_database_addresses(
     )
 
     assert set(harness.charm.operator.state.peer_database_addresses) == {
-        "10.0.0.1",
         "10.0.0.2",
     }
 
@@ -130,7 +129,6 @@ def test_local_auth_restrictions_use_peer_database_addresses(
 
     assert harness.charm.operator.state.local_auth_restrictions[1]["clientSource"] == [
         "10.0.0.1/24",
-        "172.31.15.253",
         "172.31.24.68",
         "172.31.47.55",
     ]
