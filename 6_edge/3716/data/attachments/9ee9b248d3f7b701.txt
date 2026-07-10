@@ -1,0 +1,66 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  application/0 [idle] active: received database credentials of the second database
+  application/1 [idle] active: received database credentials of the second database
+  another-database/0 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 1, stdout: , stderr: MongoServerError: Authentication failed.
+ERROR command terminated with exit code 1
+
+[1m[31mERROR   [0m integration.helpers.common:common.py:942 Failed to execute rs.status(): stderr='MongoServerError: Authentication failed.\nERROR command terminated with exit code 1\n', stdout=''
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1783648419,"i":2}},"signature":{"hash":{"$binary":{"base64":"4ozalETFdIeNzdUfuwbQZswGLUc=","subType":"00"}},"keyId":7660708749539017000}},"operationTime":{"$timestamp":{"t":1783648419,"i":2}}}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  01:53:41Z
+
+App                  Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+another-application           active      1  application             1  10.152.183.32   no       received database credentials of the first database
+another-database     6.0.28   active      1  mongodb-k8s             1  10.152.183.163  no       
+application                   active      2  application             0  10.152.183.216  no       received database credentials of the second database
+mongodb-k8s          6.0.28   active      2  mongodb-k8s             0  10.152.183.88   no       
+
+Unit                    Workload  Agent  Address       Ports  Message
+another-application/0*  active    idle   10.1.111.158         received database credentials of the first database
+another-database/0*     active    idle   10.1.111.145         Primary.
+application/0           active    idle   10.1.111.137         received database credentials of the second database
+application/1*          active    idle   10.1.111.138         received database credentials of the second database
+mongodb-k8s/0*          active    idle   10.1.111.148         Primary.
+mongodb-k8s/1           active    idle   10.1.111.151         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-1: 01:42:53 ERROR unit.mongodb-k8s/1.juju-log database-peers:0: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-10T01:42:52Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-07-10T01:42:53Z INFO Most recent service output:
+    2026-07-10T01:42:53.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-07-10T01:42:53Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-07-10T01:42:52Z INFO Service "pbm-agent" has never been started.
+----- Logs from task 1 -----
+2026-07-10T01:42:53Z INFO Most recent service output:
+    2026-07-10T01:42:53.000+0000 E Exit: connect to the node: ping: connection() error occurred during connection handshake: auth error: sasl conversation error: unable to authenticate using mechanism "SCRAM-SHA-1": (AuthenticationFailed) Authentication failed.
+2026-07-10T01:42:53Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-mongodb-k8s-1: 01:42:53 ERROR unit.mongodb-k8s/1.juju-log database-peers:0: Failed to restart pbm-agent: cannot perform the following tasks:
+- Start service "pbm-agent" (service start attempt: exited quickly with code 1, will restart)
+unit-mongodb-k8s-3: 01:48:19 ERROR unit.mongodb-k8s/3.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a504f625bb3bd4f87c29f87, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-3.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0005217400000674388>]>
+unit-mongodb-k8s-2: 01:49:09 ERROR unit.mongodb-k8s/2.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a504f94996011b10fa4f797, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.00038750499993511767>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
