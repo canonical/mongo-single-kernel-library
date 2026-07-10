@@ -564,7 +564,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Publish this unit's address before waiting for every planned unit.
         self.update_ips_in_databag()
-        if len(self.state.peer_database_addresses) + 1 < self.state.planned_units:
+        if len(self.state.peer_database_addresses) < self.state.planned_units:
             raise NotReadyError("Waiting for peer database addresses")
 
         # Configure the workload. This requires a valid role!

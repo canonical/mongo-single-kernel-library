@@ -756,11 +756,7 @@ class CharmState(Object, StatusesStateProtocol):
     @property
     def peer_database_addresses(self) -> list[str]:
         """Return the database addresses published by remote peer units."""
-        return [
-            unit.database_address
-            for unit in self.units
-            if unit.name != self.unit_peer_data.name and unit.database_address
-        ]
+        return [unit.database_address for unit in self.units if unit.database_address]
 
     # BEGIN: Configuration accessors
     @property
