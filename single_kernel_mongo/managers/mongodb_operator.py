@@ -146,6 +146,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     name = CharmKind.MONGOD.value
     workload: MongoDBWorkload
+    config_manager: MongoDBConfigManager
     refresh: charm_refresh.Common | None
 
     def __init__(self, charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):

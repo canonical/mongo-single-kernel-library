@@ -26,7 +26,6 @@ from single_kernel_mongo.config.statuses import (
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
-    ContainerNotReadyError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     ShardingMigrationError,
@@ -258,7 +257,7 @@ def test_start_waits_for_peer_database_addresses(
     )
     configure = mocker.patch.object(harness.charm.operator, "_configure_workloads")
 
-    with pytest.raises(ContainerNotReadyError, match="Waiting for peer database addresses"):
+    with pytest.raises(NotReadyError, match="Waiting for peer database addresses"):
         harness.charm.operator.prepare_for_startup()
 
     assert harness.charm.operator.state.unit_peer_data.database_address
