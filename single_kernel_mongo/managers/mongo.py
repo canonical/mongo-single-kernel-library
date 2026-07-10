@@ -222,7 +222,7 @@ class MongoManager(Object, ManagerStatusProtocol):
 
     def update_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
         """Update the cluster IP source allowlist at runtime."""
-        logger.info("Updating cluster IP source allowlist %s", allowlist)
+        logger.info("Updating cluster IP source allowlist")
         config = self.state.mongodb_config_for_user(
             CharmedOperatorUser, hosts={"localhost"}, standalone=True
         )

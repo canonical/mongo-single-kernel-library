@@ -5,11 +5,7 @@
 from ops.hookcmds import Network
 
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, mask_sensitive_information
-from single_kernel_mongo.utils.network_helpers import (
-    cidrs,
-    get_cidr_for_ip_list,
-    ip_addresses,
-)
+from single_kernel_mongo.utils.network_helpers import cidrs, get_cidr_for_ip_list, ip_addresses
 
 
 def test_hostname_from_hostport():
