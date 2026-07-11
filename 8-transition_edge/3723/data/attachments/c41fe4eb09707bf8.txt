@@ -1,0 +1,32 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:17:26Z
+
+App               Version  Status   Scale  Charm             Channel            Rev  Address         Exposed  Message
+config-server     7.0.34   waiting      3  mongodb-k8s                            0  10.152.183.110  no       Waiting for shards to upgrade/downgrade to revision 1+v1.7.21-dirty-locally built.
+continuous-write           waiting      1  continuous-write                       0  10.152.183.166  no       
+shard-one         7.0.34   blocked      3  mongodb-k8s                            1  10.152.183.155  no       Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision.
+shard-two         7.0.34   blocked      3  mongodb-k8s       8-transition/edge  205  10.152.183.19   no       Charm revision (205) is not up-to date with config-server (1+v1.7.21-dirty-locally built).
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     waiting   idle   10.1.53.40         Waiting for shards to upgrade/downgrade to revision 1+v1.7.21-dirty-locally built.
+config-server/1      waiting   idle   10.1.53.39         Waiting for shards to upgrade/downgrade to revision 1+v1.7.21-dirty-locally built.
+config-server/2      waiting   idle   10.1.53.38         Waiting for shards to upgrade/downgrade to revision 1+v1.7.21-dirty-locally built.
+continuous-write/0*  waiting   idle   10.1.53.37         
+shard-one/0          active    idle   10.1.53.43         
+shard-one/1*         active    idle   10.1.53.42         MongoDB 7.0.34 running;  Charm revision 1+v1.7.21-dirty.
+shard-one/2          active    idle   10.1.53.41         MongoDB 7.0.34 running;  Charm revision 1+v1.7.21-dirty.
+shard-two/0*         blocked   idle   10.1.53.33         Charm revision (205) is not up-to date with config-server (1+v1.7.21-dirty-locally built).
+shard-two/1          blocked   idle   10.1.53.36         Charm revision (205) is not up-to date with config-server (1+v1.7.21-dirty-locally built).
+shard-two/2          blocked   idle   10.1.53.35         Charm revision (205) is not up-to date with config-server (1+v1.7.21-dirty-locally built).
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-1: 01:56:28 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a51a2ca24fc0afaaa17b44f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.002021345000002839>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005276930000945868>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.002650189000064529>]>
+unit-shard-one-1: 01:56:33 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a51a2cf24fc0afaaa17b450, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009534609999946042>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010748140000487183>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006485740000243823>]>
+unit-shard-two-0: 01:56:48 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a51a2df03587dd7aa32464f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.003377690999968763>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006213630000502235>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.003274707000059607>]>
+unit-shard-two-0: 01:56:53 ERROR unit.shard-two/0.juju-log sharding:13: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a51a2e303587dd7aa324650, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008573095999736325>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a51a2d8f5e9d9c33afeb9ab'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14934}")>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010982989999774873>]>
+unit-shard-one-1: 01:57:58 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a51a325732a27a1ab9b8159, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009638770000037766>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0008344430000306602>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0017422649999616624>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
