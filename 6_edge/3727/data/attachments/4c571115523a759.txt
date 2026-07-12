@@ -1,0 +1,71 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:jammy/mongodb-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [idle] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Starting MongoDB.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:26:58Z
+
+App                                Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                      6.0.28   active      2  mongodb-k8s                                0  10.152.183.129  no       
+self-signed-certificates                    active      1  self-signed-certificates  latest/stable  264  10.152.183.131  no       
+self-signed-certificates-separate           active      1  self-signed-certificates  latest/stable  264  10.152.183.214  no       
+shard-one                          6.0.28   active      3  mongodb-k8s                                1  10.152.183.166  no       
+shard-tree                         6.0.28   active      1  mongodb-k8s                                3  10.152.183.72   no       
+shard-two                          6.0.28   active      1  mongodb-k8s                                2  10.152.183.36   no       
+
+Unit                                  Workload  Agent      Address     Ports  Message
+config-server/0                       active    executing  10.1.53.16         Primary.
+config-server/1*                      active    executing  10.1.53.17         
+self-signed-certificates-separate/0*  active    idle       10.1.53.33         
+self-signed-certificates/0*           active    idle       10.1.53.32         
+shard-one/0*                          blocked   idle       10.1.53.23         Shard CA and config-server CA don't match.
+shard-one/1                           blocked   idle       10.1.53.28         Shard CA and config-server CA don't match.
+shard-one/2                           blocked   idle       10.1.53.27         Shard CA and config-server CA don't match.
+shard-tree/0*                         blocked   idle       10.1.53.36         Missing relation to config-server.
+shard-two/0*                          blocked   idle       10.1.53.31         Shard CA and config-server CA don't match.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-1: 01:51:52 ERROR unit.shard-one/1.juju-log certificates:13: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-2: 01:51:53 ERROR unit.shard-one/2.juju-log certificates:13: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:51:53 ERROR unit.config-server/0.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-two-0: 01:51:53 ERROR unit.shard-two/0.juju-log certificates:14: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:51:53 ERROR unit.shard-one/0.juju-log certificates:13: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-1: 01:51:53 ERROR unit.shard-one/1.juju-log certificates:13: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 01:51:54 ERROR unit.config-server/1.juju-log certificates:12: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:51:54 ERROR unit.config-server/0.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:51:54 ERROR unit.shard-one/0.juju-log certificates:13: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-two-0: 01:51:54 ERROR unit.shard-two/0.juju-log certificates:14: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 01:51:55 ERROR unit.config-server/1.juju-log certificates:12: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 01:51:55 ERROR unit.shard-one/2.juju-log certificates:13: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:57:16 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f47a4e2b35fb05b8fee4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013419439999324823>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('shard-one-1.shard-one-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a52f473d8e07a5222c6f3d8'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11675}")>]>
+unit-shard-one-0: 01:57:21 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f47f4e2b35fb05b8fee5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012166550000074494>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0025873920001231454>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010867910000342818>]>
+unit-shard-one-0: 01:57:26 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f4844e2b35fb05b8fee6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001391046999970058>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0038985999999567866>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010092840000197612>]>
+unit-shard-one-0: 01:57:45 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f4984e2b35fb05b8feeb, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0027348230000825424>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.005628814999909082>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013322790000529494>]>
+unit-shard-one-0: 01:57:50 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f49c4e2b35fb05b8feec, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0024611630001345475>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a52f49017c88a5d01c69780'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14424}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.003419510000185255>]>
+unit-shard-one-0: 01:58:48 ERROR unit.shard-one/0.juju-log sharding:15: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f4d72eff7d64d9a8be13, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.006495535999874846>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0028182989999550045>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.005944969999973182>]>
+unit-shard-one-2: 02:09:20 ERROR unit.shard-one/2.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:09:21 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:09:22 ERROR unit.shard-one/2.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:09:23 ERROR unit.shard-one/0.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:09:25 ERROR unit.shard-one/1.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:09:27 ERROR unit.shard-one/1.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:19:47 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-1: 02:19:47 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:19:47 ERROR unit.config-server/0.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 02:19:48 ERROR unit.config-server/1.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:23:07 ERROR unit.shard-one/2.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 02:23:26 ERROR unit.shard-one/1.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 02:23:27 ERROR unit.shard-one/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 02:23:32 ERROR unit.shard-two/0.juju-log Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

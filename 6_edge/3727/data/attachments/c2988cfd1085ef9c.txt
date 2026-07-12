@@ -1,0 +1,52 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  config-server/1 [executing] active: Primary.
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: 
+  config-server/1 [executing] active: Primary.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] active: Primary.
+  shard-two/0 [executing] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:06:11Z
+
+App               Version  Status   Scale  Charm             Channel      Rev  Address         Exposed  Message
+config-server     6.0.28   active       2  mongodb-k8s                      0  10.152.183.89   no       
+continuous-write           waiting      1  continuous-write                 0  10.152.183.141  no       
+s3-integrator              active       1  s3-integrator     latest/edge  575  10.152.183.107  no       
+shard-one         6.0.28   active       2  mongodb-k8s                      1  10.152.183.172  no       
+shard-two         6.0.28   active       1  mongodb-k8s                      2  10.152.183.178  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0      active    idle   10.1.53.16         
+config-server/1*     active    idle   10.1.53.15         Primary.
+continuous-write/0*  waiting   idle   10.1.53.36         
+s3-integrator/0*     active    idle   10.1.53.35         
+shard-one/0*         active    idle   10.1.53.25         
+shard-one/1          active    idle   10.1.53.27         Primary.
+shard-two/0*         active    idle   10.1.53.34         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 01:48:12 ERROR unit.config-server/0.juju-log Deferring because of ModelError ERROR permission denied
+
+unit-shard-one-0: 01:52:08 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f347542c016631c214c5, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.006299751999904402>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.009379592999948727>]>
+unit-shard-one-0: 01:52:13 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f34b542c016631c214c6, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013273810000100639>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.005172500999833574>]>
+unit-shard-one-0: 01:52:18 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f350542c016631c214c7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0048267220001889655>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a52f343d004686c8c0d688c'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 11414}")>]>
+unit-shard-one-0: 01:52:22 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f355542c016631c214c8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.00429607599994597>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.004760832999863851>]>
+unit-shard-one-0: 01:53:12 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f386696c86ae754927e3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.007656428000018423>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a52f3696947881784e5b0bc'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 10670, 'lastCommittedOpTime': Timestamp(1783821185, 1), '$clusterTime': {'clusterTime': Timestamp(1783821187, 1), 'signature': {'hash': b'\\xc41\\xe2+Y\\x82\\xb8\\x08A\\xdd1;p\\x17\\n\\x14\\x17\\xbem_', 'keyId': 7661452444601155596}}, 'operationTime': Timestamp(1783821185, 1)}")>]>
+unit-shard-one-0: 01:53:17 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f38b696c86ae754927e4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0015937410000788077>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.004107793999992282>]>
+unit-shard-one-0: 01:53:43 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a52f3a67465fceadf8f6294, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0077815459999328596>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0020466709997890575>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
