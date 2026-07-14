@@ -1,0 +1,70 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Starting MongoDB.
+  config-server/1 [executing] maintenance: Starting MongoDB.
+  shard-one/0 [executing] waiting: Waiting for MongoDB restart.
+  shard-one/1 [executing] waiting: Waiting for MongoDB restart.
+  shard-two/0 [executing] waiting: Waiting for MongoDB restart.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Starting MongoDB.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Starting MongoDB.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:09:44Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.10   active       2  mongodb-k8s                  0  10.152.183.234  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.159  no       
+s3-integrator              active       1  s3-integrator     1/edge   575  10.152.183.51   no       
+shard-one         8.0.10   active       2  mongodb-k8s                  1  10.152.183.142  no       
+shard-two         8.0.10   active       1  mongodb-k8s                  2  10.152.183.106  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.14         Primary.
+config-server/1      active    idle   10.1.53.21         
+continuous-write/0*  waiting   idle   10.1.53.39         
+s3-integrator/0*     active    idle   10.1.53.38         
+shard-one/0*         active    idle   10.1.53.31         Primary.
+shard-one/1          active    idle   10.1.53.32         
+shard-two/0*         active    idle   10.1.53.37         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 01:55:40 ERROR unit.shard-one/0.juju-log sharding:15: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-0: 01:55:46 ERROR unit.shard-two/0.juju-log sharding:16: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-one-0: 01:56:22 ERROR unit.shard-one/0.juju-log database-peers:6: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559745500627afccd242f3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.000504867000017839>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005727890001026026>]>
+unit-shard-one-0: 01:56:27 ERROR unit.shard-one/0.juju-log rollingops-peers:5: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559749ee5d64721144e3a4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0006137210000360938>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0015619739999692683>]>
+unit-shard-one-0: 01:56:31 ERROR unit.shard-one/0.juju-log rollingops-peers:5: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a55974e3d26d7a5b5df9678, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.00040008000007674127>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005687540000280933>]>
+unit-config-server-0: 01:56:31 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1783994190, 6), \'signature\': {\'hash\': b\'.\\xcc\\xee\\x87\\xd8\\x94a\\xa8$M3\\xa9\\xe1\\xfd\\xc4\\xb5\\x84\\x9c\\xd3w\', \'keyId\': 7662195748821270552}}, \'operationTime\': Timestamp(1783994190, 6)}')
+unit-shard-one-0: 01:56:36 ERROR unit.shard-one/0.juju-log sharding:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a55975349191ff78f2f68b0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0010862699999734104>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0010575270000572345>]>
+unit-shard-one-0: 01:56:42 ERROR unit.shard-one/0.juju-log status-peers:7: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559759973726dcbe1fd6f1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006309860000328626>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0011022239999647354>]>
+unit-shard-one-0: 01:56:46 ERROR unit.shard-one/0.juju-log database-peers:6: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a55975dd280e923a6826e6d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007877920000964878>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012897249999923588>]>
+unit-shard-one-0: 01:56:48 ERROR unit.shard-one/0.juju-log database-peers:6: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a55975fd280e923a6826e6e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005854789999375498>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005963849999943704>]>
+unit-config-server-0: 01:59:01 ERROR unit.config-server/0.juju-log s3-credentials:18: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/6a5597e3c1aa4bbb90398f48 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 01:59:19 ERROR unit.config-server/0.juju-log s3-credentials:18: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.107:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/6a5597e3c1aa4bbb90398f48 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 01:59:19 ERROR unit.config-server/0.juju-log s3-credentials:18: single_kernel_mongo.managers.backups.common:Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/6a5597e3c1aa4bbb90398f48 [config-server/config-server-1.config-server-endpoints:27017]\n', 'stderr': ''}
+unit-config-server-0: 01:59:29 ERROR unit.config-server/0.juju-log single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.107:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=Error: another operation in progress, Resync storage/6a5597e3c1aa4bbb90398f48 [config-server/config-server-1.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 01:59:29 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.backups.common:Failed to configure PBM options: {'return_code': 1, 'stdout': 'Error: another operation in progress, Resync storage/6a5597e3c1aa4bbb90398f48 [config-server/config-server-1.config-server-endpoints:27017]\n', 'stderr': ''}
+unit-s3-integrator-0: 02:07:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#config-server": settings 2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#config-server not found (not found)
+unit-config-server-1: 02:07:51 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#s3-integrator": settings 2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#s3-integrator not found (not found)
+unit-config-server-0: 02:07:53 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#s3-integrator": settings 2e889faf-eeff-4419-8ba5-92755a9c822e:r#18#s3-integrator not found (not found)
+unit-config-server-0: 02:08:12 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms),config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559a0a94b67be141f3b86c, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('config-server-1.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-config-server-0: 02:08:29 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms),config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559a1c63c7ac6680203936, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('config-server-1.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-config-server-0: 02:08:43 ERROR unit.config-server/0.juju-log single_kernel_mongo.events.lifecycle:Deferring because of ServerSelectionTimeoutError config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms),config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms), Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a559a2a63c7ac6680203938, topology_type: Unknown, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-0.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('config-server-1.config-server-endpoints', 27018) server_type: Unknown, rtt: None, error=AutoReconnect('config-server-1.config-server-endpoints:27018: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
