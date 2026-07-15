@@ -1152,6 +1152,9 @@ def test_connect_mongodb_exporter_success(
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
     )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
 
     mongodb_hostname = "127.0.0.1"
 
