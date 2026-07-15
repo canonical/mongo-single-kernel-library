@@ -234,7 +234,7 @@ class MongosOperator(OperatorProtocol, Object):
         the version and  setting the environment.
         """
         if not self.workload.workload_present:
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
 
     def _configure_workloads(self) -> None:
         # Instantiate the local directory for k8s
@@ -273,7 +273,7 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
 
         if not self.refresh:
             raise ContainerNotReadyError("Workload not allowed to start yet.")

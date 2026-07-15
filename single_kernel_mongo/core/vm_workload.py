@@ -6,14 +6,23 @@
 
 import subprocess
 from collections.abc import Mapping
+from functools import cached_property
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
 from platform import machine
 from shutil import copyfile
 
+import charmlibs.snap as snap
 from ops import Container
-from tenacity import retry, retry_if_exception_type, retry_if_result, stop_after_attempt, wait_fixed
+from tenacity import (
+    Retrying,
+    retry,
+    retry_if_exception_type,
+    retry_if_result,
+    stop_after_attempt,
+    wait_fixed,
+)
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -28,7 +37,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2 import snap
 from single_kernel_mongo.utils.helpers import mask_sensitive_information
 
 logger = getLogger(__name__)
@@ -44,7 +52,17 @@ class VMWorkload(WorkloadBase):
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        self.mongod_snap = snap.SnapCache()[SNAP_NAME]
+
+    @cached_property
+    def mongod_snap(self) -> snap.Snap:
+        """Return the MongoDB snap."""
+        for attempt in Retrying(stop=stop_after_attempt(12), wait=wait_fixed(10)):
+            with attempt:
+                mongod_snap = snap.SnapCache()[SNAP_NAME]
+        logger.debug(
+            f"Snap {SNAP_NAME} fetched after {attempt.retry_state.attempt_number - 1} retries."
+        )
+        return mongod_snap
 
     @property
     @override
