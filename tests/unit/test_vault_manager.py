@@ -128,7 +128,12 @@ def test_vault_create_nonce(
     mongodb_name: str,
     mocker: MockerFixture,
     mongodb_container: Container | None,
+    short_mock_fs_interactions,
 ):
+    snap = mocker.Mock(present=True)
+    snap_cache = mocker.patch("single_kernel_mongo.core.vm_workload.snap.SnapCache")
+    snap_cache.return_value.__getitem__.return_value = snap
+    mocker.patch("single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._set_os_config")
     peer_relation = testing.PeerRelation(
         id=1,
         endpoint=PeerRelationNames.PEERS.value,
@@ -141,8 +146,9 @@ def test_vault_create_nonce(
         relations={peer_relation},
         leader=True,
     )
-    with mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install"):
-        state_out = mongodb_ctx.run(mongodb_ctx.on.install(), state=state_in)
+    mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.install")
+
+    state_out = mongodb_ctx.run(mongodb_ctx.on.install(), state=state_in)
 
     secret_out = state_out.get_secret(label=f"vault-kv.{mongodb_name}.unit")
     assert len(secret_out.latest_content.get("vault-nonce", "")) == 32

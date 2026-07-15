@@ -497,7 +497,7 @@ class MongoDBOperator(OperatorProtocol, Object):
     def install_workloads(self) -> None:
         """Handler on install."""
         if not self.workload.workload_present:
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("MongoDB workload is not present yet.")
 
         if self.substrate == Substrates.VM:
             self._set_os_config()

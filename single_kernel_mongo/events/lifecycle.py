@@ -66,7 +66,9 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
+from single_kernel_mongo.utils.event_helpers import (
+    defer_event_with_info_log,
+)
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 
 logger = logging.getLogger(__name__)
@@ -180,8 +182,8 @@ class LifecycleEventsHandler(Object):
         """Install event."""
         try:
             self.dependent.install_workloads()
-        except (ContainerNotReadyError, WorkloadServiceError):
-            logger.info("Not ready to start.")
+        except (ContainerNotReadyError, WorkloadServiceError) as e:
+            logger.info("Not ready to start. %s", e)
             event.defer()
             return
 
