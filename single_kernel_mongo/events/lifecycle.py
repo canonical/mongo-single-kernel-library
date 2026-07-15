@@ -154,8 +154,8 @@ class LifecycleEventsHandler(Object):
         """Install event."""
         try:
             self.dependent.install_workloads()
-        except (ContainerNotReadyError, WorkloadServiceError):
-            logger.info("Not ready to start.")
+        except (ContainerNotReadyError, WorkloadServiceError) as e:
+            logger.info("Not ready to start: %s", e)
             event.defer()
             return
 

@@ -125,10 +125,10 @@ class BackupConfigManager(CommonConfigManager):
     def configure_and_restart(self, force: bool = False):
         """Sets up PBM with right configuration and restarts it."""
         if not self.workload.workload_present:
-            logger.info("Workload is not present.")
+            logger.info("PBM cannot be configured and restarted: Workload is not present.")
             return
         if not self.state.db_initialised:
-            logger.info("DB is not initialised.")
+            logger.info("PBM cannot be configured and restarted: DB is not initialised.")
             return
 
         if self.state.is_role(MongoDBRoles.SHARD) and not self.state.is_shard_added_to_cluster():
@@ -181,11 +181,11 @@ class LogRotateConfigManager(CommonConfigManager):
     def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
         if not self.state.db_initialised:
-            logger.info("DB is not initialised.")
+            logger.info("LogRotate cannot be configured and restarted: DB is not initialised.")
             return
 
         if not self.state.get_user_password(LogRotateUser):
-            logger.info("No password found.")
+            logger.info("LogRotate cannot be configured and restarted: No password found.")
             return
 
         try:
