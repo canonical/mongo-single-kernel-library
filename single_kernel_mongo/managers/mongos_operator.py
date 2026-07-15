@@ -152,7 +152,7 @@ class MongosOperator(OperatorProtocol, Object):
         the version and  setting the environment.
         """
         if not self.workload.workload_present:
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
         self.charm.unit.set_workload_version(self.workload.get_version())
 
     def _configure_workloads(self) -> None:
@@ -177,7 +177,7 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
 
         self._configure_workloads()
 

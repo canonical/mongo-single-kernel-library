@@ -306,7 +306,9 @@ class MongoConnection:
         # degradation, before adding new members, it is needed to check that all other
         # members finished init sync.
         if self.is_any_sync(rs_status):
-            raise NotReadyError
+            raise NotReadyError(
+                "Waiting for all members to finish syncing before adding new member."
+            )
 
         # Avoid reusing IDs, according to the doc
         # https://www.mongodb.com/docs/manual/reference/replica-configuration/
