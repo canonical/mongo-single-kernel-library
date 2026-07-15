@@ -419,7 +419,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         self.state.tls.set_secret(internal, SECRET_CERT_LABEL, provider_cert.certificate.raw)
         self.state.tls.set_secret(internal, SECRET_CA_LABEL, provider_cert.ca.raw)
         logger.info(
-            "%s certificate secrets updated.",
+            "%s TLS certificate secrets updated.",
             TLSType.PEER.value if internal else TLSType.CLIENT.value,
         )
 
