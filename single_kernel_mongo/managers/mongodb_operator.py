@@ -663,6 +663,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            PyMongoError: If the MongoDB service is not ready to accept connections.
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             logger.info("We haven't elected a leader yet.")
@@ -709,9 +710,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
-        # If we had an IP change, we must restart.
-        if self.state.db_initialised:
-            self.async_restart_charm_services(force=False)
+        # An IP change requires the cluster network access restrictions to be refreshed.
+        self._sync_cluster_network_access_restrictions()
 
         if not self.charm.unit.is_leader():
             return
@@ -888,7 +888,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
-        self._sync_cluster_ip_source_allowlist()
+        self._sync_cluster_network_access_restrictions()
 
         # Changing the charmed-stats or the charmed-backup password will lead
         # to non-leader units receiving a relation changed event. We must update
@@ -920,7 +920,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
-            self.mongo_manager.update_users_local_auth_restrictions()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
@@ -993,14 +992,18 @@ class MongoDBOperator(OperatorProtocol, Object):
                     "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
                 )
             self.update_hosts()
-            self.mongo_manager.update_users_local_auth_restrictions()
 
-        self._sync_cluster_ip_source_allowlist(departing_unit=departing_unit)
+        self._sync_cluster_network_access_restrictions(departing_unit=departing_unit)
 
-    def _sync_cluster_ip_source_allowlist(self, departing_unit: Unit | None = None) -> None:
-        """Sync the cluster IP source allowlist in the config file and running mongod.
+    def _sync_cluster_network_access_restrictions(self, departing_unit: Unit | None = None) -> None:
+        """Sync IP-based access restrictions with the current cluster topology.
 
-        This is done by leader and not leader units.
+        Persist and apply the cluster IP source allowlist on every unit. On the
+        leader, also update authentication restrictions for internal users. If a
+        unit is departing, exclude its database address from the restrictions.
+
+        Raises:
+            PyMongoError: If the cluster IP source allowlist cannot be updated.
         """
         if not self.state.db_initialised or not self.workload.active():
             return
@@ -1018,8 +1021,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.config_manager.sync_cluster_ip_source_allowlist_to_file(allowlist)
         try:
             self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
-        except (NotReadyError, PyMongoError) as e:
-            logger.warning("Failed to update cluster IP source allowlist: error=%s", e)
+            if self.charm.unit.is_leader():
+                self.mongo_manager.update_users_local_auth_restrictions()
+        except PyMongoError as e:
+            logger.warning("Failed to update cluster network access restrictions: %s", e)
             raise
 
     @override

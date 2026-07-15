@@ -209,13 +209,13 @@ class MongoManager(Object, ManagerStatusProtocol):
 
     def update_users_local_auth_restrictions(self) -> None:
         """Update auth restrictions for internal users that connect locally."""
-        with MongoConnection(self.state.mongo_config) as mongo:
-            for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
-                if not self.state.app_peer_data.is_user_created(user.username):
-                    continue
-
+        auth_restrictions = self.state.local_auth_restrictions
+        for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
+            if not self.state.app_peer_data.is_user_created(user.username):
+                continue
+            with MongoConnection(self.state.mongo_config) as mongo:
                 config = self.state.mongodb_config_for_user(
-                    user, auth_restrictions=self.state.local_auth_restrictions
+                    user, auth_restrictions=auth_restrictions
                 )
                 logger.info("Updating auth restrictions for %s user.", user.username)
                 mongo.update_user_auth_restrictions(config)

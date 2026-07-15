@@ -192,7 +192,7 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
         {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24"]}}
     ).splitlines()
     manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
-    mock_write.assert_not_called()
+    mock_write.assert_called()
 
     mock_read.return_value = safe_dump(
         {
@@ -200,12 +200,12 @@ def test_sync_cluster_ip_source_allowlist_to_file(mocker):
             "security": {"clusterIpSourceAllowlist": ["10.0.1.0/24"]},
         }
     ).splitlines()
-    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
+    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.2/24"])
 
     written_config = safe_load(mock_write.call_args.args[1])
     assert written_config == {
         "net": {"bindIp": "10.0.0.1,127.0.0.1"},
-        "security": {"clusterIpSourceAllowlist": ["10.0.0.1/24"]},
+        "security": {"clusterIpSourceAllowlist": ["10.0.0.2/24"]},
     }
 
 

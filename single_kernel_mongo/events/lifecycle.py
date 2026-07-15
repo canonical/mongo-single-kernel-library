@@ -202,6 +202,7 @@ class LifecycleEventsHandler(Object):
             SetPasswordError,
             WaitingForVaultError,
             RollingOpsNoRelationError,
+            PyMongoError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:

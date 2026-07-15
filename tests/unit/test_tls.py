@@ -722,6 +722,9 @@ def test_tls_relation_broken_log_upgrade_in_progress(
 def test_tls_config_changed(
     harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
 ):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -749,6 +752,9 @@ def test_tls_config_changed(
 def test_tls_config_changed_invalid_key(
     harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
 ):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -785,6 +791,9 @@ def test_tls_config_changed_invalid_key(
 def test_tls_config_changed_invalid_keys(
     harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
 ):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True

@@ -312,6 +312,9 @@ def test_on_certificate_removed_clean_certs(
 def test_ldap_full_integration_cycle(
     harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
 ):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
