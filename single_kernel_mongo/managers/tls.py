@@ -138,7 +138,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         if not self.state.tls.is_tls_enabled(internal):
             logger.debug("%s TLS is disabled.", scope)
             return None, None
-        logger.debug("%s TLS *enabled*, fetching data for CA and PEM files ", scope)
+        logger.debug("%s TLS is enabled, fetching data for CA and PEM files ", scope)
 
         ca = self.state.tls.get_secret(internal, SECRET_CA_LABEL)
         chain = self.state.tls.get_secret(internal, SECRET_CHAIN_LABEL)
