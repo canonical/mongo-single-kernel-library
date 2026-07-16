@@ -710,8 +710,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
-        # An IP change requires the cluster network access restrictions to be refreshed.
-        self._sync_cluster_network_access_restrictions()
+        # If we had an IP change, we must restart to update the bindIP.
+        if self.state.db_initialised:
+            self.async_restart_charm_services(force=False)
+            self._sync_cluster_network_access_restrictions()
 
         if not self.charm.unit.is_leader():
             return
