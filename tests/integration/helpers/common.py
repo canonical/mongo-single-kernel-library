@@ -1051,10 +1051,7 @@ async def execute_on_mongod(
     ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
     tls_string = ""
     if tls:
-        tls_string = (
-            f"--tls --tlsCAFile {external_cert_path(substrate)}"
-            f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
-        )
+        tls_string = f"--tls --tlsCAFile {external_cert_path(substrate)}"
 
     if stringify:
         formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})" {tls_string}'

@@ -7,7 +7,7 @@ from pymongo.errors import OperationFailure
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     MONGOS_APP_NAME,
     TIMEOUT,
@@ -15,7 +15,7 @@ from ...helpers.common import (
     get_direct_mongo_client,
     get_relation_username_password,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
@@ -23,7 +23,7 @@ from ...helpers.sharding import (
     SHARD_REL_NAME,
     count_users,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 async def test_build_and_deploy(
@@ -172,7 +172,6 @@ async def test_disconnect_from_cluster_removes_user(
     )
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, MONGOS_APP_NAME],
-        status="active",
         idle_period=30,
         timeout=TIMEOUT,
         raise_on_error=False,

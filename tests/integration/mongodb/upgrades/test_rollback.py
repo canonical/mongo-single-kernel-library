@@ -11,15 +11,15 @@ import tomllib
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     find_unit,
     get_app_name,
     get_juju_status,
     get_unit_id,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import get_workload_version, refresh_with_juju
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import get_workload_version, refresh_with_juju
 
 logger = logging.getLogger(__name__)
 

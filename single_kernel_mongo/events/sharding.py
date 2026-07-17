@@ -20,19 +20,20 @@ from ops.framework import Object
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 
 from single_kernel_mongo.config.literals import TrustStoreFiles
-from single_kernel_mongo.config.statuses import ShardStatuses
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     DeferrableFailedHookChecksError,
     FailedToUpdateCredentialsError,
     NonDeferrableFailedHookChecksError,
     NotDrainedError,
+    RelationBrokenDuringScaleDownError,
     ShardAuthError,
     WaitingForCertificatesError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseCreatedEvent,
     DatabaseProviderEventHandlers,
     DatabaseRequestedEvent,
     DatabaseRequirerEventHandlers,
@@ -80,6 +81,11 @@ class ConfigServerEventHandler(Object):
         """Handle relation changed and relation broken events."""
         is_leaving = isinstance(event, RelationBrokenEvent)
         try:
+            self.manager.state.statuses.delete(
+                ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
         except (
             DeferrableFailedHookChecksError,
@@ -91,6 +97,11 @@ class ConfigServerEventHandler(Object):
             PyMongoError,
             OperationFailure,
         ) as e:
+            self.manager.state.statuses.add(
+                ConfigServerStatuses.MISSING_CONF_SERVER_REL.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -124,7 +135,16 @@ class ShardEventHandler(Object):
             self.charm.on[self.relation_name.value].relation_created, self._on_relation_created
         )
         self.framework.observe(
-            self.charm.on[self.relation_name.value].relation_changed, self._on_database_created
+            self.charm.on[self.relation_name.value].relation_changed, self._store_certificates
+        )
+        self.framework.observe(
+            self.charm.on[self.relation_name.value].relation_changed, self._synchronize_passwords
+        )
+        self.framework.observe(
+            self.charm.on[self.relation_name.value].relation_changed, self._synchronize_member_auth
+        )
+        self.framework.observe(
+            self.charm.on[self.relation_name.value].relation_changed, self._handle_pbm_restarts
         )
 
         self.framework.observe(
@@ -144,17 +164,53 @@ class ShardEventHandler(Object):
         """Prepare to add the shard."""
         self.manager.prepare_to_add_shard()
 
-    def _on_database_created(self, event: DatabaseCreatedEvent):
-        """When we receive a database created event, we synchronize the cluster secrets locally."""
+    def _store_certificates(self, event: RelationChangedEvent):
+        """When we receive certificates, we want to store them immediately on the file system."""
         try:
-            self.manager.synchronise_cluster_secrets(event.relation)
+            self.manager.update_config_server_certs()
+        except DeferrableFailedHookChecksError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+
+    def _synchronize_passwords(self, event: RelationChangedEvent):
+        """Upon receiving the operator and backup user passwords, we want to update them locally."""
+        try:
+            self.manager.synchronize_user_passwords(event.relation)
         except (
             DeferrableFailedHookChecksError,
-            WaitingForSecretsError,
-            WaitingForCertificatesError,
+            FailedToUpdateCredentialsError,
+            WorkloadServiceError,
             NotReadyError,
+        ) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+
+    def _synchronize_member_auth(self, event: RelationChangedEvent):
+        """When we receive a new keyfile /TLS CA we want to restart mongodb with the right files."""
+        try:
+            self.manager.synchronize_member_auth(event.relation)
+        except (
+            DeferrableFailedHookChecksError,
+            NotReadyError,
+            WaitingForSecretsError,
             FailedToUpdateCredentialsError,
             RollingOpsNoRelationError,
+            WaitingForCertificatesError,
+        ) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+
+    def _handle_pbm_restarts(self, event: RelationChangedEvent):
+        """If everything is working and we're added to the cluster, we want to finally start PBM."""
+        try:
+            self.manager.handle_pbm(event.relation)
+        except (
+            DeferrableFailedHookChecksError,
+            NotReadyError,
+            WorkloadServiceError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -174,12 +230,16 @@ class ShardEventHandler(Object):
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
-            self.manager.cleanup_cluster_id()
             self.manager.drain_shard_from_cluster(event.relation)
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
+        except RelationBrokenDuringScaleDownError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
         except NonDeferrableFailedHookChecksError as e:
+            self.manager.cleanup_cluster_id()
             self.manager.state.statuses.set(
                 ShardStatuses.MISSING_CONF_SERVER_REL.value,
                 scope="unit",
@@ -187,3 +247,4 @@ class ShardEventHandler(Object):
             )
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return

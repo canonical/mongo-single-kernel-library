@@ -8,8 +8,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.backups import S3_APP_NAME, S3_ENDPOINT, CloudConfigs
-
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     deploy_charm,
@@ -18,12 +17,12 @@ from ...helpers.common import (
     is_relation_joined,
     unit_hostname,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     cut_network_from_unit,
     restore_network_for_unit,
     wait_until_unit_in_status,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
 

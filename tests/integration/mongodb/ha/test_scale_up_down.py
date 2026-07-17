@@ -5,7 +5,7 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
@@ -13,12 +13,12 @@ from ...helpers.common import (
     get_address_of_unit,
     get_app_name,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     replica_set_primary,
     scale_application,
     verify_writes,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

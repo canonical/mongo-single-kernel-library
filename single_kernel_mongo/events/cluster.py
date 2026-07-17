@@ -23,7 +23,9 @@ from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -99,7 +101,6 @@ class ClusterConfigServerEventHandler(Object):
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""
         try:
-            self.manager.cleanup_cluster_id()
             self.manager.cleanup_users(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
@@ -178,8 +179,10 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except RollingOpsNoRelationError as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
@@ -199,7 +202,10 @@ class ClusterMongosEventHandler(Object):
         """On relation broken event, we cleanup the users and mongos instance."""
         try:
             self.manager.remove_users_and_cleanup_mongo(event.relation)
-        except (DeferrableFailedHookChecksError, DeferrableError) as e:
+            self.manager.cleanup_cluster_id()
+        except (DeferrableFailedHookChecksError, DeferrableError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+            return
+        except RelationBrokenDuringScaleDownError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
