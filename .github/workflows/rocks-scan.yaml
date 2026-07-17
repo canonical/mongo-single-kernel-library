@@ -7,7 +7,6 @@ on:
         required: true
         type: string
       artifact-prefix:
-        default: packed-rock
         required: false
         type: string
 
@@ -37,7 +36,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           ROCK_NAME: ${{ matrix.rock.name }}
         run: |
-          echo "artifact_pattern=${ARTIFACT_PREFIX}*${PLATFORM}" >> "$GITHUB_OUTPUT"
+          echo "artifact_pattern=${ARTIFACT_PREFIX}-${ROCK_NAME}*${PLATFORM}" >> "$GITHUB_OUTPUT"
           echo "image_tag=${PLATFORM}" >> "$GITHUB_OUTPUT"
           echo "scan_suffix=${PLATFORM}" >> "$GITHUB_OUTPUT"
 

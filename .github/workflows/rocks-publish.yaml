@@ -59,7 +59,7 @@ jobs:
     uses: ./.github/workflows/rocks-scan.yaml
     with:
       rocks: ${{ needs.discover-rocks.outputs.rocks }}
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: packed-rock
     secrets: inherit
     permissions:
       actions: read
@@ -80,7 +80,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/release_rock_edge.yaml@v49.0.2
     with:
       path-to-rock-directory: ${{ matrix.rock.path }}
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: packed-rock-${{ matrix.rock.name }}
     permissions:
       actions: read  # Needed for GitHub API call to get workflow version
       packages: write  # Needed to publish to GitHub Container Registry
