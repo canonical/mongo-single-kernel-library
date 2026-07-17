@@ -362,7 +362,7 @@ def test_cluster_requirer_update_mongos_and_restart(
             )
             assert (
                 data["uris"]
-                == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
+                == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authMechanism=SCRAM-SHA-256&authSource=admin"
             )
             assert mongos_harness.charm.operator.state.get_cluster_id() == "cluster"
         else:

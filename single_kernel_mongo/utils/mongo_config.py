@@ -31,7 +31,6 @@ class MongoConfiguration:
         hosts: full set of hosts to connect to, needed for the URI.
         roles: set of roles for that user.
         tls_enabled: Is TLS enabled on that configuration?
-        tls_external_keyfile: The path of the tls external certificate
         tls_external_ca: The path of the tls external CA certificate
         port: The port used to connect
         replset: The replica set we connect to
@@ -45,7 +44,6 @@ class MongoConfiguration:
     hosts: set[str]
     roles: set[str]
     tls_enabled: bool
-    tls_external_keyfile: Path = Path("")
     tls_external_ca: Path = Path("")
     port: int | None = None
     replset: str | None = None
@@ -69,9 +67,10 @@ class MongoConfiguration:
     @property
     def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
+        result = {"authMechanism": "SCRAM-SHA-256"}
         if self.database != "admin":
-            return ADMIN_AUTH_SOURCE
-        return {}
+            result |= ADMIN_AUTH_SOURCE
+        return result
 
     @property
     def tls_config(self) -> dict[str, str]:
@@ -143,12 +142,11 @@ class MongoConfiguration:
 
 
 EMPTY_CONFIGURATION = MongoConfiguration(
-    "",
-    "",
-    "",
-    set(),
-    set(),
-    False,
-    Path(""),
-    Path(""),
+    database="",
+    username="",
+    password="",  # nosec: B106
+    hosts=set(),
+    roles=set(),
+    tls_enabled=False,
+    tls_external_ca=Path(""),
 )

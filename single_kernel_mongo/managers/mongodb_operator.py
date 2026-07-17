@@ -17,13 +17,22 @@ from charmlibs.rollingops import (
     RollingOpsSyncLockError,
 )
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
-from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    before_sleep_log,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_fixed,
+)
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -476,7 +485,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @property
     @override
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (
             self,
@@ -1034,7 +1043,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     ShardStatuses.DRAINING_SHARD.value, scope="unit"
                 )
                 mongos_hosts = self.state.shard_state.mongos_hosts
-                self.shard_manager.wait_for_draining(mongos_hosts)
+                self.shard_manager.effectively_drain_shard_from_cluster(mongos_hosts)
                 logger.info("Shard successfully drained storage.")
             return
 
@@ -1053,6 +1062,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     (NotReadyError, RollingOpsSyncLockError, PyMongoError)
                 ),
                 reraise=True,
+                before_sleep=before_sleep_log(logger, logging.INFO),
             ):
                 with attempt:
                     with self.rollingops_manager.acquire_sync_lock(
@@ -1332,7 +1342,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Encryption at rest may be degraded. Vault agent state: {state}. This must be fixed first."
             )
         try:
-            should_restart = self.tls_manager.reconcile_tls_files()
+            should_restart = self.tls_manager.reconcile_tls()
             self.charm.status_handler.set_running_status(
                 MongoDBStatuses.RESTARTING.value, scope="unit"
             )
@@ -1342,6 +1352,14 @@ class MongoDBOperator(OperatorProtocol, Object):
                 self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             raise DeferrableError from e
+
+        self.finalize_after_restart()
+
+    def finalize_after_restart(self) -> None:
+        """Run a series of code that should always run after a restart."""
+        # After a restart we can always recompute the shard manager statuses.
+        self.shard_manager.recompute_statuses_for_scope(scope="unit")
+        self.shard_manager.reconcile_shard_after_restart()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
@@ -1515,7 +1533,8 @@ class MongoDBOperator(OperatorProtocol, Object):
     @property
     def is_removing_last_replica(self) -> bool:
         """Returns True if the last replica (juju unit) is getting removed."""
-        return self.state.planned_units == 0 and len(self.state.peers_units) == 0
+        # planned_units should be 0 when we're removing the last replica
+        return self.state.planned_units == 0
 
     def basic_statuses(self) -> list[StatusObject]:
         """Basic checks."""

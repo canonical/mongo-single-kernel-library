@@ -281,6 +281,12 @@ class MongoConnection:
 
         members = rs_config["config"]["members"]
 
+        if len(members) == 1:
+            logger.info(
+                "We're the last member of the replica set, we failed to detect that before."
+            )
+            return
+
         if not any(hostname == hostname_from_hostport(member["host"]) for member in members):
             logger.info("Replica set member %s is already removed", hostname)
             return

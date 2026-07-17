@@ -6,14 +6,14 @@ import pytest
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     deploy_charm,
     find_unit,
     generate_mongodb_client,
     get_address_of_unit,
     get_unit_id,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
     SHARD_ONE_APP_NAME,
@@ -22,7 +22,7 @@ from ...helpers.sharding import (
     SHARD_TWO_APP_NAME,
     has_correct_shards,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 RC_TIMEOUT = 60 * 30
 
@@ -50,7 +50,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_ONE_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
     await deploy_charm(
@@ -59,7 +59,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_TWO_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
     await deploy_charm(
@@ -68,7 +68,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=SHARD_THREE_APP_NAME,
         mongod_resource=mongod_resource,
-        num_units=2,
+        num_units=3,
         config={"role": "shard"},
     )
 

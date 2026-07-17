@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 import jinja2
 import ldap
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 from ops.model import Relation
@@ -47,7 +49,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class LDAPManager(Object, ManagerStatusProtocol):
+class LDAPManager(Object, AbstractManagerStatus[CharmState]):
     """Manages the relation between glauth-k8s and replica set, config-sever or mongos router."""
 
     def __init__(

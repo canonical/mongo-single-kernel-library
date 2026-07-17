@@ -58,6 +58,7 @@ async def test_build_and_deploy(
 @pytest.mark.abort_on_fail
 async def test_built_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that the cluster can be integrated with TLS."""
+    assert ops_test.model
     await integrate_sharding_components(ops_test)
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -91,5 +92,9 @@ async def test_rotate_tls(ops_test: OpsTest, substrate: Substrate) -> None:
 @pytest.mark.abort_on_fail
 async def test_disable_cluster_with_tls(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that the cluster can disable TLS."""
+    assert ops_test.model
     await remove_tls_integrations(ops_test, applications=CLUSTER_COMPONENTS)
+    await ops_test.model.wait_for_idle(
+        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    )
     await check_cluster_tls_disabled(ops_test, substrate)

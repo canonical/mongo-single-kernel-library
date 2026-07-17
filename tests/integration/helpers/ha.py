@@ -551,7 +551,12 @@ async def verify_writes(
 
     actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=primary_unit)
 
-    assert total_expected_writes == actual_writes
+    assert total_expected_writes == actual_writes, (
+        "Continuous writes count mismatch: "
+        f"expected={total_expected_writes}, "
+        f"actual_on_primary={actual_writes}, "
+        f"difference={actual_writes - total_expected_writes}"
+    )
 
     # Return it in case we need it later
     return total_expected_writes

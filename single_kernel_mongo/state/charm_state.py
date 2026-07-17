@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
-from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractStatusesState,
+    StatusesState,
+)
 from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
 from ops.hookcmds import Network, network_get
 from pymongo.errors import (
@@ -59,7 +63,6 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
-    AppShardingComponentKeys,
     AppShardingComponentState,
     UnitShardingComponentState,
 )
@@ -98,7 +101,7 @@ logger = logging.getLogger()
 
 
 @final
-class CharmState(Object, StatusesStateProtocol):
+class CharmState(Object, AbstractStatusesState):
     """The Charm State object.
 
     This object represents the charm state, including the different relations
@@ -642,60 +645,6 @@ class CharmState(Object, StatusesStateProtocol):
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def _update_ca_secrets(self, new_ca: str | None, cluster_key: str, sharding_key: str) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        # Only the leader can update the databag
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
-            return
-        for relation in self.cluster_relations:
-            if new_ca is None:
-                self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [cluster_key]
-                )
-            else:
-                self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {cluster_key: new_ca}
-                )
-        for relation in self.config_server_relation:
-            if new_ca is None:
-                self.config_server_data_interface.delete_relation_data(relation.id, [sharding_key])
-            else:
-                self.config_server_data_interface.update_relation_data(
-                    relation.id, {sharding_key: new_ca}
-                )
-
-    def _update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.REPLICATION):
-            return
-        for relation in self.client_relations:
-            if new_ca:
-                self.client_data_interface.set_tls(relation.id, "True")
-                self.client_data_interface.set_tls_ca(relation.id, new_ca)
-            else:
-                self.client_data_interface.set_tls(relation.id, "False")
-                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
-
-    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the peer CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.INT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.INT_CA_SECRET.value,
-        )
-
-    def update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the client CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.EXT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.EXT_CA_SECRET.value,
-        )
-        self._update_client_ca_secrets(new_ca=new_ca)
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
@@ -777,6 +726,7 @@ class CharmState(Object, StatusesStateProtocol):
         replset: str | None = None,
         standalone: bool = False,
         auth_restrictions: list[AuthRestrictions] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongodb-specific MongoConfiguration object for the provided user.
 
@@ -794,6 +744,9 @@ class CharmState(Object, StatusesStateProtocol):
             raise Exception("Invalid call: no host in user nor as a parameter.")
         if not auth_restrictions:
             auth_restrictions = []
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
@@ -802,9 +755,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_enabled=tls_enabled,
+            tls_external_ca=tls_external_ca,
             standalone=standalone,
             auth_restrictions=auth_restrictions,
         )
@@ -813,6 +765,7 @@ class CharmState(Object, StatusesStateProtocol):
         self,
         user: MongoDBUser,
         hosts: set[str] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongos-specific MongoConfiguration object for the provided user.
 
@@ -828,6 +781,9 @@ class CharmState(Object, StatusesStateProtocol):
             hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             database=user.database_name,
             username=user.username,
@@ -835,9 +791,8 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_enabled=tls_enabled,
+            tls_external_ca=tls_external_ca,
         )
 
     @property
@@ -870,7 +825,9 @@ class CharmState(Object, StatusesStateProtocol):
     def remote_mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the remote mongos server."""
         mongos_hosts = self.app_peer_data.mongos_hosts
-        return self.mongos_config_for_user(CharmedOperatorUser, set(mongos_hosts))
+        return self.mongos_config_for_user(
+            CharmedOperatorUser, set(mongos_hosts), self.paths.config_server_ext_ca_file
+        )
 
     @property
     def mongos_config(self) -> MongoConfiguration:
@@ -880,14 +837,20 @@ class CharmState(Object, StatusesStateProtocol):
         username, password = self.get_user_credentials()
         database = self.app_peer_data.database
         port: int | None = MongoPorts.MONGOS_PORT.value
+
+        # VM Mongos without external connectivity is using the UNIX socket.
         if (
             self.charm_role.name == CharmKind.MONGOS
             and self.substrate == Substrates.VM
             and not self.app_peer_data.external_connectivity
         ):
             port = None
+
         if not username or not password:
             raise MissingCredentialsError("Missing credentials.")
+
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
 
         return MongoConfiguration(
             database=database,
@@ -897,8 +860,7 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_enabled=tls_enabled,
             tls_external_ca=self.paths.ext_ca_file,
         )
 
