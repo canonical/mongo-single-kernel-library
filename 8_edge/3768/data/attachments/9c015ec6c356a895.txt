@@ -1,0 +1,106 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  03:04:34Z
+
+App            Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+config-server  8.0.10   active      3  mongodb-k8s  8/edge   213  10.152.183.26   no       
+shard-one      8.0.10   active      3  mongodb-k8s  8/edge   213  10.152.183.50   no       
+shard-two      8.0.10   active      3  mongodb-k8s  8/edge   213  10.152.183.122  no       
+
+Unit              Workload     Agent  Address     Ports  Message
+config-server/0*  active       idle   10.1.53.16         Primary.
+config-server/1   active       idle   10.1.53.27         
+config-server/2   active       idle   10.1.53.24         
+shard-one/0*      active       idle   10.1.53.31         Primary.
+shard-one/1       active       idle   10.1.53.42         
+shard-one/2       active       idle   10.1.53.40         
+shard-two/0*      blocked      idle   10.1.53.46         Unexpected error found in replica set.. Run `status-detail`: 1 action required; 1 additional statuses.
+shard-two/1       maintenance  idle   10.1.53.54         Adding shard to config-server
+shard-two/2       maintenance  idle   10.1.53.53         Adding shard to config-server
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:31:16 ERROR unit.shard-one/0.juju-log sharding:15: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-shard-two-0: 02:31:26 ERROR unit.shard-two/0.juju-log sharding:16: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+unit-config-server-0: 02:32:02 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:11 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:12 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:20 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:21 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:22 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:30 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:32 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:33 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:40 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:41 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:42 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:42 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:47 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:47 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:48 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:48 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:52 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:32:53 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-shard-one-0: 02:33:01 ERROR unit.shard-one/0.juju-log database-peers:6: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a59945cc301c7bc083389c2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007122290001007059>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004322390000197629>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0008913070000744483>]>
+unit-shard-one-0: 02:33:05 ERROR unit.shard-one/0.juju-log rollingops-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a599460ef1056104c0f1a84, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005730709999625105>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006893239999499201>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005133199999818316>]>
+unit-config-server-0: 02:33:08 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784255588, 1), \'signature\': {\'hash\': b\'\\xe0]\\x11\\xbbq\\xe4\\xade\\x10\\\\\\xaf\\x04z"\\xa9\\x81\\x1fC\\xfa\\xf2\', \'keyId\': 7663317134717485080}}, \'operationTime\': Timestamp(1784255588, 1)}')
+unit-config-server-0: 02:33:09 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:09 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:20 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:20 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:21 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:23 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:39 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:40 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:40 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:41 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:44 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:44 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:45 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:45 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:48 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:48 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:49 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:33:49 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:34:58 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:34:59 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:34:59 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:34:59 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:37:44 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:37:44 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:37:44 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:37:44 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:37:46 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:38:23 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:38:23 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:38:24 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:38:24 ERROR unit.config-server/0.juju-log status-peers:1: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:43:15 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:43:15 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:43:15 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:43:16 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:43:17 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:48:54 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:48:54 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:48:54 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:48:55 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:48:56 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:53:39 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:53:39 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:53:39 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:53:39 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:53:41 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:58:01 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:58:02 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:58:02 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:58:02 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:58:03 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 03:02:59 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 03:02:59 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 03:03:00 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 03:03:00 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 03:03:01 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
