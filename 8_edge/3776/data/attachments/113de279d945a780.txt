@@ -1,0 +1,81 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  config-server/1 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-two/0 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] maintenance: Restarting MongoDB.
+  config-server/1 [idle] waiting: Waiting for MongoDB restart.
+  shard-one/0 [executing] waiting: Waiting for MongoDB restart.
+  shard-one/1 [executing] waiting: Waiting for MongoDB restart.
+  shard-two/0 [executing] waiting: Waiting for MongoDB restart.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  config-server/1 [executing] maintenance: Restarting MongoDB.
+  shard-one/0 [executing] active: 
+  shard-one/1 [executing] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  config-server/1 [idle] active: 
+  shard-one/1 [idle] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  shard-one/1 [idle] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  shard-one/1 [idle] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  shard-one/1 [idle] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  shard-one/1 [idle] waiting: Waiting for passwords to be synced across the cluster...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] waiting: Waiting for replica set reconfiguration...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:46:34Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.10   active       2  mongodb-k8s                  0  10.152.183.242  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.149  no       
+s3-integrator              active       1  s3-integrator     1/edge   575  10.152.183.84   no       
+shard-one         8.0.10   active       2  mongodb-k8s                  1  10.152.183.191  no       
+shard-two         8.0.10   active       1  mongodb-k8s                  2  10.152.183.112  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.17         Primary.
+config-server/1      active    idle   10.1.53.21         
+continuous-write/0*  waiting   idle   10.1.53.40         
+s3-integrator/0*     active    idle   10.1.53.39         
+shard-one/0*         active    idle   10.1.53.27         
+shard-one/1          active    idle   10.1.53.32         
+shard-two/0*         active    idle   10.1.53.38         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:28:51 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3662ba9ce267bf3eae4f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0006358639999461957>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005602910000561678>]>
+unit-shard-one-0: 02:28:55 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3666cc0e6512ee50691c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0004444070000317879>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0006348929999830943>]>
+unit-config-server-0: 02:28:57 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784428135, 3), \'signature\': {\'hash\': b\'\\xde3\\xc2\\\\\\xb0\\xc7\\xe8x\\x96\\xb6\\xe6}q\\xfac\\xae\\xe1\\xfa\\x0f\\xf4\', \'keyId\': 7664059554174337048}}, \'operationTime\': Timestamp(1784428135, 3)}')
+unit-shard-one-0: 02:28:59 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c366a2077ef86397e4a4f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0009949330000154077>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0007280229999651056>]>
+unit-shard-one-0: 02:29:03 ERROR unit.shard-one/0.juju-log sharding:15: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c366e89607b89f55dddb2, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.00038679099998262245>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005304060000526079>]>
+unit-shard-one-0: 02:29:09 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3674c0a2298555508382, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.00035509200006345054>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005468499999778942>]>
+unit-shard-one-0: 02:29:11 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3676c0a2298555508383, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.00031208800010062987>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005227540000305453>]>
+unit-shard-one-0: 02:29:14 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3679c2ee15750204c175, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0005794390000346539>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0003731190000735296>]>
+unit-config-server-0: 02:29:15 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find host matching read preference { mode: "primary" } for set shard-one, full error: {\'ok\': 0.0, \'errmsg\': \'Could not find host matching read preference { mode: "primary" } for set shard-one\', \'code\': 133, \'codeName\': \'FailedToSatisfyReadPreference\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784428154, 1), \'signature\': {\'hash\': b\'\\xbd\\x86\\xce\\x9b\\xfc\\xde3\\x05\\xf65\\xb0\\x89h\\xe5\\x9f\\x05\\x96\\xbb\\xb8\\x87\', \'keyId\': 7664059554174337048}}, \'operationTime\': Timestamp(1784428154, 1)}')
+unit-shard-one-0: 02:29:16 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c367bc2ee15750204c176, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0003935009999622707>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSOther, rtt: 0.0009978780000210463>]>
+unit-shard-one-0: 02:29:20 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c367f7afd01a57a329579, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007691436000186513>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007499549999465671>]>
+unit-shard-one-0: 02:29:22 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c36817afd01a57a32957a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007566150000002381>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007242059999725825>]>
+unit-shard-one-0: 02:29:26 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3685cba580a171d6b667, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009996799999498762>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.003816606999976102>]>
+unit-shard-one-0: 02:29:28 ERROR unit.shard-one/0.juju-log rollingops-peers:8: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c3686cba580a171d6b668, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001679729999978008>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005170559999214674>]>
+unit-config-server-0: 02:31:20 ERROR unit.config-server/0.juju-log s3-credentials:18: single_kernel_mongo.core.k8s_workload:cmd failed - cmd=/usr/bin//pbm config --force-resync, stdout=Error: another operation in progress, Resync storage/6a5c36f62c65c173d94d2e1e [config-server/config-server-0.config-server-endpoints:27017]
+, stderr=None
+unit-config-server-0: 02:42:31 ERROR unit.config-server/0.juju-log database-peers:3: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5c399632bff74d8dd857f7, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('config-server-0.config-server-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010684930000479653>, <ServerDescription ('config-server-1.config-server-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009918780001498817>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
