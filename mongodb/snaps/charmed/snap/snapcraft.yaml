@@ -62,6 +62,11 @@ package-repositories:
     url: |
         https://ppa.launchpadcontent.net/data-platform/mongodb-shell/ubuntu
 
+plugs:
+  mongosh-posix-mq:
+    interface: posix-mq
+    posix-mq: mongosh
+
 slots:
   logs:
     interface: content
@@ -70,6 +75,12 @@ slots:
         - $SNAP_COMMON/var/log/mongodb
         - $SNAP_COMMON/var/log/mongos
         - $SNAP_COMMON/var/log/pbm
+  mongosh-posix-mq-provider:
+    interface: posix-mq
+    posix-mq: mongosh
+    path: /mongosh
+    permissions:
+      - read
 
 environment:
   LDAPCONF: $SNAP_DATA/etc/ldap/ldap.conf
@@ -79,8 +90,18 @@ apps:
     command: drop_priv.sh mongosh
     plugs:
       - network
+      - system-observe
+      - mongosh-posix-mq
   mongobridge:
     command: drop_priv.sh mongobridge
+    environment:
+      SSL_CERT_FILE: $SNAP/etc/ssl/certs/ca-certificates.crt
+    plugs:
+      - hardware-observe
+      - network
+      - network-bind
+      - network-observe
+      - system-observe
   mongod:
     command: start-mongod.sh
     daemon: simple
@@ -88,8 +109,11 @@ apps:
     restart-condition: always
     restart-delay: 20s
     plugs:
+      - hardware-observe
       - network
       - network-bind
+      - network-observe
+      - system-observe
     slots:
       - logs
   mongodump:
@@ -100,16 +124,25 @@ apps:
   mongod-cli:
     command: drop_priv.sh mongod
     plugs:
+      - hardware-observe
       - network
       - network-bind
+      - network-observe
+      - system-observe
     slots:
       - logs
   mongoexport:
     command: drop_priv.sh mongoexport
+    plugs:
+      - network
   mongofiles:
     command: drop_priv.sh mongofiles
+    plugs:
+      - network
   mongoimport:
     command: drop_priv.sh mongoimport
+    plugs:
+      - network
   mongorestore:
     command: drop_priv.sh mongorestore
     plugs:
@@ -128,8 +161,12 @@ apps:
       - logs
   mongostat:
     command: drop_priv.sh mongostat
+    plugs:
+      - network
   mongotop:
     command: drop_priv.sh mongotop
+    plugs:
+      - network
   mongodb-exporter:
     daemon: simple
     install-mode: disable
