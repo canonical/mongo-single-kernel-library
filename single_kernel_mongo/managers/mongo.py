@@ -212,11 +212,13 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
         self.state.app_peer_data.set_user_created(user.username)
 
     def update_users_local_auth_restrictions(
-        self, auth_restrictions: list[AuthRestrictions] | None = None
+        self, auth_restrictions: list[AuthRestrictions]
     ) -> None:
-        """Update auth restrictions for internal users that connect locally."""
-        if auth_restrictions is None:
-            auth_restrictions = self.state.local_auth_restrictions
+        """Update auth restrictions for internal users that connect locally.
+
+        Args:
+            auth_restrictions: The auth restrictions to apply.
+        """
         for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
             if not self.state.app_peer_data.is_user_created(user.username):
                 continue

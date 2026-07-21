@@ -709,10 +709,11 @@ class CharmState(Object, AbstractStatusesState):
 
     @property
     def related_cluster_hosts(self) -> list[str]:
-        """Return VM hosts published by related sharding components."""
-        if self.substrate != Substrates.VM:
-            return []
+        """Return hosts published by related sharding components.
 
+        The config servers get the RS hosts from all the shards it is integrated with.
+        The shards get the mongos hosts from config server it is integrated with.
+        """
         if self.is_role(MongoDBRoles.CONFIG_SERVER):
             hosts = []
             for relation in self.config_server_relation:
@@ -723,10 +724,10 @@ class CharmState(Object, AbstractStatusesState):
                         component=relation.app,
                     ).rs_hosts
                 )
-            return hosts
+            return sorted(set(hosts))
 
         if self.is_role(MongoDBRoles.SHARD):
-            return self.shard_state.mongos_hosts
+            return sorted(set(self.shard_state.mongos_hosts))
 
         return []
 

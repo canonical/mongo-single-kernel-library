@@ -125,6 +125,7 @@ from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.utils.helpers import is_valid_ldap_options, is_valid_ldapusertodnmapping
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
+    AuthRestrictions,
     CharmedBackupUser,
     CharmedLogRotateUser,
     CharmedOperatorUser,
@@ -722,7 +723,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # If we had an IP change, we must restart to update the bindIP.
         if self.state.db_initialised:
             self.async_restart_charm_services(force=False)
-            self._sync_cluster_network_access_restrictions()
+            self.sync_cluster_network_access_restrictions()
 
         if not self.charm.unit.is_leader():
             return
@@ -899,7 +900,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
-        self._sync_cluster_network_access_restrictions()
+        self.sync_cluster_network_access_restrictions()
 
         # Changing the charmed-stats or the charmed-backup password will lead
         # to non-leader units receiving a relation changed event. We must update
@@ -1004,11 +1005,20 @@ class MongoDBOperator(OperatorProtocol, Object):
                 )
             self.update_hosts()
 
-        self._sync_cluster_network_access_restrictions(departing_unit=departing_unit)
+        addresses_to_exclude = set()
+        departing_address = ""
+        if departing_unit:
+            try:
+                departing_address = self.state.peer_unit_data(departing_unit).database_address
+            except (KeyError, ModelError):
+                pass
 
-    def _sync_cluster_network_access_restrictions(
+        if departing_address:
+            addresses_to_exclude.add(departing_address)
+        self.sync_cluster_network_access_restrictions(excluded_addresses=addresses_to_exclude)
+
+    def sync_cluster_network_access_restrictions(
         self,
-        departing_unit: Unit | None = None,
         excluded_addresses: set[str] | None = None,
     ) -> None:
         """Sync IP-based access restrictions with the current cluster topology.
@@ -1023,26 +1033,26 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised or not self.workload.active():
             return
 
-        addresses_to_exclude = set(excluded_addresses or set())
-        if departing_unit:
-            try:
-                departing_address = self.state.peer_unit_data(departing_unit).database_address
-            except (KeyError, ModelError):
-                departing_address = ""
-
-            if departing_address:
-                addresses_to_exclude.add(departing_address)
+        excluded_addresses = excluded_addresses or set()
 
         allowlist = [
             entry
             for entry in self.config_manager.cluster_ip_source_allowlist
-            if entry not in addresses_to_exclude
+            if entry not in excluded_addresses
         ]
         auth_restrictions = [
-            {
-                key: [address for address in addresses if address not in addresses_to_exclude]
-                for key, addresses in restriction.items()
-            }
+            AuthRestrictions(
+                clientSource=[
+                    address
+                    for address in restriction.get("clientSource", [])
+                    if address not in excluded_addresses
+                ],
+                serverAddress=[
+                    address
+                    for address in restriction.get("serverAddress", [])
+                    if address not in excluded_addresses
+                ],
+            )
             for restriction in self.state.local_auth_restrictions
         ]
 
