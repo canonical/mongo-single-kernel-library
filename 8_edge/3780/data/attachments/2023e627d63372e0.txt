@@ -1,0 +1,164 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/mongodb-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] maintenance: Installing MongoDB...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-tree/0 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.25   unsupported  04:45:11Z
+
+App                                Version  Status  Scale  Charm                     Channel   Rev  Exposed  Message
+config-server                      8.0.10   active      2  mongodb                               0  no       
+self-signed-certificates                    active      1  self-signed-certificates  1/stable  586  no       
+self-signed-certificates-separate           active      1  self-signed-certificates  1/stable  586  no       
+shard-one                          8.0.10   active      3  mongodb                               1  no       
+shard-tree                         8.0.10   active      1  mongodb                               3  no       
+shard-two                          8.0.10   active      1  mongodb                               2  no       
+
+Unit                                  Workload  Agent      Machine  Public address  Ports            Message
+config-server/0*                      blocked   executing  0        10.95.46.15     27017-27018/tcp  Shards: shard-one, shard-two are unreachable.
+config-server/1                       blocked   executing  1        10.95.46.38     27017-27018/tcp  Shards: shard-two, shard-one are unreachable.
+self-signed-certificates-separate/0*  active    idle       7        10.95.46.69                      
+self-signed-certificates/0*           active    idle       6        10.95.46.17                      
+shard-one/0*                          blocked   idle       2        10.95.46.106    27017/tcp        Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/1                           blocked   idle       3        10.95.46.50     27017/tcp        Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-one/2                           blocked   idle       4        10.95.46.188    27017/tcp        Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+shard-tree/0*                         blocked   idle       8        10.95.46.189    27017/tcp        Missing relation to config-server.
+shard-two/0*                          blocked   idle       5        10.95.46.36     27017/tcp        Peer CA mismatch.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.95.46.15   juju-f53a6f-0  ubuntu@24.04  github-runner  Running
+1        started  10.95.46.38   juju-f53a6f-1  ubuntu@24.04  github-runner  Running
+2        started  10.95.46.106  juju-f53a6f-2  ubuntu@24.04  github-runner  Running
+3        started  10.95.46.50   juju-f53a6f-3  ubuntu@24.04  github-runner  Running
+4        started  10.95.46.188  juju-f53a6f-4  ubuntu@24.04  github-runner  Running
+5        started  10.95.46.36   juju-f53a6f-5  ubuntu@24.04  github-runner  Running
+6        started  10.95.46.17   juju-f53a6f-6  ubuntu@24.04  github-runner  Running
+7        started  10.95.46.69   juju-f53a6f-7  ubuntu@24.04  github-runner  Running
+8        started  10.95.46.189  juju-f53a6f-8  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-6: 03:58:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 03:58:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 04:04:46 ERROR unit.config-server/0.juju-log config-server:21: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784606686, 1), \'signature\': {\'hash\': b\'\\xc0\\xb77\\x86_\\x8b\\x17\\xae\\xbdSA:\\xcb\\xe6h\\xf3\\x07\\x80\\xf6r\', \'keyId\': 7664824560864198682}}, \'operationTime\': Timestamp(1784606686, 1)}')
+unit-config-server-0: 04:05:00 ERROR unit.config-server/0.juju-log config-server:22: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784606700, 1), \'signature\': {\'hash\': b\'\\xe6]\\xba\\xa4\\xe6\\x07\\x04\\x05\\xc9\\x8a\\x04\\x93\\xb8\\x9ax\\xa4r\\xf1\\xb24\', \'keyId\': 7664824560864198682}}, \'operationTime\': Timestamp(1784606700, 1)}')
+unit-config-server-0: 04:05:19 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784606719, 1), \'signature\': {\'hash\': b\'\\xd0\\x80\\x0f\\xf6N\\xe3rL\\xd6G\\xf15\\xdem\\xee\\xb4Q[7}\', \'keyId\': 7664824560864198682}}, \'operationTime\': Timestamp(1784606719, 1)}')
+unit-config-server-0: 04:05:40 ERROR unit.config-server/0.juju-log status-peers:2: single_kernel_mongo.managers.sharding:Deferring _on_relation_event for shards interface since: error=OperationFailure('Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external", full error: {\'ok\': 0.0, \'errmsg\': \'Could not find user "O=config-server,x500UniqueIdentifier=c129a708-adcb-48c7-94a6-a16a0fda34ab,CN=config-server" for db "$external"\', \'code\': 11, \'codeName\': \'UserNotFound\', \'$clusterTime\': {\'clusterTime\': Timestamp(1784606740, 2), \'signature\': {\'hash\': b\'4s\\x03N\\x95\\x88\\x84gg\\x9boS\\x08\\xc7\\xf9\\xd2\\xec\\xb28\\xbd\', \'keyId\': 7664824560864198682}}, \'operationTime\': Timestamp(1784606740, 2)}')
+unit-shard-one-0: 04:06:01 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5ef028f7829a76ad55590d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.95.46.106', 27017) server_type: RSSecondary, rtt: 0.0015570450000268465>, <ServerDescription ('10.95.46.188', 27017) server_type: RSSecondary, rtt: 0.0006736800000908261>, <ServerDescription ('10.95.46.50', 27017) server_type: RSSecondary, rtt: 0.0009831440002017189>]>
+machine-7: 04:19:37 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 04:19:37 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-1: 04:28:22 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "5454024d-ea20-4441-8c58-4a8621f53a6f:r#15#self-signed-certificates": settings 5454024d-ea20-4441-8c58-4a8621f53a6f:r#15#self-signed-certificates not found (not found)
+unit-shard-two-0: 04:35:38 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:35:42 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:35:43 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:35:43 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:35:44 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:35:49 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:35:49 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:35:49 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:35:54 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:35:55 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:35:55 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:35:59 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:03 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:08 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:08 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:36:38 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:36:44 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:48 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:48 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:49 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:49 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:49 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:49 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:36:50 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:36:50 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:54 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:54 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:54 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:54 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:54 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:54 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:58 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:36:58 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:58 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:36:58 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:59 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:36:59 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:02 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:02 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:06 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:06 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:37:10 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:37:10 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:10 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:10 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:37:45 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:37:45 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:37:51 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:37:51 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:52 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:52 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:56 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:37:56 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:59 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:37:59 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:00 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:00 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:38:03 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:38:03 ERROR unit.shard-one/1.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:04 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:04 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:38:06 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:38:06 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-config-server-0: 04:38:09 ERROR unit.config-server/0.juju-log single_kernel_mongo.managers.mongodb_operator:Deferring process_unremoved_units: error=ServerSelectionTimeoutError('No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5ef7b0815d58f23c2a444f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription (\'10.95.46.15\', 27017) server_type: RSSecondary, rtt: 0.0007673299996895366>, <ServerDescription (\'10.95.46.38\', 27017) server_type: Unknown, rtt: None, error=AutoReconnect(\'SSL handshake failed: 10.95.46.38:27017: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000) (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)\')>]>')
+unit-shard-one-1: 04:38:10 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:38:10 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:14 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:38:14 ERROR unit.shard-one/2.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:38:14 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:38:14 ERROR unit.shard-one/0.juju-log status-peers:5: single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:38:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:38:19 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+machine-8: 04:39:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-8: 04:39:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-tree-0: 04:41:17 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 04:41:17 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-tree-0: 04:41:18 ERROR unit.shard-tree/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-shard-one-0: 04:42:46 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:42:46 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:42:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-0: 04:42:53 ERROR unit.shard-one/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:42:55 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:42:55 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:43:01 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-two-0: 04:43:01 ERROR unit.shard-two/0.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:43:02 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:43:02 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:43:06 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-2: 04:43:06 ERROR unit.shard-one/2.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:43:21 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:43:21 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:43:25 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-one-1: 04:43:25 ERROR unit.shard-one/1.juju-log single_kernel_mongo.managers.sharding:Shard is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-shard-tree-0: 04:45:09 ERROR unit.shard-tree/0.juju-log sharding:32: single_kernel_mongo.core.secrets:Non-existing secret Scope.APP:cluster-id was attempted to be removed.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
