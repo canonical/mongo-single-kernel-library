@@ -1,0 +1,36 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  application/0 [executing] active: received database credentials of the second database
+  application/1 [executing] active: received database credentials of the second database
+  another-database/0 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 1, stdout: , stderr: MongoServerError: Authentication failed.
+ERROR command terminated with exit code 1
+
+[31m[1mERROR   [0m integration.helpers.common:common.py:942 Failed to execute rs.status(): stderr='MongoServerError: Authentication failed.\nERROR command terminated with exit code 1\n', stdout=''
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1784603658,"i":2}},"signature":{"hash":{"$binary":{"base64":"YYRkIctJ4Ev+FTDVuDTKzEXFyi0=","subType":"00"}},"keyId":7664811010242380000}},"operationTime":{"$timestamp":{"t":1784603658,"i":2}}}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  03:14:19Z
+
+App                  Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+another-application           active      1  application             1  10.152.183.233  no       received database credentials of the first database
+another-database     6.0.28   active      1  mongodb-k8s             1  10.152.183.59   no       
+application                   active      2  application             0  10.152.183.235  no       received database credentials of the second database
+mongodb-k8s          6.0.28   active      2  mongodb-k8s             0  10.152.183.163  no       
+
+Unit                    Workload  Agent  Address      Ports  Message
+another-application/0*  active    idle   10.1.141.97         received database credentials of the first database
+another-database/0*     active    idle   10.1.141.86         Primary.
+application/0           active    idle   10.1.141.75         received database credentials of the second database
+application/1*          active    idle   10.1.141.74         received database credentials of the second database
+mongodb-k8s/0*          active    idle   10.1.141.81         Primary.
+mongodb-k8s/1           active    idle   10.1.141.84         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-3: 03:08:07 ERROR unit.mongodb-k8s/3.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a5ee296bb71d3de26cf4d36, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-3.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0009421140000540618>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
