@@ -196,6 +196,7 @@ class ShardEventHandler(Object):
             NotReadyError,
             WaitingForSecretsError,
             FailedToUpdateCredentialsError,
+            PyMongoError,
             RollingOpsNoRelationError,
             WaitingForCertificatesError,
         ) as e:
