@@ -531,11 +531,13 @@ class MongoDBConfigManager(MongoConfigManager):
         # The config server should include the CIDR for the shards
         if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
+            cidrs_list.extend(self.state.related_cluster_hosts)
             # For the local mongos
             cidrs_list.append("127.0.0.1")
         # The shards should include the CIDR for the config server
         if self.state.is_role(MongoDBRoles.SHARD):
             cidrs_list.extend(cidrs(self.state.sharding_network().bind_addresses))
+            cidrs_list.extend(self.state.related_cluster_hosts)
             # The shard should include the cidrs of the mongos charms
             cidrs_list.extend(self.state.shard_state.mongos_cidrs)
         # All cluster components (config server, mongos) should include the CIDRs of its counterpart

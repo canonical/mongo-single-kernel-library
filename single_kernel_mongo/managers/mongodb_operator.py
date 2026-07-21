@@ -1006,12 +1006,16 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         self._sync_cluster_network_access_restrictions(departing_unit=departing_unit)
 
-    def _sync_cluster_network_access_restrictions(self, departing_unit: Unit | None = None) -> None:
+    def _sync_cluster_network_access_restrictions(
+        self,
+        departing_unit: Unit | None = None,
+        excluded_addresses: set[str] | None = None,
+    ) -> None:
         """Sync IP-based access restrictions with the current cluster topology.
 
         Persist and apply the cluster IP source allowlist on every unit. On the
         leader, also update authentication restrictions for internal users. If a
-        unit is departing, exclude its database address from the restrictions.
+        unit or related component is departing, exclude its addresses from the restrictions.
 
         Raises:
             PyMongoError: If the cluster IP source allowlist cannot be updated.
@@ -1019,7 +1023,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.state.db_initialised or not self.workload.active():
             return
 
-        allowlist = self.config_manager.cluster_ip_source_allowlist
+        addresses_to_exclude = set(excluded_addresses or set())
         if departing_unit:
             try:
                 departing_address = self.state.peer_unit_data(departing_unit).database_address
@@ -1027,13 +1031,26 @@ class MongoDBOperator(OperatorProtocol, Object):
                 departing_address = ""
 
             if departing_address:
-                allowlist = [entry for entry in allowlist if entry != departing_address]
+                addresses_to_exclude.add(departing_address)
+
+        allowlist = [
+            entry
+            for entry in self.config_manager.cluster_ip_source_allowlist
+            if entry not in addresses_to_exclude
+        ]
+        auth_restrictions = [
+            {
+                key: [address for address in addresses if address not in addresses_to_exclude]
+                for key, addresses in restriction.items()
+            }
+            for restriction in self.state.local_auth_restrictions
+        ]
 
         self.config_manager.sync_cluster_ip_source_allowlist_to_file(allowlist)
         try:
             self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
             if self.charm.unit.is_leader():
-                self.mongo_manager.update_users_local_auth_restrictions()
+                self.mongo_manager.update_users_local_auth_restrictions(auth_restrictions)
         except PyMongoError as e:
             logger.warning("Failed to update cluster network access restrictions: %s", e)
             raise
