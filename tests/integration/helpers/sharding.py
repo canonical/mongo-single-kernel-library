@@ -21,8 +21,8 @@ from tests.integration.helpers.common import (
     get_unit_id,
     internal_cert_path,
     mongodb_uri,
+    verify_cluster_ip_source_allowlist,
 )
-from tests.integration.helpers.ha import verify_cluster_ip_source_allowlist
 from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
     SNAP_MONGOS_SERVICE,
@@ -41,7 +41,7 @@ logger = getLogger(__name__)
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
-SHARD_THREE_APP_NAME = "shard-tree"
+SHARD_THREE_APP_NAME = "shard-three"
 CONFIG_SERVER_APP_NAME = "config-server"
 CONFIG_SERVER_TWO_APP_NAME = "config-server-two"
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]

@@ -1023,9 +1023,13 @@ class MongoDBOperator(OperatorProtocol, Object):
     ) -> None:
         """Sync IP-based access restrictions with the current cluster topology.
 
-        Persist and apply the cluster IP source allowlist on every unit. On the
+        Persist and apply the cluster IP source allowlist on the calling unit. On the
         leader, also update authentication restrictions for internal users. If a
         unit or related component is departing, exclude its addresses from the restrictions.
+
+        Args:
+            excluded_addresses (set[str] | None): Optional set of IP addresses to exclude from
+                the allowlist and authentication restrictions.
 
         Raises:
             PyMongoError: If the cluster IP source allowlist cannot be updated.

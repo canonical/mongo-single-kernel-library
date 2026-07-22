@@ -1564,3 +1564,36 @@ async def read_remote_file(
         )
 
     return stdout
+
+
+async def verify_cluster_ip_source_allowlist(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    app_name: str,
+    additional_addresses: set[str] | None = None,
+    excluded_addresses: set[str] | None = None,
+) -> None:
+    """Verify each mongod allows every current replica-set member address."""
+    units = ops_test.model.applications[app_name].units
+    replica_set_addresses = {
+        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
+        for unit in units
+    }
+    expected_addresses = replica_set_addresses | (additional_addresses or set())
+    config_path = mongodb_config_path(substrate)
+
+    for unit in units:
+        stdout = await read_remote_file(ops_test, substrate, unit.name, config_path)
+        configuration = yaml.safe_load(stdout)
+        allowlist = set(configuration["security"]["clusterIpSourceAllowlist"])
+        for address in expected_addresses:
+            assert address in allowlist, (
+                f"IP address {address} is missing from {unit.name}'s "
+                f"clusterIpSourceAllowlist: {sorted(allowlist)}"
+            )
+
+        unexpected_addresses = (excluded_addresses or set()) & allowlist
+        assert not unexpected_addresses, (
+            f"Removed IP addresses {sorted(unexpected_addresses)} are still present in "
+            f"{unit.name}'s clusterIpSourceAllowlist: {sorted(allowlist)}"
+        )

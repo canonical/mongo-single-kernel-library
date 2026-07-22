@@ -102,7 +102,10 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         """Handles the database requested event.
 
         It shares the different credentials and necessary files with the shard.
+
         """
+        if not self.charm.unit.is_leader():
+            raise NonDeferrableFailedHookChecksError("Not leader")
         self.assert_pass_hook_checks(relation)
 
         if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
@@ -162,13 +165,15 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             logger.info("Adding/Removing shards not present in cluster.")
             if is_leaving:
                 shard_hosts = self._get_shard_hosts(relation)
-                self.remove_shard_from_relation(relation)
+                if self.charm.unit.is_leader():
+                    self.remove_shard_from_relation(relation)
                 self.dependent.sync_cluster_network_access_restrictions(
                     excluded_addresses=set(shard_hosts)
                 )
             else:
                 self.dependent.sync_cluster_network_access_restrictions()
-                self.add_shard(relation)
+                if self.charm.unit.is_leader():
+                    self.add_shard(relation)
         except NotDrainedError:
             # it is necessary to removeShard multiple times for the shard to be removed.
             logger.info(
@@ -213,8 +218,6 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         if status := self.dependent.get_relation_feasible_status(self.relation_name):
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
-        if not self.charm.unit.is_leader():
-            raise NonDeferrableFailedHookChecksError("Not leader")
 
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
@@ -675,8 +678,6 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
         self._set_cluster_id()
 
-        # Allow the config-server hosts before updating the shard's shared
-        # authentication material.
         self.dependent.sync_cluster_network_access_restrictions()
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 

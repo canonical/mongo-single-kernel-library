@@ -34,6 +34,7 @@ from tests.integration.helpers.common import (
     mongod_ready,
     stop_continous_writes,
     unit_uri,
+    verify_cluster_ip_source_allowlist,
 )
 from tests.integration.helpers.ha import (
     all_db_processes_down,
@@ -50,7 +51,6 @@ from tests.integration.helpers.ha import (
     storage_id,
     storage_type,
     update_restart_delay,
-    verify_cluster_ip_source_allowlist,
     verify_replica_set_configuration,
     verify_writes,
 )
