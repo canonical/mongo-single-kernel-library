@@ -714,6 +714,8 @@ class CharmState(Object, AbstractStatusesState):
         The config servers get the RS hosts from all the shards it is integrated with.
         The shards get the mongos hosts from config server it is integrated with.
         """
+        if self.substrate != Substrates.VM:
+            return []
         if self.is_role(MongoDBRoles.CONFIG_SERVER):
             hosts = []
             for relation in self.config_server_relation:
