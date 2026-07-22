@@ -15,11 +15,14 @@ from tests.integration.helpers.common import (
     MONGOS_PORT,
     deploy_charm,
     external_cert_path,
+    get_address_of_unit,
     get_direct_mongo_client,
     get_leader_id,
+    get_unit_id,
     internal_cert_path,
     mongodb_uri,
 )
+from tests.integration.helpers.ha import verify_cluster_ip_source_allowlist
 from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
     SNAP_MONGOS_SERVICE,
@@ -68,6 +71,50 @@ CLUSTER_APPS = [
     SHARD_TWO_APP_NAME,
     SHARD_THREE_APP_NAME,
 ]
+
+
+async def verify_sharding_cluster_ip_source_allowlists(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    config_server_app: str,
+    shard_apps: set[str],
+    related_shard_apps: set[str],
+) -> None:
+    """Verify cluster allowlists for the config server and every deployed shard."""
+
+    async def application_addresses(app_name: str) -> set[str]:
+        return {
+            await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
+            for unit in ops_test.model.applications[app_name].units
+        }
+
+    config_server_addresses = await application_addresses(config_server_app)
+    related_shard_addresses = set()
+    unrelated_shard_addresses = set()
+    for shard_app in shard_apps:
+        addresses = await application_addresses(shard_app)
+        if shard_app in related_shard_apps:
+            related_shard_addresses.update(addresses)
+        else:
+            unrelated_shard_addresses.update(addresses)
+
+    await verify_cluster_ip_source_allowlist(
+        ops_test,
+        substrate,
+        config_server_app,
+        additional_addresses=related_shard_addresses,
+        excluded_addresses=unrelated_shard_addresses,
+    )
+
+    for shard_app in shard_apps:
+        is_related = shard_app in related_shard_apps
+        await verify_cluster_ip_source_allowlist(
+            ops_test,
+            substrate,
+            shard_app,
+            additional_addresses=config_server_addresses if is_related else None,
+            excluded_addresses=None if is_related else config_server_addresses,
+        )
 
 
 async def deploy_cluster_components(

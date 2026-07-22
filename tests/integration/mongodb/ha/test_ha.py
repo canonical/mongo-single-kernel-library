@@ -50,6 +50,7 @@ from tests.integration.helpers.ha import (
     storage_id,
     storage_type,
     update_restart_delay,
+    verify_cluster_ip_source_allowlist,
     verify_replica_set_configuration,
     verify_writes,
 )
@@ -92,6 +93,16 @@ async def test_build_and_deploy(
         storage=storage,
     )
     await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+
+
+@pytest.mark.abort_on_fail
+async def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
+    ops_test: OpsTest,
+    substrate: Substrate,
+):
+    """Verify every unit allows all replica-set member IPs for internal authentication."""
+    app_name = await get_app_name(ops_test)
+    await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
 
 
 @pytest.mark.abort_on_fail
@@ -292,6 +303,8 @@ async def test_scale_up_capabilities(
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hosts), "all members not running under the same replset"
 
+    await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
+
     # verify that the no writes were skipped
     await verify_writes(ops_test, substrate, app_name)
 
@@ -373,6 +386,10 @@ async def test_scale_down_capabilities_lxd(
 
     assert set(member_ips) == set(hosts), "mongod config contains deleted units"
 
+    await verify_cluster_ip_source_allowlist(
+        ops_test, substrate, app_name, excluded_addresses=set(deleted_unit_ips)
+    )
+
     await verify_writes(ops_test, substrate, app_name)
 
 
@@ -383,6 +400,10 @@ async def test_scale_down_capabilities_microk8s(
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""
     app_name = await get_app_name(ops_test)
+    addresses_before_scale_down = {
+        await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
+        for unit in ops_test.model.applications[app_name].units
+    }
 
     minority_count = int(len(ops_test.model.applications[app_name].units) // 2)
     expected_units = len(ops_test.model.applications[app_name].units) - minority_count
@@ -420,6 +441,14 @@ async def test_scale_down_capabilities_microk8s(
 
     # verify that the replica set members have the correct units
     assert set(member_hosts) == set(hostnames), "mongod config contains deleted units"
+
+    addresses_after_scale_down = set(hosts)
+    await verify_cluster_ip_source_allowlist(
+        ops_test,
+        substrate,
+        app_name,
+        excluded_addresses=addresses_before_scale_down - addresses_after_scale_down,
+    )
 
     # verify that the no writes were skipped
     await verify_writes(ops_test, substrate, app_name)

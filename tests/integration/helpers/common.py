@@ -1505,6 +1505,11 @@ def mongodb_base_path(substrate: Substrate) -> str:
     return "/etc/mongod/"
 
 
+def mongodb_config_path(substrate: Substrate) -> str:
+    """Return the path to the mongod configuration file."""
+    return f"{mongodb_base_path(substrate)}mongod.conf"
+
+
 async def delete_file_on_remote(
     ops_test: OpsTest,
     substrate: Substrate,
