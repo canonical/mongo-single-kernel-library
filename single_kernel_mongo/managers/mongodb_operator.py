@@ -155,6 +155,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     name = CharmKind.MONGOD.value
     workload: MongoDBWorkload
+    config_manager: MongoDBConfigManager
     refresh: charm_refresh.Common | None
 
     def __init__(self, charm: AbstractMongoCharm[MongoDBCharmConfig, MongoDBOperator]):
@@ -570,13 +571,15 @@ class MongoDBOperator(OperatorProtocol, Object):
             self.vault_manager.set_status(VaultStatuses.VAULT_NOT_INTEGRATED.value, scope="both")
             raise WaitingForVaultError()
 
+        # Publish this unit's address before waiting for every planned unit.
+        self.update_ips_in_databag()
+        if len(self.state.peer_database_addresses) < self.state.planned_units:
+            raise NotReadyError("Waiting for peer database addresses")
+
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
         # allowing that event to run.
         self._configure_workloads()
-
-        # Write IPs in databag
-        self.update_ips_in_databag()
 
         logger.info("Starting MongoDB.")
         self.charm.status_handler.set_running_status(
@@ -669,6 +672,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
+            PyMongoError: If the MongoDB service is not ready to accept connections.
         """
         if self.state.is_role(MongoDBRoles.UNKNOWN):  # We haven't run the leader elected event yet.
             logger.info("We haven't elected a leader yet.")
@@ -715,9 +719,10 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"Migration of sharding components not permitted, revert config role to {self.state.app_peer_data.role.value}"
             )
 
-        # If we had an IP change, we must restart.
+        # If we had an IP change, we must restart to update the bindIP.
         if self.state.db_initialised:
             self.async_restart_charm_services(force=False)
+            self._sync_cluster_network_access_restrictions()
 
         if not self.charm.unit.is_leader():
             return
@@ -894,6 +899,8 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Adds the unit as a replica to the MongoDB replica set.
         """
+        self._sync_cluster_network_access_restrictions()
+
         # Changing the charmed-stats or the charmed-backup password will lead
         # to non-leader units receiving a relation changed event. We must update
         # the monitor and pbm URI if the password changes so that COS/pbm can
@@ -972,23 +979,64 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def peer_leaving(self, departing_unit: Unit | None) -> None:
-        """Handles the relation departed events."""
-        if not self.charm.unit.is_leader() or departing_unit == self.charm.unit:
-            return
-        if state := self.vault_manager.get_degraded_state():
-            logger.warning(
-                "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
-                state,
-            )
+        """Handle a peer unit leaving the replica set.
 
-        if self.refresh_in_progress:
-            # do not defer or return here, if a user removes a unit, the config will be incorrect
-            # and lead to MongoDB reporting that the replica set is unhealthy, we should make an
-            # attempt to fix the replica set configuration even if an upgrade is occurring.
-            logger.warning(
-                "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
-            )
-        self.update_hosts()
+        The leader updates the replica-set host information.
+        Leader and non-leader units sync the cluster IP
+        allowlist so that the departing unit is removed from the active configuration.
+        """
+        if departing_unit == self.charm.unit:
+            return
+        if self.charm.unit.is_leader():
+            if state := self.vault_manager.get_degraded_state():
+                logger.warning(
+                    "Encryption at rest may be degraded. Vault agent state: %s.  The charm may be in a broken, unrecoverable state.",
+                    state,
+                )
+
+            if self.refresh_in_progress:
+                # do not defer or return here, if a user removes a unit, the config will be
+                # incorrect and lead to MongoDB reporting that the replica set is unhealthy,
+                # we should make an attempt to fix the replica set configuration even if an
+                # upgrade is occurring.
+                logger.warning(
+                    "Removing replicas during an upgrade is not supported. The charm may be in a broken, unrecoverable state"
+                )
+            self.update_hosts()
+
+        self._sync_cluster_network_access_restrictions(departing_unit=departing_unit)
+
+    def _sync_cluster_network_access_restrictions(self, departing_unit: Unit | None = None) -> None:
+        """Sync IP-based access restrictions with the current cluster topology.
+
+        Persist and apply the cluster IP source allowlist on every unit. On the
+        leader, also update authentication restrictions for internal users. If a
+        unit is departing, exclude its database address from the restrictions.
+
+        Raises:
+            PyMongoError: If the cluster IP source allowlist cannot be updated.
+        """
+        if not self.state.db_initialised or not self.workload.active():
+            return
+
+        allowlist = self.config_manager.cluster_ip_source_allowlist
+        if departing_unit:
+            try:
+                departing_address = self.state.peer_unit_data(departing_unit).database_address
+            except (KeyError, ModelError):
+                departing_address = ""
+
+            if departing_address:
+                allowlist = [entry for entry in allowlist if entry != departing_address]
+
+        self.config_manager.sync_cluster_ip_source_allowlist_to_file(allowlist)
+        try:
+            self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)
+            if self.charm.unit.is_leader():
+                self.mongo_manager.update_users_local_auth_restrictions()
+        except PyMongoError as e:
+            logger.warning("Failed to update cluster network access restrictions: %s", e)
+            raise
 
     @override
     def prepare_storage(self) -> None:  # pragma: nocover

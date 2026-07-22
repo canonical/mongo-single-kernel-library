@@ -142,7 +142,7 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError) as e:
+        except (ContainerNotReadyError, WorkloadServiceError, NotReadyError) as e:
             defer_event_with_info_log(
                 logger, event, "start", f"Not ready to start: {e.__class__.__name__}({e})"
             )
@@ -202,6 +202,7 @@ class LifecycleEventsHandler(Object):
             SetPasswordError,
             WaitingForVaultError,
             RollingOpsNoRelationError,
+            PyMongoError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:

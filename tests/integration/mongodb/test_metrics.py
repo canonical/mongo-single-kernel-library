@@ -55,7 +55,7 @@ async def test_build_and_deploy(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
 
 
 async def test_endpoints(ops_test: OpsTest, substrate: Substrate):

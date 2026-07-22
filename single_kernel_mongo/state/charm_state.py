@@ -88,7 +88,10 @@ from single_kernel_mongo.utils.mongodb_users import (
     MongoDBUser,
     RoleNames,
 )
-from single_kernel_mongo.utils.network_helpers import cidrs, ip_addresses
+from single_kernel_mongo.utils.network_helpers import (
+    cidrs,
+    ip_addresses,
+)
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
@@ -699,15 +702,24 @@ class CharmState(Object, AbstractStatusesState):
 
         return self.app_peer_data.replica_set in members
 
+    @property
+    def peer_database_addresses(self) -> list[str]:
+        """Return the database addresses published by remote peer units."""
+        return [unit.database_address for unit in self.units if unit.database_address]
+
     # BEGIN: Configuration accessors
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
+        peer_client_sources = cidrs(self.peer_network().bind_addresses)
+        peer_client_sources.extend(self.peer_database_addresses)
+        peer_client_sources = sorted(set(peer_client_sources))
+
         return [
             AuthRestrictions(clientSource=[LOCALHOST], serverAddress=[LOCALHOST]),
             AuthRestrictions(
-                clientSource=cidrs(self.peer_network().bind_addresses),
-                serverAddress=cidrs(self.peer_network().bind_addresses),
+                clientSource=peer_client_sources,
+                serverAddress=peer_client_sources,
             ),
         ]
 
