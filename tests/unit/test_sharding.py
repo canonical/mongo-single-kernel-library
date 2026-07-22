@@ -252,6 +252,7 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
 
 
 def test_reconcile_shards_syncs_cluster_network_access_when_adding(harness, mocker):
+    harness.set_leader(True)
     manager = harness.charm.operator.config_server_manager
     relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
     relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, relation_id)
@@ -280,6 +281,7 @@ def test_reconcile_shards_syncs_cluster_network_access_when_adding(harness, mock
 
 
 def test_reconcile_shards_removes_network_access_after_draining(harness, mocker):
+    harness.set_leader(True)
     manager = harness.charm.operator.config_server_manager
     relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
     relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, relation_id)
