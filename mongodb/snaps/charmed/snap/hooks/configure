@@ -13,3 +13,16 @@ export PBM_MONGODB_URI="$(snapctl get pbm-uri)"
     --regid snap_daemon -- \
     bash -c 'echo "# this file is to be left empty. Changes in this file will be ignored." > "${SNAP_DATA}/etc/pbm/pbm_config.yaml"'
 
+HOME_DIR="${SNAP_DATA}/home"
+GSS="${SNAP_DATA}/etc/gss"
+mkdir -p "${GSS}"
+chown 584788:root "${GSS}"
+"${SNAP}/usr/bin/setpriv" \
+    --clear-groups \
+    --reuid snap_daemon \
+    --regid snap_daemon \
+    -- \
+    bash -euo pipefail -c 'chmod 755 "$1"; touch "$1/mech"; chmod 644 "$1/mech"' bash "${GSS}"
+
+mkdir -p "${HOME_DIR}/.cache" "${HOME_DIR}/.config"
+chown 584788:root "${HOME_DIR}" "${HOME_DIR}/.cache" "${HOME_DIR}/.config"

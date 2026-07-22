@@ -30,3 +30,15 @@ tox -e smoke
 ```
 
 Note that the this command assumes that the snap was already packed.
+
+## Check the journal logs
+
+```
+sudo sysctl -w kernel.printk_ratelimit=0 ; journalctl --follow | grep charmed-mongodb
+```
+
+## Check the snap logs
+
+```
+sudo snap logs charmed-mongodb
+```

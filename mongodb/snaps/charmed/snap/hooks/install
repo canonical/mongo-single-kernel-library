@@ -5,6 +5,7 @@ set -eux
 
 export ETC="$SNAP_DATA"/etc
 export CONF="${SNAP_DATA}"/etc/mongod
+export GSS="${SNAP_DATA}"/etc/gss
 export PBM_CONF="${SNAP_DATA}"/etc/pbm
 export VAULT_CONF="${SNAP_DATA}"/etc/vault
 export DATA="${SNAP_COMMON}"/var/lib/mongodb
@@ -13,6 +14,7 @@ export VAULT_LOGS="${SNAP_COMMON}"/var/log/vault
 export MONGO_CONFIG_FILE="${CONF}"/mongod.conf
 export MONGOS_CONFIG_FILE="${CONF}"/mongos.conf
 export VAULT_CONFIG_FILE="${VAULT_CONF}"/vault-agent.hcl
+export HOME_DIR="${SNAP_DATA}"/home
 
 # Create the necessary parent directories 
 mkdir -p $DATA
@@ -20,7 +22,17 @@ mkdir -p $LOGS
 mkdir -p $VAULT_LOGS
 mkdir -p $PBM_CONF
 mkdir -p $CONF
+mkdir -p $GSS
 mkdir -p $VAULT_CONF
+
+mkdir -p "${HOME_DIR}/.cache" "${HOME_DIR}/.config"
+chown 584788:root "${GSS}"
+"${SNAP}/usr/bin/setpriv" \
+    --clear-groups \
+    --reuid snap_daemon \
+    --regid snap_daemon \
+    -- \
+    bash -euo pipefail -c 'chmod 755 "$1"; touch "$1/mech"; chmod 644 "$1/mech"' bash "${GSS}"
 
 # If we just created the directory, we set up permissions
 if [ stat -c '%u' "$DATA" == 0 ]; then
@@ -60,6 +72,7 @@ yq -i ".processManagement.fork = false" ${MONGO_CONFIG_FILE}
 yq -i "del(.processManagement.pidFilePath)" ${MONGO_CONFIG_FILE}
 yq -i ".systemLog.path = \"${LOGS}/mongod.log\"" ${MONGO_CONFIG_FILE}
 yq -i ".storage.dbPath = \"${DATA}\"" ${MONGO_CONFIG_FILE}
+yq -i "del(.storage.journal)" ${MONGO_CONFIG_FILE}
 
 # mongos.conf default values are not consistent with the snap directory system.
 yq -i ".processManagement.fork = false" ${MONGOS_CONFIG_FILE}

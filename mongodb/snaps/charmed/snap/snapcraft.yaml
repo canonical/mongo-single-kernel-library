@@ -88,6 +88,10 @@ environment:
 apps:
   mongosh:
     command: drop_priv.sh mongosh
+    environment:
+      HOME: $SNAP_DATA/home
+      XDG_CACHE_HOME: $SNAP_DATA/home/.cache
+      XDG_CONFIG_HOME: $SNAP_DATA/home/.config
     plugs:
       - network
       - system-observe
@@ -155,8 +159,11 @@ apps:
     restart-condition: always
     restart-delay: 20s
     plugs:
+      - hardware-observe
       - network
       - network-bind
+      - network-observe
+      - system-observe
     slots:
       - logs
   mongostat:
@@ -220,6 +227,7 @@ parts:
       - libc6
       - libgssapi-krb5-2
       - mongodb-shell
+      - libsasl2-modules
     stage-snaps:
       - yq
       - vault
