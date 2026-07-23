@@ -1,0 +1,1124 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller          Cloud/Region                      Version  SLA          Timestamp
+test-ldap-a2xn  concierge-microk8s  test-ldap-k8s-cloud-6xbr/default  3.6.25   unsupported  02:04:01Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.90   no       
+glauth-utils                       active      1  glauth-utils              latest/edge     51  10.152.183.214  no       
+postgresql-k8s            14.23    active      1  postgresql-k8s            14/stable      925  10.152.183.236  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.143  no       
+traefik-k8s               2.11.49  active      1  traefik-k8s               latest/stable  377  10.152.183.173  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address     Ports  Message
+glauth-k8s/0*                active    idle   10.1.53.20         
+glauth-utils/0*              active    idle   10.1.53.16         
+postgresql-k8s/0*            active    idle   10.1.53.13         Primary
+self-signed-certificates/0*  active    idle   10.1.53.14         
+traefik-k8s/0*               active    idle   10.1.53.18         Serving at http://10.64.140.43
+
+Offer                  Application  Charm       Rev  Connected  Endpoint      Interface             Role
+ldap-cert-integration  glauth-k8s   glauth-k8s  56   1/1        send-ca-cert  certificate_transfer  provider
+ldap-integration       glauth-k8s   glauth-k8s  56   1/1        ldap          ldap                  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:41:32 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:41:36 ERROR unit.glauth-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 433, in <module>
+    main(GLAuthCharm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 504, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 488, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 423, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 467, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 349, in _on_pebble_ready
+    self.__on_pebble_ready(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/utils.py", line 132, in wrapper
+    return func(charm, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 354, in __on_pebble_ready
+    self._certs_integration.update_certificates()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 272, in update_certificates
+    self._remove_certificates()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 319, in _remove_certificates
+    self._container.remove_path(file)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 3210, in remove_path
+    self._pebble.remove_path(str(path), recursive=recursive)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2905, in remove_path
+    resp = self._request('POST', '/v1/files', None, body)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2186, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2225, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 519, in open
+    response = self._open(req, data)
+  File "/usr/lib/python3.10/urllib/request.py", line 536, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 403, in http_open
+    return self.do_open(
+  File "/usr/lib/python3.10/urllib/request.py", line 1352, in do_open
+    r = h.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 287, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+unit-glauth-k8s-0: 01:41:37 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-traefik-k8s-0: 01:41:43 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:41:43 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:41:45 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:41:45 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-a2xn...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[1m[31mERROR   [0m pytest_operator.plugin:plugin.py:1010 ['cannot destroy application "glauth-k8s": application is used by 2 consumers']
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/pytest_operator/plugin.py", line 1005, in _destroy
+    await entity.destroy(**kwargs)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/application.py", line 298, in destroy
+    res = await app_facade.DestroyApplication(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/_client20.py", line 242, in DestroyApplication
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 680, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 615, in rpc
+    raise errors.JujuError(err_results)
+juju.errors.JujuError: ['cannot destroy application "glauth-k8s": application is used by 2 consumers']
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[1m[31mERROR   [0m pytest_operator.plugin:plugin.py:1031 Timeout resetting test-ldap-a2xn
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/utils.py", line 142, in _block
+    await asyncio.sleep(wait_period)
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 665, in sleep
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/pytest_operator/plugin.py", line 1024, in _reset
+    await model.block_until(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 1170, in block_until
+    await utils.block_until(done, timeout=timeout, wait_period=wait_period)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/utils.py", line 144, in block_until
+    await asyncio.shield(asyncio.wait_for(_block(), timeout))
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 519, in wait_for
+    async with timeouts.timeout(timeout):
+  File "/usr/lib/python3.12/asyncio/timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-a2xn to die...
+[1m[31mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:__init__.py:1340 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[1m[31mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-18891' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py:697> exception=ProxyNotConnectedError()>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 328, in _open
+    sock = self.proxy.socket()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/proxy/kubernetes/proxy.py", line 80, in socket
+    raise ProxyNotConnectedError()
+juju.client.proxy.proxy.ProxyNotConnectedError
+[1m[31mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-6xbr...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  02:19:23Z
+
+SAAS                   Status      Store               URL
+ldap-cert-integration  terminated  concierge-microk8s  admin/test-ldap-a2xn.ldap-cert-integration
+ldap-integration       terminated  concierge-microk8s  admin/test-ldap-a2xn.ldap-integration
+
+App              Version  Status   Scale  Charm            Channel        Rev  Address         Exposed  Message
+config-server    6.0.28   active       1  mongodb-k8s                       0  10.152.183.28   no       
+data-integrator           blocked      1  data-integrator  latest/stable  417  10.152.183.92   no       Please relate the data-integrator with the desired product
+mongos-k8s       6.0.28   blocked      1  mongos-k8s                        0  10.152.183.151  no       The cluster relation with the config-server is missing.
+shard-one        6.0.28   active       1  mongodb-k8s                       1  10.152.183.217  no       
+shard-two        6.0.28   active       1  mongodb-k8s                       2  10.152.183.141  no       
+
+Unit                Workload     Agent  Address     Ports  Message
+config-server/0*    error        idle   10.1.53.23         hook failed: "ldap-peers-relation-changed"
+data-integrator/0*  blocked      idle   10.1.53.32         Please relate the data-integrator with the desired product
+mongos-k8s/0*       blocked      idle   10.1.53.31         The cluster relation with the config-server is missing.
+shard-one/0*        maintenance  idle   10.1.53.27         Adding shard to config-server...
+shard-two/0*        maintenance  idle   10.1.53.30         Adding shard to config-server...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 01:54:37 ERROR unit.config-server/0.juju-log ldap-certificate-transfer:21: Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:00:01 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:00:03 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:00:12 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:04:02 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:04:04 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),), (('x500UniqueIdentifier', '1e20afbc-338a-41d1-a4c3-f35b17a26285'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '1C10D42C3B66674A6AE8D9DE29B3EC2345FAE11C', 'notBefore': 'Jul 23 01:43:16 2026 GMT', 'notAfter': 'Jul 23 01:43:16 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-a2xn.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:06:33 ERROR unit.config-server/0.juju-log Could not bind: socket connection error while opening: [Errno 110] Connection timed out
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket connection error while opening: [Errno 110] Connection timed out
+unit-config-server-0: 02:08:52 ERROR unit.config-server/0.juju-log ldap:20: Could not bind: socket connection error while opening: [Errno 110] Connection timed out
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket connection error while opening: [Errno 110] Connection timed out
+unit-config-server-0: 02:09:07 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:07Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:07Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:07Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:07Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:09:07 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:09:07 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:07Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:07Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:09:08 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:09:19 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:18Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:18Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:18Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:18Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:09:19 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:09:19 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:18Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:18Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:09:19 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:09:34 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:34Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:34Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:09:34 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:09:34 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:34Z INFO Most recent service output:
+    {"t":{"$date":"2026-07-23T01:47:49.250Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T01:48:21.256Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:34Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:09:34 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:09:59 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:59Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:59Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:59Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:59Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:09:59 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:09:59 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:09:59Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:07.430Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:08.046Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:09.226Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:11.523Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:15.657Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:18.903Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:19.544Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:20.725Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:22.884Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:24.257Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:27.050Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:32.702Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:09:59Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:10:00 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:10:45 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:10:45Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:00.295Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.407Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.626Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:03.654Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.704Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.901Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:12.525Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:10:45Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:10:45Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:00.295Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.407Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.626Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:03.654Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.704Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.901Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:12.525Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:10:45Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:10:45 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:10:45 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:10:45Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:09:34.193Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:34.778Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:35.888Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:38.055Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:42.378Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:43.905Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:51.203Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:09:59.691Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:00.295Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.407Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:01.626Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:03.654Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.704Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:05.901Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:12.525Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:10:45Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:10:45 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:12:08 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:12:08Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.781Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:46.945Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:49.211Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:52.907Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:53.384Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:01.583Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:08.377Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:10.027Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:14.640Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:31.772Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:40.436Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:41.311Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:45.957Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:04.158Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:08.357Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:12:08Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:12:08Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.781Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:46.945Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:49.211Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:52.907Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:53.384Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:01.583Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:08.377Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:10.027Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:14.640Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:31.772Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:40.436Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:41.311Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:45.957Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:04.158Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:08.357Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:12:08Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:12:08 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:12:08 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:12:08Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:10:21.564Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:22.274Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:36.812Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:44.294Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.124Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:45.781Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:46.945Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:49.211Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:52.907Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:10:53.384Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:01.583Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:08.377Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:10.027Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:14.640Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:31.772Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:40.436Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:41.311Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:11:45.957Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:04.158Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:08.357Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:12:08Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:12:09 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-config-server-0: 02:14:47 ERROR unit.config-server/0.juju-log ldap-peers:3: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:14:47Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:12:20.225Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:32.054Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:35.628Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:49.866Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:51.215Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:02.261Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:07.343Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:20.792Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:22.850Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:33.401Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:39.967Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:52.396Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:53.081Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:06.259Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:11.466Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.112Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.313Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:38.014Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:42.400Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:47.827Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:14:47Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:14:47Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:12:20.225Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:32.054Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:35.628Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:49.866Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:51.215Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:02.261Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:07.343Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:20.792Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:22.850Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:33.401Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:39.967Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:52.396Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:53.081Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:06.259Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:11.466Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.112Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.313Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:38.014Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:42.400Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:47.827Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:14:47Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-config-server-0: 02:14:47 ERROR unit.config-server/0.juju-log ldap-peers:3: An exception occurred when starting mongod agent, error: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart).
+unit-config-server-0: 02:14:48 ERROR unit.config-server/0.juju-log ldap-peers:3: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 1 -----
+2026-07-23T02:14:47Z INFO Most recent service output:
+    (...)
+    {"t":{"$date":"2026-07-23T02:12:20.225Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:32.054Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:35.628Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:49.866Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:12:51.215Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:02.261Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:07.343Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:20.792Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:22.850Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:33.401Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:39.967Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:52.396Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:13:53.081Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:06.259Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:11.466Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.112Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:23.313Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:38.014Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:42.400Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+    {"t":{"$date":"2026-07-23T02:14:47.827Z"},"s":"I",  "c":"CONTROL",  "id":5760901, "ctx":"-","msg":"Applied --setParameter options","attr":{"serverParameters":{"authenticationMechanisms":{"default":["MONGODB-X509","SCRAM-SHA-1","SCRAM-SHA-256"],"value":["PLAIN","SCRAM-SHA-256"]},"processUmask":{"default":63,"value":31}}}}
+2026-07-23T02:14:47Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 399, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 933, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/ldap.py", line 158, in _on_restart_if_ready
+    self.manager.restart_when_ready()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 120, in restart_when_ready
+    self.dependent.restart_charm_services()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 902, in restart_charm_services
+    self.config_manager.configure_and_restart(force=force)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/config.py", line 99, in configure_and_restart
+    self.workload.restart()
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 72, in restart
+    raise WorkloadServiceError(e.err) from e
+single_kernel_mongo.exceptions.WorkloadServiceError: cannot perform the following tasks:
+- Start service "mongod" (service start attempt: exited quickly with code 1, will restart)
+unit-config-server-0: 02:14:48 ERROR juju.worker.uniter.operation hook "ldap-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+controller-0: 02:19:02 ERROR juju.worker.remoterelations cmr error in relation units worker for config-server:ldap-certificate-transfer ldap-cert-integration:send-ca-cert: connection is shut down
+controller-0: 02:19:02 ERROR juju.worker.remoterelations cmr error in relation units worker for config-server:ldap-certificate-transfer ldap-cert-integration:send-ca-cert: connection is shut down
+controller-0: 02:19:02 ERROR juju.worker.remoterelations cmr error in remote application worker for ldap-cert-integration: connection is shut down
+controller-0: 02:19:02 ERROR juju.worker.remoterelations cmr exited "ldap-cert-integration": connection is shut down
+controller-0: 02:19:02 ERROR juju.worker.remoterelations cmr error in remote application worker for ldap-cert-integration: connection is shut down
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

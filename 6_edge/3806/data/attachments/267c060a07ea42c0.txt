@@ -1,0 +1,413 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-8q0z  concierge-lxd  test-ldap-k8s-cloud-17ty/default  3.6.25   unsupported  02:12:01Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.104  no       
+glauth-utils                       active      1  glauth-utils              latest/edge     51  10.152.183.177  no       
+postgresql-k8s            14.23    active      1  postgresql-k8s            14/stable      925  10.152.183.214  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.215  no       
+traefik-k8s               2.11.49  active      1  traefik-k8s               latest/stable  377  10.152.183.173  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address     Ports  Message
+glauth-k8s/0*                active    idle   10.1.53.21         
+glauth-utils/0*              active    idle   10.1.53.15         
+postgresql-k8s/0*            active    idle   10.1.53.14         Primary
+self-signed-certificates/0*  active    idle   10.1.53.17         
+traefik-k8s/0*               active    idle   10.1.53.19         Serving at http://10.64.140.43
+
+Offer                  Application  Charm       Rev  Connected  Endpoint      Interface             Role
+ldap-cert-integration  glauth-k8s   glauth-k8s  56   1/1        send-ca-cert  certificate_transfer  provider
+ldap-integration       glauth-k8s   glauth-k8s  56   1/1        ldap          ldap                  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:45:41 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:45:45 ERROR unit.glauth-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 433, in <module>
+    main(GLAuthCharm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 504, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 488, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 423, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 467, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 349, in _on_pebble_ready
+    self.__on_pebble_ready(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/utils.py", line 126, in wrapper
+    resp, msg = condition(charm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/utils.py", line 29, in container_not_connected
+    not_connected = not charm._container.can_connect()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 2620, in can_connect
+    self._pebble.get_system_info()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2250, in get_system_info
+    resp = self._request('GET', '/v1/system-info')
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2186, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 2225, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+  File "/usr/lib/python3.10/urllib/request.py", line 519, in open
+    response = self._open(req, data)
+  File "/usr/lib/python3.10/urllib/request.py", line 536, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "/usr/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/pebble.py", line 403, in http_open
+    return self.do_open(
+  File "/usr/lib/python3.10/urllib/request.py", line 1352, in do_open
+    r = h.getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 287, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+unit-glauth-k8s-0: 01:45:45 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-traefik-k8s-0: 01:45:47 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:45:47 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:45:49 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:45:49 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:926 juju-crashdump command was not found.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-8q0z...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[31m[1mERROR   [0m pytest_operator.plugin:plugin.py:1010 ['cannot destroy application "glauth-k8s": application is used by 2 consumers']
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/pytest_operator/plugin.py", line 1005, in _destroy
+    await entity.destroy(**kwargs)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/application.py", line 298, in destroy
+    res = await app_facade.DestroyApplication(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/_client20.py", line 242, in DestroyApplication
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 680, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 615, in rpc
+    raise errors.JujuError(err_results)
+juju.errors.JujuError: ['cannot destroy application "glauth-k8s": application is used by 2 consumers']
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[31m[1mERROR   [0m pytest_operator.plugin:plugin.py:1031 Timeout resetting test-ldap-8q0z
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/utils.py", line 142, in _block
+    await asyncio.sleep(wait_period)
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 665, in sleep
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/pytest_operator/plugin.py", line 1024, in _reset
+    await model.block_until(
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 1170, in block_until
+    await utils.block_until(done, timeout=timeout, wait_period=wait_period)
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/utils.py", line 144, in block_until
+    await asyncio.shield(asyncio.wait_for(_block(), timeout))
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 519, in wait_for
+    async with timeouts.timeout(timeout):
+  File "/usr/lib/python3.12/asyncio/timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-8q0z to die...
+[31m[1mERROR   [0m juju.model:_jasyncio.py:48 Task tmp raised an exception: watcher was stopped
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/_jasyncio.py", line 36, in _task_result_exp_handler
+    task.result()
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/facade.py", line 482, in wrapper
+    reply = await f(*args, **kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/_client3.py", line 126, in Next
+    reply = await self.rpc(msg)
+            ^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/overrides.py", line 116, in rpc
+    result = await self.connection.rpc(msg, encoder=TypeEncoder)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: watcher was stopped
+[33mWARNING [0m juju.model:__init__.py:1340 Watcher: watcher stopped, restarting
+[33mWARNING [0m juju.client.connection:connection.py:579 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-20516' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "b7dff7e9-0d74-4039-8d01-7ff308a85ba9"')>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "b7dff7e9-0d74-4039-8d01-7ff308a85ba9"
+[31m[1mERROR   [0m juju.client.connection:connection.py:587 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-17ty...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.25   unsupported  02:27:23Z
+
+App              Version  Status   Scale  Charm            Channel        Rev  Exposed  Message
+config-server    6.0.28   active       1  mongodb                           0  no       
+data-integrator           blocked      1  data-integrator  latest/stable  417  no       Please relate the data-integrator with the desired product
+mongos           6.0.28   blocked      1  mongos                            0  no       The cluster relation with the config-server is missing.
+shard-one        6.0.28   active       1  mongodb                           1  no       
+shard-two        6.0.28   active       1  mongodb                           2  no       
+
+Unit                Workload  Agent      Machine  Public address  Ports            Message
+config-server/0*    active    executing  0        10.172.112.34   27017-27018/tcp  Primary.
+data-integrator/0*  blocked   idle       3        10.172.112.84                    Please relate the data-integrator with the desired product
+  mongos/0*         blocked   idle                10.172.112.84   27018/tcp        The cluster relation with the config-server is missing.
+shard-one/0*        active    idle       1        10.172.112.97   27017/tcp        Primary.
+shard-two/0*        active    idle       2        10.172.112.234  27017/tcp        Primary.
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.172.112.34   juju-a2bfe5-0  ubuntu@22.04  github-runner  Running
+1        started  10.172.112.97   juju-a2bfe5-1  ubuntu@22.04  github-runner  Running
+2        started  10.172.112.234  juju-a2bfe5-2  ubuntu@22.04  github-runner  Running
+3        started  10.172.112.84   juju-a2bfe5-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 01:52:33 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:52:33 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:52:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:52:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:53:37 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:53:37 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-2: 01:53:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:53:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:53:55 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:53:55 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:54:49 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:54:49 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 01:59:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:59:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 02:02:35 ERROR unit.config-server/0.juju-log ldap-certificate-transfer:21: Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:07:23 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:07:23 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:07:30 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:11:58 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:11:58 ERROR unit.config-server/0.juju-log Could not bind: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket ssl wrapping error: certificate {'subject': ((('commonName', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),), (('x500UniqueIdentifier', 'ed27c892-76ab-4676-8a19-deb14d2a8e92'),)), 'issuer': ((('countryName', 'US'),), (('commonName', 'self-signed-certificates-operator'),)), 'version': 3, 'serialNumber': '11B0FD11E8639867D5A0B2EBDD676E5B2A051874', 'notBefore': 'Jul 23 01:47:45 2026 GMT', 'notAfter': 'Jul 23 01:47:45 2027 GMT', 'subjectAltName': (('DNS', 'glauth-k8s.test-ldap-8q0z.svc.cluster.local'),)} doesn't match any name in ['10.64.140.43'] 
+unit-config-server-0: 02:14:22 ERROR unit.config-server/0.juju-log Could not bind: socket connection error while opening: [Errno 110] Connection timed out
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket connection error while opening: [Errno 110] Connection timed out
+unit-config-server-0: 02:16:37 ERROR unit.config-server/0.juju-log ldap:20: Could not bind: socket connection error while opening: [Errno 110] Connection timed out
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 146, in open
+    raise exception_history[0][0]
+ldap3.core.exceptions.LDAPSocketOpenError: socket connection error while opening: [Errno 110] Connection timed out
+unit-config-server-0: 02:16:46 ERROR unit.config-server/0.juju-log ldap-peers:2: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:16:46 ERROR unit.config-server/0.juju-log ldap-peers:2: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:21:52 ERROR unit.config-server/0.juju-log Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:21:52 ERROR unit.config-server/0.juju-log Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:21:53 ERROR unit.config-server/0.juju-log Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:22:00 ERROR unit.config-server/0.juju-log Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:27:05 ERROR unit.config-server/0.juju-log ldap-certificate-transfer:21: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:27:05 ERROR unit.config-server/0.juju-log ldap-certificate-transfer:21: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:27:08 ERROR unit.config-server/0.juju-log ldap:20: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+unit-config-server-0: 02:27:08 ERROR unit.config-server/0.juju-log ldap:20: Could not bind: invalid server address
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/ldap.py", line 324, in get_ldap_connection_status
+    conn.bind()  # We consider sufficient to be able to bind to verify that the connection is working.
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/core/connection.py", line 589, in bind
+    self.open(read_server_info=False)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/sync.py", line 57, in open
+    BaseStrategy.open(self, reset_usage, read_server_info)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ldap3/strategy/base.py", line 154, in open
+    raise LDAPSocketOpenError('invalid server address')
+ldap3.core.exceptions.LDAPSocketOpenError: invalid server address
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
