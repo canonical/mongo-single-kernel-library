@@ -226,12 +226,10 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
                 config = self.state.mongodb_config_for_user(
                     user, auth_restrictions=auth_restrictions
                 )
-                logger.info("Updating auth restrictions for %s user.", user.username)
                 mongo.update_user_auth_restrictions(config)
 
     def update_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
         """Update the cluster IP source allowlist at runtime."""
-        logger.info("Updating cluster IP source allowlist")
         config = self.state.mongodb_config_for_user(
             CharmedOperatorUser, hosts={"localhost"}, standalone=True
         )

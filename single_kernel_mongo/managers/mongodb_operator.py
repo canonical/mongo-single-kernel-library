@@ -1059,7 +1059,7 @@ class MongoDBOperator(OperatorProtocol, Object):
             )
             for restriction in self.state.local_auth_restrictions
         ]
-
+        logger.info("Syncing cluster IP source allowlist and user local auth restrictions.")
         self.config_manager.sync_cluster_ip_source_allowlist_to_file(allowlist)
         try:
             self.mongo_manager.update_cluster_ip_source_allowlist(allowlist)

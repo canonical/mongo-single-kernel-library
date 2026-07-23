@@ -559,7 +559,6 @@ class MongoDBConfigManager(MongoConfigManager):
 
         new_allowlist = sorted(set(new_allowlist))
 
-        logger.info("Cluster IP source allowlist changed. Writing the new config.")
         current_config_file_content.setdefault("security", {})
         current_config_file_content["security"]["clusterIpSourceAllowlist"] = new_allowlist
         self.workload.write(self.file, safe_dump(current_config_file_content))
