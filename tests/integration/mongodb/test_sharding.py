@@ -151,9 +151,8 @@ async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("microk8s")
 async def test_cluster_ip_source_allowlists(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verify config-server and shard allowlists contain their related replica-set IPs."""
+    """Verify cluster allowlists contain the replica-set IPs expected for the substrate."""
     await verify_sharding_cluster_ip_source_allowlists(
         ops_test,
         substrate,
