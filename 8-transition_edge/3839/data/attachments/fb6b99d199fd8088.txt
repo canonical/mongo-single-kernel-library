@@ -1,0 +1,70 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [executing] blocked: The sharding interface cannot be used by replica sets.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [idle] blocked: Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  01:55:42Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+application                        active       1  application                                0  10.152.183.196  no       
+config-server             7.0.34   active       1  mongodb-k8s                                0  10.152.183.94   no       
+config-server-two         7.0.34   active       1  mongodb-k8s                                1  10.152.183.71   no       
+data-integrator                    blocked      1  data-integrator           latest/stable  418  10.152.183.56   no       Please specify either topic, index, database name, keyspace name, or prefix
+mongos                    7.0.34   blocked      1  mongos-k8s                                 0  10.152.183.52   no       The cluster relation with the config-server is missing.
+replication               7.0.34   blocked      1  mongodb-k8s                                3  10.152.183.17   no       The sharding interface cannot be used by replica sets.
+s3-integrator                      blocked      1  s3-integrator             latest/edge    601  10.152.183.144  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  10.152.183.31   no       
+shard-one                 7.0.34   active       1  mongodb-k8s                                2  10.152.183.156  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+application/0*               active    idle   10.1.53.22         
+config-server-two/0*         blocked   idle   10.1.53.14         Missing relation to shard(s).
+config-server/0*             active    idle   10.1.53.11         Primary.
+data-integrator/0*           blocked   idle   10.1.53.21         Please specify either topic, index, database name, keyspace name, or prefix
+mongos/0*                    blocked   idle   10.1.53.19         The cluster relation with the config-server is missing.
+replication/0*               blocked   idle   10.1.53.27         Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+s3-integrator/0*             blocked   idle   10.1.53.20         Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   10.1.53.18         
+shard-one/0*                 blocked   idle   10.1.53.17         Missing relation to config-server.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 01:37:06 ERROR unit.config-server/0.juju-log cmd failed - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: not primary
+, stderr=None
+unit-config-server-0: 01:37:06 ERROR unit.config-server/0.juju-log Deferring on start: error=cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: not primary
+, stderr=
+unit-config-server-0: 01:37:06 ERROR unit.config-server/0.juju-log Deferring because of WorkloadExecError cmd failed (1) - cmd=/usr/bin//mongosh mongodb://localhost/admin --quiet --eval "db.createUser({  user: 'operator',  pwd: passwordPrompt(),  roles: [{'role': 'userAdminAnyDatabase', 'db': 'admin'}, {'role': 'readWriteAnyDatabase', 'db': 'admin'}, {'role': 'clusterAdmin', 'db': 'admin'}],  mechanisms: ['SCRAM-SHA-256'],  passwordDigestor: 'server',})", stdout=Enter password
+********************************MongoServerError: not primary
+, stderr=
+unit-shard-one-0: 01:39:45 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:39:45 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:39:45 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:39:45 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:39:49 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:39:49 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:39:52 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:39:52 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:44:11 ERROR unit.config-server/0.juju-log replication shard does not have the same auth as the config server.
+unit-replication-0: 01:45:18 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:45:18 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:45:18 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:45:19 ERROR unit.replication/0.juju-log Cannot use a replica as a shard.
+unit-replication-0: 01:46:37 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:46:37 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:46:37 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:48:01 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:48:01 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:48:01 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:49:22 ERROR unit.replication/0.juju-log certificates:31: Non-existing secret Scope.UNIT:int-cert-secret was attempted to be removed.
+unit-replication-0: 01:49:22 ERROR unit.replication/0.juju-log certificates:31: Non-existing secret Scope.UNIT:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:53:55 ERROR unit.config-server/0.juju-log replication shard does not have the same auth as the config server.
+unit-replication-0: 01:55:07 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:07 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:07 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:55:08 ERROR unit.replication/0.juju-log Cannot use a replica as a shard.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
