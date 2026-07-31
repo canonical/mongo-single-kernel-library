@@ -1,0 +1,79 @@
+[32mINFO    [0m integration.helpers.ha:ha.py:86 Calling network loss on ns=testing and pod=mongodb-k8s-0
+[32mINFO    [0m integration.helpers.ha:ha.py:113 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: 
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET http://10.1.11.205:9216/metrics "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  01:43:38Z
+
+App          Version  Status  Scale  Charm        Channel  Rev  Address         Exposed  Message
+mongodb-k8s  6.0.28   active      3  mongodb-k8s             0  10.152.183.153  no       
+
+Unit            Workload  Agent  Address      Ports  Message
+mongodb-k8s/0*  active    idle   10.1.11.205         
+mongodb-k8s/1   active    idle   10.1.11.209         
+mongodb-k8s/2   active    idle   10.1.11.210         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-0: 01:41:58 ERROR unit.mongodb-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3422, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-mongodb-k8s-0/secret-get', '--label', 'mongodb-k8s.app', '--refresh', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/password_actions.py", line 79, in _set_password_action
+    passwd, secret_id = self.dependent.set_password(username, password)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 733, in set_password
+    secret_id = self.mongo_manager.set_user_password(user, new_password)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 113, in set_user_password
+    with MongoConnection(self.state.mongo_config) as mongo:
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 903, in mongo_config
+    return self.operator_config
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 862, in operator_config
+    return self.mongodb_config_for_user(OperatorUser, hosts=self.internal_hosts)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 807, in mongodb_config_for_user
+    password=self.get_user_password(user),
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/state/charm_state.py", line 512, in get_user_password
+    return self.secrets.get_for_key(Scope.APP, user.password_key_name) or ""
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/secrets.py", line 143, in get_for_key
+    value = secret.get_content().get(key)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/secrets.py", line 92, in get_content
+    self._secret_content = self.meta.get_content(refresh=True)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 1462, in get_content
+    self._content = self._backend.secret_get(id=self.id, label=self.label, refresh=refresh)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3808, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3424, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR cannot ensure service account "juju-secret-consumer-1b7e670b-ebce-42af-9ba7-a30342e0ef3d": rpc error: code = Unknown desc = create transaction failed for key /registry/serviceaccounts/testing/juju-secret-consumer-1b7e670b-ebce-42af-9ba7-a30342e0ef3d: exec (try: 500): database is locked
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
