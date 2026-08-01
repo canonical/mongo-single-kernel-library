@@ -1,0 +1,86 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  02:04:14Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+config-server             8.0.10   active      2  mongodb-k8s                           0  10.152.183.65   no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.199  no       
+shard-one                 8.0.10   active      3  mongodb-k8s                           1  10.152.183.232  no       
+shard-two                 8.0.10   active      1  mongodb-k8s                           2  10.152.183.106  no       
+
+Unit                         Workload     Agent      Address     Ports  Message
+config-server/0*             waiting      executing  10.1.53.16         Waiting for MongoDB restart.
+config-server/1              blocked      executing  10.1.53.20         Missing relation to shard(s).. Run `status-detail`: 1 action required; 1 additional statuses.
+self-signed-certificates/0*  active       executing  10.1.53.42         
+shard-one/0*                 waiting      executing  10.1.53.28         Waiting for replica set reconfiguration.... Run `status-detail`: 0 action required; 1 additional statuses.
+shard-one/1                  maintenance  executing  10.1.53.35         Enabling TLS...
+shard-one/2                  active       executing  10.1.53.36         
+shard-two/0*                 error        idle       10.1.53.41         hook failed: "client-certificates-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:01:56 ERROR unit.shard-one/0.juju-log database-peers:9: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=Waiting for all members to finish syncing before adding new member.
+unit-shard-two-0: 02:04:12 ERROR unit.shard-two/0.juju-log client-certificates:20: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3570, in _wrap_hookcmd
+    yield
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3921, in secret_get
+    return hookcmds.secret_get(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/hookcmds/_secret.py", line 153, in secret_get
+    stdout = run('secret-get', '--format=json', *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/hookcmds/_utils.py", line 53, in run
+    raise Error(returncode=e.returncode, cmd=e.cmd, stdout=e.stdout, stderr=e.stderr) from None
+ops.hookcmds._utils.Error: command ('secret-get', '--format=json', '--label', 'afd8c2bccf834997afce12c2706d2ede-private-key-0-client-certificates', '--refresh') exited with status 1
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1757, in _configure
+    self._send_certificate_requests()
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 2069, in _send_certificate_requests
+    if not self._certificate_requested(certificate_request):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1964, in _certificate_requested
+    if not self.private_key:
+           ^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1867, in private_key
+    if not self._private_key_generated():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1928, in _private_key_generated
+    secret.get_content(refresh=True)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 1474, in get_content
+    self._content = self._backend.secret_get(id=self.id, label=self.label, refresh=refresh)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3920, in secret_get
+    with self._wrap_hookcmd('secret-get', id=id, label=label, refresh=refresh, peek=peek):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3580, in _wrap_hookcmd
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR cannot ensure service account "juju-secret-consumer-ddf38bc3-591f-4021-9bf6-6d0afd16757c": rpc error: code = Unknown desc = create transaction failed for key /registry/serviceaccounts/testing/juju-secret-consumer-ddf38bc3-591f-4021-9bf6-6d0afd16757c: exec (try: 500): database is locked
+
+unit-shard-two-0: 02:04:13 ERROR juju.worker.uniter.operation hook "client-certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
