@@ -42,7 +42,7 @@ class MachineMongoDBRefresh(
         if not self.dependent.workload.install(revision=snap_revision, retry_and_raise=False):
             logger.exception("Snap refresh failed")
 
-            if self.dependent.charm.workload.snap_revision() == revision_before_refresh:
+            if self.dependent.workload.snap_revision() == revision_before_refresh:
                 self.dependent.start_charm_services()
             else:
                 refresh.update_snap_revision()
