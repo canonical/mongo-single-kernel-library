@@ -1,0 +1,134 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: Primary.
+  shard-one/0 [idle] active: 
+  shard-two/0 [idle] active: 
+  mongos/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [executing] active: Primary.
+  mongos/0 [executing] active: 
+[32mINFO    [0m integration.helpers.ldap:ldap.py:133 Removing ldap offer
+[32mINFO    [0m integration.helpers.ldap:ldap.py:139 Removing ldap cert offer
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model           Controller     Cloud/Region                      Version  SLA          Timestamp
+test-ldap-mhmo  concierge-lxd  test-ldap-k8s-cloud-s50v/default  3.6.27   unsupported  01:59:20Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+glauth-k8s                         active      1  glauth-k8s                latest/edge     56  10.152.183.211  no       
+glauth-utils                       active      1  glauth-utils              latest/edge     54  10.152.183.172  no       
+postgresql-k8s            14.23    active      1  postgresql-k8s            14/stable      925  10.152.183.165  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.94   no       
+traefik-k8s               2.11.49  active      1  traefik-k8s               latest/stable  377  10.152.183.196  no       Serving at http://10.64.140.43
+
+Unit                         Workload  Agent  Address     Ports  Message
+glauth-k8s/0*                active    idle   10.1.53.22         
+glauth-utils/0*              active    idle   10.1.53.16         
+postgresql-k8s/0*            active    idle   10.1.53.15         Primary
+self-signed-certificates/0*  active    idle   10.1.53.17         
+traefik-k8s/0*               active    idle   10.1.53.20         Serving at http://10.64.140.43
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-glauth-k8s-0: 01:43:06 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:43:16 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-traefik-k8s-0: 01:43:23 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:23 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:25 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:25 ERROR unit.traefik-k8s/0.juju-log peers:3: Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:27 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:27 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:29 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-traefik-k8s-0: 01:43:29 ERROR unit.traefik-k8s/0.juju-log Failed to fetch LoadBalancer traefik-k8s-lb: services "traefik-k8s-lb" not found
+unit-glauth-k8s-0: 01:43:58 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1015 Resetting model test-ldap-mhmo...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications postgresql-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications self-signed-certificates
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications glauth-utils
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1004    Destroying applications traefik-k8s
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Reset test-ldap-mhmo completed successfully.
+[33mWARNING [0m pytest_operator.plugin:plugin.py:984 Waiting for model test-ldap-mhmo to die...
+[31m[1mERROR   [0m juju.model:__init__.py:1388 Error in watcher
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 1379, in _all_watcher
+    old_obj, new_obj = self.state.apply_delta(entity)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 287, in apply_delta
+    entity = self.get_entity(delta.entity, delta.get_id())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/model/__init__.py", line 311, in get_entity
+    return entity_class(
+           ^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/action.py", line 11, in __init__
+    self._status = self.data["status"]
+                   ~~~~~~~~~^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-16984' coro=<Connection.reconnect() done, defined at /root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py:697> exception=JujuAPIError('unknown model: "ba5be60e-8c46-4252-8bf1-41fbf06111bf"')>
+Traceback (most recent call last):
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 805, in _connect_with_login
+    result = (await self.login())["response"]
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 886, in login
+    return await self.rpc({
+           ^^^^^^^^^^^^^^^^
+  File "/root/.cache/pypoetry/virtualenvs/mongo-charms-single-kernel-PDlT7FyH-py3.12/lib/python3.12/site-packages/juju/client/connection.py", line 597, in rpc
+    raise errors.JujuAPIError(result)
+juju.errors.JujuAPIError: unknown model: "ba5be60e-8c46-4252-8bf1-41fbf06111bf"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model secondary...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1710 Forgetting cloud: test-ldap-k8s-cloud-s50v...
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  02:00:33Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Exposed  Message
+config-server    6.0.28   active      1  mongodb                           0  no       
+data-integrator           active      1  data-integrator  latest/stable  417  no       
+mongos           6.0.28   active      1  mongos                            0  no       
+shard-one        6.0.28   active      1  mongodb                           1  no       
+shard-two        6.0.28   active      1  mongodb                           2  no       
+
+Unit                Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*    active    idle   0        10.83.20.213    27017-27018/tcp  Primary.
+data-integrator/0*  active    idle   3        10.83.20.67                      
+  mongos/0*         active    idle            10.83.20.67     27018/tcp        
+shard-one/0*        active    idle   1        10.83.20.145    27017/tcp        
+shard-two/0*        active    idle   2        10.83.20.5      27017/tcp        
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.83.20.213  juju-5f84cf-0  ubuntu@22.04  github-runner  Running
+1        started  10.83.20.145  juju-5f84cf-1  ubuntu@22.04  github-runner  Running
+2        started  10.83.20.5    juju-5f84cf-2  ubuntu@22.04  github-runner  Running
+3        started  10.83.20.67   juju-5f84cf-3  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:48:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:48:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:49:11 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:49:11 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-1: 01:49:32 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:49:32 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:40 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:49:40 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:50:08 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:50:08 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:50:19 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:50:19 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 01:53:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:53:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 01:57:07 ERROR unit.mongos/0.juju-log ldap-certificate-transfer:24: Config Server and mongos integrations with LDAP have a different checksum.This usually means they are not integrated with the same LDAP application.
+unit-mongos-0: 01:58:48 ERROR unit.mongos/0.juju-log ldap:23: Config Server and mongos integrations with LDAP have a different checksum.This usually means they are not integrated with the same LDAP application.
+unit-mongos-0: 01:58:50 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "60667954-2538-4f45-884f-dd982c5f84cf:r#23#ldap-integration": settings 60667954-2538-4f45-884f-dd982c5f84cf:r#23#ldap-integration not found (not found)
+controller-0: 01:58:55 ERROR juju.worker.remoterelations cmr error in relation units worker for config-server:ldap ldap-integration:ldap: bad catacomb ErrDying: still alive
+controller-0: 01:58:55 ERROR juju.worker.remoterelations cmr error in relation units worker for config-server:ldap ldap-integration:ldap: bad catacomb ErrDying: still alive
+controller-0: 01:58:55 ERROR juju.worker.remoterelations cmr error in remote application worker for ldap-integration: bad catacomb ErrDying: still alive
+controller-0: 01:58:55 ERROR juju.worker.remoterelations cmr exited "ldap-integration": bad catacomb ErrDying: still alive
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

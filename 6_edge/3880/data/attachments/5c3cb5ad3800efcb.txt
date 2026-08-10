@@ -1,0 +1,148 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m integration.helpers.ha:ha.py:86 Calling network loss on ns=testing and pod=shard-two-1
+[32mINFO    [0m integration.helpers.ha:ha.py:113 Result of isolating unit from cluster is 'b'networkchaos.chaos-mesh.org/network-loss-primary created\n''
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: 
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [executing] active: Primary.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [executing] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  02:17:59Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     6.0.28   active       3  mongodb-k8s                  0  10.152.183.114  no       
+continuous-write           waiting      1  continuous-write             0  10.152.183.81   no       
+shard-one         6.0.28   active       3  mongodb-k8s                  1  10.152.183.54   no       
+shard-two         6.0.28   active       3  mongodb-k8s                  2  10.152.183.236  no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.39         
+config-server/1      active    idle   10.1.53.38         
+config-server/2      active    idle   10.1.53.37         
+continuous-write/0*  waiting   idle   10.1.53.36         
+shard-one/0*         active    idle   10.1.53.42         Primary.
+shard-one/1          active    idle   10.1.53.41         
+shard-one/2          active    idle   10.1.53.40         
+shard-two/0*         active    idle   10.1.53.45         Primary.
+shard-two/1          active    idle   10.1.53.44         
+shard-two/2          active    idle   10.1.53.43         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 01:56:45 ERROR unit.shard-one/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a792fdc9e62a40f51aab3d4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a792c916ef42c053017e8f5'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12230, 'lastCommittedOpTime': Timestamp(1786326997, 26), '$clusterTime': {'clusterTime': Timestamp(1786327002, 4), 'signature': {'hash': b'\\xc8\\xa5/L\\xfe\\x16\\xd0h\\x95z\\xd7\\xf2\\x90Gp\\xee\\xcb\\x93Z\\x0e', 'keyId': 7672211307612864539}}, 'operationTime': Timestamp(1786326997, 26)}")>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a792fd150e97db8f8c8edd3'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12704, 'lastCommittedOpTime': Timestamp(1786326997, 26), '$clusterTime': {'clusterTime': Timestamp(1786327002, 4), 'signature': {'hash': b'\\xc8\\xa5/L\\xfe\\x16\\xd0h\\x95z\\xd7\\xf2\\x90Gp\\xee\\xcb\\x93Z\\x0e', 'keyId': 7672211307612864539}}, 'operationTime': Timestamp(1786326997, 26)}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006217729999207222>]>
+unit-shard-two-0: 02:03:19 ERROR unit.shard-two/0.juju-log Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a793166385b7f150b93ffc1, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-two-0.shard-two-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a792c83215262bbf9e02637'), 'counter': 10}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12987, 'lastCommittedOpTime': Timestamp(1786327392, 28), '$clusterTime': {'clusterTime': Timestamp(1786327396, 1), 'signature': {'hash': b'VO\\xe8\\xe1\\xb5\\x05k\\xf6\\xa2vp0$\\x1dp\\xc0\\xf8N\\x86\\xeb', 'keyId': 7672211307612864539}}, 'operationTime': Timestamp(1786327392, 28)}")>, <ServerDescription ('shard-two-1.shard-two-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a79315c467ca261b1eceede'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12983, 'lastCommittedOpTime': Timestamp(1786327392, 28), '$clusterTime': {'clusterTime': Timestamp(1786327396, 1), 'signature': {'hash': b'VO\\xe8\\xe1\\xb5\\x05k\\xf6\\xa2vp0$\\x1dp\\xc0\\xf8N\\x86\\xeb', 'keyId': 7672211307612864539}}, 'operationTime': Timestamp(1786327392, 28)}")>, <ServerDescription ('shard-two-2.shard-two-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007824140000138868>]>
+unit-shard-one-0: 02:04:28 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a7931aaa13643ea65246754, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0026303040001494082>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009441459999379731>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016579159998855175>]>
+unit-continuous-write-0: 02:11:36 ERROR unit.continuous-write/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 291, in <module>
+    main(ContinuousWritesApplication)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 255, in _on_clear_continuous_writes_action
+    test_collection.drop()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/collection.py", line 1234, in drop
+    dbo.drop_collection(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 108, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/database.py", line 1249, in drop_collection
+    return self._drop_helper(name, session, comment)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/database.py", line 1163, in _drop_helper
+    with self.__client._conn_for_writes(session, operation=_Op.DROP) as connection:
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/mongo_client.py", line 1333, in _conn_for_writes
+    server = self._select_server(writable_server_selector, session, operation)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/mongo_client.py", line 1316, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 368, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 346, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 253, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 303, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: 10.1.53.34:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.35:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.32:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 6a79333ac0278d1fcb295da7, topology_type: Unknown, servers: [<ServerDescription ('10.1.53.32', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.32:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.34', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.34:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.35', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.35:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+unit-continuous-write-0: 02:12:10 ERROR unit.continuous-write/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 291, in <module>
+    main(ContinuousWritesApplication)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 255, in _on_clear_continuous_writes_action
+    test_collection.drop()
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/collection.py", line 1234, in drop
+    dbo.drop_collection(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 108, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/database.py", line 1249, in drop_collection
+    return self._drop_helper(name, session, comment)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/database.py", line 1163, in _drop_helper
+    with self.__client._conn_for_writes(session, operation=_Op.DROP) as connection:
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/mongo_client.py", line 1333, in _conn_for_writes
+    server = self._select_server(writable_server_selector, session, operation)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/mongo_client.py", line 1316, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 368, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 346, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 253, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/pymongo/topology.py", line 303, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: 10.1.53.34:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.32:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms),10.1.53.35:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 6a79335c04534cd292298706, topology_type: Unknown, servers: [<ServerDescription ('10.1.53.32', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.32:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.34', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.34:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>, <ServerDescription ('10.1.53.35', 27018) server_type: Unknown, rtt: None, error=NetworkTimeout('10.1.53.35:27018: timed out (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+unit-config-server-0: 02:15:13 ERROR unit.config-server/0.juju-log Cluster cannot read/write to replicas
+unit-shard-one-0: 02:15:45 ERROR unit.shard-one/0.juju-log Cluster cannot read/write to replicas
+unit-shard-two-1: 02:15:52 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bca312] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:15:59 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bca312] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:16:06 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bca312] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-1: 02:16:15 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [bca312] "unit-shard-two-1" cannot open api: cannot resolve "controller-service.controller-concierge-microk8s.svc.cluster.local": lookup controller-service.controller-concierge-microk8s.svc.cluster.local: operation was canceled
+unit-shard-two-0: 02:16:16 ERROR unit.shard-two/0.juju-log Cluster cannot read/write to replicas
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
