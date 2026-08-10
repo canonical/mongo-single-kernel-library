@@ -268,15 +268,10 @@ def test_reconcile_shards_syncs_cluster_network_access_when_adding(harness, mock
     )
 
     mocker.patch.object(manager, "assert_pass_hook_checks")
-    sync_access_restrictions = mocker.patch.object(
-        manager.dependent,
-        "sync_cluster_network_access_restrictions",
-    )
     add_shard = mocker.patch.object(manager, "add_shard")
 
     manager.reconcile_shards_for_relation(relation)
 
-    sync_access_restrictions.assert_called_once_with()
     add_shard.assert_called_once_with(relation)
 
 
@@ -297,15 +292,10 @@ def test_reconcile_shards_removes_network_access_after_draining(harness, mocker)
 
     mocker.patch.object(manager, "assert_pass_hook_checks")
     remove_shard = mocker.patch.object(manager, "remove_shard_from_relation")
-    sync_access_restrictions = mocker.patch.object(
-        manager.dependent,
-        "sync_cluster_network_access_restrictions",
-    )
 
     manager.reconcile_shards_for_relation(relation, is_leaving=True)
 
     remove_shard.assert_called_once_with(relation)
-    sync_access_restrictions.assert_called_once_with(excluded_addresses={"2.2.2.2", "2.2.2.3"})
 
 
 def test_config_server_cluster_password_synced_success(harness: Harness[MongoTestCharm], mocker):

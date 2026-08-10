@@ -211,6 +211,8 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         if status := self.dependent.get_relation_feasible_status(self.relation_name):
             self.dependent.state.statuses.add(status, scope="unit", component=self.dependent.name)
             raise NonDeferrableFailedHookChecksError("relation is not feasible")
+        if not self.charm.unit.is_leader():
+            raise NonDeferrableFailedHookChecksError("Not leader")
 
         # Note: we permit this logic based on status since we aren't checking
         # self.charm.unit.status`, instead `get_cluster_mismatched_revision_status` directly
