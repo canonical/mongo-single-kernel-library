@@ -163,14 +163,9 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         try:
             if is_leaving:
                 logger.info("Removing shard %s from cluster.", relation.app.name)
-                shard_hosts = self.get_shard_hosts_from_relation(relation)
                 self.remove_shard_from_relation(relation)
-                self.dependent.sync_cluster_network_access_restrictions(
-                    excluded_addresses=set(shard_hosts)
-                )
             else:
                 logger.info("Adding shard %s to cluster.", relation.app.name)
-                self.dependent.sync_cluster_network_access_restrictions()
                 self.add_shard(relation)
         except NotDrainedError:
             # it is necessary to removeShard multiple times for the shard to be removed.
