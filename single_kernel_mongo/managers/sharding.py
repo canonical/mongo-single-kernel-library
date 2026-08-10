@@ -102,10 +102,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         """Handles the database requested event.
 
         It shares the different credentials and necessary files with the shard.
-
         """
-        if not self.charm.unit.is_leader():
-            raise NonDeferrableFailedHookChecksError("Not leader")
         self.assert_pass_hook_checks(relation)
 
         if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
@@ -151,6 +148,8 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
         Updating of shards is done automatically via MongoDB change-streams.
         """
+        if not self.charm.unit.is_leader():
+            return
         self.assert_pass_hook_checks(relation, is_leaving)
 
         if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
@@ -164,17 +163,15 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         try:
             if is_leaving:
                 logger.info("Removing shard %s from cluster.", relation.app.name)
-                shard_hosts = self._get_shard_hosts_from_relation(relation)
-                if self.charm.unit.is_leader():
-                    self.remove_shard_from_relation(relation)
+                shard_hosts = self.get_shard_hosts_from_relation(relation)
+                self.remove_shard_from_relation(relation)
                 self.dependent.sync_cluster_network_access_restrictions(
                     excluded_addresses=set(shard_hosts)
                 )
             else:
                 logger.info("Adding shard %s to cluster.", relation.app.name)
                 self.dependent.sync_cluster_network_access_restrictions()
-                if self.charm.unit.is_leader():
-                    self.add_shard(relation)
+                self.add_shard(relation)
         except NotDrainedError:
             # it is necessary to removeShard multiple times for the shard to be removed.
             logger.info(
@@ -196,7 +193,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             logger.error(f"Deferring _on_relation_event for shards interface since: error={e}")
             raise
 
-    def _get_shard_hosts_from_relation(self, relation: Relation) -> list[str]:
+    def get_shard_hosts_from_relation(self, relation: Relation) -> list[str]:
         """Return the replica-set hosts published by a shard relation."""
         hosts = json.loads(
             self.data_interface.fetch_relation_field(
@@ -379,7 +376,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         """Adds a shard to the cluster."""
         shard_name = relation.app.name
 
-        hosts = self._get_shard_hosts_from_relation(relation)
+        hosts = self.get_shard_hosts_from_relation(relation)
         if not len(hosts):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return

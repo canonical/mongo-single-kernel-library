@@ -87,6 +87,13 @@ class ConfigServerEventHandler(Object):
                 component=self.manager.name,
             )
             self.manager.reconcile_shards_for_relation(event.relation, is_leaving)
+
+            shard_hosts = (
+                set(self.manager.get_shard_hosts_from_relation(event.relation))
+                if is_leaving
+                else None
+            )
+            self.dependent.sync_cluster_network_access_restrictions(excluded_addresses=shard_hosts)
         except (
             DeferrableFailedHookChecksError,
             ServerSelectionTimeoutError,
