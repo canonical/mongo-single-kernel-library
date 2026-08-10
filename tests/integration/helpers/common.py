@@ -4,6 +4,7 @@
 import json
 import logging
 import math
+import re
 import subprocess
 from base64 import b64decode
 from dataclasses import dataclass
@@ -1073,7 +1074,7 @@ async def execute_on_mongod(
     data = None
     if expecting_output:
         try:
-            data = json.loads(stdout.split("\x07")[-1])
+            data = find_json(stdout)
         except json.JSONDecodeError:
             pass
 
@@ -1083,6 +1084,22 @@ async def execute_on_mongod(
         stdout=stdout,
         data=data,
     )
+
+
+def find_json(combined_string: str) -> dict[str, Any]:
+    split = combined_string.splitlines()
+    all_lines = [escape_ansi(line) for line in split]
+    for line in all_lines:
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError:
+            continue
+    return {}
+
+
+def escape_ansi(line: str) -> str:
+    ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", line)
 
 
 async def start_continous_writes(
