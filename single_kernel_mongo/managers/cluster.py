@@ -28,8 +28,10 @@ from single_kernel_mongo.config.statuses import (
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
+    DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
+    FailedToGetHostsError,
     MissingConfigServerError,
     MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
@@ -108,10 +110,19 @@ class ClusterProvider(Object):
         self.assert_pass_hook_checks(initial_event=initial_event)
 
         config_server_db = self.state.generate_config_server_db(relation)
-        self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        try:
+            self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
+            # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
+            # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
+            # attempt to retrieve hosts while non-leader units are still enabling node port
+            # resulting in an exception.
+            raise DeferrableError("Failed to add user for mongos.")
+
         relation_data = {
             ClusterStateKeys.KEYFILE.value: self.state.get_keyfile(),
             ClusterStateKeys.CONFIG_SERVER_DB.value: config_server_db,
+            ClusterStateKeys.REPLICA_SET.value: self.state.app_peer_data.replica_set,
         }
 
         if int_tls_ca := self.state.tls.get_secret(label_name=SECRET_CA_LABEL, internal=True):
@@ -166,9 +177,14 @@ class ClusterProvider(Object):
         self.dependent.assert_proceed_on_broken_event(relation)
 
         if self.substrate == Substrates.VM:
-            self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(
-                relation, relation_departing=True
-            )
+            try:
+                self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
+                # Failed to get hosts error is unique to mongos-k8s charm. In other charms we do not
+                # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
+                # attempt to retrieve hosts while non-leader units are still enabling node port
+                # resulting in an exception.
+                raise DeferrableError("Failed to remove user for mongos.")
 
     def update_config_server_db(self) -> None:
         """Updates the config server DB URI in the mongos relation."""
@@ -521,7 +537,7 @@ class ClusterRequirer(Object):
         try:
             for relation in self.state.client_relations:
                 self.dependent.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-        except PyMongoError:
+        except (PyMongoError, FailedToGetHostsError, DatabaseRequestedHasNotRunYetError):
             raise DeferrableError("Failed to add users on mongos-k8s router.")
 
     def remove_users_for_k8s_routers(self, relation: Relation) -> None:

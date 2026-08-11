@@ -121,6 +121,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
                 sorted(cidrs(self.state.cluster_network().bind_addresses))
             ),
+            AppShardingComponentKeys.REPLICA_SET.value: self.state.app_peer_data.replica_set,
         }
 
         if self.state.s3_relation:
@@ -714,6 +715,9 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
             return
         if not self.state.shard_relation:
             return
+
+        # We send the name of our replicaset to the config server
+        self.state.shard_state.replica_set = self.state.app_peer_data.replica_set
 
         # Let's send the IPs of our replicaset.
         self.state.shard_state.rs_hosts = list(self.state.internal_hosts)

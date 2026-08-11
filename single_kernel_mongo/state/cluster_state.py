@@ -22,6 +22,7 @@ class ClusterStateKeys(str, Enum):
     ALIAS = "alias"
     EXTERNAL_NODE_CONNECTIVITY = "external-node-connectivity"
     CONFIG_SERVER_DB = "config-server-db"
+    REPLICA_SET = "replset"
     KEYFILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"
     EXT_CA_SECRET = "ext-ca-secret"
@@ -122,3 +123,15 @@ class ClusterState(AbstractRelationState[Data]):
     def cluster_id(self) -> str | None:
         """Returns the cluster ID."""
         return self.relation_data.get(ClusterStateKeys.CLUSTER_ID.value, None)
+
+    @property
+    def replica_set(self) -> str | None:
+        """The name of the replica set."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(ClusterStateKeys.REPLICA_SET.value, None)
+
+    @replica_set.setter
+    def replica_set(self, value: str):
+        """Sets the auth-updated field."""
+        self.update({ClusterStateKeys.REPLICA_SET.value: value})
