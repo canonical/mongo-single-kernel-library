@@ -1,7 +1,5 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
-import os
-import uuid
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -9,10 +7,9 @@ from typing import Any
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.backups import CloudConfigs, CloudConfiguration
-from ..helpers.common import get_app_name
-from ..helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
-from ..helpers.types import Substrate
+from tests.integration.helpers.common import get_app_name
+from tests.integration.helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
+from tests.integration.helpers.types import Substrate
 
 ORIGINAL_RESTART_DELAY = 5
 
@@ -31,60 +28,6 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
         destroy_chaos_mesh(ops_test.model.info.name)
     else:
         yield
-
-
-@pytest.fixture(scope="session")
-def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
-    configs: dict[str, str] = {
-        "endpoint": "https://s3.amazonaws.com",
-        "bucket": "data-charms-testing",
-        "path": f"{path}/{uuid.uuid4()}",
-        "region": "us-east-1",
-    }
-    credentials: dict[str, str] = {
-        "access-key": os.environ["AWS_ACCESS_KEY"],
-        "secret-key": os.environ["AWS_SECRET_KEY"],
-    }
-    return configs, credentials
-
-
-@pytest.fixture(scope="session")
-def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
-    configs: dict[str, str] = {
-        "bucket": "data-charms-testing",
-        "endpoint": "https://storage.googleapis.com",
-        "region": "",
-        "path": f"{path}/{uuid.uuid4()}",
-    }
-    credentials: dict[str, str] = {
-        "access-key": os.environ["GCP_ACCESS_KEY"],
-        "secret-key": os.environ["GCP_SECRET_KEY"],
-    }
-    return configs, credentials
-
-
-@pytest.fixture(scope="session")
-def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
-    configs: dict[str, str] = {
-        "bucket": "data-charms-testing",
-        "path": f"{path}/{uuid.uuid4()}",
-    }
-    credentials: dict[str, str] = {
-        "secret-key": os.environ["GCS_SERVICE_ACCOUNT"],
-    }
-    return configs, credentials
-
-
-@pytest.fixture(scope="session")
-def cloud_configs(
-    cloud_configs_gcp: CloudConfiguration,
-    cloud_configs_aws: CloudConfiguration,
-    cloud_configs_gcs: CloudConfiguration,
-) -> Generator[CloudConfigs]:
-    yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp, "GCS": cloud_configs_gcs}
 
 
 @pytest.fixture()

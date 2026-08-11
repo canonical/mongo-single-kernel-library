@@ -31,7 +31,7 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.utils.helpers import hostname_from_hostport, hostname_from_shardname
 from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
-from single_kernel_mongo.utils.mongodb_users import DBPrivilege
+from single_kernel_mongo.utils.mongodb_users import AuthRestrictions, DBPrivilege
 
 logger = logging.getLogger(__name__)
 
@@ -142,11 +142,19 @@ class MongoConnection:
                 logger.error("Cannot initialize replica set. error=%r", e)
                 raise e
 
-    def create_user(self, username: str, password: str, roles: list[DBPrivilege]):
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        roles: list[DBPrivilege],
+        auth_restrictions: list[AuthRestrictions] | None = None,
+    ):
         """Create user.
 
         Grant read and write privileges for specified database.
         """
+        if not auth_restrictions:
+            auth_restrictions = []
         try:
             self.client.admin.command(
                 "createUser",
@@ -154,6 +162,7 @@ class MongoConnection:
                 pwd=password,
                 roles=roles,
                 mechanisms=["SCRAM-SHA-256"],
+                authenticationRestrictions=auth_restrictions,
             )
         except OperationFailure as e:
             if e.code == MongoErrorCodes.USER_ALREADY_EXISTS:
@@ -168,6 +177,20 @@ class MongoConnection:
             "updateUser",
             value=config.username,
             roles=config.supported_roles,
+        )
+
+    def update_user_auth_restrictions(self, config: MongoConfiguration):
+        """Update authentication restrictions on database."""
+        self.client.admin.command(
+            "updateUser",
+            value=config.username,
+            authenticationRestrictions=config.auth_restrictions,
+        )
+
+    def set_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
+        """Update the cluster IP source allowlist at runtime."""
+        self.client.admin.command(
+            {"setParameter": 1, "clusterIpSourceAllowlist": allowlist},
         )
 
     def set_user_password(self, username: str, password: str):
@@ -256,12 +279,6 @@ class MongoConnection:
 
         return rs_status_parsed
 
-    @retry(
-        stop=stop_after_attempt(20),
-        wait=wait_fixed(3),
-        reraise=True,
-        before=before_log(logger, logging.DEBUG),
-    )
     def remove_replset_member(self, hostname: str) -> None:
         """Remove member from replica set config inside MongoDB.
 
@@ -274,9 +291,19 @@ class MongoConnection:
         # When we remove member, to avoid issues when majority members is removed, we need to
         # remove next member only when MongoDB forget the previous removed member.
         if self.is_any_removing(rs_status):
-            # removing from replicaset is fast operation, lets @retry(3 times with a 5sec timeout)
-            # before giving up.
             raise NotReadyError
+
+        members = rs_config["config"]["members"]
+
+        if len(members) == 1:
+            logger.info(
+                "We're the last member of the replica set, we failed to detect that before."
+            )
+            return
+
+        if not any(hostname == hostname_from_hostport(member["host"]) for member in members):
+            logger.info("Replica set member %s is already removed", hostname)
+            return
 
         # avoid downtime we need to reelect new primary if removable member is the primary.
         if self.primary(rs_status) == hostname:
@@ -285,10 +312,9 @@ class MongoConnection:
 
         rs_config["config"]["version"] += 1
         rs_config["config"]["members"] = [
-            member
-            for member in rs_config["config"]["members"]
-            if hostname != hostname_from_hostport(member["host"])
+            member for member in members if hostname != hostname_from_hostport(member["host"])
         ]
+
         logger.debug("rs_config: %r", json_util.dumps(rs_config["config"]))
         self.client.admin.command("replSetReconfig", rs_config["config"])
 
@@ -306,7 +332,9 @@ class MongoConnection:
         # degradation, before adding new members, it is needed to check that all other
         # members finished init sync.
         if self.is_any_sync(rs_status):
-            raise NotReadyError
+            raise NotReadyError(
+                "Waiting for all members to finish syncing before adding new member."
+            )
 
         # Avoid reusing IDs, according to the doc
         # https://www.mongodb.com/docs/manual/reference/replica-configuration/

@@ -1,13 +1,16 @@
 import pathlib
+from contextlib import nullcontext
 from pathlib import Path
 from platform import platform
 
+import ops.testing
 import pytest
 import tomllib
 import yaml
-from ops.testing import Harness
+from charmlibs.snap import Snap, SnapState
+from ops.hookcmds import Network
+from ops.testing import Context, Harness
 
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import Snap, SnapState
 from tests.integration.helpers.types import Substrate
 
 CONFIG = str(yaml.safe_load(Path("./tests/charms/mongodb_test_charm/config.yaml").read_text()))
@@ -47,6 +50,28 @@ class _MockRefreshVM:
 
 
 @pytest.fixture(autouse=True)
+def mock_network_get(mocker):
+    mocker.patch(
+        "single_kernel_mongo.state.charm_state.network_get",
+        return_value=Network._from_dict(
+            {
+                "bind-addresses": [
+                    {
+                        "mac-address": "aa:bb",
+                        "interface-name": "eth0",
+                        "addresses": [
+                            {"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}
+                        ],
+                    }
+                ],
+                "egress-subnets": ["127.0.0.0/24"],
+                "ingress-addresses": ["10.0.0.1"],
+            }
+        ),
+    )
+
+
+@pytest.fixture(autouse=True)
 def mock_refresh(mocker):
     mocker.patch("charm_refresh.Machines", new=_MockRefreshVM)
     mocker.patch("charm_refresh.Kubernetes", new=_MockRefreshVM)
@@ -67,6 +92,26 @@ def mock_refresh(mocker):
         return_value=None,
     )
     yield
+
+
+@pytest.fixture(autouse=True)
+def mock_rollingops_manager(mocker):
+    manager = mocker.Mock()
+    manager.request_async_lock.return_value = None
+    manager.acquire_sync_lock.return_value = nullcontext()
+
+    manager.is_waiting.return_value = False
+    manager.is_waiting_callback.return_value = False
+
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.RollingOpsManager",
+        return_value=manager,
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongos_operator.RollingOpsManager",
+        return_value=manager,
+    )
+    return manager
 
 
 @pytest.fixture
@@ -91,6 +136,11 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     harness.add_relation("database-peers", "database-peers")
     harness.add_relation("status-peers", "mongodb")
     harness.add_relation("ldap-peers", "ldap-peers")
+    harness.add_relation("rollingops-peers", "rollingops-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
 
     if substrate == "microk8s":
@@ -127,6 +177,11 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
     harness.add_relation("status-peers", "mongos")
     harness.add_relation("ldap-peers", "ldap-peers")
     harness.add_relation("router-peers", "router-peers")
+    harness.add_relation("rollingops-peers", "rollingops-peers")
+
+    # Add network
+    harness.add_network("10.0.0.10")
+
     harness.begin()
     if substrate == "microk8s":
         container = harness.model.unit.get_container("mongos")
@@ -182,7 +237,7 @@ def mongod_ready(mocker):
 @pytest.fixture(autouse=True)
 def mock_snap_cache(mocker):
     mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.SnapCache.__getitem__",
+        "charmlibs.snap.SnapCache.__getitem__",
         return_value=Snap(
             "charmed-mongodb",
             state=SnapState.Available,
@@ -200,10 +255,10 @@ def setup_secrets(harness: Harness) -> None:
 
 
 @pytest.fixture
-def mock_fs_interactions(mocker, substrate: Substrate) -> None:
+def short_mock_fs_interactions(mocker, substrate: Substrate) -> None:
     if substrate == "lxd":
         mocker.patch(
-            "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.present",
+            "charmlibs.snap.Snap.present",
             new_callable=mocker.PropertyMock,
             return_value=True,
         )
@@ -233,6 +288,10 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
         "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
     )
     mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+
+
+@pytest.fixture
+def mock_fs_interactions(mocker, short_mock_fs_interactions) -> None:
     mocker.patch("pathlib.Path.mkdir")
     mocker.patch("pathlib.Path.write_text")
     mocker.patch("pathlib.Path.chmod")
@@ -242,12 +301,42 @@ def mock_fs_interactions(mocker, substrate: Substrate) -> None:
 @pytest.fixture
 def mongodb_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.10"
+        return "10.0.0.1"
     return "mongodb-k8s-0.mongodb-k8s-endpoints"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
     if substrate == "lxd":
-        return "10.0.0.11"
+        return "10.0.0.2"
     return "mongodb-k8s-1.mongodb-k8s-endpoints"
+
+
+@pytest.fixture
+def mongodb_ctx(substrate: Substrate):
+    if substrate == "lxd":
+        from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm as TestCharm
+    else:
+        from tests.charms.mongodb_k8s_test_charm.src.charm import (
+            MongoKubernetesTestCharm as TestCharm,
+        )
+
+    return Context(TestCharm)
+
+
+@pytest.fixture
+def mongodb_container(substrate: Substrate) -> set[ops.testing.Container]:
+    if substrate == "lxd":
+        return set()
+    return {ops.testing.Container(name="mongod", can_connect=True)}
+
+
+@pytest.fixture
+def mongos_ctx(substrate: Substrate):
+    if substrate == "lxd":
+        from tests.charms.mongos_test_charm.src.charm import MongosTestCharm as TestCharm
+    else:
+        from tests.charms.mongos_k8s_test_charm.src.charm import (
+            MongosKubernetesTestCharm as TestCharm,
+        )
+    return Context(TestCharm)

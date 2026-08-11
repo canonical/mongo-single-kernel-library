@@ -23,6 +23,7 @@ to nasty behaviors on other events, especially the stop events on Kubernetes.
 
 import logging
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
@@ -61,10 +62,13 @@ from single_kernel_mongo.exceptions import (
     SetPasswordError,
     UpgradeInProgressError,
     WaitingForLeaderError,
+    WaitingForVaultError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
+from single_kernel_mongo.utils.event_helpers import (
+    defer_event_with_info_log,
+)
 from single_kernel_mongo.utils.mongo_connection import NotReadyError
 
 logger = logging.getLogger(__name__)
@@ -138,7 +142,7 @@ class LifecycleEventsHandler(Object):
         """Start event."""
         try:
             self.dependent.prepare_for_startup()
-        except (ContainerNotReadyError, WorkloadServiceError) as e:
+        except (ContainerNotReadyError, WorkloadServiceError, NotReadyError) as e:
             defer_event_with_info_log(
                 logger, event, "start", f"Not ready to start: {e.__class__.__name__}({e})"
             )
@@ -154,6 +158,10 @@ class LifecycleEventsHandler(Object):
                 scope="unit",
                 component=self.dependent.name,
             )
+            event.defer()
+            return
+        except WaitingForVaultError:
+            logger.info("Waiting for vault to be integrated.")
             event.defer()
             return
         except Exception as e:
@@ -174,8 +182,8 @@ class LifecycleEventsHandler(Object):
         """Install event."""
         try:
             self.dependent.install_workloads()
-        except (ContainerNotReadyError, WorkloadServiceError):
-            logger.info("Not ready to start.")
+        except (ContainerNotReadyError, WorkloadServiceError) as e:
+            logger.info("Not ready to start. %s", e)
             event.defer()
             return
 
@@ -192,6 +200,9 @@ class LifecycleEventsHandler(Object):
             WaitingForLeaderError,
             DeferrableFailedHookChecksError,
             SetPasswordError,
+            WaitingForVaultError,
+            RollingOpsNoRelationError,
+            PyMongoError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except InvalidConfigRoleError:
@@ -248,6 +259,10 @@ class LifecycleEventsHandler(Object):
         """Relation joined event."""
         try:
             self.dependent.new_peer()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
@@ -261,6 +276,10 @@ class LifecycleEventsHandler(Object):
         """Relation changed event."""
         try:
             self.dependent.peer_changed()
+        except WaitingForVaultError:
+            logger.info(f"Deferring {event}: Encryption at rest not working properly.")
+            event.defer()
+            return
         except UpgradeInProgressError:
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()

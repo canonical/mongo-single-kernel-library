@@ -20,7 +20,7 @@ jobs:
       - name: Set up environment
         run: |
           sudo snap install go --classic
-          go install github.com/snapcore/spread/cmd/spread@latest
+          go install github.com/canonical/spread/cmd/spread@latest
           pipx install tox poetry
       - name: Install deps
         run: |
@@ -114,7 +114,11 @@ jobs:
         run: df --human-readable
       - name: Checkout
         timeout-minutes: 3
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+      - name: Setup python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
       - name: Set up environment
         timeout-minutes: 5
         run: sudo snap install charmcraft --classic
@@ -122,7 +126,7 @@ jobs:
       # https://github.com/canonical/charmcraft/issues/2130 fixed
       - run: |
           sudo snap install go --classic
-          go install github.com/snapcore/spread/cmd/spread@latest
+          go install github.com/canonical/spread/cmd/spread@latest
       - name: Download packed charm(s)
         timeout-minutes: 5
         uses: actions/download-artifact@v4

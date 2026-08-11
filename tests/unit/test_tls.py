@@ -13,7 +13,7 @@ from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
 )
-from single_kernel_mongo.state.tls_state import SECRET_KEY_LABEL
+from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
 
@@ -49,7 +49,7 @@ def test_client_certificate_available(
 ):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -114,7 +114,7 @@ def test_internal_certificate_available(
 ):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -179,7 +179,7 @@ def test_internal_certificate_available(
 def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker, role):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     new_private_key = MagicMock()
@@ -259,7 +259,7 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
 def test_private_key_is_none_certificate_available(harness: Harness[MongoTestCharm], mocker, role):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     new_private_key = MagicMock()
@@ -320,7 +320,7 @@ def test_private_key_does_not_match_config_client_certificate_available(
 ):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -384,7 +384,7 @@ def test_private_key_does_not_match_config_peer_certificate_available(
 ):
     manager = harness.charm.operator.tls_manager
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -532,7 +532,7 @@ def test_client_tls_relation_broken(
     manager = harness.charm.operator.tls_manager
 
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -601,7 +601,7 @@ def test_peer_tls_relation_broken(
     manager = harness.charm.operator.tls_manager
 
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -698,7 +698,7 @@ def test_tls_relation_broken_log_upgrade_in_progress(
     mock_defer = mocker.patch("ops.framework.EventBase.defer")
     harness.charm.operator.refresh.in_progress = True
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services",
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services",
         return_value=None,
     )
     mocker.patch(
@@ -719,7 +719,12 @@ def test_tls_relation_broken_log_upgrade_in_progress(
     mock_defer.assert_called()
 
 
-def test_tls_config_changed(harness: Harness[MongoTestCharm], mocker, mongodb_name):
+def test_tls_config_changed(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
+):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -744,7 +749,31 @@ def test_tls_config_changed(harness: Harness[MongoTestCharm], mocker, mongodb_na
     spied.assert_called()
 
 
-def test_tls_config_changed_invalid_key(harness: Harness[MongoTestCharm], mocker, mongodb_name):
+def test_reconcile_tls_files_propagates_ca_secrets(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation("database", "client-app")
+        harness.update_relation_data(relation_id, "client-app", {"database": "client-db"})
+    manager.state.tls.set_secret(internal=True, label_name=SECRET_CA_LABEL, contents="int-ca")
+    manager.state.tls.set_secret(internal=False, label_name=SECRET_CA_LABEL, contents="ext-ca")
+
+    manager.reconcile_tls()
+
+    relation_data = harness.get_relation_data(relation_id, harness.charm.app.name)
+    assert relation_data["tls"] == "True"
+    assert relation_data["tls-ca"] == "ext-ca"
+
+
+def test_tls_config_changed_invalid_key(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
+):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -771,15 +800,19 @@ def test_tls_config_changed_invalid_key(harness: Harness[MongoTestCharm], mocker
 
     harness.evaluate_status()
 
-    assert harness.charm.model.unit.status.message == "Invalid peer private key"
-
+    assert "Invalid peer private key" in harness.charm.model.unit.status.message
     assert (
         manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL)
         == private_key_content
     )
 
 
-def test_tls_config_changed_invalid_keys(harness: Harness[MongoTestCharm], mocker, mongodb_name):
+def test_tls_config_changed_invalid_keys(
+    harness: Harness[MongoTestCharm], mocker, mongodb_name, mock_fs_interactions
+):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     manager = harness.charm.operator.tls_manager
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -813,7 +846,7 @@ def test_tls_config_changed_invalid_keys(harness: Harness[MongoTestCharm], mocke
 
     harness.evaluate_status()
 
-    assert harness.charm.model.unit.status.message == "Invalid peer private key"
+    assert "Invalid peer private key" in harness.charm.model.unit.status.message
 
     assert (
         manager.state.tls.get_secret(internal=True, label_name=SECRET_KEY_LABEL)

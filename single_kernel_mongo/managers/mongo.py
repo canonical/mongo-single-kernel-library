@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 from urllib.parse import urlencode
 
 from dacite import from_dict
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops import Object
 from ops.model import Relation
@@ -32,7 +34,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import MongoPorts, Substrates
 from single_kernel_mongo.config.statuses import CharmStatuses, MongodStatuses
-from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeployedWithoutTrustError,
@@ -53,20 +55,28 @@ from single_kernel_mongo.utils.mongo_config import (
 from single_kernel_mongo.utils.mongo_connection import MongoConnection, NotReadyError
 from single_kernel_mongo.utils.mongodb_users import (
     OPERATOR_ROLE,
+    AuthRestrictions,
     CharmedBackupUser,
     CharmedLogRotateUser,
     CharmedOperatorUser,
     CharmedStatsUser,
     MongoDBUser,
 )
+from single_kernel_mongo.utils.network_helpers import (
+    cidrs,
+    get_cidr_for_ip_list,
+    network_for_relation,
+)
 
 if TYPE_CHECKING:
+    from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.core.operator import MainWorkloadType, OperatorProtocol
 
 logger = logging.getLogger(__name__)
 
 
-class MongoManager(Object, ManagerStatusProtocol):
+@final
+class MongoManager(Object, AbstractManagerStatus[CharmState]):
     """Manager for Mongo related operations."""
 
     def __init__(
@@ -77,11 +87,11 @@ class MongoManager(Object, ManagerStatusProtocol):
         substrate: Substrates,
     ) -> None:
         super().__init__(parent=dependent, key="managers")
-        self.name = "mongo"
-        self.charm = dependent.charm
-        self.workload = workload
-        self.state = state
-        self.substrate = substrate
+        self.name: str = "mongo"
+        self.charm: AbstractMongoCharm[MongoConfigModel, OperatorProtocol] = dependent.charm
+        self.workload: MainWorkloadType = workload
+        self.state: CharmState = state
+        self.substrate: Substrates = substrate
 
         pod_name = self.model.unit.name.replace("/", "-")
         self.k8s = K8sManager(pod_name, self.model.name)
@@ -110,8 +120,14 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         actual_uri = uri or f"mongodb://localhost:{port}"
         actual_uri = f"{actual_uri}/?{urlencode(params)}"
-        with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
-            return direct_mongo.is_ready
+
+        try:
+            with MongoConnection(EMPTY_CONFIGURATION, actual_uri, direct=direct) as direct_mongo:
+                return direct_mongo.is_ready
+        except FileNotFoundError as e:
+            # Handle the missing external-cert.pem file because the unit is waiting a restart.
+            logger.warning("Failed to connect to mongod: %s", e)
+            return False
 
     def set_user_password(self, user: MongoDBUser, password: str) -> None:
         """Sets the password for a given username in the workload and secrets.
@@ -183,14 +199,39 @@ class MongoManager(Object, ManagerStatusProtocol):
                 privileges=user.privileges,
             )
             logger.info(f"Creating the {user.username} user...")
-            config = self.state.mongodb_config_for_user(user)
+            config = self.state.mongodb_config_for_user(
+                user, auth_restrictions=self.state.local_auth_restrictions
+            )
             mongo.create_user(
                 config.username,
                 config.password,
                 config.supported_roles,
+                auth_restrictions=config.auth_restrictions,
             )
 
         self.state.app_peer_data.set_user_created(user.username)
+
+    def update_users_local_auth_restrictions(self) -> None:
+        """Update auth restrictions for internal users that connect locally."""
+        auth_restrictions = self.state.local_auth_restrictions
+        for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
+            if not self.state.app_peer_data.is_user_created(user.username):
+                continue
+            with MongoConnection(self.state.mongo_config) as mongo:
+                config = self.state.mongodb_config_for_user(
+                    user, auth_restrictions=auth_restrictions
+                )
+                logger.info("Updating auth restrictions for %s user.", user.username)
+                mongo.update_user_auth_restrictions(config)
+
+    def update_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
+        """Update the cluster IP source allowlist at runtime."""
+        logger.info("Updating cluster IP source allowlist")
+        config = self.state.mongodb_config_for_user(
+            CharmedOperatorUser, hosts={"localhost"}, standalone=True
+        )
+        with MongoConnection(config, direct=True) as mongo:
+            mongo.set_cluster_ip_source_allowlist(allowlist)
 
     def reconcile_mongo_users_and_dbs(
         self,
@@ -211,12 +252,16 @@ class MongoManager(Object, ManagerStatusProtocol):
         Raises:
             PyMongoError
         """
-        self.add_user(relation)
-        self.update_user(relation)
-        if relation_departing:
-            self.remove_user(relation)
-        if relation_changed:
-            self.update_diff(relation)
+        match (relation_departing, relation_changed):
+            case (False, False):
+                self.add_user(relation)
+                self.update_user(relation)
+            case (True, False):
+                self.remove_user(relation)
+            case (False, True):
+                self.update_diff(relation)
+            case (True, True):
+                raise ValueError("This case should never happen")
 
     def update_diff(self, relation: Relation):
         """Update the relation databag with the diff of data.
@@ -248,6 +293,10 @@ class MongoManager(Object, ManagerStatusProtocol):
             logger.info(f"Database Requested for {relation} has not run yet, skipping.")
             raise DatabaseRequestedHasNotRunYetError
 
+        if not relation.units:
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
         with MongoConnection(self.state.mongo_config) as mongo:
             has_user = mongo.user_exists(username)
 
@@ -255,16 +304,23 @@ class MongoManager(Object, ManagerStatusProtocol):
         if has_user:
             return
 
+        auth_restrictions = self._compute_auth_restrictions(relation, data_interface)
+
         with MongoConnection(self.state.mongo_config) as mongo:
             config = self.get_config(
                 username,
                 None,  # We are creating the user, which means we don't have password for it yet
                 data_interface,
-                relation.id,
+                relation,
             )
             logger.info("Create relation user: %s on %s", config.username, config.database)
 
-            mongo.create_user(config.username, config.password, config.supported_roles)
+            mongo.create_user(
+                config.username,
+                config.password,
+                config.supported_roles,
+                auth_restrictions=auth_restrictions,
+            )
             managed_users.add(username)
             data_interface.set_database(relation.id, config.database)
             data_interface.set_credentials(relation.id, config.username, config.password)
@@ -308,7 +364,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 username,
                 password,
                 data_interface,
-                relation.id,
+                relation,
             )
 
             logger.info("Update relation user: %s on %s", config.username, config.database)
@@ -334,6 +390,17 @@ class MongoManager(Object, ManagerStatusProtocol):
 
         # Skip our user.
         if self.state.is_role(MongoDBRoles.MONGOS) and username == mongo_config.username:
+            return
+
+        # Nothing to do if it's not a user we're managing.
+        if username not in managed_users:
+            return
+
+        with MongoConnection(self.state.mongo_config) as mongo:
+            has_user = mongo.user_exists(username)
+
+        # Don't remove a user that doesn't exist
+        if not has_user:
             return
 
         # Dropping the admin-user for mongos-k8s-router is done by mongos-k8s charm.
@@ -380,7 +447,7 @@ class MongoManager(Object, ManagerStatusProtocol):
             username,
             password,
             data_interface,
-            relation.id,
+            relation,
         )
         self.update_app_relation_data_for_config(relation, config)
 
@@ -424,20 +491,21 @@ class MongoManager(Object, ManagerStatusProtocol):
         username: str,
         password: str | None,
         data_inteface: DatabaseProviderData,
-        relation_id: int,
+        relation: Relation,
     ) -> MongoConfiguration:
         """."""
         if not password:
             password = self.workload.generate_password()
-        database_name = data_inteface.fetch_relation_field(relation_id, "database")
-        roles = data_inteface.fetch_relation_field(relation_id, "extra-user-roles") or "default"
+        database_name = data_inteface.fetch_relation_field(relation.id, "database")
+        roles = data_inteface.fetch_relation_field(relation.id, "extra-user-roles") or "default"
         if not database_name or not roles:
             raise Exception("Missing database name or roles.")
+
         mongo_args = {
             "database": database_name,
             "username": username,
             "password": password,
-            "hosts": self.state.app_hosts,
+            "hosts": self.state.hosts_for(relation),
             "roles": set(roles.split(",")),
             "tls_enabled": False,
             "port": self.state.host_port,
@@ -450,21 +518,6 @@ class MongoManager(Object, ManagerStatusProtocol):
         """Sets the election priority."""
         with MongoConnection(self.state.mongo_config) as mongo:
             mongo.set_replicaset_election_priority(priority=priority)
-
-    def process_unremoved_units(self) -> None:
-        """Remove units from replica set."""
-        with MongoConnection(self.state.mongo_config) as mongo:
-            try:
-                replset_members = mongo.get_replset_members()
-                for member in replset_members - mongo.config.hosts:
-                    logger.debug("Removing %s from replica set", member)
-                    mongo.remove_replset_member(member)
-            except NotReadyError:
-                logger.info("Deferring process_unremoved_units: another member is syncing")
-                raise
-            except PyMongoError as e:
-                logger.error("Deferring process_unremoved_units: error=%r", e)
-                raise
 
     def remove_replset_member(self) -> None:  # pragma: nocover
         """Remove a unit from the replicaset."""
@@ -482,10 +535,7 @@ class MongoManager(Object, ManagerStatusProtocol):
                 return
 
             for member in config_hosts - replset_members:
-                logger.debug("Adding %s to replica set", member)
-                if not self.mongod_ready(uri=f"mongodb://{member}"):
-                    logger.debug("not reconfiguring: %s is not ready yet.", member)
-                    raise NotReadyError
+                logger.info("Adding %s to replica set", member)
                 mongo.add_replset_member(member)
 
     def get_draining_shards(
@@ -606,3 +656,62 @@ class MongoManager(Object, ManagerStatusProtocol):
                 new_primary = self.dependent.primary_unit_name  # type: ignore
                 if new_primary == old_primary:
                     raise FailedToElectNewPrimaryError()
+
+    def _compute_auth_restrictions(
+        self, relation: Relation, data_interface: DatabaseProviderData
+    ) -> list[AuthRestrictions]:
+        """Compute the correct auth restriction rules."""
+        # No juju spaces support on K8S.
+        if self.substrate == Substrates.K8S:
+            return []
+
+        external_connectivity: bool = json.loads(
+            data_interface.fetch_relation_field(relation.id, "external-node-connectivity")
+            or "false"
+        )
+        # No restriction on external connectivity for now.
+        if external_connectivity:
+            return []
+        # We can't enforce rules on sharded deployments due to
+        # - No support for socket connection
+        # - Otherwise it's external connectivity, hence already handled.
+        if self.state.is_cluster_component:
+            return []
+
+        ip_list = [
+            self.state.unit_peer_data_for(unit, relation).internal_address
+            for unit in relation.units
+        ]
+
+        return [
+            AuthRestrictions(
+                clientSource=cidrs(network_for_relation(relation).bind_addresses),
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
+            AuthRestrictions(
+                clientSource=[get_cidr_for_ip_list(ip_list)],
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
+            AuthRestrictions(
+                clientSource=cidrs(self.state.peer_network().bind_addresses),
+                serverAddress=cidrs(self.state.peer_network().bind_addresses),
+            ),
+        ]
+
+    def get_unwanted_replicaset_members(self) -> set[str]:
+        """Return replica set members that are no longer part of the desired config."""
+        with MongoConnection(self.state.mongo_config) as mongo:
+            return mongo.get_replset_members() - mongo.config.hosts
+
+    def remove_replset_members(self, members: set[str]) -> None:
+        """Remove the given members from the replica set configuration.
+
+        Raises:
+        NotReadyError: If MongoDB is not ready to process the removal
+            (e.g. another removal is in progress).
+        PyMongoError: If an error occurs while communicating with MongoDB.
+        """
+        with MongoConnection(self.state.mongo_config) as mongo:
+            for member in members:
+                logger.info("Removing %s from replica set", member)
+                mongo.remove_replset_member(member)

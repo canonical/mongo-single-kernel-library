@@ -225,7 +225,7 @@ def test_ldap_on_remove_clean_data(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
@@ -271,7 +271,7 @@ def test_on_certificate_removed_clean_certs(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exists", return_value=True)
     mocker.patch(
@@ -312,11 +312,14 @@ def test_on_certificate_removed_clean_certs(
 def test_ldap_full_integration_cycle(
     harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
 ):
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
     harness.set_leader()
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     mocker.patch(
         "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
@@ -399,6 +402,55 @@ def test_ldap_full_integration_cycle(
     )
 
 
+def test_ldap_unable_to_bind_defers(
+    harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
+):
+    harness.set_leader()
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
+    harness.charm.operator.state.app_peer_data.db_initialised = True
+    mock_restart = mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.ldap.LDAPManager.get_ldap_connection_status",
+        return_value=LdapState.UNABLE_TO_BIND,
+    )
+
+    ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")
+    secret_id = harness.add_model_secret("glauth-k8s", {"password": "password"})
+    harness.grant_secret(secret_id, mongodb_name)
+    harness.update_relation_data(
+        ldap_relation_id,
+        "glauth-k8s",
+        {
+            "base_dn": "dc=glauth,dc=com",
+            "bind_dn": "cn=user,ou=group,dc=glauth,dc=com",
+            "bind_password": "password",
+            "bind_password_id": "secret-id",
+            "bind_password_secret": secret_id,
+            "auth_method": "simple",
+            "starttls": "true",
+            "ldaps_urls": '["ldaps://ldap.glauth.com"]',
+            "urls": '["ldap://ldap.glauth.com"]',
+        },
+    )
+
+    ldap_cert_relation_id = harness.add_relation(
+        ExternalRequirerRelations.LDAP_CERT.value, "glauth-k8s"
+    )
+    harness.add_relation_unit(ldap_cert_relation_id, "glauth-k8s/0")
+
+    defer = mocker.patch("ops.framework.EventBase.defer")
+    harness.update_relation_data(
+        ldap_cert_relation_id,
+        "glauth-k8s/0",
+        {"ca": "deadbeef", "chain": '["feeddead"]', "certificate": "beefdead"},
+    )
+
+    defer.assert_called()
+    mock_restart.assert_not_called()
+
+
 def test_ldaps_not_enabled(
     harness: Harness[MongoTestCharm], mongodb_name: str, mocker, mock_fs_interactions
 ):
@@ -406,7 +458,7 @@ def test_ldaps_not_enabled(
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     harness.charm.operator.state.app_peer_data.db_initialised = True
     mock_restart = mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     ldap_relation_id = harness.add_relation(ExternalRequirerRelations.LDAP.value, "glauth-k8s")

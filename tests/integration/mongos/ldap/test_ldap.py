@@ -2,13 +2,12 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from pathlib import Path
 
 import pytest
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DATA_INTEGRATOR_APP_NAME,
     DEPLOYMENT_TIMEOUT,
     check_or_scale_app,
@@ -17,7 +16,7 @@ from ...helpers.common import (
     get_app_name,
     wait_for_mongodb_units_blocked,
 )
-from ...helpers.ldap import (
+from tests.integration.helpers.ldap import (
     LDAP_CERT_OFFER,
     LDAP_OFFER,
     apply_ldif,
@@ -27,7 +26,7 @@ from ...helpers.ldap import (
     generate_mongodb_ldap_client,
     teardown_offers,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CLUSTER_REL_NAME,
     CONFIG_SERVER_APP_NAME,
@@ -36,7 +35,7 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 TIMEOUT = 15 * 60
 
@@ -93,7 +92,11 @@ async def test_build_and_deploy_mongodb_cluster(
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy_mongos(
-    ops_test: OpsTest, mongos_charm: Path, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest,
+    mongos_charm: str,
+    substrate: Substrate,
+    mongos_resource: dict[str, str],
+    base_app_name: str,
 ) -> None:
     """Deploys mongos and data integrator, and integrates both.
 
@@ -106,7 +109,7 @@ async def test_build_and_deploy_mongos(
             ops_test=ops_test,
             charm=mongos_charm,
             substrate=substrate,
-            mongod_resource=mongod_resource,
+            mongod_resource=mongos_resource,
             app_name=base_app_name,
             num_units=1,
             subordinate=(substrate == "lxd"),
@@ -135,11 +138,48 @@ async def test_build_and_deploy_mongos(
         subordinate=(substrate == "lxd"),
     )
 
+
+@pytest.mark.abort_on_fail
+async def test_config_server_only_integrated_with_mongos(ops_test: OpsTest, substrate: Substrate):
+    app_name = await get_app_name(ops_test, charm_name="mongos")
+
+    await ops_test.model.integrate(f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap")
+    await ops_test.model.integrate(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
+        idle_period=20,
+        status="active",
+    )
+
     # connect sharded cluster to mongos
     await ops_test.model.integrate(
         f"{app_name}:{CLUSTER_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CLUSTER_REL_NAME}",
     )
+    await ops_test.model.wait_for_idle(
+        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
+        idle_period=20,
+        status="active",
+    )
+    await wait_for_mongodb_units_blocked(
+        ops_test,
+        substrate,
+        app_name,
+        status="mongos and config-server not integrated with the same ldap server.",
+        timeout=300,
+        subordinate=(substrate == "lxd"),
+    )
+
+    # Go back to normal state
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+        f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
+    )
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+        f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
+    )
+
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, app_name],
         idle_period=20,
@@ -250,10 +290,10 @@ async def test_teardown(ops_test: OpsTest, kubernetes_model: Model):
     await ops_test.model.applications[app_name].remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{app_name}:ldap-certificate-transfer"
     )
-    await ops_test.model.applications[app_name].remove_relation(
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{LDAP_OFFER}:ldap", f"{CONFIG_SERVER_APP_NAME}:ldap"
     )
-    await ops_test.model.applications[app_name].remove_relation(
+    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{LDAP_CERT_OFFER}:send-ca-cert", f"{CONFIG_SERVER_APP_NAME}:ldap-certificate-transfer"
     )
 

@@ -9,15 +9,21 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ops.charm import RelationBrokenEvent, RelationChangedEvent, RelationCreatedEvent
+from charmlibs.rollingops import RollingOpsNoRelationError
+from ops.charm import (
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationCreatedEvent,
+    SecretChangedEvent,
+)
 from ops.framework import Object
 
-from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.exceptions import (
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
     WaitingForSecretsError,
     WorkloadServiceError,
 )
@@ -78,6 +84,8 @@ class ClusterConfigServerEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info("Database requested has not run yet, skipping.")
 
     def _on_relation_event(self, event: RelationChangedEvent) -> None:
         """Handle relation changed events."""
@@ -87,6 +95,8 @@ class ClusterConfigServerEventHandler(Object):
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info("Database requested has not run yet, skipping.")
 
     def _on_relation_broken_event(self, event: RelationBrokenEvent) -> None:
         """During a relation broken event, the manager will cleanup the users."""
@@ -132,6 +142,9 @@ class ClusterMongosEventHandler(Object):
         self.framework.observe(
             self.charm.on[self.relation_name.value].relation_broken, self._on_relation_broken
         )
+        self.framework.observe(
+            getattr(self.charm.on, "secret_changed"), self._handle_changed_secrets
+        )
 
     def _on_relation_created(self, event: RelationCreatedEvent) -> None:
         """Relation created event handler."""
@@ -155,37 +168,44 @@ class ClusterMongosEventHandler(Object):
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
 
+    def _handle_changed_secrets(self, event: SecretChangedEvent):
+        """SecretChanged event handler, which is used to propagate the updated passwords.
+
+        The manager will request to asynchronously update the mongos configuration
+        and restart. All the exceptions are handled in the callback and
+        retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        """
+        try:
+            self.manager.handle_secret_changed(event.secret.label or "")
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except NonDeferrableFailedHookChecksError as e:
+            logger.info(f"Skipping {str(type(event))}: {str(e)}")
+
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
 
-        The manager will update the mongos configuration and restart it.
+        The manager will request to asynchronously update the mongos configuration
+        and restart. All the exceptions are handled in the callback and
+        retries are requested if necessary.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
         """
         try:
-            self.manager.update_mongos_and_restart()
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
+            self.manager.async_update_mongos_and_restart()
+        except RollingOpsNoRelationError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except (NonDeferrableFailedHookChecksError, WaitingForSecretsError) as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-        except WaitingForSecretsError as e:
-            logger.info(f"Skipping {str(type(event))}: {str(e)}")
-            self.dependent.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-        except WorkloadServiceError:
-            # Some status was already set and a log was already displayed in
-            # `restart_charm_services`
-            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """On relation broken event, we cleanup the users and mongos instance."""
         try:
             self.manager.remove_users_and_cleanup_mongo(event.relation)
-        except (DeferrableFailedHookChecksError, DeferrableError) as e:
+            self.manager.cleanup_cluster_id()
+        except (DeferrableFailedHookChecksError, DeferrableError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
-        except NonDeferrableFailedHookChecksError as e:
+            return
+        except RelationBrokenDuringScaleDownError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return

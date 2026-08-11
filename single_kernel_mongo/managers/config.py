@@ -10,11 +10,12 @@ from abc import ABC, abstractmethod
 from functools import reduce
 from itertools import chain
 from pathlib import Path
-from typing import Any
+from typing import Any, final, override
 
+import hcl2
+import jinja2
 from deepmerge import always_merger
 from ops import Container
-from typing_extensions import override
 from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import (
@@ -23,7 +24,12 @@ from single_kernel_mongo.config.literals import (
     MongoPorts,
     Substrates,
 )
-from single_kernel_mongo.config.models import AuditLogConfig, CharmSpec, LogRotateConfig
+from single_kernel_mongo.config.models import (
+    VAULT_AGENT_TEMPLATE,
+    AuditLogConfig,
+    CharmSpec,
+    LogRotateConfig,
+)
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.core.workload import WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
@@ -33,12 +39,15 @@ from single_kernel_mongo.utils.mongodb_users import (
     CharmedLogRotateUser,
     CharmedStatsUser,
 )
+from single_kernel_mongo.utils.network_helpers import cidrs
 from single_kernel_mongo.workload import (
     get_logrotate_workload_for_substrate,
     get_mongodb_exporter_workload_for_substrate,
     get_pbm_workload_for_substrate,
+    get_vault_agent_workload_for_substrate,
 )
 from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
+from single_kernel_mongo.workload.vault_agent_workload import VaultAgentWorkload
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +90,7 @@ class FileBasedConfigManager(CommonConfigManager):
         """Builds the config dict."""
         ...
 
+    @override
     def set_environment(self):
         """Write update parameters in the file."""
         data = "\n".join(self.workload.read(self.file))
@@ -97,9 +107,14 @@ class FileBasedConfigManager(CommonConfigManager):
         current_config_file_content = safe_load(current_config_file)
 
         new_content = self.build_config()
+        config_changed = new_content != current_config_file_content
+        should_restart = force or config_changed or not self.workload.active()
 
-        if force or not self.workload.active() or new_content != current_config_file_content:
+        if config_changed:
+            logger.info("Workload config changed. Writing the new config.")
             self.workload.write(self.file, safe_dump(new_content))
+        if should_restart:
+            logger.info("Workload will be restarted now.")
             self.workload.restart()
 
 
@@ -129,10 +144,10 @@ class BackupConfigManager(CommonConfigManager):
     def configure_and_restart(self, force: bool = False):
         """Sets up PBM with right configuration and restarts it."""
         if not self.workload.workload_present:
-            logger.info("Workload is not present.")
+            logger.info("PBM cannot be configured and restarted: Workload is not present.")
             return
         if not self.state.db_initialised:
-            logger.info("DB is not initialised.")
+            logger.info("PBM cannot be configured and restarted: DB is not initialised.")
             return
 
         if self.state.is_role(MongoDBRoles.SHARD) and not self.state.is_shard_added_to_cluster():
@@ -140,7 +155,7 @@ class BackupConfigManager(CommonConfigManager):
             return
 
         if not self.state.get_user_password(CharmedBackupUser):
-            logger.info("No password found.")
+            logger.info("PBM cannot be configured and restarted: No password found.")
             return
 
         if (
@@ -185,11 +200,11 @@ class LogRotateConfigManager(CommonConfigManager):
     def configure_and_restart(self) -> None:
         """Setup logrotate and cron."""
         if not self.state.db_initialised:
-            logger.info("DB is not initialised.")
+            logger.info("LogRotate cannot be configured and restarted: DB is not initialised.")
             return
 
         if not self.state.get_user_password(CharmedLogRotateUser):
-            logger.info("No password found.")
+            logger.info("LogRotate cannot be configured and restarted: No password found.")
             return
 
         try:
@@ -249,6 +264,94 @@ class MongoDBExporterConfigManager(CommonConfigManager):
                 raise
 
 
+@final
+class VaultConfigManager(FileBasedConfigManager):
+    """Config manager for Vault."""
+
+    def __init__(
+        self,
+        role: CharmSpec,
+        substrate: Substrates,
+        config: MongoConfigModel,
+        state: CharmState,
+        container: Container | None,
+    ):
+        self.config = config
+        self.role = role
+        self.workload: VaultAgentWorkload = get_vault_agent_workload_for_substrate(substrate)(
+            role=role, container=container
+        )
+        self.state = state
+        self.file = self.workload.paths.vault_config
+
+    def _render_template(self) -> str:
+        new_content = self.build_config()
+        template = jinja2.Template(VAULT_AGENT_TEMPLATE.read_text())
+        return template.render(**new_content)
+
+    @override
+    def set_environment(self) -> None:
+        """Write update parameters in the file."""
+        current_config = {}
+        if data := "\n".join(self.workload.read(self.file)):
+            current_config = hcl2.loads(data)
+        rendered_template = self._render_template()
+        new_config = hcl2.loads(rendered_template)
+
+        if new_config != current_config:
+            self.workload.write(self.file, rendered_template)
+            # set decent permissions.
+            self.workload.exec(
+                [
+                    "chown",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{self.file}",
+                ]
+            )
+            self.workload.exec(["chmod", "640", f"{self.file}"])
+
+    @override
+    def build_parameters(self) -> list[list[str]]:
+        return [[]]
+
+    @override
+    def build_config(self) -> dict[str, str]:
+        return {
+            "vault_url": self.state.vault_state.vault_url or "",
+            "ca_path": f"{self.workload.paths.vault_cert}",
+            "role_id_path": f"{self.workload.paths.role_id}",
+            "role_secret_id_path": f"{self.workload.paths.role_secret_id}",
+            "token_file_path": f"{self.workload.paths.vault_token_file_path}",
+            "peer_addr": self.state.unit_peer_data.internal_address,
+            "tls_cert_file": f"{self.workload.paths.vault_agent_cert}",
+            "tls_key_file": f"{self.workload.paths.vault_agent_key}",
+            "log_file": f"{self.workload.paths.vault_agent_log_file}",
+        }
+
+    def configure_and_restart(self, force: bool = False) -> None:
+        """Restarts vault agent with the correct config."""
+        if not self.state.enable_encryption_at_rest:
+            return
+
+        if not self.state.vault_relation:
+            return
+
+        current_config = {}
+        if data := "\n".join(self.workload.read(self.file)):
+            current_config = hcl2.loads(data)
+        new_config = hcl2.loads(self._render_template())
+
+        if force or not self.workload.active() or current_config != new_config:
+            try:
+                # Always enable the service
+                self.workload.stop()
+                self.set_environment()
+                self.workload.start()
+            except WorkloadServiceError as e:
+                logger.error(f"Failed to restart {self.workload.service}: {e}")
+                raise
+
+
 class MongoConfigManager(FileBasedConfigManager, ABC):
     """The common configuration manager for both MongoDB and Mongos."""
 
@@ -271,19 +374,33 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
             always_merger.merge,
             [
                 self.binding_ips,
+                self.cluster_ips,
                 self.port_parameter,
                 self.auth_parameter,
                 self.client_tls_parameters,
                 self.log_options,
                 self.audit_options,
                 self.ldap_parameters,
+                self.vault_parameters,
             ],
         )
 
     @property
     @abstractmethod
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        ...
+
+    @property
+    @abstractmethod
     def port_parameter(self) -> dict[str, Any]:
         """The port parameter."""
+        ...
+
+    @property
+    @abstractmethod
+    def vault_parameters(self) -> dict[str, Any]:
+        """The vault parameters."""
         ...
 
     @property
@@ -302,11 +419,12 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                 "net": {
                     "bindIp": f"{self.workload.paths.socket_path}",
                     "unixDomainSocket": {
-                        "filePermissions": "0766",
+                        "enabled": True,
+                        "filePermissions": "0666",
                     },
                 },
             }
-        return {"net": {"bindIpAll": True}}
+        return {"net": {"bindIp": ",".join(sorted(self.state.listens_on()))}}
 
     @property
     def log_options(self) -> dict[str, Any]:
@@ -379,6 +497,7 @@ class MongoConfigManager(FileBasedConfigManager, ABC):
                         "certificateKeyFile": f"{self.workload.paths.ext_pem_file}",
                         "mode": "requireTLS",
                         "disabledProtocols": "TLS1_0,TLS1_1",
+                        "allowConnectionsWithoutCertificates": True,
                     }
                 },
             }
@@ -403,6 +522,45 @@ class MongoDBConfigManager(MongoConfigManager):
         self.auth = True
 
     @property
+    @override
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        # Always include IPs from the local peer relation
+        cidrs_list = cidrs(self.state.peer_network().bind_addresses)
+        cidrs_list.extend(self.state.peer_database_addresses)
+        # The config server should include the CIDR for the shards
+        if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            cidrs_list.extend(cidrs(self.state.config_server_network().bind_addresses))
+            # For the local mongos
+            cidrs_list.append("127.0.0.1")
+        # The shards should include the CIDR for the config server
+        if self.state.is_role(MongoDBRoles.SHARD):
+            cidrs_list.extend(cidrs(self.state.sharding_network().bind_addresses))
+            # The shard should include the cidrs of the mongos charms
+            cidrs_list.extend(self.state.shard_state.mongos_cidrs)
+        # All cluster components (config server, mongos) should include the CIDRs of its counterpart
+        if self.state.is_cluster_component:
+            cidrs_list.extend(cidrs(self.state.cluster_network().bind_addresses))
+
+        # Deduplicate the list
+        return {"security": {"clusterIpSourceAllowlist": sorted(set(cidrs_list))}}
+
+    @property
+    def cluster_ip_source_allowlist(self) -> list[str]:
+        """Return the computed cluster IP source allowlist."""
+        return self.cluster_ips["security"]["clusterIpSourceAllowlist"]
+
+    def sync_cluster_ip_source_allowlist_to_file(self, new_allowlist: list[str]) -> None:
+        """Persist cluster IP source allowlist changes without restarting MongoDB."""
+        current_config_file = "\n".join(self.workload.read(self.file))
+        current_config_file_content = safe_load(current_config_file) or {}
+
+        logger.info("Cluster IP source allowlist changed. Writing the new config.")
+        current_config_file_content.setdefault("security", {})
+        current_config_file_content["security"]["clusterIpSourceAllowlist"] = new_allowlist
+        self.workload.write(self.file, safe_dump(current_config_file_content))
+
+    @property
     def db_path_argument(self) -> dict[str, Any]:
         """The full path of the data directory."""
         return {
@@ -411,6 +569,25 @@ class MongoDBConfigManager(MongoConfigManager):
                 "journal": {"enabled": True},
             }
         }
+
+    @property
+    @override
+    def vault_parameters(self) -> dict[str, Any]:
+        if self.state.enable_encryption_at_rest and self.state.vault_relation:
+            server_name, port = self.state.vault_state.vault_url_tuple
+            return {
+                "security": {
+                    "enableEncryption": True,
+                    "vault": {
+                        "serverName": server_name,
+                        "port": port,
+                        "tokenFile": f"{self.workload.paths.vault_token_file_path}",
+                        "serverCAFile": f"{self.workload.paths.vault_cert}",
+                        "secret": f"{self.state.vault_state.vault_secret_path}",
+                    },
+                },
+            }
+        return {}
 
     @property
     def role_parameter(self) -> dict[str, Any]:
@@ -502,18 +679,19 @@ class MongosConfigManager(MongoConfigManager):
         """The config server DB parameter."""
         # In case we are integrated with a config-server, we need to provide
         # it's URI to mongos so it can configure_and_restart to it.
-        if uri := self.state.cluster.config_server_uri:
+        if uri := self.state.config_server_uri:
             return {"sharding": {"configDB": uri}}
-        return {
-            "sharding": {
-                "configDB": f"{self.state.app_peer_data.replica_set}/{self.state.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
-            }
-        }
+        return {}
 
     @property
     @override
     def port_parameter(self) -> dict[str, Any]:
         return {"net": {"port": MongoPorts.MONGOS_PORT.value}}
+
+    @property
+    @override
+    def vault_parameters(self) -> dict[str, Any]:
+        return {}
 
     @property
     @override
@@ -541,6 +719,12 @@ class MongosConfigManager(MongoConfigManager):
                 self.state.ldap.ldap_user_to_dn_mapping
             )
         return ldap_params
+
+    @property
+    @override
+    def cluster_ips(self) -> dict[str, Any]:
+        """The allowed cluster IPs."""
+        return {}
 
     @override
     def build_config(self) -> dict[str, Any]:

@@ -20,6 +20,9 @@ def sigterm_handler(_signo, _stack_frame):
     global run
     run = False
 
+def last_written_filename(db_name: str, coll_name: str) -> str:
+    return f"last_written_value-{db_name}-{coll_name}"
+
 
 def continous_writes(
     connection_string: str,
@@ -31,20 +34,28 @@ def continous_writes(
 
     # First, create a unique index to avoid duplicate writes on upsert
     # https://www.mongodb.com/docs/manual/reference/method/db.collection.update/#upsert-with-duplicate-values
-    client = MongoClient(
-        connection_string,
-        socketTimeoutMS=5000,
-    )
-    db = client[db_name]
-    test_collection = db[coll_name]
-    test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
-    client.close()
+    try:
+        client = MongoClient(
+            connection_string,
+            socketTimeoutMS=5000,
+        )
+        db = client[db_name]
+        test_collection = db[coll_name]
+        test_collection.create_index([("number", ASCENDING)], unique=True, sparse=True)
+        client.close()
+    except Exception as err:
+        with open(last_written_filename(db_name, coll_name), "w") as fd:
+            fd.write(str(-1))
+        with open("error.log", mode="a") as fd:
+            fd.write(f"{err}\n")
+        return
 
     while run:
         client = MongoClient(
             connection_string,
             socketTimeoutMS=5000,
         )
+
         db = client[db_name]
         test_collection = db[coll_name]
         try:
@@ -58,17 +69,23 @@ def continous_writes(
             ).update_one({"number": write_value}, {"$set": {"number": write_value}}, upsert=True)
 
             # update_one
-        except PyMongoError:
+        except PyMongoError as err:
             # PyMongoErors should result in an attempt to retry a write. An application should
             # try to reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
             continue
+        except Exception as err:
+            with open("error.log", mode="a") as fd:
+                fd.write(f"{err}\n")
+            raise
         finally:
             client.close()
 
         write_value += 1
 
-    with open(f"last_written_value-{db_name}-{coll_name}", "w") as fd:
+    with open(last_written_filename(db_name, coll_name), "w") as fd:
         fd.write(str(write_value - 1))
 
 

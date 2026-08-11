@@ -36,7 +36,7 @@ from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_DATABASE_NAME,
     DEFAULT_REPLICATION_COLL_NAME,
-    TIMEOUT,
+    DEPLOYMENT_TIMEOUT,
     ProcessError,
     count_primaries,
     count_writes,
@@ -455,7 +455,7 @@ async def scale_application(
     count: int,
     wait: bool = True,
     raise_on_blocked: bool = True,
-    timeout: int = TIMEOUT,
+    timeout: int = DEPLOYMENT_TIMEOUT,
 ) -> None:
     """Scale a given application to the desired unit count.
 
@@ -551,7 +551,12 @@ async def verify_writes(
 
     actual_writes = await count_writes(ops_test, substrate, app_name=app_name, unit=primary_unit)
 
-    assert total_expected_writes == actual_writes
+    assert total_expected_writes == actual_writes, (
+        "Continuous writes count mismatch: "
+        f"expected={total_expected_writes}, "
+        f"actual_on_primary={actual_writes}, "
+        f"difference={actual_writes - total_expected_writes}"
+    )
 
     # Return it in case we need it later
     return total_expected_writes

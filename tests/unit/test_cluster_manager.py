@@ -22,7 +22,10 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
 )
-from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
+from single_kernel_mongo.state.tls_state import (
+    SECRET_CA_LABEL,
+    SECRET_CERT_LABEL,
+)
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
@@ -103,12 +106,15 @@ def test_assert_pass_hook_checks_fail_upgrade_in_progress(harness: Harness[Mongo
     assert "during an upgrade" in err.value.args[0]
 
 
-def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str):
+def test_share_secret_to_mongos(
+    harness: Harness[MongoTestCharm], mocker, mongodb_hostname: str, substrate: Substrate
+):
     manager = harness.charm.operator.cluster_manager
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
 
     mocked_reconcile = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
@@ -124,6 +130,10 @@ def test_share_secret_to_mongos(harness: Harness[MongoTestCharm], mocker, mongod
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
+    if substrate == "lxd":
+        assert len(data.get("cluster-id")) == 8
+    else:
+        assert data.get("cluster-id") is None
 
 
 def test_share_secret_to_mongos_also_shares_ldap_config(
@@ -134,12 +144,13 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.unit_peer_data.cluster_address = mongodb_hostname
 
     mocked_reconcile = mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs"
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
 
     valid_mapping = [
@@ -308,8 +319,6 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     mongos_harness.update_relation_data(rel_id_proxy, "test-application", {"database": "test-db"})
 
-    manager.share_credentials_to_clients("charmed-operator", "password")
-
     data = Path("tests/unit/data/mongos.conf").read_text().splitlines()
 
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.reconcile_mongo_users_and_dbs")
@@ -326,9 +335,16 @@ def test_cluster_requirer_update_mongos_and_restart(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "mongodb/2.2.2.2:27017",
+            "username": "charmed-operator",
+            "password": "password",  # nosec: B105
+            "cluster-id": "cluster",
+        },
     )
 
+    manager.update_mongos_and_restart()
     statuses = mongos_harness.charm.operator.state.statuses.get(
         scope=Scope.UNIT, component=mongos_harness.charm.operator.name
     )
@@ -346,13 +362,15 @@ def test_cluster_requirer_update_mongos_and_restart(
             )
             assert (
                 data["uris"]
-                == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authSource=admin"
+                == "mongodb://charmed-operator:password@%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock/test-db?authMechanism=SCRAM-SHA-256&authSource=admin"
             )
+            assert mongos_harness.charm.operator.state.get_cluster_id() == "cluster"
         else:
             # on k8s, the router generates the password and user ids.
             assert data["username"] == f"relation-{relation.id}"
             assert len(data["password"]) == 32
             assert data["endpoints"] == "mongos-k8s-0.mongos-k8s-endpoints"
+            assert mongos_harness.charm.operator.state.get_cluster_id() is None
         assert data["database"] == "test-db"
 
 
@@ -380,7 +398,7 @@ def test_cluster_requirer_update_mongos_and_restart_fail_missing_data(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        databag,
+        databag | {"username": "unused", "password": "unused"},
     )
     with pytest.raises(WaitingForSecretsError) as err:
         manager.update_mongos_and_restart()
@@ -416,7 +434,12 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     mongos_harness.update_relation_data(
         rel_id_cluster,
         "mongodb",
-        {"key-file": "deadbeef", "config-server-db": "mongodb/2.2.2.2:27017"},
+        {
+            "key-file": "deadbeef",
+            "config-server-db": "mongodb/2.2.2.2:27017",
+            "username": "unused",
+            "password": "unused",
+        },
     )
 
     # Check that we raise a deferrable error because mongos is not running after restart
@@ -590,6 +613,14 @@ def test_cluster_requirer_tls_status(
         mongos_harness.add_relation(
             ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates"
         )
+        mocker.patch(
+            "single_kernel_mongo.state.tls_state.TLSState.peer_enabled",
+            new_callable=mocker.PropertyMock(return_value=True),
+        )
+        mocker.patch(
+            "single_kernel_mongo.state.tls_state.TLSState.client_enabled",
+            new_callable=mocker.PropertyMock(return_value=True),
+        )
 
     # Ensure some credentials are present
     manager.share_credentials_to_clients("charmed-operator", "password")
@@ -679,9 +710,13 @@ def test_cluster_requirer_get_tls_statuses(
         mongos_harness.add_relation(
             ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates"
         )
-        # Local certificate
+        # Local CA certificate
         manager.state.tls.set_secret(
             internal=True, label_name=SECRET_CA_LABEL, contents=mongos_peer_ca_secret
+        )
+        # Local cert
+        manager.state.tls.set_secret(
+            internal=True, label_name=SECRET_CERT_LABEL, contents="useless"
         )
     if mongos_client_ca_secret:
         mongos_harness.add_relation(
@@ -689,6 +724,10 @@ def test_cluster_requirer_get_tls_statuses(
         )
         manager.state.tls.set_secret(
             internal=False, label_name=SECRET_CA_LABEL, contents=mongos_client_ca_secret
+        )
+        # Local cert
+        manager.state.tls.set_secret(
+            internal=False, label_name=SECRET_CERT_LABEL, contents="useless"
         )
 
     # Ensure some credentials are present

@@ -5,8 +5,10 @@ import json
 import logging
 import math
 import subprocess
+from base64 import b64decode
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from random import choices
 from string import ascii_lowercase, digits
 from typing import Any
@@ -34,6 +36,9 @@ from tenacity import (
 
 from tests.integration.helpers.types import Substrate
 
+MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
+MONGODB_ROCK_CONF_DIR = "/etc/mongod"
+
 MONGO_SHELL = "charmed-mongodb.mongosh"
 MONGOD_PORT = 27017
 MONGOS_PORT = 27018
@@ -49,6 +54,8 @@ INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 
 
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
+CONTINUOUS_WRITE_APPLICATION_BIS = "continuous-write-bis"
+READER_APPLICATION = "reader-application"
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
 DEFAULT_DATABASE_NAME = "continuous_writes_database"
 DEFAULT_COLLECTION_NAME = "continuous_writes_collection"
@@ -88,6 +95,24 @@ def mongosh(substrate: Substrate) -> str:
             return "mongosh"
 
 
+def external_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
+
+
+def external_pem_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
+
+
+def internal_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
+
+
 class ProcessError(Exception):
     """Raised when a process fails."""
 
@@ -100,21 +125,27 @@ async def deploy_charm(
     ops_test: OpsTest,
     charm: str,
     substrate: Substrate,
-    mongod_resource: dict[str, str],
     app_name: str,
     num_units: int = 3,
+    mongod_resource: dict[str, str] | None = None,
     channel: str | None = None,
+    revision: int | None = None,
     config: dict[str, str] | None = None,
     subordinate: bool = False,
     storage: dict[str, str] | None = None,
     series: str | None = None,
+    constraints: dict[str, list[str]] | None = None,
+    bind: dict[str, str] | None = None,
 ):
+    if revision is not None:
+        channel = "8/beta"
     if substrate == "microk8s":
         series = series or "noble"
         await ops_test.model.deploy(
             charm,
-            resources=(mongod_resource if not channel else None),
             application_name=app_name,
+            revision=revision,
+            resources=(mongod_resource if not channel else None),
             num_units=0 if subordinate else num_units,
             series=series,
             trust=True,
@@ -125,11 +156,14 @@ async def deploy_charm(
     else:
         await ops_test.model.deploy(
             charm,
-            num_units=0 if subordinate else num_units,
             application_name=app_name,
+            num_units=0 if subordinate else num_units,
+            revision=revision,
             config=config,
             channel=channel,
             storage=storage,
+            constraints=constraints,
+            bind=bind,
         )
 
 
@@ -137,6 +171,9 @@ async def deploy_application(
     ops_test: OpsTest,
     application_path: str,
     app_name: str,
+    database_name: str = DEFAULT_DATABASE_NAME,
+    constraints: dict[str, list[str]] | None = None,
+    bind: dict[str, str] | None = None,
 ):
     """Deploys the helpers applications with one unit and waits for idle."""
     application_name = await get_app_name(ops_test, app_name)
@@ -147,6 +184,9 @@ async def deploy_application(
         application_name=app_name,
         num_units=1,
         series="noble",
+        constraints=constraints,
+        config={"database-name": database_name},
+        bind=bind,
     )
     # TODO: remove raise_on_error when we move to juju 3.5 (DPE-4996)
     await ops_test.model.wait_for_idle(
@@ -167,13 +207,23 @@ async def relate_mongodb_and_application(
         mongodb_application_name: The mongodb charm application name
         application_name: The continuous writes test charm application name
     """
-    if is_relation_joined(ops_test, "database", "database"):
+    if is_relation_joined(
+        ops_test, "mongodb", "database", app_one=application_name, app_two=mongodb_application_name
+    ):
         return
 
     await ops_test.model.integrate(
-        f"{application_name}:database", f"{mongodb_application_name}:database"
+        f"{application_name}:mongodb", f"{mongodb_application_name}:database"
     )
-    await ops_test.model.block_until(lambda: is_relation_joined(ops_test, "database", "database"))
+    await ops_test.model.block_until(
+        lambda: is_relation_joined(
+            ops_test,
+            "mongodb",
+            "database",
+            app_one=application_name,
+            app_two=mongodb_application_name,
+        )
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[mongodb_application_name, application_name],
@@ -451,7 +501,7 @@ async def find_unit(ops_test: OpsTest, leader: bool, app_name: str | None = None
     return ret_unit
 
 
-async def get_leader_id(ops_test: OpsTest, app_name=None) -> int:
+async def get_leader_id(ops_test: OpsTest, app_name: str | None = None) -> int:
     """Returns the unit number of the juju leader unit."""
     app_name = app_name or await get_app_name(ops_test)
     for unit in ops_test.model.applications[app_name].units:
@@ -656,8 +706,8 @@ async def remove_units(
 
 
 async def get_app_name(
-    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] = []
-) -> str:
+    ops_test: OpsTest, charm_name: str = "mongodb", test_deployments: list[str] | None = None
+) -> str | None:
     """Returns the name of the cluster running MongoDB.
 
     This is important since not all deployments of the MongoDB charm have the application name
@@ -665,6 +715,7 @@ async def get_app_name(
 
     Note: if multiple clusters are running MongoDB this will return the one first found.
     """
+    test_deployments = test_deployments or []
     status = await ops_test.model.get_status()
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "mongodb" but instead takes the form
@@ -932,17 +983,38 @@ async def check_app_status(
         assert app.status_message == message
 
 
-def is_relation_joined(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
+def is_relation_joined(
+    ops_test: OpsTest,
+    endpoint_one: str,
+    endpoint_two: str,
+    app_one: str | None = None,
+    app_two: str | None = None,
+) -> bool:
     """Check if a relation is joined.
 
     Args:
         ops_test: The ops test object passed into every test case
         endpoint_one: The first endpoint of the relation
         endpoint_two: The second endpoint of the relation
+        app_one: Application name for the first endpoint of the relation
+        app_two: Application name for the second endpoint of the relation
     """
     for rel in ops_test.model.relations:
-        endpoints = [endpoint.name for endpoint in rel.endpoints]
-        if endpoint_one in endpoints and endpoint_two in endpoints:
+        endpoints = rel.endpoints
+        endpoint_names = [endpoint.name for endpoint in endpoints]
+        invalid = False
+        if endpoint_one not in endpoint_names or endpoint_two not in endpoint_names:
+            continue
+        if not app_one and not app_two:
+            return True
+        for endpoint in endpoints:
+            if endpoint.name == endpoint_one:
+                if app_one and endpoint.application.name != app_one:
+                    invalid = True
+            if endpoint.name == endpoint_two:
+                if app_two and endpoint.application.name != app_two:
+                    invalid = True
+        if not invalid:
             return True
     return False
 
@@ -970,17 +1042,21 @@ async def execute_on_mongod(
     uri: str,
     command: str,
     container_name: str = "mongod",
+    tls: bool = False,
     stringify: bool = True,
     expecting_output: bool = True,
 ) -> CommandResult:
     """Executes the command with mongosh."""
     leader_id = await get_leader_id(ops_test, app_name)
     ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
+    tls_string = ""
+    if tls:
+        tls_string = f"--tls --tlsCAFile {external_cert_path(substrate)}"
 
     if stringify:
-        formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})"'
+        formatted_string = f'"{uri}" --quiet --eval "EJSON.stringify({command})" {tls_string}'
     else:
-        formatted_string = f'"{uri}" --quiet --eval "{command}"'
+        formatted_string = f'"{uri}" --quiet --eval "{command}" {tls_string}'
 
     cmd = [f"{app_name}/{leader_id}", mongosh(substrate), formatted_string]
 
@@ -1023,6 +1099,20 @@ async def start_continous_writes(
     await start_writes_action.wait()
 
 
+async def start_continuous_reads(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+):
+    """Helper function to run the `start-continuous-reads` action on the continuous write app."""
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    start_reads_action = await application_unit.run_action(
+        "start-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
+    )
+    await start_reads_action.wait()
+
+
 async def stop_continous_writes(
     ops_test: OpsTest,
     client_app_name: str,
@@ -1039,6 +1129,22 @@ async def stop_continous_writes(
     )
     await stop_writes_action.wait()
     return int(stop_writes_action.results["writes"])
+
+
+async def stop_continuous_reads(
+    ops_test: OpsTest,
+    client_app_name: str,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+) -> tuple[int, list[str]]:
+    """Helper function to run the `stop-continuous-reads` action on the continuous write app."""
+    application_unit = ops_test.model.applications[client_app_name].units[0]
+    stop_writes_action = await application_unit.run_action(
+        "stop-continuous-reads", **{"db-name": db_name, "collection-name": coll_name}
+    )
+    await stop_writes_action.wait()
+    logger.warning(f"Failed reads: {stop_writes_action.results['failed-reads']}")
+    return int(stop_writes_action.results["reads"]), stop_writes_action.results["failed-reads"]
 
 
 async def clear_continous_writes(
@@ -1062,6 +1168,9 @@ async def count_writes(
     unit: JujuUnit,
     mongos: bool = False,
     username: str = CHARMED_OPERATOR_USERNAME,
+    db_name: str = DEFAULT_DATABASE_NAME,
+    coll_name: str = DEFAULT_COLLECTION_NAME,
+    tls: bool = False,
 ) -> int:
     """New versions of pymongo no longer support the count operation, instead find is used."""
     host = await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name=app_name)
@@ -1073,12 +1182,22 @@ async def count_writes(
         hosts=[host],
         username=username,
     )
+    container = "mongod"
+    if tls:
+        ca_file = await scp_file_preserve_ctime(
+            ops_test, substrate, unit.name, external_cert_path(substrate), container
+        )
+    else:
+        ca_file = None
 
-    client = MongoClient(uri, directConnection=True)
-    db = client[DEFAULT_DATABASE_NAME]
-    test_collection = db[DEFAULT_COLLECTION_NAME]
+    client = MongoClient(uri, directConnection=True, tlsCaFile=ca_file, tls=tls)
+    db = client[db_name]
+    test_collection = db[coll_name]
     count = test_collection.count_documents({})
     client.close()
+
+    if ca_file:
+        Path(ca_file).unlink()
     return count
 
 
@@ -1136,7 +1255,7 @@ def get_app_name_from_unit(unit_name: str) -> str:
     return unit_name.split("/")[0]
 
 
-def get_unit_app(unit_name) -> tuple[int, str]:
+def get_unit_app(unit_name: str) -> tuple[int, str]:
     """Returns the unit id and app name from the unit name."""
     return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
 
@@ -1200,6 +1319,29 @@ async def get_secret_data(ops_test: OpsTest, secret_uri: str):
     complete_command = f"show-secret {secret_uri} --reveal --format=json"
     _, stdout, _ = await ops_test.juju(*complete_command.split())
     return json.loads(stdout)[secret_unique_id]["content"]["Data"]
+
+
+async def get_juju_secret(model: Model, label: str, fields: list[str]) -> list[str]:
+    """Get a Juju secret from the model and return the specified fields.
+
+    Ops doesn't provide a way to get the secret values, so we have to do it a
+    little more manually.
+
+    Args:
+        model (Model): The Juju model to get the secret from.
+        label (str): The label of the secret to get.
+        fields (List[str]): The fields to return from the secret.
+    """
+    secrets = await model.list_secrets(show_secrets=True)
+    secret = next(secret for secret in secrets if secret.label == label)
+
+    return [b64decode(secret.value.data[field]).decode("utf-8") for field in fields]
+
+
+async def get_model_secret_id(ops_test: OpsTest, label: str) -> str:
+    secrets = await ops_test.model.list_secrets(show_secrets=True)  # type: ignore
+    secret = next(secret for secret in secrets if secret.label == label)
+    return secret.uri
 
 
 async def get_connection_string(
@@ -1328,3 +1470,92 @@ async def execute_on_server(
         shell=True,
         universal_newlines=True,
     )
+
+
+async def scp_file_preserve_ctime(
+    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
+) -> str:
+    """Returns the unix timestamp of when a file was created on a specified unit."""
+    # Retrieving the file
+    filename = path.split("/")[-1]
+    if substrate == "lxd":
+        complete_command = f"exec --unit {unit_name} -- sudo cat {path}"
+        return_code, stdout, stderr = await ops_test.juju(*complete_command.split(), check=True)
+        with open(filename, mode="w") as fd:
+            fd.write(stdout.strip())
+    else:
+        complete_command = f"scp --container {container} {unit_name}:{path} {filename}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+
+    return f"{filename}"
+
+
+def mongodb_base_path(substrate: Substrate) -> str:
+    if substrate == "lxd":
+        return "/var/snap/charmed-mongodb/current/etc/mongod/"
+    return "/etc/mongod/"
+
+
+async def delete_file_on_remote(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+):
+    if substrate == "lxd":
+        complete_command = f"exec --unit {unit_name} -- sudo rm {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split(), check=True)
+    else:
+        complete_command = f"ssh --container {container} {unit_name} rm -f {filepath}"
+        return_code, _, stderr = await ops_test.juju(*complete_command.split())
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            complete_command,
+            return_code,
+            stderr,
+        )
+    return
+
+
+async def read_remote_file(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+) -> str:
+    """Read a file on a remote unit and return its stdout.
+
+    Uses `juju ssh` for LXD (adds sudo) and `juju ssh --container` for
+    microk8s so callers don't need to duplicate the command construction.
+    Raises `ProcessError` when the command exits with a non-zero code.
+    """
+    if substrate == "microk8s":
+        cmd = ["ssh", "--container", container, unit_name, "cat", filepath]
+    else:
+        cmd = ["ssh", unit_name, "sudo", "cat", filepath]
+
+    return_code, stdout, stderr = await ops_test.juju(*cmd)
+
+    if return_code != 0:
+        logger.error(stderr)
+        raise ProcessError(
+            "Expected command %s to succeed instead it failed: %s; %s",
+            " ".join(cmd),
+            return_code,
+            stderr,
+        )
+
+    return stdout

@@ -24,7 +24,9 @@ from typing import TYPE_CHECKING, ClassVar, NewType, override
 
 from botocore.exceptions import ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
 from ops.model import (
@@ -103,7 +105,7 @@ def _backup_restore_retry_before_sleep(retry_state) -> None:
     )
 
 
-class CommonBackupManager(Object, BackupConfigManager, ManagerStatusProtocol):
+class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[CharmState]):
     """Common Manager for the backups and storage integrators."""
 
     CONFIG_MAP: ClassVar[dict[str, str]] = {}

@@ -84,6 +84,11 @@ class MongoPaths:
         return Path(f"{self.conf_path}/external-ca.crt")
 
     @property
+    def config_server_ext_ca_file(self) -> Path:
+        """External connectivity CA file."""
+        return Path(f"{self.conf_path}/config-server-external-ca.crt")
+
+    @property
     def int_pem_file(self) -> Path:
         """Internal connectivity PEM file."""
         return Path(f"{self.conf_path}/internal-cert.pem")
@@ -129,6 +134,16 @@ class MongoPaths:
         """The LDAP certificates file path."""
         return Path(f"{self.ldap_certificates_dir}/ldap.crt")
 
+    @property
+    def vault_cert(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.etc_path}/vault/vault_cert.pem")
+
+    @property
+    def vault_token_file_path(self) -> Path:
+        """Vault configuration file path."""
+        return Path(f"{self.etc_path}/vault/vaultTokenFile")
+
 
 class WorkloadBase(ABC):  # pragma: nocover
     """The protocol for workloads.
@@ -147,6 +162,9 @@ class WorkloadBase(ABC):  # pragma: nocover
     layer_name: ClassVar[str]
     container: Container | None
     users: ClassVar[WorkloadUser]
+    # Used as a command runner for all the cases where we need the user that runs the mongodb calls
+    # This is root:root on VM and mongodb:mongodb on kubernetes
+    command_user: ClassVar[WorkloadUser]
     bin_cmd: ClassVar[str]
     env_var: ClassVar[str]
     snap_param: ClassVar[str]
@@ -246,6 +264,8 @@ class WorkloadBase(ABC):  # pragma: nocover
         env: dict[str, str] | None = None,
         working_dir: str | None = None,
         input: str | None = None,
+        user: str | None = None,
+        group: str | None = None,
     ) -> str:
         """Runs a command on the workload substrate."""
         ...

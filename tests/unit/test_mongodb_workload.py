@@ -3,6 +3,7 @@ from pathlib import Path
 from platform import machine
 
 import pytest
+from charmlibs.snap import SnapError
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VmUser
@@ -13,7 +14,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap import SnapError
 from single_kernel_mongo.workload import (
     VMLogRotateDBWorkload,
     VMMongoDBExporterWorkload,
@@ -266,7 +266,7 @@ def test_command_success_failure(monkeypatch, caplog, command):
 )
 def test_active(mocker, value: dict, expected: bool):
     mocker.patch(
-        "single_kernel_mongo.lib.charms.operator_libs_linux.v2.snap.Snap.services",
+        "charmlibs.snap.Snap.services",
         return_value=value,
         new_callable=mocker.PropertyMock,
     )

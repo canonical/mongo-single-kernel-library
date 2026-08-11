@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.framework import EventBase, EventSource, Object
 from pydantic import ValidationError
 
@@ -20,6 +21,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapWithShardError,
     LDAPSNotEnabledError,
     NonDeferrableFailedHookChecksError,
+    UnableToBindError,
     WaitingForLdapDataError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -62,6 +64,7 @@ class LDAPEventHandler(Object):
             self.manager.certificate_transfer.on.certificate_available,
             self._on_certificate_available,
         )
+        self.framework.observe(self.charm.on.update_status, self._on_update_status)
         self.framework.observe(
             self.manager.certificate_transfer.on.certificate_removed, self._on_certificate_removed
         )
@@ -107,8 +110,14 @@ class LDAPEventHandler(Object):
             )
 
     def _on_ldap_unavailable(self, event: LdapUnavailableEvent) -> None:
-        """Handles the ops event that indicates that ldap relation is now unavailable."""
-        self.manager.clean_ldap_credentials_and_uri()
+        """Handles the ops event that indicates that ldap relation is now unavailable.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        """
+        try:
+            self.manager.clean_ldap_credentials_and_uri()
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_certificate_available(self, event: CertificateAvailableEvent):
         """Handles the ops event that indicates that ldap-certificates relation is ready."""
@@ -128,16 +137,50 @@ class LDAPEventHandler(Object):
                 LdapStatuses.on_error_status(err), scope="unit", component=self.manager.name
             )
 
+    def _on_update_status(self, event: CertificateAvailableEvent):
+        """On update-status, check if everything is alright and restart if needed."""
+        try:
+            # Runs the checks and restart if needed.
+            self.manager.restart_when_ready()
+        except (
+            DeferrableFailedHookChecksError,
+            InvalidLdapWithShardError,
+            UnableToBindError,
+            NonDeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+        ):
+            logger.warning(
+                "Update Status could not reconcile ldap integration. Please investigate."
+            )
+            # Statuses will be updated in the handler for advanced statuses.
+            return
+
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
-        """Handles the ops event that indicates that ldap-certificates relation is unavailable."""
-        self.manager.remove_ldap_certificates()
+        """Handles the ops event that indicates that ldap-certificates relation is unavailable.
+
+        Defer if RollingOpsNoRelationError is raised. It means a lock was requested too early.
+        """
+        try:
+            self.manager.remove_ldap_certificates()
+        except RollingOpsNoRelationError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:
-        """Custom ops revent to trigger restart of leader with a single source of truth."""
+        """Custom ops revent to trigger restart of leader with a single source of truth.
+
+        Also executed by follower units on relation changed event.
+        """
         action = "restart-ldap-if-ready"
         try:
             self.manager.restart_when_ready()
-        except (DeferrableFailedHookChecksError, DeferrableError) as err:
+        except (DeferrableFailedHookChecksError, DeferrableError, RollingOpsNoRelationError) as err:
+            defer_event_with_info_log(logger, event, action, f"{err}")
+        except UnableToBindError as err:
+            self.manager.state.statuses.add(
+                LdapStatuses.UNABLE_TO_BIND.value,
+                scope="unit",
+                component=self.manager.name,
+            )
             defer_event_with_info_log(logger, event, action, f"{err}")
         except InvalidLdapWithShardError:
             self.manager.state.statuses.add(

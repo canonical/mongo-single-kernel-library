@@ -3,19 +3,26 @@
 # See LICENSE file for licensing details.
 
 import re
+import time
 
 import pytest
 from cryptography import x509
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import (
-    DATA_INTEGRATOR_APP_NAME,
+    CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     UNIT_IDS,
     check_or_scale_app,
+    clear_continous_writes,
+    deploy_application,
     deploy_charm,
-    find_unit,
+    external_cert_path,
     get_app_name,
+    get_secret_by_label,
+    internal_cert_path,
+    start_continous_writes,
+    stop_continous_writes,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.tls import (
@@ -26,9 +33,7 @@ from tests.integration.helpers.tls import (
     cannot_connect_without_tls,
     check_certs_correctly_distributed,
     check_tls,
-    external_cert_path,
     integrate_apps_with_tls,
-    internal_cert_path,
     remove_tls_integrations,
     set_invalid_private_key,
     set_private_key,
@@ -43,7 +48,12 @@ REGEX_TLS = re.compile("(-+(BEGIN|END) [A-Z ]+-+)")
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
+    ops_test: OpsTest,
+    mongodb_charm: str,
+    substrate: Substrate,
+    mongod_resource,
+    base_app_name,
+    application_path: str,
 ) -> None:
     """Build and deploy one unit of MongoDB and one unit of TLS."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
@@ -75,11 +85,9 @@ async def test_build_and_deploy(
     await ops_test.model.wait_for_idle(
         apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=DEPLOYMENT_TIMEOUT
     )
-    await ops_test.model.deploy(
-        DATA_INTEGRATOR_APP_NAME,
-        channel="latest/stable",
-        series="noble",
-        config={"database-name": "test-database"},
+
+    await deploy_application(
+        ops_test, application_path=application_path, app_name=CONTINUOUS_WRITE_APPLICATION
     )
 
 
@@ -109,30 +117,31 @@ async def test_integrate_client_access_tls(ops_test: OpsTest, substrate: Substra
     """Tests that an integration with a client application sends the certificate as expected."""
     app_name = await get_app_name(ops_test)
 
-    await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, app_name)
+    relation = await ops_test.model.integrate(CONTINUOUS_WRITE_APPLICATION, app_name)
     await ops_test.model.wait_for_idle(
-        apps=[app_name, DATA_INTEGRATOR_APP_NAME],
+        apps=[app_name, CONTINUOUS_WRITE_APPLICATION],
         status="active",
     )
+    assert relation
 
-    leader = await find_unit(ops_test, leader=True, app_name=DATA_INTEGRATOR_APP_NAME)
+    secret = await get_secret_by_label(ops_test, f"database.{relation.id}.tls.secret")
 
-    action = await leader.run_action("get-credentials")
-    action = await action.wait()
-    # `mongodb` here is the name of the relation that we're looking for.
-    result = action.results.get("mongodb")
-
-    tls_field: str = result.get("tls")
-    tls_certificate: str = result.get("tls-ca", "")
-
-    assert tls_field == "True", "TLS flag is not set to True"
-    assert REGEX_TLS.match(tls_certificate)
+    assert secret.get("tls") == "True"
+    tls_certificate = secret.get("tls-ca")
+    assert tls_certificate, "No TLS CA in secret."
 
     parsed_cert = x509.load_pem_x509_certificate(data=tls_certificate.encode())
     _common_name = parsed_cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
     common_name = str(_common_name[0].value) if _common_name else ""
 
     assert common_name == "Test CA"
+
+    await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    time.sleep(20)
+    n_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    await clear_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+
+    assert n_writes != -1, "Did not manage to write on database"
 
 
 async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
@@ -205,6 +214,13 @@ async def test_rotate_tls_key(ops_test: OpsTest, substrate: Substrate) -> None:
         assert await cannot_connect_without_tls(
             ops_test, substrate, unit, app_name=app_name
         ), f"Client can still connect without TLS on unit {unit.name}"
+
+    await start_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    time.sleep(20)
+    n_writes = await stop_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+    await clear_continous_writes(ops_test, CONTINUOUS_WRITE_APPLICATION)
+
+    assert n_writes != -1, "Did not manage to write on database"
 
 
 async def test_invalid_key(ops_test: OpsTest, substrate: Substrate) -> None:

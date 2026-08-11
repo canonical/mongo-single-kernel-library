@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """Code for interactions with MongoDB."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
 from urllib.parse import quote_plus, urlencode
@@ -11,6 +11,7 @@ from single_kernel_mongo.config.literals import MongoPorts
 from single_kernel_mongo.exceptions import AmbiguousConfigError
 from single_kernel_mongo.utils.mongodb_users import (
     REGULAR_ROLES,
+    AuthRestrictions,
     DBPrivilege,
     UserRole,
 )
@@ -22,13 +23,19 @@ ADMIN_AUTH_SOURCE = {"authSource": "admin"}
 class MongoConfiguration:
     """Class for Mongo configurations usable my mongos and mongodb.
 
-    — replset: name of replica set
-    — database: database name.
-    — username: username.
-    — password: password.
-    — hosts: full list of hosts to connect to, needed for the URI.
-    — tls_external: indicator for use of internal TLS connection.
-    — tls_internal: indicator for use of external TLS connection.
+    Args:
+        replset: name of replica set
+        database: database name.
+        username: username.
+        password: password.
+        hosts: full set of hosts to connect to, needed for the URI.
+        roles: set of roles for that user.
+        tls_enabled: Is TLS enabled on that configuration?
+        tls_external_ca: The path of the tls external CA certificate
+        port: The port used to connect
+        replset: The replica set we connect to
+        standalone: Should that be a standalone connection ?
+        auth_restrictions: The list of authentication restrictions for that user
     """
 
     database: str
@@ -37,11 +44,11 @@ class MongoConfiguration:
     hosts: set[str]
     roles: set[str]
     tls_enabled: bool
-    tls_external_keyfile: Path = Path("")
     tls_external_ca: Path = Path("")
     port: int | None = None
     replset: str | None = None
     standalone: bool = False
+    auth_restrictions: list[AuthRestrictions] = field(default_factory=list)
 
     @property
     def formatted_hosts(self) -> set[str]:
@@ -51,29 +58,35 @@ class MongoConfiguration:
         return self.hosts
 
     @property
-    def formatted_replset(self) -> dict:
+    def formatted_replset(self) -> dict[str, str]:
         """Formatted replicaSet parameter."""
         if self.replset:
             return {"replicaSet": quote_plus(self.replset)}
         return {}
 
     @property
-    def formatted_auth_source(self) -> dict:
+    def formatted_auth_source(self) -> dict[str, str]:
         """Formatted auth source."""
+        result = {"authMechanism": "SCRAM-SHA-256"}
         if self.database != "admin":
-            return ADMIN_AUTH_SOURCE
-        return {}
+            result |= ADMIN_AUTH_SOURCE
+        return result
 
     @property
-    def tls_config(self) -> dict:
+    def tls_config(self) -> dict[str, str]:
         """TLS Config."""
         if not self.tls_enabled:
             return {}
-        return {
+        config = {
             "tls": "true",
-            "tlsCertificateKeyFile": f"{self.tls_external_keyfile}",
             "tlsCaFile": f"{self.tls_external_ca}",
         }
+        # Edge case: MongoDB TLS with Unix Socket requires disabling client hostname verification.
+        # This is because the reported remote is the unix socket, which is not in the SANS list.
+        if len(self.hosts) == 1 and list(self.hosts)[0].endswith("27018.sock"):
+            config["tlsAllowInvalidHostnames"] = "true"
+
+        return config
 
     def _uri(self, tls: bool):
         if self.port == MongoPorts.MONGOS_PORT and self.replset:
@@ -129,12 +142,11 @@ class MongoConfiguration:
 
 
 EMPTY_CONFIGURATION = MongoConfiguration(
-    "",
-    "",
-    "",
-    set(),
-    set(),
-    False,
-    Path(""),
-    Path(""),
+    database="",
+    username="",
+    password="",  # nosec: B106
+    hosts=set(),
+    roles=set(),
+    tls_enabled=False,
+    tls_external_ca=Path(""),
 )

@@ -6,7 +6,7 @@ This module should contain the literals used in the charms (paths, enums, etc).
 """
 
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -88,6 +88,14 @@ class VmUser(WorkloadUser[int]):
     group: int = 0
 
 
+@dataclass(frozen=True)
+class RootUser(WorkloadUser[str]):
+    """The system user for VM charms."""
+
+    user: str = "root"
+    group: str = "root"
+
+
 CRON_FILE = Path("/etc/cron.d/mongodb")
 
 SYSTEMD_MONGODB_OVERRIDE = Path("/etc/systemd/system/snap.charmed-mongodb.mongod.service.d")
@@ -116,3 +124,18 @@ class TrustStoreFiles(str, Enum):
 
     PBM = "pbm.crt"
     LDAP = "ldap.crt"
+    VAULT = "vault.crt"
+
+
+class RollingOpsBackend(StrEnum):
+    """Identifiers of the sync lock backends used for rollingops."""
+
+    STOP_REPLSET_MEMBER = "stop-replset-member"
+
+
+class RollingOpsCallbackId(StrEnum):
+    """Identifier of the callbacks used for rollingops."""
+
+    RESTART_CHARM_SERVICES = "restart-charm-services"
+    SHARD_RESTART_ON_KEYFILE_CHANGED = "shard-restart-on-keyfile-change"
+    UPDATE_MONGOS_AND_RESTART = "update-mongos-and-restart"

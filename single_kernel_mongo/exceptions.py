@@ -193,6 +193,10 @@ class NonDeferrableFailedHookChecksError(Exception):
     """Raised when we failed to pass hook checks and we should skip."""
 
 
+class RelationBrokenDuringScaleDownError(NonDeferrableFailedHookChecksError):
+    """Raised when relation-broken is emitted because this unit is scaling down."""
+
+
 class DeferrableError(Exception):
     """Raised for all deferrable errors."""
 
@@ -249,6 +253,10 @@ class InvalidLdapQueryTemplateError(Exception):
     """Raised when the LdapQueryTemplate and LdapUserToDnMapping combination is invalid."""
 
 
+class UnableToBindError(Exception):
+    """Raised when we're unable to bind with GLAuth."""
+
+
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
 
@@ -265,5 +273,17 @@ class InvalidPasswordError(Exception):
     """Raised when an invalid password is found in the system-users config secret."""
 
 
+class InvalidConfigError(Exception):
+    """Raised when a config value is invalid."""
+
+
 class InvalidConfigRoleError(Exception):
     """Raised when the role is invalid."""
+
+
+class WaitingForVaultError(DeferrableError):
+    """Raised when we're waiting for vault."""
+
+
+class ImpossibleToRotateMasterKeyError(Exception):
+    """Raised when it's impossible to rotate the master key."""

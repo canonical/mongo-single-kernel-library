@@ -13,6 +13,7 @@ class PeerRelationNames(str, Enum):
     ROUTER_PEERS = "router-peers"
     STATUS_PEERS = "status-peers"
     LDAP_PEERS = "ldap-peers"
+    ROLLINGOPS_PEERS = "rollingops-peers"
 
 
 class RelationNames(str, Enum):
@@ -23,6 +24,7 @@ class RelationNames(str, Enum):
     CONFIG_SERVER = "config-server"
     CLUSTER = "cluster"
     MONGOS_PROXY = "mongos_proxy"
+    ETCD = "etcd"
 
 
 class Scopes(str, Enum):
@@ -41,6 +43,7 @@ class ExternalRequirerRelations(str, Enum):
     GCS_CREDENTIALS = "gcs-credentials"
     LDAP = "ldap"
     LDAP_CERT = "ldap-certificate-transfer"
+    VAULT = "vault-kv"
 
 
 class ExternalProviderRelations(str, Enum):

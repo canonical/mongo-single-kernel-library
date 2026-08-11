@@ -8,7 +8,7 @@ from logging import getLogger
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     UNIT_IDS,
@@ -22,7 +22,7 @@ from ...helpers.common import (
     mongod_ready,
     unit_hostname,
 )
-from ...helpers.ha import (
+from tests.integration.helpers.ha import (
     cut_network_from_unit,
     get_controller_machine,
     is_machine_reachable_from,
@@ -34,7 +34,7 @@ from ...helpers.ha import (
     wait_network_restore,
     wait_until_unit_in_status,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
@@ -63,7 +63,7 @@ async def test_build_and_deploy(
         app_name=base_app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT)
+    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
 
 
 @pytest.mark.abort_on_fail

@@ -31,6 +31,10 @@ class MongoDBStatuses(Enum):
         message="Waiting for mongodb-exporter to start...",
         check="MongoDB Exporter status check.",
     )
+    WAITING_FOR_RESTART = StatusObject(
+        status="waiting",
+        message="Waiting for MongoDB restart.",
+    )
     INVALID_SHARDING_REL = StatusObject(
         status="blocked",
         message="The sharding interface cannot be used by replica sets.",
@@ -92,6 +96,16 @@ class MongoDBStatuses(Enum):
         action="Set the role config to a valid value: `replication`, `shard` or `config-server`.",
         running="blocking",
     )
+    WAITING_SYNC_REMOVAL = StatusObject(
+        status="waiting",
+        message="Waiting for lock to remove replica set.",
+        running="blocking",
+    )
+    RESTARTING = StatusObject(
+        status="maintenance",
+        message="Restarting MongoDB.",
+        running="blocking",
+    )
 
 
 class MongosStatuses(Enum):
@@ -111,6 +125,10 @@ class MongosStatuses(Enum):
         status="waiting",
         message="Waiting for mongos to start...",
         check="mongos process status check.",
+    )
+    WAITING_FOR_RESTART = StatusObject(
+        status="waiting",
+        message="Waiting for mongos restart.",
     )
     INVALID_REL = StatusObject(
         status="blocked",
@@ -179,6 +197,11 @@ class MongosStatuses(Enum):
     # Running statuses:
     STARTING_MONGOS = StatusObject(
         status="maintenance", message="Starting mongos.", running="blocking"
+    )
+    RESTARTING = StatusObject(
+        status="maintenance",
+        message="Restarting mongos.",
+        running="blocking",
     )
 
     @classmethod
@@ -721,4 +744,60 @@ class PasswordManagementStatuses(Enum):
         status="maintenance",
         message="Failed to update user passwords.",
         action="Check logs.",
+    )
+
+
+class VaultStatuses(Enum):
+    """Vault statuses for encryption at rest."""
+
+    INVALID_CONFIG = StatusObject(
+        status="blocked",
+        message="The enable-encryption-at-rest config option is invalid.",
+        short_message="Wrong enable-encryption-at-rest config.",
+        check="Config validation failed.",
+        action="Revert config option enable-encryption-at-rest value.",
+        approved_critical_component=True,
+    )
+    VAULT_INTEGRATED = StatusObject(
+        status="blocked",
+        message="The vault-kv interface cannot be used with encryption at rest disabled.",
+        short_message="Invalid vault-kv relation.",
+        check="Encryption at rest is disabled.",
+        action="Remove vault integration",
+    )
+    VAULT_NOT_INTEGRATED = StatusObject(
+        status="blocked",
+        message="Must be integrated with vault to enable encryption at rest.",
+        short_message="Integrate with vault.",
+        check="Missing vault relation.",
+        action="Integrate with vault charm.",
+        approved_critical_component=True,
+    )
+    MISSING_DATA = StatusObject(
+        status="waiting",
+        message="Still waiting data from vault.",
+        check="Missing vault relation.",
+    )
+    VAULT_UNREACHABLE = StatusObject(
+        status="blocked",
+        message="Vault is unreachable.",
+        check="Approle login failed.",
+        action="Ensure vault is running and reachable.",
+    )
+    VAULT_AGENT_FAILED = StatusObject(
+        status="blocked",
+        message="Vault agent failed to start.",
+        check="Vault agent is not running.",
+        action="Check configuration of vault agent.",
+    )
+    ACTIVE = StatusObject(
+        status="active",
+        message="",
+    )
+
+    ### Running status
+    VAULT_ROTATE_MASTER_KEY = StatusObject(
+        status="maintenance",
+        message="Master key rotation in progress.",
+        running="blocking",
     )

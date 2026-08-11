@@ -28,7 +28,9 @@ from typing import ClassVar, Generic, TypeVar
 import ops.log
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
 
@@ -38,6 +40,7 @@ from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
+from single_kernel_mongo.state.charm_state import CharmState
 
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
@@ -47,7 +50,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
-class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
+class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], CharmBase):
     """An abstract mongo charm.
 
     This class is meant to be inherited from to define an actual charm.
@@ -65,7 +68,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[PeerRelationNames]
     status_peer_rel_name: ClassVar[PeerRelationNames] = PeerRelationNames.STATUS_PEERS
-    name: ClassVar[str]
+    name: str
 
     def __init__(self, *args):
         # Init the Juju object Object

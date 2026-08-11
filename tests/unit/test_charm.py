@@ -245,6 +245,25 @@ def test_start_not_ready(harness, mocker, mock_fs_interactions):
     assert statuses[0] == MongoDBStatuses.WAITING_FOR_MONGODB_START.value
 
 
+def test_start_waits_for_peer_database_addresses(
+    harness, mocker, mock_fs_interactions, mongodb_name
+):
+    rel = harness.charm.operator.state.peer_relation
+    harness.add_relation_unit(rel.id, f"{mongodb_name}/1")
+    mocker.patch.object(harness.charm.operator, "_run_startup_checks")
+    mocker.patch(
+        "single_kernel_mongo.managers.vault.VaultManager.get_degraded_state",
+        return_value=None,
+    )
+    configure = mocker.patch.object(harness.charm.operator, "_configure_workloads")
+
+    with pytest.raises(NotReadyError, match="Waiting for peer database addresses"):
+        harness.charm.operator.prepare_for_startup()
+
+    assert harness.charm.operator.state.unit_peer_data.database_address
+    configure.assert_not_called()
+
+
 def test_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
@@ -598,7 +617,7 @@ def test_on_config_changed_invalid_ldap_query_template_user(harness):
 def test_on_config_changed_valid_ldap_query_template(harness, mocker):
     harness.set_leader(True)
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.restart_charm_services"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.async_restart_charm_services"
     )
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
 
@@ -637,7 +656,7 @@ def test_on_config_changed_upgrade_in_progress(harness, mocker, mongodb_name):
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_valid_system_users_password_is_updated(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -667,7 +686,9 @@ def test_on_config_changed_valid_system_users_password_is_updated(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongodb_name, role):
+def test_on_config_changed_system_users_invalid_passwords(
+    harness, mocker, mongodb_name, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -689,7 +710,7 @@ def test_on_config_changed_system_users_invalid_passwords(harness, mocker, mongo
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_password_did_not_changed(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -717,7 +738,9 @@ def test_on_config_changed_system_users_password_did_not_changed(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_one_password_changed(harness, mocker, mongodb_name, role):
+def test_on_config_changed_system_users_one_password_changed(
+    harness, mocker, mongodb_name, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -746,7 +769,7 @@ def test_on_config_changed_system_users_one_password_changed(harness, mocker, mo
 
 
 def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
-    harness, mocker, mongodb_name: str
+    harness, mocker, mongodb_name: str, mock_fs_interactions
 ):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
@@ -768,7 +791,9 @@ def test_on_config_changed_system_users_do_not_update_passwords_on_shard(
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
-def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, role):
+def test_on_config_changed_system_users_secret_does_not_exist(
+    harness, mocker, role, mock_fs_interactions
+):
     set_user_password_mock = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.set_user_password"
     )
@@ -791,7 +816,7 @@ def test_on_config_changed_system_users_secret_does_not_exist(harness, mocker, r
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
 def test_on_config_changed_system_users_fail_to_update_password(
-    harness, mocker, mongodb_name, role
+    harness, mocker, mongodb_name, role, mock_fs_interactions
 ):
     defer = mocker.patch("ops.framework.EventBase.defer")
     set_user_password_mock = mocker.patch(
@@ -897,6 +922,28 @@ def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
     assert state.get_user_password(CharmedStatsUser) == stats_password
     assert state.get_user_password(CharmedLogRotateUser) == logrotate_password
     assert state.get_user_password(CharmedBackupUser) == backup_password
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_on_leader_elected_dont_rotate_cluster_id_already_set_vm(harness):
+    harness.set_leader(True)
+    cluster_id = harness.charm.operator.state.get_cluster_id()
+    harness.charm.on.leader_elected.emit()
+    new_cluster_id = harness.charm.operator.state.get_cluster_id()
+
+    assert len(cluster_id) == 8
+    assert cluster_id == new_cluster_id
+
+
+@pytest.mark.skip_if_substrate("lxd")
+def test_on_leader_elected_cluster_id_is_none(harness):
+    harness.set_leader(True)
+    cluster_id = harness.charm.operator.state.get_cluster_id()
+    harness.charm.on.leader_elected.emit()
+    new_cluster_id = harness.charm.operator.state.get_cluster_id()
+
+    assert cluster_id is None
+    assert cluster_id == new_cluster_id
 
 
 @pytest.mark.parametrize("role", [MongoDBRoles.CONFIG_SERVER, MongoDBRoles.REPLICATION])
@@ -1105,6 +1152,9 @@ def test_connect_mongodb_exporter_success(
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
     )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+    )
 
     mongodb_hostname = "127.0.0.1"
 
@@ -1114,9 +1164,7 @@ def test_connect_mongodb_exporter_success(
     harness.charm.on.mongod_pebble_ready.emit(container)
 
     password = harness.charm.operator.state.get_user_password(CharmedStatsUser)
-    uri_template = (
-        "mongodb://charmed-stats:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s"
-    )
+    uri_template = "mongodb://charmed-stats:{password}@{mongodb_hostname}:27017/admin?replicaSet=mongodb-k8s&authMechanism=SCRAM-SHA-256"
     env = harness.charm.operator.mongodb_exporter_config_manager.get_environment()
 
     assert env == uri_template.format(password=password, mongodb_hostname=mongodb_hostname)
@@ -1250,7 +1298,7 @@ def test_relation_joined_upgrade_in_progress_defers(harness: Harness[MongoTestCh
     mock_on_relation_changed.assert_not_called()
 
 
-def test_mongodb_relation_joined_all_replicas_not_ready(
+def test_mongodb_relation_joined_all_replicas_not_ready_are_added(
     harness: Harness[MongoTestCharm], mocker, substrate: Substrate, mongodb_hostname: str
 ):
     harness.set_leader(True)
@@ -1280,8 +1328,62 @@ def test_mongodb_relation_joined_all_replicas_not_ready(
         scope=Scope.UNIT, component=harness.charm.operator.name
     )
 
-    assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
-    mocked_add_replset_member.assert_not_called()
+    assert all(status != MongodStatuses.WAITING_RECONFIG.value for status in statuses)
+    mocked_add_replset_member.assert_called()
+
+
+def test_peer_changed_updates_cluster_ip_source_allowlist(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+    mocker.patch(
+        "single_kernel_mongo.managers.vault.VaultManager.get_degraded_state", return_value=None
+    )
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_users_local_auth_restrictions"
+    )
+    mock_update = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
+
+    harness.charm.operator.peer_changed()
+
+    mock_update.assert_called_once_with(
+        harness.charm.operator.config_manager.cluster_ip_source_allowlist
+    )
+    mock_sync.assert_called_once()
+
+
+def test_non_leader_peer_changed_update_runtime_cluster_ip_source_allowlist(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.db_initialised = True
+    harness.set_leader(False)
+    mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBExporterConfigManager.configure_and_restart"
+    )
+    mocker.patch("single_kernel_mongo.managers.config.BackupConfigManager.configure_and_restart")
+    mock_update = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
+
+    harness.charm.operator.peer_changed()
+
+    mock_update.assert_called()
+    mock_sync.assert_called_once()
 
 
 def test_reconfigure_not_already_initialised(
@@ -1368,6 +1470,7 @@ def test_reconfigure_remove_members_failure(
     substrate: Substrate,
     mongodb_name: str,
     second_hostname: str,
+    mock_rollingops_manager,
 ):
     """Tests reconfigure does not proceed when unable to remove a member.
 
@@ -1389,7 +1492,9 @@ def test_reconfigure_remove_members_failure(
 
     rel = harness.charm.model.get_relation("database-peers")
 
-    for exception, _ in PYMONGO_EXCEPTIONS:
+    exceptions = PYMONGO_EXCEPTIONS + [(NotReadyError, None)]
+
+    for exception, _ in exceptions:
         remove_replset.side_effect = exception
         # simulate 2nd MongoDB unit joining( need a unit to join before removing a unit)
         harness.add_relation_unit(rel.id, f"{mongodb_name}/1")
@@ -1399,10 +1504,14 @@ def test_reconfigure_remove_members_failure(
         harness.remove_relation_unit(rel.id, f"{mongodb_name}/1")
 
         remove_replset.assert_called()
+        mock_rollingops_manager.acquire_sync_lock.assert_called_with(
+            backend_id="stop-replset-member",
+            timeout=3 * 60,
+        )
         defer.assert_called()
 
 
-def test_reconfigure_peer_not_ready(
+def test_reconfigure_peer_not_ready_replica_set_is_added(
     harness,
     mocker,
     mock_fs_interactions,
@@ -1417,6 +1526,9 @@ def test_reconfigure_peer_not_ready(
     defer = mocker.patch("ops.framework.EventBase.defer")
     add_replset = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
     )
     get_replset = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members"
@@ -1436,8 +1548,8 @@ def test_reconfigure_peer_not_ready(
     harness.add_relation_unit(rel.id, f"{mongodb_name}/1")
     harness.update_relation_data(rel.id, f"{mongodb_name}/1", PEER_ADDR[substrate])
 
-    add_replset.assert_not_called()
-    defer.assert_called()
+    add_replset.assert_called()
+    defer.assert_not_called()
 
 
 def test_reconfigure_add_member_failure(
@@ -1455,6 +1567,9 @@ def test_reconfigure_add_member_failure(
     defer = mocker.patch("ops.framework.EventBase.defer")
     add_replset = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.add_replset_member"
+    )
+    mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
     )
     get_replset = mocker.patch(
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.get_replset_members"
@@ -1498,18 +1613,33 @@ def test_on_relation_departed_not_leader(
     update_host_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
     )
+    mock_update_allowlist = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync_allowlist = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
     rel = harness.charm.operator.state.peer_relation
     harness.add_relation_unit(rel.id, "mongodb/1")
+    harness.update_relation_data(rel.id, "mongodb/1", {"database-address": "10.0.0.2"})
 
+    mock_update_allowlist.reset_mock()
+    mock_sync_allowlist.reset_mock()
     harness.set_leader(False)
     harness.remove_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_not_called()
+    mock_update_allowlist.assert_called_once()
+    allowlist = mock_update_allowlist.call_args.args[0]
+    assert "10.0.0.2" not in allowlist
+    mock_sync_allowlist.assert_called_once_with(allowlist)
 
 
 def test_on_relation_departed_leader(
-    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+    harness: Harness[MongoTestCharm],
+    mocker,
+    mock_fs_interactions,
 ):
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
@@ -1528,13 +1658,23 @@ def test_on_relation_departed_leader(
     update_host_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.update_hosts"
     )
+    mock_update_allowlist = mocker.patch(
+        "single_kernel_mongo.managers.mongo.MongoManager.update_cluster_ip_source_allowlist"
+    )
+    mock_sync_allowlist = mocker.patch(
+        "single_kernel_mongo.managers.config.MongoDBConfigManager.sync_cluster_ip_source_allowlist_to_file"
+    )
     rel = harness.charm.operator.state.peer_relation
     harness.add_relation_unit(rel.id, "mongodb/1")
 
+    mock_update_allowlist.reset_mock()
+    mock_sync_allowlist.reset_mock()
     harness.remove_relation_unit(rel.id, "mongodb/1")
 
     spied.assert_called()
     update_host_mock.assert_called()
+    mock_update_allowlist.assert_called_once()
+    mock_sync_allowlist.assert_called_once()
 
 
 def test_primary_db_not_initialised(harness: Harness[MongoTestCharm], mocker):

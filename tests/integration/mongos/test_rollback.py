@@ -10,16 +10,21 @@ import pytest
 import tenacity
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.upgrade import refresh_charm
-
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT, find_unit, get_juju_status, get_unit_id
-from ..helpers.mongos import (
+from tests.integration.helpers.common import (
+    MONGOS_APP_NAME,
+    TIMEOUT,
+    find_unit,
+    get_juju_status,
+    get_unit_id,
+)
+from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     build_cluster,
     deploy_cluster_components,
     exec_on_mongos,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 

@@ -17,15 +17,18 @@ from __future__ import annotations
 
 import shutil
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
+from charmlibs.rollingops import RollingOpsManager
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
+from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
@@ -35,7 +38,6 @@ from single_kernel_mongo.config.literals import (
     SYSTEMD_MONGODB_OVERRIDE,
     SYSTEMD_MONGOS_OVERRIDE,
     TRUST_STORE_PATH,
-    Scope,
     Substrates,
     TrustStoreFiles,
 )
@@ -50,7 +52,7 @@ from single_kernel_mongo.core.structured_config import MongoConfigModel
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
-    NonDeferrableFailedHookChecksError,
+    RelationBrokenDuringScaleDownError,
 )
 from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.lib.charms.operator_libs_linux.v1.systemd import (
@@ -81,7 +83,11 @@ logger = getLogger(__name__)
 MainWorkloadType: TypeAlias = MongoDBWorkload | MongosWorkload
 
 
-class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
+class OperatorProtocol(
+    AbstractManagerStatus[CharmState],
+    ABC,
+    Object,
+):
     """Protocol for a charm operator.
 
     A Charm Operator must define the following elements:
@@ -95,7 +101,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     """
 
     charm: AbstractMongoCharm
-    name: ClassVar[str]
+    name: str
     substrate: Substrates
     role: CharmSpec
     config_manager: FileBasedConfigManager
@@ -111,6 +117,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     tls_events: TLSEventsHandler
     ldap_events: LDAPEventHandler
     sysctl_config: Config
+    rollingops_manager: RollingOpsManager
 
     if TYPE_CHECKING:
 
@@ -124,7 +131,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
 
     @property
     @abstractmethod
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components reporting statuses."""
         ...
 
@@ -208,6 +215,11 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
+    def async_restart_charm_services(self, force: bool = False) -> None:
+        """Request an async lock to restart the relevant services."""
+        ...
+
+    @abstractmethod
     def get_relation_feasible_status(self, name: str) -> StatusObject | None:
         """Checks if the relation is feasible in this context."""
         ...
@@ -218,7 +230,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         ...
 
     @abstractmethod
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> Sequence[StatusObject]:
+    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
         """Recomputes the statuses for the given scope."""
         ...
 
@@ -230,7 +242,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
             )
 
         if self.state.is_scaling_down(relation.id):
-            raise NonDeferrableFailedHookChecksError(
+            raise RelationBrokenDuringScaleDownError(
                 "Relation broken event occurring during scale down, do not proceed to remove users."
             )
 
@@ -357,7 +369,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
         # Update CA certificates to remove the certificate from the trust store
         self.workload.exec(["update-ca-certificates"])
         # Restart the service
-        self.restart_charm_services(force=True)
+        self.async_restart_charm_services(force=True)
 
     def write_thp_config_file(self):
         """Writes the unit file to enable Transparent Huge Pages."""
@@ -411,7 +423,7 @@ class OperatorProtocol(ABC, Object, ManagerStatusProtocol):
     def instantiate_keyfile(self):
         """Instantiate the keyfile."""
         if not (keyfile := self.state.get_keyfile()):
-            raise Exception("Waiting for leader unit to generate keyfile contents")
+            raise Exception("Waiting to have a keyfile.")
 
         self.workload.write(self.workload.paths.keyfile, keyfile)
 

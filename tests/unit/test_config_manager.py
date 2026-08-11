@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from ops.hookcmds import Network
 from ops.model import Relation
-from yaml import safe_dump
+from yaml import safe_dump, safe_load
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.models import ROLES, VM_MONGOD, VM_MONGOS, VM_PATH
@@ -18,9 +19,9 @@ from single_kernel_mongo.managers.config import (
 )
 from single_kernel_mongo.state.app_peer_state import AppPeerReplicaSet
 from single_kernel_mongo.state.charm_state import CharmState
-from single_kernel_mongo.state.cluster_state import ClusterState
 from single_kernel_mongo.state.ldap_state import LdapState
 from single_kernel_mongo.state.tls_state import TLSState
+from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 
 
@@ -46,6 +47,21 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock_state.app_peer_data.role = role
     mock_state.tls.peer_enabled = False
     mock_state.tls.client_enabled = False
+    mock_state.vault_relation = None
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
+    mock_state.listens_on = lambda: ["10.0.0.1", "127.0.0.1"]
     workload = VMMongoDBWorkload(VM_MONGOD, None)
     config = MongoDBCharmConfig()
     manager = MongoDBConfigManager(
@@ -63,6 +79,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     audit_options = manager.audit_options
     auth_parameter = manager.auth_parameter
     client_tls_parameters = manager.client_tls_parameters
+    cluster_ips = manager.cluster_ips
 
     all_params = manager.build_config()
 
@@ -75,7 +92,7 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
             "journal": {"enabled": True},
         }
     }
-    assert binding_ips == {"net": {"bindIpAll": True}}
+    assert binding_ips == {"net": {"bindIp": "10.0.0.1,127.0.0.1"}}
     assert log_options == {
         "setParameter": {"processUmask": "037"},
         "systemLog": {
@@ -102,14 +119,16 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
         }
     }
     assert client_tls_parameters == {}
+    assert cluster_ips == {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"]}}
 
     assert (
         all_params
         == {
-            "net": {"bindIpAll": True, "port": 27017},
+            "net": {"bindIp": "10.0.0.1,127.0.0.1", "port": 27017},
             "security": {
                 "authorization": "enabled",
                 "clusterAuthMode": "keyFile",
+                "clusterIpSourceAllowlist": ["10.0.0.1/24", "127.0.0.1"],
                 "keyFile": f"{VM_PATH['mongod']['CONF']}/keyFile",
             },
             "setParameter": {"processUmask": "037"},
@@ -135,6 +154,59 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     mock.assert_called_once_with(
         Path(f"{VM_PATH['mongod']['CONF']}/mongod.conf"), safe_dump(all_params)
     )
+
+
+def test_sync_cluster_ip_source_allowlist_to_file(mocker):
+    mock_write = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
+    mock_read = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.read")
+
+    mock_state = mocker.MagicMock(CharmState)
+    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.tls = mocker.MagicMock(TLSState)
+    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
+    mock_state.vault_relation = None
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
+    mock_state.is_role = lambda role: False
+    mock_state.is_cluster_component = False
+    manager = MongoDBConfigManager(
+        MongoDBCharmConfig(), mock_state, VMMongoDBWorkload(VM_MONGOD, None)
+    )
+
+    mock_read.return_value = safe_dump(
+        {"security": {"clusterIpSourceAllowlist": ["10.0.0.1/24"]}}
+    ).splitlines()
+    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.1/24"])
+    mock_write.assert_called()
+
+    mock_read.return_value = safe_dump(
+        {
+            "net": {"bindIp": "10.0.0.1,127.0.0.1"},
+            "security": {"clusterIpSourceAllowlist": ["10.0.1.0/24"]},
+        }
+    ).splitlines()
+    manager.sync_cluster_ip_source_allowlist_to_file(["10.0.0.2/24"])
+
+    written_config = safe_load(mock_write.call_args.args[1])
+    assert written_config == {
+        "net": {"bindIp": "10.0.0.1,127.0.0.1"},
+        "security": {"clusterIpSourceAllowlist": ["10.0.0.2/24"]},
+    }
 
 
 def test_mongodb_ldap_config(mocker):
@@ -179,6 +251,46 @@ def test_mongodb_ldap_config(mocker):
     assert ldap_config["transportSecurity"] == "tls"
 
 
+def test_mongodb_encryption_at_rest_config(mocker):
+    mock_state = mocker.MagicMock(CharmState)
+    mock_app_state = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state.app_peer_data = mock_app_state
+    mock_state.vault_state = mocker.MagicMock(VaultState)
+
+    mock_state.enable_encryption_at_rest = True
+    mock_state.vault_state.is_ready = lambda: True
+    mock_state.vault_relation = mocker.MagicMock(Relation)
+    mock_state.vault_state.vault_url_tuple = "192.168.1.1", "8200"
+    mock_state.vault_state.vault_secret_path = "mongodb-mongodb/data/mongodb-0"
+
+    mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOD]
+    mock_state.app_peer_data.replica_set = "deadbeef"
+    mock_state.is_role = lambda x: False
+    mock_state.app_peer_data.role = MongoDBRoles.REPLICATION
+    mock_state.tls.peer_enabled = False
+    mock_state.tls.client_enabled = False
+    workload = VMMongoDBWorkload(VM_MONGOD, None)
+    config = MongoDBCharmConfig()
+    manager = MongoDBConfigManager(
+        config,
+        mock_state,
+        workload,
+    )
+    vault_config = manager.vault_parameters["security"]
+    assert vault_config["enableEncryption"]
+    assert vault_config["vault"]["serverName"] == "192.168.1.1"
+    assert vault_config["vault"]["port"] == "8200"
+    assert (
+        vault_config["vault"]["tokenFile"]
+        == "/var/snap/charmed-mongodb/current/etc/vault/vaultTokenFile"
+    )
+    assert (
+        vault_config["vault"]["serverCAFile"]
+        == "/var/snap/charmed-mongodb/current/etc/vault/vault_cert.pem"
+    )
+    assert vault_config["vault"]["secret"] == "mongodb-mongodb/data/mongodb-0"
+
+
 def test_mongos_config_manager(mocker):
     mock = mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.write",
@@ -187,13 +299,25 @@ def test_mongos_config_manager(mocker):
     mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
     mock_state.charm_role = ROLES[Substrates.VM][CharmKind.MONGOS]
     mock_state.substrate = Substrates.VM
-    mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_uri = "mongodb://config-server-url"
+    mock_state.config_server_uri = "mongodb://config-server-url"
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.peer_enabled = False
     mock_state.tls.client_enabled = False
     mock_state.ldap.is_ready = lambda: False
+    mock_state.peer_network = lambda: Network._from_dict(
+        {
+            "bind-addresses": [
+                {
+                    "mac-address": "aa:bb",
+                    "interface-name": "eth0",
+                    "addresses": [{"hostname": "host", "value": "10.0.0.1", "cidr": "10.0.0.1/24"}],
+                }
+            ],
+            "egress-subnets": ["127.0.0.0/24"],
+            "ingress-addresses": ["10.0.0.1"],
+        }
+    )
     workload = VMMongosWorkload(VM_MONGOS, None)
     config = MongosCharmConfig()
     manager = MongosConfigManager(
@@ -209,6 +333,7 @@ def test_mongos_config_manager(mocker):
     auth_parameter = manager.auth_parameter
     client_tls_parameters = manager.client_tls_parameters
     config_server_db_parameter = manager.config_server_db_parameter
+    cluster_ips = manager.cluster_ips
 
     all_params = manager.build_config()
 
@@ -217,10 +342,12 @@ def test_mongos_config_manager(mocker):
         "net": {
             "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
             "unixDomainSocket": {
-                "filePermissions": "0766",
+                "enabled": True,
+                "filePermissions": "0666",
             },
         }
     }
+    assert cluster_ips == {}
     assert log_options == {
         "setParameter": {"processUmask": "037"},
         "systemLog": {
@@ -251,7 +378,8 @@ def test_mongos_config_manager(mocker):
         "net": {
             "bindIp": f"{VM_PATH['mongod']['VAR']}/mongodb-27018.sock",
             "unixDomainSocket": {
-                "filePermissions": "0766",
+                "enabled": True,
+                "filePermissions": "0666",
             },
             "port": 27018,
         },
@@ -324,18 +452,20 @@ def test_mongodb_config_manager_tls_enabled(mocker):
                 "certificateKeyFile": f"{VM_PATH['mongod']['CONF']}/external-cert.pem",
                 "mode": "requireTLS",
                 "disabledProtocols": "TLS1_0,TLS1_1",
+                "allowConnectionsWithoutCertificates": True,
             }
         },
     }
 
 
 def test_mongos_default_config_server(mocker):
-    mock_state = mocker.MagicMock(CharmState)
-    mock_state.app_peer_data = mocker.MagicMock(AppPeerReplicaSet)
+    mock_state = mocker.create_autospec(CharmState)
+    mock_state.app_peer_data = mocker.Mock(AppPeerReplicaSet)
     mock_state.app_peer_data.replica_set = "deadbeef"
     mock_state.unit_peer_data.internal_address = "127.0.0.1"
-    mock_state.cluster = mocker.MagicMock(ClusterState)
-    mock_state.cluster.config_server_uri = ""
+    mock_state.config_server_uri = (
+        f"{mock_state.app_peer_data.replica_set}/{mock_state.unit_peer_data.internal_address}:27017"
+    )
     mock_state.tls = mocker.MagicMock(TLSState)
     mock_state.app_peer_data.external_connectivity = False
     mock_state.tls.peer_enabled = False

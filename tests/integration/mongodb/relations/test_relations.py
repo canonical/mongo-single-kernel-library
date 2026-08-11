@@ -9,9 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
-from tests.integration.helpers.ha import replica_set_primary
-
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     MEDIAN_REELECTION_TIME,
     check_or_scale_app,
@@ -24,14 +22,15 @@ from ...helpers.common import (
     is_relation_joined,
     run_action,
 )
-from ...helpers.relations import (
+from tests.integration.helpers.ha import replica_set_primary
+from tests.integration.helpers.relations import (
     APPLICATION_APP_NAME,
     FIRST_DATABASE_RELATION_NAME,
     SECOND_DATABASE_RELATION_NAME,
     assert_created_user_can_connect,
     verify_application_data,
 )
-from ...helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 DATABASE_RELATION_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
@@ -49,7 +48,7 @@ async def test_deploy_charms(
     ops_test: OpsTest,
     mongodb_charm: str,
     substrate: Substrate,
-    mongod_resource: str,
+    mongod_resource: dict[str, str],
     base_app_name: str,
     client_relation_charm_path: str,
 ):
@@ -122,12 +121,14 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
     )
 
     await ops_test.model.block_until(
-        lambda: is_relation_joined(
-            ops_test,
-            FIRST_DATABASE_RELATION_NAME,
-            DATABASE_RELATION_NAME,
-        )
-        is True,
+        lambda: (
+            is_relation_joined(
+                ops_test,
+                FIRST_DATABASE_RELATION_NAME,
+                DATABASE_RELATION_NAME,
+            )
+            is True
+        ),
         timeout=600,
     )
 

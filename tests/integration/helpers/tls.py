@@ -19,12 +19,15 @@ from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
     ProcessError,
+    external_cert_path,
     get_address_of_unit,
     get_application_relation_data,
     get_password,
     get_secret_content,
     get_secret_id,
+    internal_cert_path,
     mongosh,
+    scp_file_preserve_ctime,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -38,29 +41,9 @@ CLIENT_TLS_RELATION_NAME = "client-certificates"
 
 DIFFERENT_CERTIFICATES_APP_NAME = "self-signed-certificates-separate"
 
-MONGODB_SNAP_CONF_DIR = "/var/snap/charmed-mongodb/current/etc/mongod"
-MONGODB_ROCK_CONF_DIR = "/etc/mongod"
 
 SNAP_MONGOD_SERVICE = "snap.charmed-mongodb.mongod.service"
 SNAP_MONGOS_SERVICE = "snap.charmed-mongodb.mongos.service"
-
-
-def external_cert_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
-
-
-def external_pem_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
-    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
-
-
-def internal_cert_path(substrate: Substrate):
-    if substrate == "lxd":
-        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
-    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
 
 
 async def integrate_apps_with_tls(
@@ -128,14 +111,13 @@ async def mongo_tls_command(
         uri = f"mongodb://{username}:{password}@{hosts}/admin{extra_args}"
 
     if app_name == MONGOS_APP_NAME:
-        status_command = "db.getUsers()"
+        status_command = "db.version()"
     else:
         status_command = "rs.status()" if not mongos else "sh.status()"
 
     return (
         f'{mongosh(substrate)} "{uri}"  --eval "{status_command}"'
         f" --tls --tlsCAFile {external_cert_path(substrate)}"
-        f" --tlsCertificateKeyFile {external_pem_path(substrate)}"
     )
 
 
@@ -356,33 +338,6 @@ def process_systemctl_time(systemctl_output) -> datetime:
     "ActiveEnterTimestamp=Thu 2022-09-22 10:00:00 UTC"
     time_as_str = "T".join(systemctl_output.split("=")[1].split(" ")[1:3])
     return datetime.strptime(time_as_str, "%Y-%m-%dT%H:%M:%S")
-
-
-async def scp_file_preserve_ctime(
-    ops_test: OpsTest, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
-) -> str:
-    """Returns the unix timestamp of when a file was created on a specified unit."""
-    # Retrieving the file
-    filename = path.split("/")[-1]
-    if substrate == "lxd":
-        complete_command = f"exec --unit {unit_name} -- sudo cat {path}"
-        return_code, stdout, stderr = await ops_test.juju(*complete_command.split(), check=True)
-        with open(filename, mode="w") as fd:
-            fd.write(stdout.strip())
-    else:
-        complete_command = f"scp --container {container} {unit_name}:{path} {filename}"
-        return_code, _, stderr = await ops_test.juju(*complete_command.split())
-
-    if return_code != 0:
-        logger.error(stderr)
-        raise ProcessError(
-            "Expected command %s to succeed instead it failed: %s; %s",
-            complete_command,
-            return_code,
-            stderr,
-        )
-
-    return f"{filename}"
 
 
 async def check_certs_correctly_distributed(

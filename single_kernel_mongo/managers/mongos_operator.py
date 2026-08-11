@@ -12,17 +12,30 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
+from data_platform_helpers.advanced_statuses.types import Scope as StatusesScope
 from lightkube.core.exceptions import ApiError
 from ops.framework import Object
 from ops.model import Relation, Unit
-from pymongo.errors import PyMongoError
 from typing_extensions import override
 
-from single_kernel_mongo.config.literals import CharmKind, MongoPorts, Scope, Substrates
+from single_kernel_mongo.config.literals import (
+    CharmKind,
+    MongoPorts,
+    RollingOpsCallbackId,
+    Scope,
+    Substrates,
+)
 from single_kernel_mongo.config.models import ROLES
-from single_kernel_mongo.config.relations import ExternalRequirerRelations, RelationNames
+from single_kernel_mongo.config.relations import (
+    ExternalRequirerRelations,
+    PeerRelationNames,
+    RelationNames,
+)
 from single_kernel_mongo.config.statuses import CharmStatuses, MongosStatuses
 from single_kernel_mongo.core.kubernetes_upgrades_v3 import KubernetesMongoDBRefresh
 from single_kernel_mongo.core.machine_upgrades_v3 import MachineMongoDBRefresh
@@ -52,6 +65,7 @@ from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager
 from single_kernel_mongo.managers.upgrade_v3_status import MongoDBUpgradesStatusManager
 from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
+from single_kernel_mongo.utils.network_helpers import ip_addresses
 from single_kernel_mongo.workload import get_mongos_workload_for_substrate
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -100,6 +114,16 @@ class MongosOperator(OperatorProtocol, Object):
         self.tls_manager = TLSManager(self, self.workload, self.state)
         self.cluster_manager = ClusterRequirer(
             self, self.workload, self.state, self.substrate, RelationNames.CLUSTER
+        )
+        self.rollingops_manager = RollingOpsManager(
+            charm=charm,
+            peer_relation_name=PeerRelationNames.ROLLINGOPS_PEERS.value,
+            etcd_relation_name=RelationNames.ETCD.value,
+            cluster_id=self.state.get_cluster_id(),
+            callback_targets={
+                RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
+                RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART: self.cluster_manager.update_mongos_and_restart_callback,
+            },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
         if self.substrate == Substrates.VM:
@@ -168,11 +192,13 @@ class MongosOperator(OperatorProtocol, Object):
         if not refresh.workload_allowed_to_start:
             return
 
-        logger.info("Restarting workloads")
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
         self._configure_workloads()
-        self.start_charm_services()
+
+        if self.state.mongos_cluster_relation:
+            logger.info("Restarting workloads")
+            self.start_charm_services()
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:
@@ -190,7 +216,7 @@ class MongosOperator(OperatorProtocol, Object):
         refresh.next_unit_allowed_to_refresh = True
 
     @property
-    def components(self) -> tuple[ManagerStatusProtocol, ...]:
+    def components(self) -> tuple[AbstractManagerStatus[CharmState], ...]:
         """The ordered list of components for this operator."""
         return (self, self.tls_manager, self.ldap_manager, self.upgrades_status_manager)
 
@@ -208,7 +234,7 @@ class MongosOperator(OperatorProtocol, Object):
         the version and  setting the environment.
         """
         if not self.workload.workload_present:
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
 
     def _configure_workloads(self) -> None:
         # Instantiate the local directory for k8s
@@ -232,10 +258,11 @@ class MongosOperator(OperatorProtocol, Object):
         self.mongos_config_manager.set_environment()
 
         # Instantiate the keyfile
-        try:
-            self.instantiate_keyfile()
-        except Exception:
-            logger.info("Not instantiating as we don't have a keyfile yet.")
+        if self.state.mongos_cluster_relation:
+            try:
+                self.instantiate_keyfile()
+            except Exception:
+                logger.info("Not instantiating as we don't have a keyfile yet.")
 
     @override
     def prepare_for_startup(self) -> None:
@@ -246,7 +273,7 @@ class MongosOperator(OperatorProtocol, Object):
         """
         if not self.workload.workload_present:
             logger.debug("mongos installation is not ready yet.")
-            raise ContainerNotReadyError
+            raise ContainerNotReadyError("Workload is not present yet.")
 
         if not self.refresh:
             raise ContainerNotReadyError("Workload not allowed to start yet.")
@@ -259,7 +286,6 @@ class MongosOperator(OperatorProtocol, Object):
         self._configure_workloads()
 
         if self.state.mongos_cluster_relation:
-            self.instantiate_keyfile()
             self.start_charm_services()
             return
 
@@ -306,9 +332,24 @@ class MongosOperator(OperatorProtocol, Object):
                 scope="unit",
                 component=self.name,
             )
+            self.update_config_on_k8s()
+
+        # Always update connection information.
+        self.share_connection_info()
+
+        # If we had an IP change, we must restart.
+        if self.state.db_initialised:
+            self.async_restart_charm_services(force=False)
+
+    def update_config_on_k8s(self):
+        """Run the specific updates we might have to do on K8S."""
+        try:
             self.update_k8s_external_services()
-            self.tls_events.refresh_certificates()
-            self.share_connection_info()
+        except ApiError as e:  # Raised for k8s
+            logger.info("Failed to update k8s service: %s", e)
+
+        # Always update certs on k8s since the IP/external connectivity could change
+        self.tls_events.refresh_certificates()
 
     @override
     def prepare_storage(self) -> None:
@@ -398,19 +439,92 @@ class MongosOperator(OperatorProtocol, Object):
     @override
     def restart_charm_services(self, force: bool = False) -> None:
         """Restarts the charm with the new configuration."""
+        if not self.state.cluster.config_server_uri:
+            logger.error("Cannot start mongos without a config server db")
+            raise MissingConfigServerError("Cannot start mongos without a config server db")
+
+        if self.ldap_manager.should_not_restart():
+            raise DeferrableError(
+                "Workload not allowed to restart: LDAP is in an inconsistent state."
+            )
         try:
-            if not self.state.cluster.config_server_uri:
-                logger.error("Cannot start mongos without a config server db")
-                raise MissingConfigServerError()
+            should_restart = self.tls_manager.reconcile_tls()
+            force = force or should_restart
+            self.charm.status_handler.set_running_status(
+                MongosStatuses.RESTARTING.value, scope="unit"
+            )
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
-                MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                MongosStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
                 component=self.name,
             )
             raise
+        self.finalize_after_restart()
+
+    def finalize_after_restart(self) -> None:
+        """Run a series of code that should always run after a restart."""
+        self.share_connection_info()
+
+    def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
+        """Callback to be used as a rolling operation."""
+        self.charm.state.statuses.delete(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        try:
+            self.restart_charm_services(force=force)
+            self.recompute_statuses()
+        except MissingConfigServerError as e:
+            logger.warning("Non-deferrable error during mongos restart. %s", e)
+            return OperationResult.RELEASE
+        except (WorkloadServiceError, DeferrableError) as e:
+            logger.info("Deferrable error during mongos restart. %s", e)
+            return OperationResult.RETRY_RELEASE
+        return OperationResult.RELEASE
+
+    def recompute_statuses(self) -> None:
+        """Recomputes and store all statuses."""
+        scopes: list[StatusesScope] = ["unit"]
+        if self.charm.unit.is_leader():
+            scopes.append("app")
+        for scope in scopes:
+            self.state.statuses.clear(scope=scope, component=self.name)
+            statuses = self.get_statuses(scope=scope, recompute=True)
+            for status in statuses:
+                self.state.statuses.add(status, scope=scope, component=self.name)
+
+    @override
+    def async_restart_charm_services(self, force: bool = False) -> None:
+        """Request to an async lock to restart.
+
+        All the exceptions are handled in the callback and retries are requested if necessary.
+
+        Raises:
+            RollingOpsNoRelationError: If an async lock is requested too early.
+        """
+        self.charm.state.statuses.add(
+            MongosStatuses.WAITING_FOR_RESTART.value,
+            scope="unit",
+            component=self.name,
+        )
+        self.rollingops_manager.request_async_lock(
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": force}
+        )
+        logger.info("Requested and async lock to restart mongos.")
+
+    def is_waiting_for_rolling_operation(self) -> bool:
+        """Returns whether Mongos has pending rolling operations."""
+        return self.rollingops_manager.state.status == RollingOpsStatus.WAITING
+
+    def update_ips_in_databag(self) -> None:
+        """Sets all the ips in the databag to be used by the leader."""
+        self.state.unit_peer_data.database_address = ip_addresses(
+            self.state.client_network().bind_addresses
+        )[0]
 
     @override
     def get_relation_feasible_status(self, name: str) -> StatusObject | None:
@@ -424,20 +538,16 @@ class MongosOperator(OperatorProtocol, Object):
 
     def share_connection_info(self):
         """Shares the connection information of clients."""
+        # Always update ips in databag.
+        self.update_ips_in_databag()
+
         if not self.state.db_initialised:
             return
         if not self.charm.unit.is_leader():
             return
-        try:
-            self._share_configuration()
-        except PyMongoError as e:
-            raise DeferrableError(f"updating app relation data because of {e}")
-        except ApiError as e:  # Raised for k8s
-            if e.status.code == 404:
-                raise DeferrableError(
-                    "updating app relation data since service not found for more or one units"
-                )
-            raise
+
+        # Update the connection information.
+        self._share_configuration()
 
     def remove_connection_info(self) -> None:
         """Deletes the information from the client databag."""
@@ -500,6 +610,8 @@ class MongosOperator(OperatorProtocol, Object):
             if self.state.mongos_cluster_relation:
                 self.state.cluster.extra_user_roles = new_extra_user_roles
 
+        if self.state.mongos_cluster_relation:
+            self.state.cluster.external_node_connectivity = external_connectivity
         self.state.app_peer_data.external_connectivity = external_connectivity
 
         if external_connectivity:
@@ -604,7 +716,7 @@ class MongosOperator(OperatorProtocol, Object):
 
         return True
 
-    def get_statuses(self, scope: Scope, recompute: bool = False) -> list[StatusObject]:
+    def get_statuses(self, scope: StatusesScope, recompute: bool = False) -> list[StatusObject]:  # noqa: C901
         """Returns the statuses of the charm manager."""
         charm_statuses: list[StatusObject] = []
 
@@ -642,6 +754,9 @@ class MongosOperator(OperatorProtocol, Object):
 
         if self.state.mongos_cluster_relation and not self.state.cluster.config_server_uri:
             charm_statuses.append(MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value)
+
+        if scope == "unit" and self.is_waiting_for_rolling_operation():
+            charm_statuses.append(MongosStatuses.WAITING_FOR_RESTART.value)
 
         if not self.is_mongos_running():
             logger.info("mongos has not started yet")

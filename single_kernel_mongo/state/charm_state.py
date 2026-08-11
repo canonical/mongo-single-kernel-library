@@ -8,20 +8,26 @@ from __future__ import annotations
 
 import json
 import logging
-from ipaddress import IPv4Address, IPv6Address
-from typing import TYPE_CHECKING, TypeVar
+from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar, final
 from urllib.parse import quote
 
-from data_platform_helpers.advanced_statuses.protocol import StatusesState, StatusesStateProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractStatusesState,
+    StatusesState,
+)
 from ops import ModelError, Object, Relation, SecretNotFoundError, Unit
+from ops.hookcmds import Network, network_get
 from pymongo.errors import (
     AutoReconnect,
+    ConfigurationError,
     NotPrimaryError,
     OperationFailure,
     ServerSelectionTimeoutError,
 )
 
 from single_kernel_mongo.config.literals import (
+    LOCALHOST,
     SECRETS_UNIT,
     CharmKind,
     MongoPorts,
@@ -57,7 +63,6 @@ from single_kernel_mongo.state.app_peer_state import (
 from single_kernel_mongo.state.cluster_state import ClusterState, ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
     SECRETS_FIELDS,
-    AppShardingComponentKeys,
     AppShardingComponentState,
     UnitShardingComponentState,
 )
@@ -66,6 +71,7 @@ from single_kernel_mongo.state.tls_state import TLSState
 from single_kernel_mongo.state.unit_peer_state import (
     UnitPeerReplicaSet,
 )
+from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.utils.helpers import (
     generate_relation_departed_key,
 )
@@ -73,6 +79,7 @@ from single_kernel_mongo.utils.mongo_config import MongoConfiguration
 from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.utils.mongo_error_codes import MongoErrorCodes
 from single_kernel_mongo.utils.mongodb_users import (
+    AuthRestrictions,
     CharmedBackupUser,
     CharmedLogRotateUser,
     CharmedOperatorUser,
@@ -80,6 +87,10 @@ from single_kernel_mongo.utils.mongodb_users import (
     InternalUsers,
     MongoDBUser,
     RoleNames,
+)
+from single_kernel_mongo.utils.network_helpers import (
+    cidrs,
+    ip_addresses,
 )
 
 if TYPE_CHECKING:
@@ -92,7 +103,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger()
 
 
-class CharmState(Object, StatusesStateProtocol):
+@final
+class CharmState(Object, AbstractStatusesState):
     """The Charm State object.
 
     This object represents the charm state, including the different relations
@@ -156,6 +168,13 @@ class CharmState(Object, StatusesStateProtocol):
 
     # BEGIN: Relations
     @property
+    def client_relation_name(self) -> str:
+        """The correct client relation name."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return RelationNames.MONGOS_PROXY.value
+        return RelationNames.DATABASE.value
+
+    @property
     def peer_relation(self) -> Relation | None:
         """The replica set peer relation."""
         return self.model.get_relation(self.peer_relation_name)
@@ -187,9 +206,7 @@ class CharmState(Object, StatusesStateProtocol):
         which is exposed for mongos charms, and one for replication which is
         exposed for mongodb charms.
         """
-        if self.charm_role.name == CharmKind.MONGOS:
-            return set(self.model.relations[RelationNames.MONGOS_PROXY.value])
-        return set(self.model.relations[RelationNames.DATABASE.value])
+        return set(self.model.relations[self.client_relation_name])
 
     @property
     def mongos_cluster_relation(self) -> Relation | None:
@@ -240,6 +257,11 @@ class CharmState(Object, StatusesStateProtocol):
     def ldap_cert_relation(self) -> Relation | None:
         """The certificate transfer relation for LDAP if it exists."""
         return self.model.get_relation(ExternalRequirerRelations.LDAP_CERT.value)
+
+    @property
+    def vault_relation(self) -> Relation | None:
+        """The Vault relation if it exists."""
+        return self.model.get_relation(ExternalRequirerRelations.VAULT.value)
 
     # END: Relations
 
@@ -345,6 +367,8 @@ class CharmState(Object, StatusesStateProtocol):
                 ClusterStateKeys.KEYFILE.value,
                 ClusterStateKeys.CONFIG_SERVER_DB.value,
                 ClusterStateKeys.INT_CA_SECRET.value,
+                ClusterStateKeys.EXT_CA_SECRET.value,
+                ClusterStateKeys.CLUSTER_ID.value,
             ],
         )
 
@@ -376,6 +400,14 @@ class CharmState(Object, StatusesStateProtocol):
             component=self.model.app,
         )
 
+    @property
+    def vault_state(self) -> VaultState:
+        """A view of the vault state from the local app databag."""
+        return VaultState(
+            charm=self.charm,
+            vault_relation=self.vault_relation,
+        )
+
     # END: State Accessors
 
     # BEGIN: Helpers
@@ -387,6 +419,11 @@ class CharmState(Object, StatusesStateProtocol):
     def is_sharding_component(self) -> bool:
         """Is the shard a sharding component?"""
         return self.is_role(MongoDBRoles.SHARD) or self.is_role(MongoDBRoles.CONFIG_SERVER)
+
+    @property
+    def is_cluster_component(self) -> bool:
+        """Is the application a cluster component?"""
+        return self.is_role(MongoDBRoles.MONGOS) or self.is_role(MongoDBRoles.CONFIG_SERVER)
 
     @property
     def has_sharding_integration(self) -> bool:
@@ -403,14 +440,23 @@ class CharmState(Object, StatusesStateProtocol):
         self.app_peer_data.db_initialised = other
 
     @property
-    def bind_address(self) -> IPv4Address | IPv6Address | str:
-        """The network binding address from the peer relation."""
-        bind_address = None
-        if self.peer_relation:
-            if binding := self.model.get_binding(self.peer_relation):
-                bind_address = binding.network.bind_address
+    def enable_encryption_at_rest(self) -> bool:
+        """Should encryption at rest be enabled."""
+        return self.app_peer_data.enable_encryption_at_rest or False
 
-        return bind_address or ""
+    @enable_encryption_at_rest.setter
+    def enable_encryption_at_rest(self, other: bool):
+        self.app_peer_data.enable_encryption_at_rest = other
+
+    @property
+    def bind_address(self) -> str:
+        """The network binding address from the peer relation."""
+        if not self.peer_relation:
+            return ""
+        try:
+            return str(self.peer_network().bind_addresses[0].addresses[0].value)
+        except IndexError:
+            return ""
 
     def get_user_password(self, user: MongoDBUser) -> str:
         """Returns the user password for a system user."""
@@ -439,6 +485,22 @@ class CharmState(Object, StatusesStateProtocol):
         """Gets the keyfile content from the secret."""
         return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
 
+    def set_cluster_id(self, cluster_id_content: str) -> str:
+        """Sets the cluster id content in the secret."""
+        return self.secrets.set(
+            AppPeerDataKeys.CLUSTER_ID.value, cluster_id_content, Scope.APP
+        ).label
+
+    def get_cluster_id(self) -> str | None:
+        """Gets the cluster id content from the secret."""
+        if self.substrate == Substrates.K8S:
+            return None
+        return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.CLUSTER_ID.value)
+
+    def remove_cluster_id(self) -> None:
+        """Remove the content of cluster id from the secret."""
+        self.secrets.remove(key=AppPeerDataKeys.CLUSTER_ID.value, scope=Scope.APP)
+
     @property
     def planned_units(self) -> int:
         """Return the planned units for the charm."""
@@ -463,13 +525,12 @@ class CharmState(Object, StatusesStateProtocol):
         """
         return quote(f"{self.paths.socket_path}", safe="")
 
-    @property
-    def app_hosts(self) -> set[str]:
+    def hosts_for(self, relation: Relation) -> set[str]:
         """Retrieve the hosts associated with MongoDB application."""
         if self.substrate == Substrates.K8S and self.charm_role.name == CharmKind.MONGOS:
             if self.config.expose_external == ExposeExternal.NODEPORT:
                 return {f"{unit.node_ip}" for unit in self.units}
-        return self.internal_hosts
+        return {unit.address_for(relation.name) for unit in self.units}
 
     @property
     def unit_host(self) -> str | None:
@@ -558,6 +619,15 @@ class CharmState(Object, StatusesStateProtocol):
         )
         return None
 
+    @property
+    def config_server_uri(self) -> str | None:
+        """Gets the config-server URI for Mongos."""
+        if self.charm_role.name == CharmKind.MONGOS:
+            return self.cluster.config_server_uri
+        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
+            return None
+        return f"{self.app_peer_data.replica_set}/{self.unit_peer_data.internal_address}:{MongoPorts.MONGODB_PORT.value}"
+
     def get_subject_name(self) -> str:
         """Generate the subject name for CSR."""
         # In sharded MongoDB deployments it is a requirement that all subject names match across
@@ -569,67 +639,15 @@ class CharmState(Object, StatusesStateProtocol):
         # subject name
         return self.config_server_name or self.model.app.name
 
-    def generate_config_server_db(self) -> str:
+    def generate_config_server_db(self, relation: Relation) -> str:
         """Generates the config server DB URI."""
         replica_set_name = self.model.app.name
-        hosts = sorted(f"{host}:{MongoPorts.MONGODB_PORT.value}" for host in self.internal_hosts)
+        hosts = sorted(
+            f"{host}:{MongoPorts.MONGODB_PORT.value}" for host in self.hosts_for(relation)
+        )
         return f"{replica_set_name}/{','.join(hosts)}"
 
     # END: Helpers
-    def _update_ca_secrets(self, new_ca: str | None, cluster_key: str, sharding_key: str) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        # Only the leader can update the databag
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.CONFIG_SERVER):
-            return
-        for relation in self.cluster_relations:
-            if new_ca is None:
-                self.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [cluster_key]
-                )
-            else:
-                self.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {cluster_key: new_ca}
-                )
-        for relation in self.config_server_relation:
-            if new_ca is None:
-                self.config_server_data_interface.delete_relation_data(relation.id, [sharding_key])
-            else:
-                self.config_server_data_interface.update_relation_data(
-                    relation.id, {sharding_key: new_ca}
-                )
-
-    def _update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the CA secret for the right values on the right fields."""
-        if not self.charm.unit.is_leader():
-            return
-        if not self.is_role(MongoDBRoles.REPLICATION):
-            return
-        for relation in self.client_relations:
-            if new_ca:
-                self.client_data_interface.set_tls(relation.id, "True")
-                self.client_data_interface.set_tls_ca(relation.id, new_ca)
-            else:
-                self.client_data_interface.set_tls(relation.id, "False")
-                self.client_data_interface.delete_relation_data(relation.id, ["tls-ca"])
-
-    def update_peer_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the peer CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.INT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.INT_CA_SECRET.value,
-        )
-
-    def update_client_ca_secrets(self, new_ca: str | None) -> None:
-        """Updates the client CA secret in the cluster and config-server relations."""
-        self._update_ca_secrets(
-            new_ca=new_ca,
-            cluster_key=ClusterStateKeys.EXT_CA_SECRET.value,
-            sharding_key=AppShardingComponentKeys.EXT_CA_SECRET.value,
-        )
-        self._update_client_ca_secrets(new_ca=new_ca)
 
     def is_scaling_down(self, rel_id: int) -> bool:
         """Returns True if the application is scaling down."""
@@ -667,6 +685,8 @@ class CharmState(Object, StatusesStateProtocol):
             # check our ability to use connect to mongos
             with MongoConnection(self.remote_mongos_config) as mongos:
                 members = mongos.get_shard_members()
+        except FileNotFoundError:
+            return False
         except OperationFailure as e:
             if e.code in (
                 MongoErrorCodes.UNAUTHORIZED,
@@ -675,14 +695,33 @@ class CharmState(Object, StatusesStateProtocol):
             ):
                 return False
             raise
-        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError):
+        except (ServerSelectionTimeoutError, AutoReconnect, NotPrimaryError, ConfigurationError):
             # Connection refused, - this occurs when internal membership is not in sync across the
             # cluster (i.e. TLS + KeyFile).
             return False
 
         return self.app_peer_data.replica_set in members
 
+    @property
+    def peer_database_addresses(self) -> list[str]:
+        """Return the database addresses published by remote peer units."""
+        return [unit.database_address for unit in self.units if unit.database_address]
+
     # BEGIN: Configuration accessors
+    @property
+    def local_auth_restrictions(self) -> list[AuthRestrictions]:
+        """Return auth restrictions for local users."""
+        peer_client_sources = cidrs(self.peer_network().bind_addresses)
+        peer_client_sources.extend(self.peer_database_addresses)
+        peer_client_sources = sorted(set(peer_client_sources))
+
+        return [
+            AuthRestrictions(clientSource=[LOCALHOST], serverAddress=[LOCALHOST]),
+            AuthRestrictions(
+                clientSource=peer_client_sources,
+                serverAddress=peer_client_sources,
+            ),
+        ]
 
     def has_credentials(self) -> bool:
         """Checks if we have received credentials or not."""
@@ -695,9 +734,11 @@ class CharmState(Object, StatusesStateProtocol):
     def mongodb_config_for_user(
         self,
         user: MongoDBUser,
-        hosts: set[str] = set(),
+        hosts: set[str] | None = None,
         replset: str | None = None,
         standalone: bool = False,
+        auth_restrictions: list[AuthRestrictions] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongodb-specific MongoConfiguration object for the provided user.
 
@@ -709,8 +750,15 @@ class CharmState(Object, StatusesStateProtocol):
         Raises:
             Exception if neither user.hosts nor hosts is non empty.
         """
+        if not hosts:
+            hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
+        if not auth_restrictions:
+            auth_restrictions = []
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             replset=replset or self.app_peer_data.replica_set,
             database=user.database_name,
@@ -719,16 +767,17 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGODB_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_enabled=tls_enabled,
+            tls_external_ca=tls_external_ca,
             standalone=standalone,
+            auth_restrictions=auth_restrictions,
         )
 
     def mongos_config_for_user(
         self,
         user: MongoDBUser,
-        hosts: set[str] = set(),
+        hosts: set[str] | None = None,
+        tls_external_ca: Path | None = None,
     ) -> MongoConfiguration:
         """Returns a mongos-specific MongoConfiguration object for the provided user.
 
@@ -740,8 +789,13 @@ class CharmState(Object, StatusesStateProtocol):
         Raises:
             Exception if neither user.hosts nor hosts is non empty.
         """
+        if not hosts:
+            hosts = set()
         if not user.hosts and not hosts:
             raise Exception("Invalid call: no host in user nor as a parameter.")
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_external_ca = tls_external_ca or self.paths.ext_ca_file
+        tls_enabled = self.tls.client_enabled and tls_external_ca.exists()
         return MongoConfiguration(
             database=user.database_name,
             username=user.username,
@@ -749,25 +803,30 @@ class CharmState(Object, StatusesStateProtocol):
             hosts=hosts or user.hosts,
             port=MongoPorts.MONGOS_PORT.value,
             roles=user.roles,
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
-            tls_external_ca=self.paths.ext_ca_file,
+            tls_enabled=tls_enabled,
+            tls_external_ca=tls_external_ca,
         )
 
     @property
     def backup_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-backup user."""
-        return self.mongodb_config_for_user(CharmedBackupUser, standalone=True)
+        return self.mongodb_config_for_user(
+            CharmedBackupUser, standalone=True, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def stats_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-stats user."""
-        return self.mongodb_config_for_user(CharmedStatsUser)
+        return self.mongodb_config_for_user(
+            CharmedStatsUser, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def logrotate_config(self) -> MongoConfiguration:
         """Mongo Configuration for the charmed-logrotate user."""
-        return self.mongodb_config_for_user(CharmedLogRotateUser, standalone=True)
+        return self.mongodb_config_for_user(
+            CharmedLogRotateUser, standalone=True, auth_restrictions=self.local_auth_restrictions
+        )
 
     @property
     def operator_config(self) -> MongoConfiguration:
@@ -778,7 +837,9 @@ class CharmState(Object, StatusesStateProtocol):
     def remote_mongos_config(self) -> MongoConfiguration:
         """Mongos Configuration for the remote mongos server."""
         mongos_hosts = self.app_peer_data.mongos_hosts
-        return self.mongos_config_for_user(CharmedOperatorUser, set(mongos_hosts))
+        return self.mongos_config_for_user(
+            CharmedOperatorUser, set(mongos_hosts), self.paths.config_server_ext_ca_file
+        )
 
     @property
     def mongos_config(self) -> MongoConfiguration:
@@ -788,14 +849,20 @@ class CharmState(Object, StatusesStateProtocol):
         username, password = self.get_user_credentials()
         database = self.app_peer_data.database
         port: int | None = MongoPorts.MONGOS_PORT.value
+
+        # VM Mongos without external connectivity is using the UNIX socket.
         if (
             self.charm_role.name == CharmKind.MONGOS
             and self.substrate == Substrates.VM
             and not self.app_peer_data.external_connectivity
         ):
             port = None
+
         if not username or not password:
             raise MissingCredentialsError("Missing credentials.")
+
+        # TLS is considered enabled if we have client certificates AND they are on the file system.
+        tls_enabled = self.tls.client_enabled and self.paths.ext_ca_file.exists()
 
         return MongoConfiguration(
             database=database,
@@ -805,8 +872,7 @@ class CharmState(Object, StatusesStateProtocol):
             # unlike the vm mongos charm, the K8s charm does not communicate with the unix socket
             port=port,
             roles={RoleNames.ADMIN},
-            tls_enabled=self.tls.client_enabled,
-            tls_external_keyfile=self.paths.ext_pem_file,
+            tls_enabled=tls_enabled,
             tls_external_ca=self.paths.ext_ca_file,
         )
 
@@ -838,3 +904,55 @@ class CharmState(Object, StatusesStateProtocol):
             raise
 
         return secret_content
+
+    # BEGIN: Addresses accessors
+    def client_network(self) -> Network:
+        """Listening IP for that unit on the client relation."""
+        return network_get(self.client_relation_name)
+
+    def peer_network(self) -> Network:
+        """Listening IP for that unit on the peer relation."""
+        return network_get(self.peer_relation_name)
+
+    def sharding_network(self) -> Network:
+        """Listening IP for that unit on the sharding relation."""
+        return network_get(RelationNames.SHARDING.value)
+
+    def config_server_network(self) -> Network:
+        """Listening IP for that unit on the config-server relation."""
+        return network_get(RelationNames.CONFIG_SERVER.value)
+
+    def cluster_network(self) -> Network:
+        """Listening IP for that unit on the sharding relation."""
+        return network_get(RelationNames.CLUSTER.value)
+
+    def listen_hosts(self) -> set[str]:
+        """All the hosts to listen to."""
+        if self.substrate == Substrates.VM:
+            return set()
+        return {self.unit_peer_data.internal_address}
+
+    def listen_ips(self) -> set[str]:
+        """All the IPs to listen to."""
+        if self.substrate == Substrates.K8S:
+            return {"127.0.0.1"}
+        ip_list: list[str] = [
+            *ip_addresses(self.client_network().bind_addresses),
+            *ip_addresses(self.peer_network().bind_addresses),
+        ]
+        if self.is_sharding_component:
+            ip_list.extend(ip_addresses(self.sharding_network().bind_addresses))
+            ip_list.extend(
+                ip_addresses(self.config_server_network().bind_addresses),
+            )
+        if self.is_cluster_component:
+            ip_list.extend(ip_addresses(self.cluster_network().bind_addresses))
+
+        # Localhost
+        ip_list.append("127.0.0.1")
+
+        return {str(ip) for ip in ip_list if ip}
+
+    def listens_on(self) -> set[str]:
+        """Everything we should listen on."""
+        return {*self.listen_ips(), *self.listen_hosts()}
