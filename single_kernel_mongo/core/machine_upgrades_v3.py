@@ -7,6 +7,7 @@ import charm_refresh
 
 from single_kernel_mongo.config.literals import CharmKind
 from single_kernel_mongo.core.abstract_upgrades_v3 import MongoDBRefresh
+from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import FailedToElectNewPrimaryError, MongoDBUpgradeError
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,9 @@ class MachineMongoDBRefresh(
             logger.exception("Snap refresh failed")
 
             if self.dependent.workload.snap_revision() == revision_before_refresh:
-                self.dependent.start_charm_services()
+                self.dependent.workload.start()
+                if self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                    self.dependent.mongos_workload.start()  # type: ignore[attr-defined]
             else:
                 refresh.update_snap_revision()
 
