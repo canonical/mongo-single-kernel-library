@@ -156,6 +156,46 @@ def test_mongodb_config_manager(mocker, role: MongoDBRoles, expected_parameter: 
     )
 
 
+@pytest.mark.skip_if_substrate("microk8s")
+def test_config_server_cluster_ips_include_shard_rs_hosts(mocker):
+    state = mocker.MagicMock(CharmState)
+    state.peer_network.return_value.bind_addresses = []
+    state.peer_database_addresses = []
+    state.substrate = Substrates.VM
+    state.config_server_network.return_value.bind_addresses = []
+    state.is_role.side_effect = lambda role: role == MongoDBRoles.CONFIG_SERVER
+    state.is_cluster_component = False
+
+    state.related_cluster_hosts = ["10.0.1.10", "10.0.1.11"]
+
+    manager = MongoDBConfigManager.__new__(MongoDBConfigManager)
+    manager.state = state
+
+    assert manager.cluster_ips == {
+        "security": {"clusterIpSourceAllowlist": ["10.0.1.10", "10.0.1.11", "127.0.0.1"]}
+    }
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_shard_cluster_ips_include_config_server_hosts(mocker):
+    state = mocker.MagicMock(CharmState)
+    state.peer_network.return_value.bind_addresses = []
+    state.peer_database_addresses = []
+    state.substrate = Substrates.VM
+    state.sharding_network.return_value.bind_addresses = []
+    state.related_cluster_hosts = ["10.0.2.10", "10.0.2.11"]
+    state.shard_state.mongos_cidrs = []
+    state.is_role.side_effect = lambda role: role == MongoDBRoles.SHARD
+    state.is_cluster_component = False
+
+    manager = MongoDBConfigManager.__new__(MongoDBConfigManager)
+    manager.state = state
+
+    assert manager.cluster_ips == {
+        "security": {"clusterIpSourceAllowlist": ["10.0.2.10", "10.0.2.11"]}
+    }
+
+
 def test_sync_cluster_ip_source_allowlist_to_file(mocker):
     mock_write = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.write")
     mock_read = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.read")

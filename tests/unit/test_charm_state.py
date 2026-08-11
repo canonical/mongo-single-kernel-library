@@ -4,6 +4,7 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import (
     PeerRelationNames,
+    RelationNames,
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.utils.mongodb_users import (
@@ -109,7 +110,6 @@ def test_peer_database_addresses(
     }
 
 
-@pytest.mark.skip_if_substrate("microk8s")
 def test_local_auth_restrictions_use_peer_database_addresses(
     harness: Harness[MongoTestCharm], mongodb_name: str, substrate: Substrate
 ):
@@ -128,11 +128,104 @@ def test_local_auth_restrictions_use_peer_database_addresses(
         {"database-address": "172.31.47.55"},
     )
 
-    assert harness.charm.operator.state.local_auth_restrictions[1]["clientSource"] == [
+    peer_addresses = [
         "10.0.0.1/24",
         "172.31.15.253",
         "172.31.24.68",
         "172.31.47.55",
+    ]
+    assert harness.charm.operator.state.local_auth_restrictions == [
+        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+        {"clientSource": peer_addresses, "serverAddress": peer_addresses},
+    ]
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_config_server_local_auth_restrictions_include_shard_hosts(
+    harness: Harness[MongoTestCharm], mongodb_name: str
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
+        harness.update_relation_data(
+            relation_id,
+            "shard0",
+            {"rs-hosts": '["172.31.20.165", "172.31.4.251"]'},
+        )
+
+    assert harness.charm.operator.state.local_auth_restrictions == [
+        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+        {
+            "clientSource": ["10.0.0.1/24", "172.31.20.165", "172.31.4.251"],
+            "serverAddress": ["10.0.0.1/24", "172.31.20.165", "172.31.4.251"],
+        },
+    ]
+
+
+@pytest.mark.skip_if_substrate("microk8s")
+def test_shard_local_auth_restrictions_include_config_server_hosts(
+    harness: Harness[MongoTestCharm], mongodb_name: str
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+        harness.update_relation_data(
+            relation_id,
+            "config-server",
+            {"host": '["172.31.14.77", "172.31.34.113"]'},
+        )
+
+    assert harness.charm.operator.state.local_auth_restrictions == [
+        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+        {
+            "clientSource": ["10.0.0.1/24", "172.31.14.77", "172.31.34.113"],
+            "serverAddress": ["10.0.0.1/24", "172.31.14.77", "172.31.34.113"],
+        },
+    ]
+
+
+@pytest.mark.skip_if_substrate("lxd")
+def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
+    harness: Harness[MongoTestCharm], mongodb_name: str
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
+        harness.update_relation_data(
+            relation_id,
+            "shard0",
+            {"rs-hosts": '["shard0-0.shard0-endpoints", "shard0-1.shard0-endpoints"]'},
+        )
+
+    assert harness.charm.operator.state.local_auth_restrictions == [
+        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+        {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
+    ]
+
+
+@pytest.mark.skip_if_substrate("lxd")
+def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_microk8s(
+    harness: Harness[MongoTestCharm], mongodb_name: str
+):
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.SHARD
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation(RelationNames.SHARDING.value, "config-server")
+        harness.update_relation_data(
+            relation_id,
+            "config-server",
+            {
+                "host": '["config-server-0.config-server-endpoints", '
+                '"config-server-1.config-server-endpoints"]'
+            },
+        )
+
+    assert harness.charm.operator.state.local_auth_restrictions == [
+        {"clientSource": ["127.0.0.1"], "serverAddress": ["127.0.0.1"]},
+        {"clientSource": ["10.0.0.1/24"], "serverAddress": ["10.0.0.1/24"]},
     ]
 
 

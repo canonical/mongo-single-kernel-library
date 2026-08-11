@@ -101,7 +101,8 @@ def test_reconcile_local_auth_restrictions(harness: Harness[MongoTestCharm], moc
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.update_user_auth_restrictions",
     )
 
-    harness.charm.operator.mongo_manager.update_users_local_auth_restrictions()
+    auth_restrictions = state.local_auth_restrictions
+    harness.charm.operator.mongo_manager.update_users_local_auth_restrictions(auth_restrictions)
 
     assert mock_update.call_count == 3
     for call in mock_update.call_args_list:

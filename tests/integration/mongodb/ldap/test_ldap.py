@@ -16,6 +16,7 @@ from tests.integration.helpers.common import (
     deploy_charm,
     execute_on_mongod,
     get_app_name,
+    mongodb_config_path,
     wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.ldap import (
@@ -163,11 +164,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
 
     await ops_test.model.wait_for_idle(apps=[db_app_name], status="active", timeout=TIMEOUT)
 
-    path = (
-        "/var/snap/charmed-mongodb/current/etc/mongod/mongod.conf"
-        if substrate == "lxd"
-        else "/etc/mongod/mongod.conf"
-    )
+    path = mongodb_config_path(substrate)
 
     if substrate == "lxd":
         cat_cmd = "exec --unit {} -- cat {}"
