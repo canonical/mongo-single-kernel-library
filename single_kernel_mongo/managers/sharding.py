@@ -148,6 +148,8 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
         Updating of shards is done automatically via MongoDB change-streams.
         """
+        if not self.charm.unit.is_leader():
+            return
         self.assert_pass_hook_checks(relation, is_leaving)
 
         if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
@@ -159,10 +161,11 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             return
 
         try:
-            logger.info("Adding/Removing shards not present in cluster.")
             if is_leaving:
+                logger.info("Removing shard %s from cluster.", relation.app.name)
                 self.remove_shard_from_relation(relation)
             else:
+                logger.info("Adding shard %s to cluster.", relation.app.name)
                 self.add_shard(relation)
         except NotDrainedError:
             # it is necessary to removeShard multiple times for the shard to be removed.
@@ -184,6 +187,16 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         except (PyMongoError, NotReadyError, BalancerNotEnabledError) as e:
             logger.error(f"Deferring _on_relation_event for shards interface since: error={e}")
             raise
+
+    def get_shard_hosts_from_relation(self, relation: Relation) -> list[str]:
+        """Return the replica-set hosts published by a shard relation."""
+        hosts = json.loads(
+            self.data_interface.fetch_relation_field(
+                relation.id, AppShardingComponentKeys.RS_HOSTS.value
+            )
+            or "[]"
+        )
+        return sorted(set(hosts))
 
     def assert_pass_sanity_hook_checks(self) -> None:
         """Runs some sanity hook checks.
@@ -360,12 +373,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         """Adds a shard to the cluster."""
         shard_name = relation.app.name
 
-        hosts: list[str] = json.loads(
-            self.data_interface.fetch_relation_field(
-                relation.id, AppShardingComponentKeys.RS_HOSTS.value
-            )
-            or "[]"
-        )
+        hosts = self.get_shard_hosts_from_relation(relation)
         if not len(hosts):
             logger.info(f"host info for shard {shard_name} not yet added, skipping")
             return
@@ -665,6 +673,7 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
         self._set_cluster_id()
 
+        self.dependent.sync_cluster_network_access_restrictions()
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
 
     def handle_pbm(self, relation: Relation):
@@ -835,6 +844,10 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
     def effectively_drain_shard_from_cluster(self, mongos_hosts: list[str]):
         """Effectively drains the shard from the cluster."""
         self.wait_for_draining(mongos_hosts)
+
+        self.dependent.sync_cluster_network_access_restrictions(
+            excluded_addresses=set(mongos_hosts)
+        )
 
         if self.charm.unit.is_leader():
             self.state.app_peer_data.mongos_hosts = []

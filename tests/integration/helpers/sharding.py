@@ -15,10 +15,13 @@ from tests.integration.helpers.common import (
     MONGOS_PORT,
     deploy_charm,
     external_cert_path,
+    get_address_of_unit,
     get_direct_mongo_client,
     get_leader_id,
+    get_unit_id,
     internal_cert_path,
     mongodb_uri,
+    verify_cluster_ip_source_allowlist,
 )
 from tests.integration.helpers.tls import (
     SNAP_MONGOD_SERVICE,
@@ -38,7 +41,7 @@ logger = getLogger(__name__)
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
-SHARD_THREE_APP_NAME = "shard-tree"
+SHARD_THREE_APP_NAME = "shard-three"
 CONFIG_SERVER_APP_NAME = "config-server"
 CONFIG_SERVER_TWO_APP_NAME = "config-server-two"
 CLUSTER_COMPONENTS = [CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME]
@@ -68,6 +71,60 @@ CLUSTER_APPS = [
     SHARD_TWO_APP_NAME,
     SHARD_THREE_APP_NAME,
 ]
+
+
+async def verify_sharding_cluster_ip_source_allowlists(
+    ops_test: OpsTest,
+    substrate: Substrate,
+    config_server_app: str,
+    shard_apps: set[str],
+    related_shard_apps: set[str],
+) -> None:
+    """Verify cluster allowlists for the config server and every deployed shard.
+
+    For k8s, the config server and shards only verify that its peers are in the allowlist.
+    For VM, the config server and shards verify that all other cluster components are in
+    the allowlist.
+    """
+
+    async def application_addresses(app_name: str) -> set[str]:
+        return {
+            await get_address_of_unit(ops_test, substrate, get_unit_id(unit.name), app_name)
+            for unit in ops_test.model.applications[app_name].units
+        }
+
+    if substrate == "microk8s":
+        for app_name in shard_apps | {config_server_app}:
+            await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
+        return
+
+    config_server_addresses = await application_addresses(config_server_app)
+    related_shard_addresses = set()
+    unrelated_shard_addresses = set()
+    for shard_app in shard_apps:
+        addresses = await application_addresses(shard_app)
+        if shard_app in related_shard_apps:
+            related_shard_addresses.update(addresses)
+        else:
+            unrelated_shard_addresses.update(addresses)
+
+    await verify_cluster_ip_source_allowlist(
+        ops_test,
+        substrate,
+        config_server_app,
+        additional_addresses=related_shard_addresses,
+        excluded_addresses=unrelated_shard_addresses,
+    )
+
+    for shard_app in shard_apps:
+        is_related = shard_app in related_shard_apps
+        await verify_cluster_ip_source_allowlist(
+            ops_test,
+            substrate,
+            shard_app,
+            additional_addresses=config_server_addresses if is_related else None,
+            excluded_addresses=None if is_related else config_server_addresses,
+        )
 
 
 async def deploy_cluster_components(

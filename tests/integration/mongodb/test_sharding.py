@@ -33,6 +33,7 @@ from tests.integration.helpers.sharding import (
     has_correct_shards,
     shard_has_databases,
     verify_data_mongodb,
+    verify_sharding_cluster_ip_source_allowlists,
     write_data_to_mongodb,
 )
 from tests.integration.helpers.types import Substrate
@@ -147,6 +148,18 @@ async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
         MongoClient(mongos_uri, directConnection=True),
         expected_shards=[SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME],
     ), "Config server did not process config properly"
+
+
+@pytest.mark.abort_on_fail
+async def test_cluster_ip_source_allowlists(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Verify cluster allowlists contain the replica-set IPs expected for the substrate."""
+    await verify_sharding_cluster_ip_source_allowlists(
+        ops_test,
+        substrate,
+        config_server_app=CONFIG_SERVER_APP_NAME,
+        shard_apps={SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME},
+        related_shard_apps={SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME},
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -299,6 +312,15 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
         shard_name=SHARD_ONE_APP_NAME,
         expected_databases_on_shard=["animals_database_1", "animals_database_2"],
     ), "Not all databases on final shard"
+
+    if substrate == "lxd":
+        await verify_sharding_cluster_ip_source_allowlists(
+            ops_test,
+            substrate,
+            config_server_app=CONFIG_SERVER_APP_NAME,
+            shard_apps={SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME},
+            related_shard_apps={SHARD_ONE_APP_NAME},
+        )
 
 
 @pytest.mark.abort_on_fail
