@@ -932,6 +932,11 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
                 raise WaitingForCertificatesError()
             if keyfile_changed:
                 self.async_shard_restart_on_key_file()
+            else:
+                # If we don't need to restart, we still want to ensure that all the data is correct
+                # EG: we add and remove a shard, the auth will be unchanged, yet we want to fill
+                # the databag with all it needs filling.
+                self.reconcile_shard_after_restart()
             return
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
