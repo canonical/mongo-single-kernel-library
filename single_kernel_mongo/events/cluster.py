@@ -96,6 +96,9 @@ class ClusterConfigServerEventHandler(Object):
             self.manager.update_keyfile_and_hosts_on_mongos(event.relation)
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+        except DeferrableError as e:
+            logger.info("Deferring relation changed requested event: %s", str(e))
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
         except DatabaseRequestedHasNotRunYetError:

@@ -121,7 +121,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
                 sorted(cidrs(self.state.cluster_network().bind_addresses))
             ),
-            AppShardingComponentKeys.REPLICA_SET.value: self.state.app_peer_data.replica_set,
+            AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
         }
 
         if self.state.s3_relation:
@@ -367,17 +367,13 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
         for relation in self.state.config_server_relation:
-            shard_name = self.data_interface.fetch_relation_field(
-                relation.id, AppShardingComponentKeys.REPLICA_SET.value
-            )
+            shard_name = self.state.config_server_state(relation).shard_replset
             if shard_name and shard_name not in cluster_shards:
                 self.add_shard(relation)
 
     def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
-        shard_name = self.data_interface.fetch_relation_field(
-            relation.id, AppShardingComponentKeys.REPLICA_SET.value
-        )
+        shard_name = self.state.config_server_state(relation).shard_replset
         if not shard_name:
             logger.info("replica set name not yet added in databag, skipping")
             return
@@ -433,11 +429,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         relation_shards = {
             replica_set_name
             for relation in self.state.config_server_relation
-            if (
-                replica_set_name := self.data_interface.fetch_relation_field(
-                    relation.id, AppShardingComponentKeys.REPLICA_SET.value
-                )
-            )
+            if (replica_set_name := self.state.config_server_state(relation).shard_replset)
             is not None
         }
 
@@ -454,9 +446,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
     def remove_shard_from_relation(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
-        shard_name = self.data_interface.fetch_relation_field(
-            relation.id, AppShardingComponentKeys.REPLICA_SET.value
-        )
+        shard_name = self.state.config_server_state(relation).shard_replset
 
         if not shard_name:
             logger.info("No shard name in databag to remove.")
@@ -749,7 +739,7 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
             return
 
         # We send the name of our replicaset to the config server
-        self.state.shard_state.replica_set = self.state.app_peer_data.replica_set
+        self.state.shard_state.shard_replset = self.state.app_peer_data.replica_set
 
         # Let's send the IPs of our replicaset.
         self.state.shard_state.rs_hosts = list(self.state.internal_hosts)

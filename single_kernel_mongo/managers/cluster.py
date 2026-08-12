@@ -117,7 +117,9 @@ class ClusterProvider(Object):
             # foresee issues to retrieve hosts. However in external mongos-k8s, the leader can
             # attempt to retrieve hosts while non-leader units are still enabling node port
             # resulting in an exception.
-            raise DeferrableError("Failed to add user for mongos.")
+            raise DeferrableError(
+                "Failed to add user for mongos."
+            ) from DatabaseRequestedHasNotRunYetError
 
         relation_data = {
             ClusterStateKeys.KEYFILE.value: self.state.get_keyfile(),
