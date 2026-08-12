@@ -354,12 +354,20 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
         for relation in self.state.config_server_relation:
-            if relation.app.name not in cluster_shards:
+            shard_name = self.data_interface.fetch_relation_field(
+                relation.id, AppShardingComponentKeys.REPLICA_SET.value
+            )
+            if shard_name and shard_name not in cluster_shards:
                 self.add_shard(relation)
 
     def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.data_interface.fetch_relation_field(
+            relation.id, AppShardingComponentKeys.REPLICA_SET.value
+        )
+        if not shard_name:
+            logger.info("replica set name not yet added in databag, skipping")
+            return
 
         hosts: list[str] = json.loads(
             self.data_interface.fetch_relation_field(
@@ -414,7 +422,16 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
 
-        relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+        relation_shards = {
+            replica_set_name
+            for relation in self.state.config_server_relation
+            if (
+                replica_set_name := self.data_interface.fetch_relation_field(
+                    relation.id, AppShardingComponentKeys.REPLICA_SET.value
+                )
+            )
+            is not None
+        }
 
         for shard_name in cluster_shards - relation_shards:
             try:
@@ -429,7 +446,13 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
     def remove_shard_from_relation(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.data_interface.fetch_relation_field(
+            relation.id, AppShardingComponentKeys.REPLICA_SET.value
+        )
+
+        if not shard_name:
+            logger.info("No shard name in databag to remove.")
+            return
 
         self.remove_shard(shard_name)
 
