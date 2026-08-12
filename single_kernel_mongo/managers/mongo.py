@@ -211,9 +211,14 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
 
         self.state.app_peer_data.set_user_created(user.username)
 
-    def update_users_local_auth_restrictions(self) -> None:
-        """Update auth restrictions for internal users that connect locally."""
-        auth_restrictions = self.state.local_auth_restrictions
+    def update_users_local_auth_restrictions(
+        self, auth_restrictions: list[AuthRestrictions]
+    ) -> None:
+        """Update auth restrictions for internal users that connect locally.
+
+        Args:
+            auth_restrictions: The auth restrictions to apply.
+        """
         for user in (CharmedStatsUser, CharmedBackupUser, CharmedLogRotateUser):
             if not self.state.app_peer_data.is_user_created(user.username):
                 continue
@@ -221,12 +226,10 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
                 config = self.state.mongodb_config_for_user(
                     user, auth_restrictions=auth_restrictions
                 )
-                logger.info("Updating auth restrictions for %s user.", user.username)
                 mongo.update_user_auth_restrictions(config)
 
     def update_cluster_ip_source_allowlist(self, allowlist: list[str]) -> None:
         """Update the cluster IP source allowlist at runtime."""
-        logger.info("Updating cluster IP source allowlist")
         config = self.state.mongodb_config_for_user(
             CharmedOperatorUser, hosts={"localhost"}, standalone=True
         )

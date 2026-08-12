@@ -1153,7 +1153,7 @@ def test_connect_mongodb_exporter_success(
         "single_kernel_mongo.managers.mongo.MongoManager.set_feature_compatibility_version"
     )
     mocker.patch(
-        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator._sync_cluster_network_access_restrictions"
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.sync_cluster_network_access_restrictions"
     )
 
     mongodb_hostname = "127.0.0.1"
@@ -1361,6 +1361,46 @@ def test_peer_changed_updates_cluster_ip_source_allowlist(
         harness.charm.operator.config_manager.cluster_ip_source_allowlist
     )
     mock_sync.assert_called_once()
+
+
+def test_sync_cluster_network_access_restrictions_excludes_departed_addresses(
+    harness: Harness[MongoTestCharm], mocker
+):
+    operator = harness.charm.operator
+    harness.set_leader(True)
+    operator.state.db_initialised = True
+
+    mocker.patch.object(operator.workload, "active", return_value=True)
+    mocker.patch.object(
+        type(operator.config_manager),
+        "cluster_ip_source_allowlist",
+        new_callable=mocker.PropertyMock,
+        return_value=["10.0.0.1", "10.0.0.2"],
+    )
+    mocker.patch.object(
+        type(operator.state),
+        "local_auth_restrictions",
+        new_callable=mocker.PropertyMock,
+        return_value=[
+            {
+                "clientSource": ["10.0.0.1", "10.0.0.2"],
+                "serverAddress": ["10.0.0.1", "10.0.0.2"],
+            }
+        ],
+    )
+    sync_file = mocker.patch.object(
+        operator.config_manager, "sync_cluster_ip_source_allowlist_to_file"
+    )
+    sync_runtime = mocker.patch.object(operator.mongo_manager, "update_cluster_ip_source_allowlist")
+    sync_users = mocker.patch.object(operator.mongo_manager, "update_users_local_auth_restrictions")
+
+    operator.sync_cluster_network_access_restrictions(excluded_addresses={"10.0.0.2"})
+
+    sync_file.assert_called_once_with(["10.0.0.1"])
+    sync_runtime.assert_called_once_with(["10.0.0.1"])
+    sync_users.assert_called_once_with(
+        [{"clientSource": ["10.0.0.1"], "serverAddress": ["10.0.0.1"]}]
+    )
 
 
 def test_non_leader_peer_changed_update_runtime_cluster_ip_source_allowlist(

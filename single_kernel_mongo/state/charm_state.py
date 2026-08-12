@@ -707,12 +707,39 @@ class CharmState(Object, AbstractStatusesState):
         """Return the database addresses published by remote peer units."""
         return [unit.database_address for unit in self.units if unit.database_address]
 
+    @property
+    def related_cluster_hosts(self) -> list[str]:
+        """Return hosts published by related sharding components.
+
+        The config servers get the RS hosts from all the shards it is integrated with.
+        The shards get the mongos hosts from config server it is integrated with.
+        """
+        if self.substrate != Substrates.VM:
+            return []
+        if self.is_role(MongoDBRoles.CONFIG_SERVER):
+            hosts = []
+            for relation in self.config_server_relation:
+                hosts.extend(
+                    AppShardingComponentState(
+                        relation=relation,
+                        data_interface=self.config_server_data_interface,
+                        component=relation.app,
+                    ).rs_hosts
+                )
+            return sorted(set(hosts))
+
+        if self.is_role(MongoDBRoles.SHARD):
+            return sorted(set(self.shard_state.mongos_hosts))
+
+        return []
+
     # BEGIN: Configuration accessors
     @property
     def local_auth_restrictions(self) -> list[AuthRestrictions]:
         """Return auth restrictions for local users."""
         peer_client_sources = cidrs(self.peer_network().bind_addresses)
         peer_client_sources.extend(self.peer_database_addresses)
+        peer_client_sources.extend(self.related_cluster_hosts)
         peer_client_sources = sorted(set(peer_client_sources))
 
         return [

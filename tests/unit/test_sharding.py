@@ -253,6 +253,53 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
         mocked_add_shard.assert_called_with("shard0", ["shard0-0.shard0-endpoints"])
 
 
+def test_reconcile_shards_syncs_cluster_network_access_when_adding(harness, mocker):
+    harness.set_leader(True)
+    manager = harness.charm.operator.config_server_manager
+    relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
+    relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, relation_id)
+
+    harness.update_relation_data(
+        relation_id,
+        "shard0",
+        {
+            "requested-secrets": '["unused"]',
+            "auth-updated": "true",
+            "rs-hosts": '["2.2.2.2"]',
+        },
+    )
+
+    mocker.patch.object(manager, "assert_pass_hook_checks")
+    add_shard = mocker.patch.object(manager, "add_shard")
+
+    manager.reconcile_shards_for_relation(relation)
+
+    add_shard.assert_called_once_with(relation)
+
+
+def test_reconcile_shards_removes_network_access_after_draining(harness, mocker):
+    harness.set_leader(True)
+    manager = harness.charm.operator.config_server_manager
+    relation_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard0")
+    relation = harness.charm.model.get_relation(RelationNames.CONFIG_SERVER.value, relation_id)
+    harness.update_relation_data(
+        relation_id,
+        "shard0",
+        {
+            "requested-secrets": '["unused"]',
+            "auth-updated": "true",
+            "rs-hosts": '["2.2.2.2", "2.2.2.3"]',
+        },
+    )
+
+    mocker.patch.object(manager, "assert_pass_hook_checks")
+    remove_shard = mocker.patch.object(manager, "remove_shard_from_relation")
+
+    manager.reconcile_shards_for_relation(relation, is_leaving=True)
+
+    remove_shard.assert_called_once_with(relation)
+
+
 def test_config_server_cluster_password_synced_success(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.config_server_manager
 
@@ -395,6 +442,22 @@ def test_shard_manager_prepare_to_add_shard(harness: Harness[MongoTestCharm]):
     assert as_status(statuses[0]) == MaintenanceStatus("Adding shard to config-server")
 
 
+def test_shard_syncs_config_server_network_access_when_draining(harness, mocker):
+    manager = harness.charm.operator.shard_manager
+    config_server_hosts = ["10.0.0.10", "10.0.0.11"]
+
+    wait_for_draining = mocker.patch.object(manager, "wait_for_draining")
+    sync_access_restrictions = mocker.patch.object(
+        manager.dependent,
+        "sync_cluster_network_access_restrictions",
+    )
+
+    manager.effectively_drain_shard_from_cluster(config_server_hosts)
+
+    wait_for_draining.assert_called_once_with(config_server_hosts)
+    sync_access_restrictions.assert_called_once_with(excluded_addresses=set(config_server_hosts))
+
+
 def test_shard_manager_synchronise_user_password_invalid_role(
     harness: Harness[MongoTestCharm], mocker
 ):
@@ -453,6 +516,9 @@ def test_shard_manager_synchronise_member_auth_success(
     mocked_update_member_auth = mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.update_member_auth"
     )
+    mocked_access_sync = mocker.patch.object(
+        manager.dependent, "sync_cluster_network_access_restrictions"
+    )
     mocked_sync = mocker.patch(
         "single_kernel_mongo.managers.sharding.ShardManager.sync_cluster_passwords"
     )
@@ -478,8 +544,10 @@ def test_shard_manager_synchronise_member_auth_success(
 
     relation: Relation = harness.charm.model.get_relation(RelationNames.SHARDING.value, rel_id)  # type: ignore[assignment]
 
+    mocked_access_sync.reset_mock()
     manager.synchronize_member_auth(relation)
 
+    mocked_access_sync.assert_called_once_with()
     mocked_update_member_auth.assert_called_with("deadbeef", None, None)
     mocked_sync.assert_called_with("test-operator", "test-backup")
 
@@ -545,6 +613,7 @@ def test_shard_manager_synchronise_cluster_secrets_no_ca_cert_waiting_for_both_c
         "single_kernel_mongo.managers.sharding.ShardManager.update_member_auth",
         side_effect=WaitingForCertificatesError,
     )
+    mocker.patch.object(manager.dependent, "sync_cluster_network_access_restrictions")
 
     harness.add_relation(ExternalRequirerRelations.PEER_TLS.value, "self-signed-certificates")
     harness.add_relation(ExternalRequirerRelations.CLIENT_TLS.value, "self-signed-certificates")
