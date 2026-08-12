@@ -1088,7 +1088,7 @@ async def execute_on_mongod(
 
 def find_json(combined_string: str) -> dict[str, Any]:
     split = combined_string.splitlines()
-    all_lines = [escape_ansi(line) for line in split]
+    all_lines = [escape_ansi(_line) for line in split for _line in line.split("\x07")]
     for line in all_lines:
         try:
             return json.loads(line)
