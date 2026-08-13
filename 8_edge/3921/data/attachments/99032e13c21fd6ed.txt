@@ -1,0 +1,86 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:noble/continuous-write-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [idle] waiting: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+  continuous-write/0 [idle] waiting: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+  continuous-write/0 [idle] active:
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_tls:test_backups_tls.py:138 Restore backup result restore.results={'restore-status': 'restore started', 'return-code': 0}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb/1 [executing] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  01:57:53Z
+
+App               Version  Status  Scale  Charm             Channel  Rev  Exposed  Message
+continuous-write           active      1  continuous-write             0  no       
+mongodb           8.0.10   active      3  mongodb                      0  no       
+s3-integrator              active      1  s3-integrator     1/edge   621  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports      Message
+continuous-write/0*  active    idle   4        10.18.203.104              
+mongodb/0*           active    idle   0        10.18.203.80    27017/tcp  Primary.
+mongodb/1            active    idle   1        10.18.203.184   27017/tcp  
+mongodb/2            active    idle   2        10.18.203.226   27017/tcp  
+s3-integrator/0*     active    idle   3        10.18.203.96               
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.18.203.80   juju-217cf5-0  ubuntu@24.04  github-runner  Running
+1        started  10.18.203.184  juju-217cf5-1  ubuntu@24.04  github-runner  Running
+2        started  10.18.203.226  juju-217cf5-2  ubuntu@24.04  github-runner  Running
+3        started  10.18.203.96   juju-217cf5-3  ubuntu@22.04  github-runner  Running
+4        started  10.18.203.104  juju-217cf5-4  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:46:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:46:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:46:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:46:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:47:10 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:47:10 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:47:58 ERROR unit.mongodb/0.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:47:58 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:47:58 ERROR unit.mongodb/0.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-2: 01:48:34 ERROR unit.mongodb/2.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:48:34 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:48:34 ERROR unit.mongodb/2.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-1: 01:48:38 ERROR unit.mongodb/1.juju-log single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl:Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:48:38 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on sysctl parameters: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:48:39 ERROR unit.mongodb/1.juju-log single_kernel_mongo.core.operator:Error setting values on kernel parameters: ('Command [\'systemctl\', \'start\', \'enable-transparent-huge-pages\'] failed with returncode 1. systemctl output:\nJob for enable-transparent-huge-pages.service failed because the control process exited with error code.\nSee "systemctl status enable-transparent-huge-pages.service" and "journalctl -xeu enable-transparent-huge-pages.service" for details.\n',)
+unit-mongodb-0: 01:52:29 ERROR unit.mongodb/0.juju-log s3-credentials:6: single_kernel_mongo.core.vm_workload:cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --force-resync, stdout=, stderr=Error: another operation in progress, Resync storage/6a7d235cbd02e623af83715e [mongodb/10.18.203.184:27017]
+
+unit-mongodb-0: 01:52:40 ERROR unit.mongodb/0.juju-log s3-credentials:6: single_kernel_mongo.core.vm_workload:cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.193:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/6a7d235cbd02e623af83715e [mongodb/10.18.203.184:27017]
+
+unit-mongodb-0: 01:52:40 ERROR unit.mongodb/0.juju-log s3-credentials:6: single_kernel_mongo.managers.backups.common:Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/6a7d235cbd02e623af83715e [mongodb/10.18.203.184:27017]\n'}
+unit-mongodb-0: 01:52:50 ERROR unit.mongodb/0.juju-log status-peers:3: single_kernel_mongo.core.vm_workload:cmd failed - cmd=/snap/bin/charmed-mongodb.pbm config --set storage.type=s3 --set storage.s3.credentials.access-key-id=xxx --set storage.s3.bucket=testbucket --set storage.s3.endpointUrl=https://10.151.33.193:445 --set storage.s3.prefix=mongodb-backups --set storage.s3.credentials.secret-access-key=xxx, stdout=, stderr=Error: another operation in progress, Resync storage/6a7d235cbd02e623af83715e [mongodb/10.18.203.184:27017]
+
+unit-mongodb-0: 01:52:50 ERROR unit.mongodb/0.juju-log status-peers:3: single_kernel_mongo.managers.backups.common:Waiting for resync to finish before setting configuration: {'return_code': 1, 'stdout': '', 'stderr': 'Error: another operation in progress, Resync storage/6a7d235cbd02e623af83715e [mongodb/10.18.203.184:27017]\n'}
+machine-4: 01:54:24 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:54:24 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:54:48 ERROR unit.mongodb/0.juju-log database:8: root:Deferring _on_relation_event since: error=DatabaseRequestedHasNotRunYetError()
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
