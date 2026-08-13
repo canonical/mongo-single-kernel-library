@@ -281,6 +281,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
                     AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
                         sorted(cidrs(self.state.cluster_network().bind_addresses))
                     ),
+                    AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
                 },
             )
 

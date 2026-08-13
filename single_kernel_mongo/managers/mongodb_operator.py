@@ -434,6 +434,12 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.charm.unit.is_leader():
             manager.set_config_options(credentials)
 
+        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.config_server_manager.update_mongos_hosts()
+
+        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.SHARD):
+            self.shard_manager.reconcile_shard_after_restart()
+
     @property
     @override
     def config(self) -> MongoDBCharmConfig:
