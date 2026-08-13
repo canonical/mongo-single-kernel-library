@@ -746,6 +746,10 @@ class MongoDBOperator(OperatorProtocol, Object):
             DeferrableFailedHookChecksError: If the system-users secret has not been granted or
                 there is a backup or upgrade running.
         """
+        # Cleanup password statuses for this component.
+        for old_status in PasswordManagementStatuses:
+            self.state.statuses.delete(status=old_status.value, scope="app", component=self.name)
+
         if not (context := self.get_password_management_context()):
             return
 

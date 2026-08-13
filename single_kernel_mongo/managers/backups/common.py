@@ -373,7 +373,7 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             remapping_args = ["--replset-remapping", remapping_pattern] if remapping_pattern else []
             self.workload.run_bin_command(
                 "restore",
-                [backup_id] + remapping_args,
+                [backup_id, "--yes"] + remapping_args,
                 environment=self.environment,
             )
         except WorkloadExecError as e:

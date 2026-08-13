@@ -442,7 +442,7 @@ def test_restore_backup_success(
 
     mock_call.assert_called_with(
         "restore",
-        ["deadbeef", "--replset-remapping", "mongodb=mongodb"],
+        ["deadbeef", "--yes", "--replset-remapping", "mongodb=mongodb"],
         environment=backup_manager.environment,
     )
 

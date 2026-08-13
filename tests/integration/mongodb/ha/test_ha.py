@@ -10,7 +10,7 @@ import pytest
 from juju import tag
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
@@ -636,7 +636,11 @@ async def test_kill_db_process(ops_test, substrate: Substrate, continuous_writes
     new_primary = await replica_set_primary(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
-    assert new_primary.name != primary.name
+    assert new_primary, "No new primary found"
+
+    assert (
+        new_primary.name != primary.name
+    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
 
     # verify that no writes were missed
     total_expected_writes = await verify_writes(ops_test, substrate, app_name)
@@ -677,7 +681,11 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     new_primary = await replica_set_primary(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
-    assert new_primary.name != primary.name
+    assert new_primary, "No new primary found"
+
+    assert (
+        new_primary.name != primary.name
+    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
     # verify new writes are continuing by counting the number of writes before and after a 5 second
     # wait
     writes = await count_writes(ops_test, substrate, app_name=app_name, unit=other_unit)
@@ -714,7 +722,11 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
     new_primary = await replica_set_primary(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
-    assert new_primary.name != primary.name
+    assert new_primary, "No new primary found"
+
+    assert (
+        new_primary.name != primary.name
+    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
 
     # verify that no writes were missed
     total_expected_writes = await verify_writes(ops_test, substrate, app_name)
@@ -729,6 +741,7 @@ async def test_freeze_db_process(ops_test: OpsTest, substrate: Substrate, contin
 async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db):
     # locate primary unit
     app_name = await get_app_name(ops_test)
+    assert app_name, "No app name found."
     ip_addresses = [
         await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
         for unit in ops_test.model.applications[app_name].units
@@ -762,18 +775,22 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     primary_address = await get_address_of_unit(
         ops_test, substrate, get_unit_id(primary.name), app_name
     )
-    assert await mongod_ready(ops_test, primary_address, app_name)
+    assert await mongod_ready(ops_test, primary_address, app_name), "Mongod is not ready"
 
     # verify that a new primary gets elected
     new_primary = await replica_set_primary(
         ops_test, substrate, app_name=app_name, replica_set_hosts=ip_addresses
     )
-    assert new_primary.name != primary.name
+    assert new_primary, "No new primary found"
+
+    assert (
+        new_primary.name != primary.name
+    ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
 
     # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
     # send a replica step down signal. Performed with a retry to give time for the logs to update.
     try:
-        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
             with attempt:
                 assert await db_step_down(
                     ops_test, substrate, primary.name, sig_term_time, app_name=app_name
