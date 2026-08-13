@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 import pytest
-import tomllib
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
@@ -70,9 +69,7 @@ async def test_rollback(
         reverse=True,
     )
 
-    initial_version_path = mongod_base_path / "refresh_versions.toml"
-    data = tomllib.loads(initial_version_path.read_text())
-    initial_version = data["workload"]
+    initial_version = await get_workload_version(ops_test, leader_unit.name)
 
     await mongodb_application.refresh(path=faulty_mongodb_upgrade_charm, resources=resources)
     logger.info("Wait for refresh to fail")
