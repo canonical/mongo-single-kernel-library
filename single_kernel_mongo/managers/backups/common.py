@@ -277,21 +277,22 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
         If PMB returen any other error, the function will raise BackupError.
         """
         try:
-            output = self.workload.run_bin_command(
+            output_str = self.workload.run_bin_command(
                 "backup",
+                ["--out", "json"],
                 environment=self.environment,
-            )
-            backup_id_match = re.search(
-                r"Starting backup '(?P<backup_id>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)'",
-                output,
-            )
-            return backup_id_match.group("backup_id") if backup_id_match else "N/A"
+            ).strip()
+            output = json.loads(output_str)
+            return output.get("name", "N/A")
         except WorkloadExecError as e:
             error_message = e.stdout
             if "Resync" in error_message:
                 raise ResyncError from e
 
             fail_message = f"Backup failed: {str(e)}"
+            raise BackupError(fail_message)
+        except json.JSONDecodeError:
+            fail_message = f"Backup failed: {output_str}"  # pyright: ignore[reportPossiblyUnboundVariable]
             raise BackupError(fail_message)
 
     def list_backup_action(self) -> str:
