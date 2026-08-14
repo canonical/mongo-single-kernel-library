@@ -1,0 +1,79 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] waiting: Waiting for MongoDB restart.
+  shard-two/1 [executing] active: 
+  shard-two/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [executing] active: 
+  shard-two/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] waiting: Waiting for lock to remove replica set.
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: Primary.
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  02:41:01Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     8.0.23   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         8.0.23   active       3  mongodb                      1  no       
+shard-two         8.0.23   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.226.138.69   27017-27018/tcp  
+config-server/1      active    idle   1        10.226.138.193  27017-27018/tcp  Primary.
+config-server/2      active    idle   2        10.226.138.47   27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.226.138.58                    
+shard-one/0          active    idle   3        10.226.138.7    27017/tcp        Primary.
+shard-one/1          active    idle   4        10.226.138.235  27017/tcp        
+shard-one/2*         active    idle   5        10.226.138.50   27017/tcp        
+shard-two/0          active    idle   6        10.226.138.251  27017/tcp        Primary.
+shard-two/1*         active    idle   7        10.226.138.100  27017/tcp        Primary.
+shard-two/2          active    idle   8        10.226.138.121  27017/tcp        
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.226.138.69   juju-fd99ea-0  ubuntu@24.04  github-runner  Running
+1        started  10.226.138.193  juju-fd99ea-1  ubuntu@24.04  github-runner  Running
+2        started  10.226.138.47   juju-fd99ea-2  ubuntu@24.04  github-runner  Running
+3        started  10.226.138.7    juju-fd99ea-3  ubuntu@24.04  github-runner  Running
+4        started  10.226.138.235  juju-fd99ea-4  ubuntu@24.04  github-runner  Running
+5        started  10.226.138.50   juju-fd99ea-5  ubuntu@24.04  github-runner  Running
+6        started  10.226.138.251  juju-fd99ea-6  ubuntu@24.04  github-runner  Running
+7        started  10.226.138.100  juju-fd99ea-7  ubuntu@24.04  github-runner  Running
+8        started  10.226.138.121  juju-fd99ea-8  ubuntu@24.04  github-runner  Running
+9        started  10.226.138.58   juju-fd99ea-9  ubuntu@24.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:37:32 ERROR unit.config-server/0.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x796606c2f260 state=finished raised ClusterNotHealthyError>]
+machine-6: 02:38:04 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+unit-shard-one-2: 02:38:06 ERROR unit.shard-one/2.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x779cdf4db800 state=finished raised ClusterNotHealthyError>]
+machine-6: 02:38:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+machine-6: 02:38:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+machine-6: 02:38:18 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+machine-6: 02:38:24 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+machine-6: 02:38:32 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+unit-shard-two-1: 02:38:38 ERROR unit.shard-two/1.juju-log root:Cannot proceed with refresh. Failed to check cluster health, error: RetryError[<Future at 0x736771d913a0 state=finished raised ClusterNotHealthyError>]
+machine-6: 02:38:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [f5747a] "machine-6" cannot open api: unable to connect to API: dial tcp 10.226.138.130:17070: connect: network is unreachable
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
