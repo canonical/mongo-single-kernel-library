@@ -265,11 +265,11 @@ def test_create_backup_success(
 
     mocker.patch(
         "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command",
-        return_value="Starting backup '2024-11-25T15:05:40Z'",
+        return_value='{"name": "2024-11-25T15:05:40Z", "storagePath": ""}\n',
     )
     mocker.patch(
         "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command",
-        return_value="Starting backup '2024-11-25T15:05:40Z'",
+        return_value='{"name": "2024-11-25T15:05:40Z", "storagePath": ""}\n',
     )
 
     backup_id = backup_manager.create_backup_action()
