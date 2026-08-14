@@ -421,6 +421,12 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
+        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            self.config_server_manager.update_mongos_hosts()
+
+        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.SHARD):
+            self.shard_manager.reconcile_shard_after_restart()
+
         if not (backup_relation := self.backup_events.current_relation):
             return
         manager = self.backup_events.manager_for(backup_relation.name)
@@ -433,12 +439,6 @@ class MongoDBOperator(OperatorProtocol, Object):
         # Only leader should set config options.
         if self.charm.unit.is_leader():
             manager.set_config_options(credentials)
-
-        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            self.config_server_manager.update_mongos_hosts()
-
-        if self.charm.unit.is_leader() and self.state.is_role(MongoDBRoles.SHARD):
-            self.shard_manager.reconcile_shard_after_restart()
 
     @property
     @override
