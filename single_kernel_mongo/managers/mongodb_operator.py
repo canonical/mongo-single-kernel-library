@@ -1079,6 +1079,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Set the permissions for the common and tmp dir.
         """
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
         if self.substrate == Substrates.K8S:
             return
 
@@ -1091,7 +1092,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
-        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
