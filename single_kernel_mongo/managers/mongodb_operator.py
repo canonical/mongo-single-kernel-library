@@ -149,6 +149,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Temporary diagnostic pin used to determine whether the snap installation failure seen while
+# Juju storage is mounted on /tmp is specific to the newer snapd release.
+SNAPD_DIAGNOSTIC_VERSION = "2.62+24.04build1"
+
 
 @final
 class MongoDBOperator(OperatorProtocol, Object):
@@ -1082,6 +1086,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.substrate == Substrates.K8S:
             return
 
+        self._pin_snapd_for_storage_test()
+
         self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
         self.workload.exec(
             [
@@ -1092,6 +1098,32 @@ class MongoDBOperator(OperatorProtocol, Object):
             ]
         )
         self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
+
+    def _pin_snapd_for_storage_test(self) -> None:
+        """Install and hold the snapd version used by the storage-mount diagnostic."""
+        installed_version = self.workload.exec(
+            ["dpkg-query", "-W", "-f=${Version}", "snapd"]
+        ).strip()
+
+        if installed_version != SNAPD_DIAGNOSTIC_VERSION:
+            logger.warning(
+                "Changing snapd from version %s to diagnostic version %s",
+                installed_version,
+                SNAPD_DIAGNOSTIC_VERSION,
+            )
+            self.workload.exec(
+                [
+                    "apt-get",
+                    "install",
+                    "--yes",
+                    "--allow-downgrades",
+                    f"snapd={SNAPD_DIAGNOSTIC_VERSION}",
+                ]
+            )
+
+        # This is intentionally idempotent and prevents unattended upgrades from changing the
+        # version between storage-attached and install hooks.
+        self.workload.exec(["apt-mark", "hold", "snapd"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901

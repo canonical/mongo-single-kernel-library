@@ -109,6 +109,10 @@ class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], Charm
     def on_install(self, _):
         """First install event handler."""
         if self.substrate == Substrates.VM:
+            snapd_version = self.workload.exec(
+                ["dpkg-query", "-W", "-f=${Version}", "snapd"]
+            ).strip()
+            logger.info("Installed snapd version before workload installation: %s", snapd_version)
             self.status_handler.set_running_status(
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
