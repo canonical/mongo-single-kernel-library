@@ -112,7 +112,15 @@ class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], Charm
             snapd_version = self.workload.exec(
                 ["dpkg-query", "-W", "-f=${Version}", "snapd"]
             ).strip()
-            logger.info("Installed snapd version before workload installation: %s", snapd_version)
+            snap_versions = self.workload.exec(["snap", "version"]).strip()
+            snapd_revisions = self.workload.exec(["snap", "list", "snapd", "--all"]).strip()
+            logger.info(
+                "Snapd state before workload installation: deb=%s; runtime:\n%s\n"
+                "snap revisions:\n%s",
+                snapd_version,
+                snap_versions,
+                snapd_revisions,
+            )
             self.status_handler.set_running_status(
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )

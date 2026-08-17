@@ -150,8 +150,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Temporary diagnostic pin used to determine whether the snap installation failure seen while
-# Juju storage is mounted on /tmp is specific to the newer snapd release.
-SNAPD_DIAGNOSTIC_VERSION = "2.62+24.04build1"
+# Juju storage is mounted on /tmp is specific to this snapd snap release.
+SNAPD_DIAGNOSTIC_REVISION = "26865"
 
 
 @final
@@ -1086,7 +1086,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.substrate == Substrates.K8S:
             return
 
-        self._pin_snapd_for_storage_test()
+        self._refresh_snapd_for_storage_test()
 
         self.workload.exec(["chmod", "-R", "770", f"{self.workload.paths.common_path}"])
         self.workload.exec(
@@ -1099,31 +1099,30 @@ class MongoDBOperator(OperatorProtocol, Object):
         )
         self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
-    def _pin_snapd_for_storage_test(self) -> None:
-        """Install and hold the snapd version used by the storage-mount diagnostic."""
-        installed_version = self.workload.exec(
-            ["dpkg-query", "-W", "-f=${Version}", "snapd"]
-        ).strip()
+    def _refresh_snapd_for_storage_test(self) -> None:
+        """Install and hold the snapd snap revision used by the storage diagnostic."""
+        snapd_fields = self.workload.exec(["snap", "list", "snapd"]).splitlines()[1].split()
+        installed_version, installed_revision = snapd_fields[1:3]
 
-        if installed_version != SNAPD_DIAGNOSTIC_VERSION:
+        if installed_revision != SNAPD_DIAGNOSTIC_REVISION:
             logger.warning(
-                "Changing snapd from version %s to diagnostic version %s",
+                "Refreshing snapd from version %s (revision %s) to diagnostic revision %s",
                 installed_version,
-                SNAPD_DIAGNOSTIC_VERSION,
+                installed_revision,
+                SNAPD_DIAGNOSTIC_REVISION,
             )
             self.workload.exec(
                 [
-                    "apt-get",
-                    "install",
-                    "--yes",
-                    "--allow-downgrades",
-                    f"snapd={SNAPD_DIAGNOSTIC_VERSION}",
+                    "snap",
+                    "refresh",
+                    "snapd",
+                    f"--revision={SNAPD_DIAGNOSTIC_REVISION}",
                 ]
             )
 
-        # This is intentionally idempotent and prevents unattended upgrades from changing the
-        # version between storage-attached and install hooks.
-        self.workload.exec(["apt-mark", "hold", "snapd"])
+        # Prevent an automatic snap refresh from changing the revision between the
+        # storage-attached and install hooks.
+        self.workload.exec(["snap", "refresh", "--hold=forever", "snapd"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
