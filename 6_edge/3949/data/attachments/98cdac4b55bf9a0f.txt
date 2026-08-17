@@ -1,0 +1,98 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:jammy/continuous-write-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: waiting for machine
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [idle] waiting: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+  continuous-write/0 [idle] waiting:
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m integration.mongodb.backups.test_backups_tls:test_backups_tls.py:131 Restore backup result restore.results={'restore-status': 'restore started', 'return-code': 0}
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+  mongodb/1 [executing] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] maintenance: Backing up.... Run `status-detail`: 0 action required; 1 additional statuses.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  01:49:38Z
+
+App               Version  Status  Scale  Charm             Channel      Rev  Exposed  Message
+continuous-write           active      1  continuous-write                 0  no       
+mongodb           6.0.28   active      3  mongodb                          0  no       
+s3-integrator              active      1  s3-integrator     latest/edge  621  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports      Message
+continuous-write/0*  active    idle   4        10.159.188.42              
+mongodb/0*           active    idle   0        10.159.188.55   27017/tcp  Primary.
+mongodb/1            active    idle   1        10.159.188.206  27017/tcp  
+mongodb/2            active    idle   2        10.159.188.103  27017/tcp  
+s3-integrator/0*     active    idle   3        10.159.188.89              
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.159.188.55   juju-4cb8e1-0  ubuntu@22.04  github-runner  Running
+1        started  10.159.188.206  juju-4cb8e1-1  ubuntu@22.04  github-runner  Running
+2        started  10.159.188.103  juju-4cb8e1-2  ubuntu@22.04  github-runner  Running
+3        started  10.159.188.89   juju-4cb8e1-3  ubuntu@22.04  github-runner  Running
+4        started  10.159.188.42   juju-4cb8e1-4  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:36:01 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:01 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:36:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:36:59 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:36:59 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-2: 01:37:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:37:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:37:08 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:37:08 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-2: 01:38:00 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:38:00 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:38:46 ERROR unit.mongodb/1.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="6/edge"', '--revision="174"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (174) from channel "6/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_174.snap?interactive=1&token=1786942800_e9b8c239e8821c5487608bd576211dcd80279f58": net/http: timeout awaiting response headers)
+
+Latest logs:
+Aug 17 01:36:44 juju-4cb8e1-1 snapd[2256]: devicemgr.go:1338: skipping boot ok check since it already ran for boot-id "e4f39954-4c20-4c64-a21d-7667fb2a62da"
+Aug 17 01:36:44 juju-4cb8e1-1 snapd[2256]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Aug 17 01:36:46 juju-4cb8e1-1 snapd[2256]: cache.go:320: removed 0 entries/    0 from downloads cache
+Aug 17 01:36:47 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:36:49 juju-4cb8e1-1 snapd[2256]: storehelpers.go:919: cannot refresh: snap has no updates available: "core22", "snapd"
+Aug 17 01:36:51 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:36:51 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:36:54 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:36:54 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:36:54 juju-4cb8e1-1 systemd[1]: /lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.
+Aug 17 01:37:09 juju-4cb8e1-1 snapd[2256]: api_snaps.go:522: Installing snap "charmed-mongodb" revision 174
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3352]: group added to /etc/group: name=snapd-range-524288-root, GID=524288
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3352]: group added to /etc/gshadow: name=snapd-range-524288-root
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3352]: new group: name=snapd-range-524288-root, GID=524288
+Aug 17 01:37:09 juju-4cb8e1-1 useradd[3358]: new user: name=snapd-range-524288-root, UID=524288, GID=524288, home=/nonexistent, shell=/usr/bin/false, from=none
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3367]: group added to /etc/group: name=snap_daemon, GID=584788
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3367]: group added to /etc/gshadow: name=snap_daemon
+Aug 17 01:37:09 juju-4cb8e1-1 groupadd[3367]: new group: name=snap_daemon, GID=584788
+Aug 17 01:37:09 juju-4cb8e1-1 useradd[3373]: new user: name=snap_daemon, UID=584788, GID=584788, home=/nonexistent, shell=/usr/bin/false, from=none
+Aug 17 01:38:46 juju-4cb8e1-1 snapd[2256]: taskrunner.go:304: Change 5 task (Download snap "charmed-mongodb" (174) from channel "6/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_174.snap?interactive=1&token=1786942800_e9b8c239e8821c5487608bd576211dcd80279f58": net/http: timeout awaiting response headers
+.
+unit-mongodb-1: 01:39:20 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:39:20 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-4: 01:46:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:46:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
