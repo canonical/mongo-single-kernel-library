@@ -223,7 +223,6 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
 
     units = ops_test.model.applications[db_app_name].units
 
-    await none_is_restarting(ops_test, db_app_name)
     await ops_test.model.block_until(
         *[lambda: unit.workload_status == "blocked" for unit in units], timeout=TIMEOUT
     )
@@ -235,6 +234,8 @@ async def test_remove_ldap_goes_to_blocked(ops_test: OpsTest, substrate: Substra
         status="GLauth TLS is integrated but LDAP is not.",
         timeout=300,
     )
+
+    await none_is_restarting(ops_test, db_app_name)
 
     # John should not be able to log in now.
     uri = await generate_mongodb_ldap_client(
