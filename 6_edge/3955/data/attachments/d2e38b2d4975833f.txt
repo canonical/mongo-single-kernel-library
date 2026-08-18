@@ -1,0 +1,100 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:67 Wait for refresh to fail
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:79 Re-refresh the charm
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:90 Running resume-refresh on the leader unit
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:95 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [executing] active: 
+  mongodb/1 [executing] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: 
+  mongodb/1 [idle] active: 
+  mongodb/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: 
+  mongodb/1 [executing] active: 
+  mongodb/2 [idle] active: MongoDB 6.0.28 running; Snap revision 174; Charm revision 1+82ce9b6-dirty.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  01:42:35Z
+
+App      Version  Status   Scale  Charm    Channel  Rev  Exposed  Message
+mongodb  6.0.28   blocked      3  mongodb             1  no       Refresh incompatible. Rollback to previous revision with `juju refresh`.
+
+Unit        Workload  Agent  Machine  Public address  Ports      Message
+mongodb/0   active    idle   0        10.14.216.7     27017/tcp  
+mongodb/1*  error     idle   1        10.14.216.34    27017/tcp  hook failed: "upgrade-version-a-relation-changed"
+mongodb/2   active    idle   2        10.14.216.79    27017/tcp  MongoDB 6.0.28 running; Snap revision 174; Charm revision 1+82ce9b6-dirty.
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.14.216.7   juju-3d7e8b-0  ubuntu@22.04  runnervmp9m8c  Running
+1        started  10.14.216.34  juju-3d7e8b-1  ubuntu@22.04  runnervmp9m8c  Running
+2        started  10.14.216.79  juju-3d7e8b-2  ubuntu@22.04  runnervmp9m8c  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 01:34:47 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:34:47 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-1: 01:36:06 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-1: 01:36:06 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+machine-0: 01:36:11 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:36:11 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:36:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:36:54 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-0: 01:36:54 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+unit-mongodb-2: 01:37:03 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count']
+unit-mongodb-2: 01:37:03 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count']
+unit-mongodb-1: 01:42:34 ERROR unit.mongodb/1.juju-log upgrade-version-a:2: cmd failed - cmd=chown -R 584788:0 /var/snap/charmed-mongodb/common, stdout=, stderr=chown: changing ownership of '/var/snap/charmed-mongodb/common/var/lib/mongodb/WiredTiger.turtle.set': No such file or directory
+
+unit-mongodb-1: 01:42:34 ERROR unit.mongodb/1.juju-log upgrade-version-a:2: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 148, in exec
+    output = subprocess.check_output(
+  File "/usr/lib/python3.10/subprocess.py", line 421, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['chown', '-R', '584788:0', '/var/snap/charmed-mongodb/common']' returned non-zero exit status 1.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/upgrades.py", line 99, in _reconcile_upgrade
+    self.manager._reconcile_upgrade(during_upgrade=True)
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 404, in _reconcile_upgrade
+    self._on_vm_outdated()  # type: ignore
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 452, in _on_vm_outdated
+    self._upgrade.upgrade_unit(dependent=self.dependent)  # type: ignore
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/machine_upgrades.py", line 169, in upgrade_unit
+    dependent._configure_workloads()
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 996, in _configure_workloads
+    self.set_permissions()
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/operator.py", line 283, in set_permissions
+    self.workload.exec(
+  File "/var/lib/juju/agents/unit-mongodb-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/vm_workload.py", line 162, in exec
+    raise WorkloadExecError(
+single_kernel_mongo.exceptions.WorkloadExecError: cmd failed (1) - cmd=chown -R 584788:0 /var/snap/charmed-mongodb/common, stdout=, stderr=chown: changing ownership of '/var/snap/charmed-mongodb/common/var/lib/mongodb/WiredTiger.turtle.set': No such file or directory
+
+unit-mongodb-1: 01:42:34 ERROR juju.worker.uniter.operation hook "upgrade-version-a-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
