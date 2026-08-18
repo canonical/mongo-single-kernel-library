@@ -268,6 +268,11 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
     def update_mongos_hosts(self) -> None:
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+
         for relation in self.state.config_server_relation:
             if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
