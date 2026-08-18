@@ -33,6 +33,7 @@ from data_platform_helpers.advanced_statuses.protocol import (
 )
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -40,6 +41,7 @@ from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
+from single_kernel_mongo.exceptions import WorkloadExecError
 from single_kernel_mongo.state.charm_state import CharmState
 
 T = TypeVar("T", bound=MongoConfigModel)
@@ -106,12 +108,25 @@ class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], Charm
         """Return the config parsed as a pydantic model."""
         return self.config_type.model_validate(self.model.config)
 
+    @retry(
+        stop=stop_after_attempt(10),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(WorkloadExecError),
+        reraise=True,
+    )
+    def _wait_for_snapd(self) -> None:
+        """Wait until the snapd service is active."""
+        self.workload.exec(["systemctl", "is-active", "--quiet", "snapd.service"])
+
     def on_install(self, _):
         """First install event handler."""
         if self.substrate == Substrates.VM:
             self.status_handler.set_running_status(
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
+            logger.info("Restarting snapd before installing the MongoDB workload snap")
+            self.workload.exec(["systemctl", "restart", "snapd.service"])
+            self._wait_for_snapd()
             self.workload.install()
 
     def on_leader_elected(self, event):
