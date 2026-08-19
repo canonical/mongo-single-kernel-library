@@ -63,6 +63,7 @@ from single_kernel_mongo.exceptions import (
     UpgradeInProgressError,
     WaitingForLeaderError,
     WaitingForVaultError,
+    WorkloadExecError,
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
@@ -304,7 +305,15 @@ class LifecycleEventsHandler(Object):
 
     def on_storage_attached(self, event: StorageAttachedEvent):
         """Storage Attached Event."""
-        self.dependent.prepare_storage()
+        try:
+            self.dependent.prepare_storage()
+        except WorkloadExecError as e:
+            defer_event_with_info_log(
+                logger,
+                event,
+                "storage attached",
+                f"Workload is not ready: {e}",
+            )
 
     def on_storage_detaching(self, event: StorageDetachingEvent):
         """Storage Detaching Event."""
