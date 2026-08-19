@@ -496,6 +496,8 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             _ = self.workload.run_bin_command(
                 "config", ["--file=-"], environment=self.environment, input=safe_dump(config)
             )
+            time.sleep(2)
+            self._wait_pbm_status()
         except WorkloadExecError as err:
             # In case of resync in progress, raise a ResyncError that will set a waiting status.
             if "resync" in err.stderr.lower():
