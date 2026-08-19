@@ -1446,12 +1446,11 @@ async def has_file(
     container: str = "mongod",
 ) -> bool:
     """Checks if the file exists or not."""
-    app_name = get_app_name_from_unit(unit.name)
     match substrate:
         case "lxd":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {unit.name} sudo"
         case "microk8s":
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {app_name}/leader"
+            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {unit.name}"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
 
