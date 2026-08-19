@@ -553,6 +553,19 @@ class MongoDBOperator(OperatorProtocol, Object):
                 )
                 raise
 
+        # Kubernetes storage-attached events can run before Pebble is ready, so commands
+        # executed from those hooks cannot reliably prepare the mounted /tmp directory.
+        # At this point the startup checks have confirmed that Pebble is reachable and all
+        # storage is attached. Ensure MongoDB can create its Unix socket before starting it.
+        if self.substrate == Substrates.K8S:
+            #self.workload.exec(
+            #    ["chmod", "1777", f"{self.workload.paths.tmp_path}"],
+            #    user="root",
+            #    group="root",
+            #)
+            self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
+
+
         if self.refresh.in_progress:  # type: ignore[union-attr]
             # Bypass the regular start if refresh is in progress
             return
@@ -1079,7 +1092,6 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Set the permissions for the common and tmp dir.
         """
-        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
         if self.substrate == Substrates.K8S:
             return
 
@@ -1092,6 +1104,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
