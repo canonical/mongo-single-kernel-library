@@ -30,9 +30,13 @@ jobs:
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v50.2.1#subdirectory=_cli
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Collect charm platforms to build from charmcraft.yaml
         id: collect
-        run: collect-charm-platforms --directory='${{ inputs.path-to-charm-directory }}'
+        run: collect-charm-platforms --directory="${INPUTS_PATH_TO_CHARM_DIRECTORY}"
+        env:
+          INPUTS_PATH_TO_CHARM_DIRECTORY: ${{ inputs.path-to-charm-directory }}
     outputs:
       platforms: ${{ steps.collect.outputs.platforms }}
     permissions:
@@ -83,14 +87,17 @@ jobs:
       - name: Update lib and build charm
         shell: bash
         run: |
-          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh --charm ${{ inputs.path-to-charm-directory }} --platform ${{ matrix.platform.name }}
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- bash scripts/build_lib_for_integration.sh --charm "${INPUTS_PATH_TO_CHARM_DIRECTORY}" --platform ${{ matrix.platform.name }}
         env:
           CI_CACHE: ${{ inputs.cache }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUTS_PATH_TO_CHARM_DIRECTORY: ${{ inputs.path-to-charm-directory }}
       - run: touch .empty
       - name: Compute path in artifact
         id: path-in-artifact
-        run: compute-path-in-artifact '${{ inputs.path-to-charm-directory }}'
+        run: compute-path-in-artifact "${INPUTS_PATH_TO_CHARM_DIRECTORY}"
+        env:
+          INPUTS_PATH_TO_CHARM_DIRECTORY: ${{ inputs.path-to-charm-directory }}
       - name: Upload charm
         uses: actions/upload-artifact@v7
         with:

@@ -11,6 +11,12 @@ on:
         description: "Target branch to create PR against (e.g. 8/edge)"
         required: true
         type: string
+    secrets:
+      PAT:
+        required: True
+      CI_COMMITS_SSH_SIGNING_KEY:
+        required: True
+
   workflow_dispatch:
     inputs:
       version:
@@ -51,6 +57,7 @@ jobs:
         with:
           fetch-depth: 20
           fetch-tags: true
+          persist-credentials: false
 
       - name: Get new tag content
         id: get-tag
@@ -81,6 +88,7 @@ jobs:
           repository: ${{ matrix.repo }}
           ref: ${{ env.BASE_BRANCH }}
           token: ${{ secrets.PAT }}
+          persist-credentials: false
 
       - name: Install tox & poetry
         run: |
@@ -154,17 +162,19 @@ jobs:
       - name: Open Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+          STEPS_GET_TAG_OUTPUTS_VERSION_CONTENT: ${{ steps.get-tag.outputs.VERSION_CONTENT }}
+          STEPS_GET_REVIEWERS_OUTPUTS_REVIEWERS: ${{ steps.get-reviewers.outputs.REVIEWERS }}
         run: |
           BODY="Automated bump of \`${DEP_NAME}\` to version \`${VERSION}\` after PyPI release.
             ### What's Changed
-            ${{ steps.get-tag.outputs.VERSION_CONTENT }}"
+            ${STEPS_GET_TAG_OUTPUTS_VERSION_CONTENT}"
 
           PR_URL=$(gh pr create \
             --title "patch: Bump ${DEP_NAME} to ${VERSION}" \
             --body "${BODY}" \
-            --base ${{ env.BASE_BRANCH }}  \
+            --base "${BASE_BRANCH}"  \
             --head "${PR_BRANCH}" \
-            --reviewer "${{ steps.get-reviewers.outputs.REVIEWERS }}"
+            --reviewer "${STEPS_GET_REVIEWERS_OUTPUTS_REVIEWERS}"
           )
           # shellcheck disable=SC2086
           echo "- ${{ matrix.repo }}: ${PR_URL}" >> $GITHUB_STEP_SUMMARY

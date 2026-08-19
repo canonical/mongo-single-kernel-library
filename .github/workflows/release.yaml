@@ -19,13 +19,17 @@ jobs:
     uses: ./.github/workflows/ci-quick.yaml
     permissions:
       pull-requests: write
-    secrets: inherit
 
   ci-tests:
     uses: ./.github/workflows/ci.yaml
     permissions:
       contents: write # Needed for Allure Report
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+      GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
+      GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
 
   release-part1:
     needs:
@@ -76,7 +80,7 @@ jobs:
       - name: Wait for PyPI release to be available
         run: |
           set -euo pipefail
-          TAG="${{ needs.release-part1.outputs.git-tag }}"
+          TAG="${NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG}"
           DEP_NAME="mongo-charms-single-kernel"
           VERSION_NUMBER="${TAG#v}"
           URL="https://pypi.org/pypi/${DEP_NAME}/${VERSION_NUMBER}/json"
@@ -93,6 +97,8 @@ jobs:
 
           echo "Timed out waiting for ${DEP_NAME}==${VERSION_NUMBER} on PyPI."
           exit 1
+        env:
+          NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
       contents: read
 
@@ -109,4 +115,6 @@ jobs:
     permissions: # Needed to create PRs in dependent charm repos
       contents: write
       pull-requests: write
-    secrets: inherit
+    secrets:
+      PAT: ${{ secrets.PAT }}
+      CI_COMMITS_SSH_SIGNING_KEY: secrets.CI_COMMITS_SSH_SIGNING_KEY

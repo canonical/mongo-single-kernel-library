@@ -47,6 +47,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up environment
         run: |
           sudo snap install go --classic
@@ -59,14 +61,19 @@ jobs:
       - name: Collect spread jobs
         id: collect-jobs
         shell: python
+        env:
+          BACKEND: ${{ inputs.backend }}
+          MONGODB_REVISIONS: ${{ inputs.mongodb-revisions }}
+          MONGOS_REVISIONS: ${{ inputs.mongos-revisions }}
         run: |
           import json
           import pathlib
           import os
           import subprocess
-          backend = "${{ inputs.backend }}"
+          backend = os.environ["BACKEND"]
           pattern = f"github-ci:...:tests/spread/release/{backend}/"
-          mongodb_revisions = json.loads("${{ inputs.mongodb-revisions }}")
+          mongodb_revisions = json.loads(os.environ["MONGODB_REVISIONS"])
+          mongos_revisions = json.loads(os.environ["MONGOS_REVISIONS"])
           spread_jobs = (
               subprocess.run(
                 [pathlib.Path.home() / "go/bin/spread", "-list", pattern],
@@ -130,6 +137,8 @@ jobs:
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Setup python 3.12
         uses: actions/setup-python@v7
         with:
