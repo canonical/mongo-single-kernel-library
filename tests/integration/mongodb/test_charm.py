@@ -111,18 +111,18 @@ async def test_status(ops_test: OpsTest) -> None:
 
 
 async def test_tmp_permissions(ops_test: OpsTest, substrate: Substrate) -> None:
-    """Verifies that the temporary directory has the expected permissions."""
+    """Verifies that every unit's temporary directory has the expected permissions."""
     app_name = await get_app_name(ops_test)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
 
-    permissions = await execute_on_server(
-        ops_test,
-        substrate,
-        leader_unit,
-        "stat -c %a /tmp",
-    )
+    for unit in ops_test.model.applications[app_name].units:
+        permissions = await execute_on_server(
+            ops_test,
+            substrate,
+            unit,
+            "stat -c %a /tmp",
+        )
 
-    assert permissions.strip() == "1777"
+        assert permissions.strip() == "1777", f"invalid /tmp permissions on {unit.name}"
 
 
 @pytest.mark.abort_on_fail
