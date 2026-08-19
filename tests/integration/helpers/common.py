@@ -975,6 +975,7 @@ async def get_status_detail(unit: JujuUnit) -> dict:
 
 
 async def none_has_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    """Checks that no unit has a specific status in its status-detail output."""
     for unit in ops_test.model.applications[app_name].units:
         action = await unit.run_action("status-detail")
         action = await action.wait()
@@ -984,7 +985,7 @@ async def none_has_status(ops_test: OpsTest, app_name: str, status: str, message
         unit_statuses = json.loads(result["unit"])
 
         assert all(
-            unit_status["Status"].lower() != status for unit_status in unit_statuses
+            unit_status["Status"].lower() != status.lower() for unit_status in unit_statuses
         ), f"Status {status} still present"
         assert all(
             unit_status["Message"] != message for unit_status in unit_statuses
