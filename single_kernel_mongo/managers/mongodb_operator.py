@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, final
 
 import charm_refresh
 import shortuuid
+from charmlibs import sysctl
 from charmlibs.rollingops import (
     OperationResult,
     RollingOpsManager,
@@ -102,7 +103,6 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
     WorkloadServiceError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.backups.gcs import GCSBackupManager
 from single_kernel_mongo.managers.backups.s3 import S3BackupManager
 from single_kernel_mongo.managers.cluster import ClusterProvider

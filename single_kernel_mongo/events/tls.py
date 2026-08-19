@@ -9,6 +9,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.interfaces.tls_certificates import (
+    CertificateAvailableEvent,
+    TLSCertificatesRequiresV4,
+)
 from charmlibs.rollingops import RollingOpsNoRelationError
 from ops import ConfigChangedEvent
 from ops.charm import RelationBrokenEvent, RelationCreatedEvent
@@ -23,10 +27,6 @@ from single_kernel_mongo.config.statuses import (
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import DeferrableFailedHookChecksError
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
-    TLSCertificatesRequiresV4,
-)
 from single_kernel_mongo.state.tls_state import TlsManagementState
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 

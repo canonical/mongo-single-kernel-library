@@ -6,12 +6,12 @@
 
 from enum import Enum
 
+from charmlibs.interfaces.tls_certificates import PrivateKey
 from ops import Relation
 from ops.model import Unit
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.core.secrets import SecretCache
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import PrivateKey
 
 SECRET_KEY_LABEL = "key-secret"
 SECRET_CA_LABEL = "ca-secret"
