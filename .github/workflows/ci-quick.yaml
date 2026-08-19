@@ -65,6 +65,27 @@ jobs:
     permissions:
       contents: read
 
+  actionlint:
+    name: Lint .github/workflows/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        id: install
+        run: |
+          curl -O https://raw.githubusercontent.com/rhysd/actionlint/main/.github/actionlint-matcher.json
+          echo "::add-matcher::actionlint-matcher.json"
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      - name: Run actionlint
+        run: |
+          '${{ steps.install.outputs.executable }}' -color
+    permissions:
+      contents: read
+
   lint-workflows:
     name: Lint .github/workflows/
     uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@50.2.1
