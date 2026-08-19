@@ -26,6 +26,8 @@ jobs:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   build-helpers:
     strategy:
@@ -35,11 +37,13 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
     with:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   integration-test:
     name: Integration test charm

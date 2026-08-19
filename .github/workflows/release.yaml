@@ -32,9 +32,9 @@ jobs:
       - ci-quick-tests
       - ci-tests
     name: Release to PyPI (part 1)
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v31.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v50.2.1
     permissions:
-      contents: write  # Needed to create git tag
+      contents: write # Needed to create git tag
 
   # Separate job needed to workaround https://github.com/pypi/warehouse/issues/11096
   release-trusted-publishing:
@@ -46,25 +46,25 @@ jobs:
     environment: production
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ needs.release-part1.outputs.artifact-name }}
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1.14.2 # This is an immutable release
     permissions:
-      id-token: write  # Needed for PyPI trusted publishing
+      id-token: write # Needed for PyPI trusted publishing
 
   release-part2:
     name: Release to PyPI (part 2)
     needs:
       - release-part1
       - release-trusted-publishing
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v31.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v50.2.1
     with:
       git-tag: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
-      contents: write  # Needed to create GitHub release
+      contents: write # Needed to create GitHub release
 
   wait-for-pypi-available:
     name: Wait for PyPI release to be available
@@ -93,6 +93,8 @@ jobs:
 
           echo "Timed out waiting for ${DEP_NAME}==${VERSION_NUMBER} on PyPI."
           exit 1
+    permissions:
+      contents: read
 
   trigger-bump-dependent-charms:
     name: Trigger bump-dependent-charms workflow

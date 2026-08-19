@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up environment
         run: |
           sudo snap install go --classic
@@ -109,6 +109,8 @@ jobs:
               file.write(output)
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
+    permissions:
+      contents: read
 
   release-test:
     strategy:
@@ -127,9 +129,9 @@ jobs:
         run: df --human-readable
       - name: Checkout
         timeout-minutes: 3
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Set up environment
@@ -186,7 +188,7 @@ jobs:
       - name: Upload logs
         timeout-minutes: 5
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: logs-release-test-${{ matrix.job.name_in_artifact }}
           path: ~/logs/
@@ -195,3 +197,5 @@ jobs:
         timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: df --human-readable
+    permissions:
+      contents: read
