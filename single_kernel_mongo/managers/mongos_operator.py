@@ -12,6 +12,7 @@ import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
+from charmlibs import sysctl
 from charmlibs.rollingops import OperationResult, RollingOpsManager, RollingOpsStatus
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
@@ -54,7 +55,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
 from single_kernel_mongo.managers.cluster import ClusterRequirer
 from single_kernel_mongo.managers.config import MongosConfigManager
 from single_kernel_mongo.managers.k8s import K8sManager

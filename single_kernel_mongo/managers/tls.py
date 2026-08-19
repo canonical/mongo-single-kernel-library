@@ -15,6 +15,12 @@ import re
 import socket
 from typing import TYPE_CHECKING, TypedDict, final
 
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    PrivateKey,
+    ProviderCertificate,
+)
 from data_platform_helpers.advanced_statuses.models import (
     StatusObject,
 )
@@ -30,12 +36,6 @@ from single_kernel_mongo.config.literals import CharmKind, Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    CertificateRequestAttributes,
-    PrivateKey,
-    ProviderCertificate,
-)
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (

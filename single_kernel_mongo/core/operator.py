@@ -23,7 +23,15 @@ from typing import TYPE_CHECKING, TypeAlias
 
 import charm_refresh
 import jinja2
+from charmlibs import sysctl
 from charmlibs.rollingops import RollingOpsManager
+from charmlibs.systemd import (
+    SystemdError,
+    daemon_reload,
+    service_disable,
+    service_enable,
+    service_start,
+)
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
     AbstractManagerStatus,
@@ -54,14 +62,6 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     RelationBrokenDuringScaleDownError,
 )
-from single_kernel_mongo.lib.charms.operator_libs_linux.v0 import sysctl
-from single_kernel_mongo.lib.charms.operator_libs_linux.v1.systemd import (
-    SystemdError,
-    daemon_reload,
-    service_disable,
-    service_enable,
-    service_start,
-)
 from single_kernel_mongo.managers.config import FileBasedConfigManager
 from single_kernel_mongo.managers.mongo import MongoManager
 from single_kernel_mongo.state.charm_state import CharmState
@@ -69,10 +69,11 @@ from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
 if TYPE_CHECKING:
+    from charmlibs.sysctl import Config
+
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
     from single_kernel_mongo.events.database import DatabaseEventsHandler
     from single_kernel_mongo.events.tls import TLSEventsHandler
-    from single_kernel_mongo.lib.charms.operator_libs_linux.v0.sysctl import Config
     from single_kernel_mongo.managers.ldap import LDAPManager
     from single_kernel_mongo.managers.tls import TLSManager
     from single_kernel_mongo.managers.upgrade_v3 import MongoDBUpgradesManager

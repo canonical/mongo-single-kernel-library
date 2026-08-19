@@ -1,18 +1,19 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import base64
+import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from charmlibs.interfaces.tls_certificates import (
+    CertificateAvailableEvent,
+)
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.structured_config import MongoDBRoles
-from single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
-)
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
@@ -22,6 +23,8 @@ def get_certificate_mock(cert: str, chain: str, ca: str, csr: str) -> MagicMock:
 
     cert_mock = MagicMock()
     cert_mock.raw = cert
+    cert_mock.validity_start_time = datetime.datetime(1970, 1, 1, 0, 0, tzinfo=datetime.UTC)
+    cert_mock.expiry_time = datetime.datetime(2038, 1, 1, 0, 0, tzinfo=datetime.UTC)
     csr_mock = MagicMock()
     csr_mock.raw = csr
     provider_certificate_mock.certificate = cert_mock
@@ -66,11 +69,14 @@ def test_client_certificate_available(
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         return_value=([new_cert], new_private_key),
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
         return_value=(new_cert, new_private_key),
     )
     harness.set_leader(True)
@@ -130,11 +136,14 @@ def test_internal_certificate_available(
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
-        side_effect=[([], None), ([new_cert], new_private_key)],
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        side_effect=(([], None), ([new_cert], new_private_key)),
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
         side_effect=[
             (new_cert, new_private_key),
             (None, None),
@@ -191,7 +200,10 @@ def test_unknown_certificate_available(harness: Harness[MongoTestCharm], mocker,
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([new_cert], new_private_key), ([new_cert], new_private_key)],
     )
 
@@ -271,7 +283,10 @@ def test_private_key_is_none_certificate_available(harness: Harness[MongoTestCha
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([new_cert], None), ([new_cert], None)],
     )
 
@@ -337,11 +352,14 @@ def test_private_key_does_not_match_config_client_certificate_available(
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         return_value=([new_cert], new_private_key),
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
         return_value=(new_cert, new_private_key),
     )
 
@@ -400,11 +418,14 @@ def test_private_key_does_not_match_config_peer_certificate_available(
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([], None), ([new_cert], new_private_key)],
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificate",
         side_effect=[
             (new_cert, new_private_key),
             (None, None),
@@ -456,8 +477,11 @@ def test_certificate_available_mongos_without_config_server_certificate_is_ignor
         ca="new_test_ca_server",
         csr="new_csr",
     )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
     get_assigned_certificates_mock = mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([new_cert], new_private_key), ([new_cert], new_private_key)],
     )
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
@@ -498,7 +522,10 @@ def test_certificate_available_upgrade_in_progress_defer(
         csr="new_csr",
     )
     mocker.patch(
-        "single_kernel_mongo.lib.charms.tls_certificates_interface.v4.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4._renew_expiring_certificates",
+    )
+    mocker.patch(
+        "charmlibs.interfaces.tls_certificates.TLSCertificatesRequiresV4.get_assigned_certificates",
         side_effect=[([new_cert], new_private_key), ([new_cert], new_private_key)],
     )
     harness.set_leader(True)

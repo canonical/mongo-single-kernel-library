@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from charmlibs.interfaces.ldap import LdapReadyEvent, LdapUnavailableEvent
 from charmlibs.rollingops import RollingOpsNoRelationError
 from ops.framework import EventBase, EventSource, Object
 from pydantic import ValidationError
@@ -28,7 +29,6 @@ from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificat
     CertificateAvailableEvent,
     CertificateRemovedEvent,
 )
-from single_kernel_mongo.lib.charms.glauth_k8s.v0.ldap import LdapReadyEvent, LdapUnavailableEvent
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
 
 if TYPE_CHECKING:

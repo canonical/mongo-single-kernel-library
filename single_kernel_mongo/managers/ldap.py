@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import jinja2
 import ldap
+from charmlibs.interfaces.ldap import LdapRequirer
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from data_platform_helpers.advanced_statuses.protocol import (
     AbstractManagerStatus,
@@ -40,7 +41,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
     CertificateTransferRequires,
 )
-from single_kernel_mongo.lib.charms.glauth_k8s.v0.ldap import LdapRequirer
 from single_kernel_mongo.state.charm_state import CharmState
 
 if TYPE_CHECKING:
