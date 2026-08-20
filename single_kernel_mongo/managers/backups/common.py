@@ -478,11 +478,13 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
     def set_certificate(self, credentials: dict) -> None:
         """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
+        file_on_disk = self.dependent.get_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         if cert_chain_list := credentials.get("tls-ca-chain", None):
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
-            self.configure_and_restart(force=True)
+            should_restart = file_on_disk.strip() == "\n".join(cert_chain_list).strip()
+            self.configure_and_restart(force=should_restart)
 
     def set_config_options(self, credentials: dict) -> None:
         """Apply the configuration provided by S3 integrator.
@@ -703,6 +705,7 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             pbm_status = self.pbm_status
             pbm_as_dict: dict[str, dict[str, str]] = json.loads(pbm_status)
             current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
+            logger.debug("current_pbm_op: %s", current_pbm_op)
 
             if current_pbm_op.get("type", "") == "resync":
                 # since this process takes several minutes we should let the user know
