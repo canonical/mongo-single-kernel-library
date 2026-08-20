@@ -210,7 +210,7 @@ class S3BackupManager(CommonBackupManager):
         This can still happen for now through the s3 integrator for already integrated clients.
         When PBM completely disables that support, it will be removed.
         """
-        output_dict: dict[str, Any] = {"storage.type": "gcs"}
+        output_dict: dict[str, Any] = {"storage": {"type": "gcs"}}
         # Iterate on all configuration values
         for s3_option, s3_value in credentials.items():
             # Create a ref to the dict on which we'll walk
