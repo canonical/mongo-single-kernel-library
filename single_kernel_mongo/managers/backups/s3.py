@@ -70,7 +70,7 @@ class S3BackupManager(CommonBackupManager):
         "endpoint": "storage.s3.endpointUrl",
         "storage-class": "storage.s3.storageClass",
     }
-    BASIC_CONFIG = {"storage.type": "s3"}
+    BASIC_CONFIG = {"storage": {"type": "s3"}}
     backend = "s3"
 
     def __init__(

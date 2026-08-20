@@ -106,7 +106,7 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
     """Common Manager for the backups and storage integrators."""
 
     CONFIG_MAP: ClassVar[dict[str, str]] = {}
-    BASIC_CONFIG: ClassVar[dict[str, str]] = {}
+    BASIC_CONFIG: ClassVar[dict[str, dict[str, str]]] = {}
     invalid_integration_status: StatusObject
     backend: ClassVar[str]
 
