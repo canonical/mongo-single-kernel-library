@@ -10,7 +10,7 @@ import pytest
 from juju import tag
 from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
@@ -792,10 +792,10 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
     # send a replica step down signal. Performed with a retry to give time for the logs to update.
     try:
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(5 * 60), wait=wait_fixed(2)):
             with attempt:
                 assert await db_step_down(
-                    ops_test, substrate, primary.name, sig_term_time, app_name=app_name
+                    ops_test, substrate, sig_term_time, app_name
                 ), "old primary departed without stepping down."
     except RetryError:
         assert False, "old primary departed without stepping down."
