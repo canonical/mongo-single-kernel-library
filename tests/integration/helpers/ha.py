@@ -6,6 +6,7 @@
 
 import json
 import os
+import shlex
 import string
 import subprocess
 import tarfile
@@ -670,10 +671,12 @@ async def db_step_down(
 
     if substrate == "lxd":
         ls_command_template = "ssh {unit_name} sudo ls {log_path}"
-        cat_command_template = "ssh {unit_name} sudo cat {log_path}"
+        cat_command_template = (
+            "ssh {unit_name} \"sudo grep 'Starting an election due to step up request' {log_path}\""
+        )
     else:
         ls_command_template = "ssh  --container mongod {unit_name} ls {log_path}"
-        cat_command_template = "ssh  --container mongod {unit_name} cat {log_path}"
+        cat_command_template = "ssh  --container mongod {unit_name} \"grep 'Starting an election due to step up request' {log_path}\""
 
     for unit in ops_test.model.applications[app_name].units:
         if unit.name == primary_name:
@@ -688,17 +691,22 @@ async def db_step_down(
         # these log files can get quite large. According to the Juju team the 'run' command
         # cannot be used for more than 16MB of data so it is best to use juju ssh or juju scp.
         cat_file = cat_command_template.format(unit_name=unit.name, log_path=log_path)
-        _, stdout, _ = await ops_test.juju(*cat_file.split())
+        _, stdout, _ = await ops_test.juju(*shlex.split(cat_file))
 
         for line in stdout.splitlines():
             if not len(line):
                 continue
 
-            item = json.loads(line)
+            logger.info(line)
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                logger.warning("failed to parse line: %s", line)
+                continue
 
             step_down_time = convert_time(item["t"]["$date"])
             if (
-                "Starting an election due to step up request" in line
+                "Starting an election due to step up request" in item.get("msg", "")
                 and step_down_time >= sigterm_time
             ):
                 return True
