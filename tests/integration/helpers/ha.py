@@ -662,7 +662,7 @@ async def kill_unit_process(
         )
 
 
-async def db_step_down(
+async def db_step_down(  # noqa: C901
     ops_test: OpsTest, substrate: Substrate, primary_name: str, sigterm_time: float, app_name: str
 ):
     # loop through all units that aren't the old primary
@@ -671,11 +671,13 @@ async def db_step_down(
 
     if substrate == "lxd":
         ls_command_template = "ssh {unit_name} sudo ls {log_path}"
+        election_template = "ssh {unit_name} \"sudo grep 'ELECTION' {log_path}\""
         cat_command_template = (
             "ssh {unit_name} \"sudo grep 'Starting an election due to step up request' {log_path}\""
         )
     else:
         ls_command_template = "ssh  --container mongod {unit_name} ls {log_path}"
+        election_template = "ssh  --container mongod {unit_name} \"grep 'ELECTION' {log_path}\""
         cat_command_template = "ssh  --container mongod {unit_name} \"grep 'Starting an election due to step up request' {log_path}\""
 
     for unit in ops_test.model.applications[app_name].units:
@@ -687,6 +689,14 @@ async def db_step_down(
         if return_code == 2:
             logger.info(f"Missing file {log_path}")
             continue
+
+        # Observability: log all election lines
+        election_file = election_template.format(unit_name=unit.name, log_path=log_path)
+        _, _stdout, _ = await ops_test.juju(*shlex.split(election_file))
+        logger.info("BEGIN: ELECTION lines for %s", unit.name)
+        for line in _stdout.splitlines():
+            logger.info(line)
+        logger.info("END: ELECTION lines for %s", unit.name)
 
         # these log files can get quite large. According to the Juju team the 'run' command
         # cannot be used for more than 16MB of data so it is best to use juju ssh or juju scp.
