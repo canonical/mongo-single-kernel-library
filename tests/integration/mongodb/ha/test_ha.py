@@ -759,7 +759,9 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     assert other_unit, "No secondary unit found"
 
     # send SIGTERM, we expect `systemd` to restart the process
-    sig_term_time = datetime.now(timezone.utc).timestamp()
+    sig_term_dt = datetime.now(timezone.utc)
+    logger.info("SIGTERM TIME is %s", sig_term_dt)
+    sig_term_time = sig_term_dt.timestamp()
     await kill_unit_process(
         ops_test, substrate, primary.name, kill_code="SIGTERM", app_name=app_name
     )
@@ -788,12 +790,13 @@ async def test_restart_db_process(ops_test: OpsTest, substrate: Substrate, conti
     ), f"New primary {new_primary.name=} is equal to old primary {primary.name=}"
 
     # verify that a stepdown was performed on restart. SIGTERM should send a graceful restart and
-    # send a replica step down signal. Performed with a retry to give time for the logs to update.
+    # send a replica step down signal.
+    # We check using rs.status metrics information
     try:
         for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
             with attempt:
                 assert await db_step_down(
-                    ops_test, substrate, primary.name, sig_term_time, app_name=app_name
+                    ops_test, substrate, sig_term_time, app_name
                 ), "old primary departed without stepping down."
     except RetryError:
         assert False, "old primary departed without stepping down."

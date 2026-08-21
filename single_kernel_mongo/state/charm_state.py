@@ -593,6 +593,14 @@ class CharmState(Object, AbstractStatusesState):
             component=self.model.app,
         )
 
+    def config_server_state(self, relation: Relation) -> AppShardingComponentState:
+        """The app config-server state state for a given relation."""
+        return AppShardingComponentState(
+            relation=relation,
+            data_interface=self.config_server_data_interface,
+            component=relation.app,
+        )
+
     @property
     def unit_shard_state(self) -> UnitShardingComponentState:
         """The unit shard state."""
@@ -607,13 +615,13 @@ class CharmState(Object, AbstractStatusesState):
         """Gets the config server name."""
         if self.charm_role.name == CharmKind.MONGOS:
             if self.mongos_cluster_relation:
-                return self.mongos_cluster_relation.app.name
+                return self.cluster.replica_set
             return None
         if self.is_role(MongoDBRoles.SHARD):
             if self.shard_relation:
-                return self.shard_relation.app.name
+                return self.shard_state.config_server_replset
             return None
-        logger.info(
+        logger.debug(
             "Component %s is not a shard, cannot be integrated to a config-server.",
             self.app_peer_data.role,
         )
