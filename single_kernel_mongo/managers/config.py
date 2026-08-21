@@ -650,7 +650,11 @@ class MongoDBConfigManager(MongoConfigManager):
                     },
                 }
             },
-            "setParameter": {"authenticationMechanisms": "PLAIN,SCRAM-SHA-256"},
+            "setParameter": {
+                "authenticationMechanisms": "PLAIN,SCRAM-SHA-256",
+                "ldapShouldRefreshUserCacheEntries": False,
+                "ldapUserCacheInvalidationInterval": 30,
+            },
         }
         if self.state.ldap.ldap_user_to_dn_mapping:
             ldap_params["security"]["ldap"]["userToDNMapping"] = (
