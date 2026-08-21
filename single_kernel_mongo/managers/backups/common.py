@@ -683,8 +683,8 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
                 return
 
     @retry(
-        stop=stop_after_attempt(120),
-        wait=wait_fixed(5),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(10),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
         before=before_log(logger, logging.DEBUG),
