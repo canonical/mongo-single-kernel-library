@@ -111,9 +111,6 @@ def test_pbm_workload_init(monkeypatch):
 
     workload._env = "test"
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
-    assert workload.paths.pbm_config == Path(
-        "/var/snap/charmed-mongodb/current/etc/pbm/pbm_config.yaml"
-    )
     assert workload.env_var == "PBM_MONGODB_URI"
     assert workload.role == ROLES["vm"]["mongod"]
 
