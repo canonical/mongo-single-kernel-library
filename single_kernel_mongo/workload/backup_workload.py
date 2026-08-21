@@ -4,6 +4,7 @@
 
 """PBM service workloads definition."""
 
+from pathlib import Path
 from typing import ClassVar
 
 from ops.model import Container
@@ -13,6 +14,25 @@ from typing_extensions import override
 from single_kernel_mongo.config.models import CharmSpec
 from single_kernel_mongo.core.workload import MongoPaths, WorkloadBase
 from single_kernel_mongo.exceptions import WorkloadServiceError
+
+
+class PBMPaths(MongoPaths):
+    """Vault Agent specific paths."""
+
+    @property
+    def pbm_agent_config_path(self) -> Path:
+        """PBM Agent configuration file path."""
+        return Path(f"{self.etc_path}/pbm/pbm-agent.yaml")
+
+    @property
+    def pbm_agent_log_dir(self) -> Path:
+        """PBM Agent log dir."""
+        return Path(f"{self.var_path}/log/pbm")
+
+    @property
+    def pbm_agent_log_file(self) -> Path:
+        """PBM Agent log file."""
+        return Path(f"{self.var_path}/log/pbm/pbm-agent.json")
 
 
 class PBMWorkload(WorkloadBase):
@@ -26,7 +46,7 @@ class PBMWorkload(WorkloadBase):
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
-        self.paths: MongoPaths = MongoPaths(self.role)
+        self.paths: PBMPaths = PBMPaths(self.role)
 
     @property
     @override
@@ -43,7 +63,7 @@ class PBMWorkload(WorkloadBase):
                     self.service: {
                         "override": "replace",
                         "summary": "pbm",
-                        "command": "/usr/bin/pbm-agent",
+                        "command": f"/usr/bin/pbm-agent -f {self.paths.pbm_agent_config_path}",
                         "startup": "enabled",
                         "user": self.users.user,
                         "group": self.users.group,
