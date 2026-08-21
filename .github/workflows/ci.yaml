@@ -10,6 +10,17 @@ on:
       - "docs/**"
   workflow_dispatch:
   workflow_call:
+    secrets:
+      AWS_ACCESS_KEY:
+        required: true
+      AWS_SECRET_KEY:
+        required: true
+      GCP_ACCESS_KEY:
+        required: true
+      GCP_SECRET_KEY:
+        required: true
+      GCS_SERVICE_ACCOUNT:
+        required: true
 
 jobs:
   build:
@@ -26,6 +37,8 @@ jobs:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   build-helpers:
     strategy:
@@ -35,11 +48,13 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
     with:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   integration-test:
     name: Integration test charm
@@ -49,6 +64,11 @@ jobs:
     uses: ./.github/workflows/integration_test.yaml
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+      GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
+      GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
     permissions:
       contents: write # Needed for Allure Report
