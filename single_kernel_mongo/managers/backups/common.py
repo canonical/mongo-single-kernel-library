@@ -705,7 +705,6 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             pbm_status = self.pbm_status
             pbm_as_dict: dict[str, dict[str, str]] = json.loads(pbm_status)
             current_pbm_op: dict[str, str] = pbm_as_dict.get("running", {})
-            logger.debug("current_pbm_op: %s", current_pbm_op)
 
             if current_pbm_op.get("type", "") == "resync":
                 # since this process takes several minutes we should let the user know
