@@ -311,7 +311,7 @@ class LifecycleEventsHandler(Object):
             defer_event_with_info_log(
                 logger,
                 event,
-                "storage attached",
+                str(type(event)),
                 f"Workload is not ready: {e}",
             )
 
@@ -325,4 +325,12 @@ class LifecycleEventsHandler(Object):
 
     def on_upgrade_charm(self, event: UpgradeCharmEvent):
         """Upgrade Charm Event."""
-        self.dependent.upgrade_charm()
+        try:
+            self.dependent.upgrade_charm()
+        except WorkloadExecError as e:
+            defer_event_with_info_log(
+                logger,
+                event,
+                str(type(event)),
+                f"Workload is not ready: {e}",
+            )
