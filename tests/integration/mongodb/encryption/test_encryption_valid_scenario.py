@@ -102,12 +102,12 @@ async def test_integration_goes_to_active(
         )
 
         replica_set_uri = f"mongodb://{CHARMED_OPERATOR_USERNAME}:{password}@{host}/admin"
-        command = "db.adminCommand({getCmdLineOpts: 1})"
+        command = "db.serverStatus()"
         result = await execute_on_mongod(
             ops_test, app_name, substrate, uri=replica_set_uri, command=command
         )
         assert result.succeeded
-        assert result.data.get("parsed", {}).get("security", {}).get("enableEncryption", False)
+        assert result.data.get("encryptionAtRest", {}).get("encryptionEnabled", False)
 
 
 async def test_vault_agent_metrics(ops_test: OpsTest, substrate: Substrate):

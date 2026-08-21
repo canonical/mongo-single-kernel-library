@@ -974,6 +974,36 @@ async def get_status_detail(unit: JujuUnit) -> dict:
     return action.results["json-output"]
 
 
+async def none_has_status(ops_test: OpsTest, app_name: str, status: str, message: str) -> None:
+    """Checks that no unit has a specific status in its status-detail output."""
+    for unit in ops_test.model.applications[app_name].units:
+        action = await unit.run_action("status-detail")
+        action = await action.wait()
+        result = action.results["json-output"]
+
+        # juju messes up the string formatting here.
+        unit_statuses = json.loads(result["unit"])
+
+        assert all(
+            unit_status["Status"].lower() != status.lower() for unit_status in unit_statuses
+        ), f"Status {status} still present"
+        assert all(
+            unit_status["Message"] != message for unit_status in unit_statuses
+        ), f"Message {message} still present"
+
+
+async def none_is_restarting(ops_test: OpsTest, app_name: str) -> None:
+    """This checks that no unit is waiting for restart, based on the unit statuses.
+
+    This might be a bit flaky but we don't really have a better solution until jubilant.
+    """
+    for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(5), reraise=True):
+        with attempt:
+            await none_has_status(
+                ops_test, app_name, status="waiting", message="Waiting for MongoDB restart."
+            )
+
+
 async def check_app_status(
     ops_test: OpsTest, app_name: str, status: str, message: str | None = None
 ) -> None:
