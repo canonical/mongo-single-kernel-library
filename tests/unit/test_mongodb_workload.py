@@ -111,8 +111,8 @@ def test_pbm_workload_init(monkeypatch):
 
     workload._env = "test"
     assert workload.paths == MongoPaths(ROLES["vm"]["mongod"])
-    assert workload.paths.pbm_agent_config_path == Path(
-        "/var/snap/charmed-mongodb/current/etc/pbm/pbm-agent.yaml"
+    assert workload.paths.pbm_config == Path(
+        "/var/snap/charmed-mongodb/current/etc/pbm/pbm_config.yaml"
     )
     assert workload.env_var == "PBM_MONGODB_URI"
     assert workload.role == ROLES["vm"]["mongod"]
@@ -125,7 +125,7 @@ def test_pbm_workload_init(monkeypatch):
                 "pbm-agent": {
                     "override": "replace",
                     "summary": "pbm",
-                    "command": "/usr/bin/pbm-agent -f /var/snap/charmed-mongodb/current/etc/pbm/pbm-agent.yaml",
+                    "command": "/usr/bin/pbm-agent",
                     "startup": "enabled",
                     "user": VmUser.user,  # type: ignore
                     "group": VmUser.group,  # type: ignore

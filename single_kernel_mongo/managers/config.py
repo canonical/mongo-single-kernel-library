@@ -46,7 +46,6 @@ from single_kernel_mongo.workload import (
     get_pbm_workload_for_substrate,
     get_vault_agent_workload_for_substrate,
 )
-from single_kernel_mongo.workload.backup_workload import PBMWorkload
 from single_kernel_mongo.workload.log_rotate_workload import LogRotateWorkload
 from single_kernel_mongo.workload.vault_agent_workload import VaultAgentWorkload
 
@@ -130,14 +129,9 @@ class BackupConfigManager(CommonConfigManager):
         state: CharmState,
         container: Container | None,
     ):
-        self.config: MongoConfigModel = config
-        self.workload: PBMWorkload = get_pbm_workload_for_substrate(substrate)(
-            role=role, container=container
-        )
-        self.state: CharmState = state
-        self.agent_config: dict[str, dict[str, str | bool]] = {
-            "log": {"path": f"{self.workload.paths.pbm_agent_log_file}", "level": "I", "json": True}
-        }
+        self.config = config
+        self.workload = get_pbm_workload_for_substrate(substrate)(role=role, container=container)
+        self.state = state
 
     @override
     def build_parameters(self) -> list[list[str]]:
@@ -146,13 +140,6 @@ class BackupConfigManager(CommonConfigManager):
                 self.state.backup_config.uri,
             ]
         ]
-
-    def write_config_file(self):
-        """Write the configuration for PBM."""
-        if not self.workload.exists(self.workload.paths.pbm_agent_config_path):
-            self.workload.write(
-                path=self.workload.paths.pbm_agent_config_path, content=safe_dump(self.agent_config)
-            )
 
     def configure_and_restart(self, force: bool = False):
         """Sets up PBM with right configuration and restarts it."""
@@ -170,9 +157,6 @@ class BackupConfigManager(CommonConfigManager):
         if not self.state.get_user_password(CharmedBackupUser):
             logger.info("PBM cannot be configured and restarted: No password found.")
             return
-
-        # Write the configuration for PBM
-        self.write_config_file()
 
         if (
             not self.workload.active()

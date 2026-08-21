@@ -1564,16 +1564,11 @@ class MongoDBOperator(OperatorProtocol, Object):
             return MongoDBStatuses.INVALID_MONGOS_REL.value
         return None
 
-    @override
     def _configure_workloads(self) -> None:
         """Handle filesystem interactions for charm configuration."""
         # Configure the workloads
         self.config_manager.set_environment()
         self.mongos_config_manager.set_environment()
-
-        # Write the PBM Agent config file.
-        self.s3_backup_manager.prepare_log_dir()
-        self.s3_backup_manager.write_config_file()
 
         # Instantiate the keyfile
         self.instantiate_keyfile()
