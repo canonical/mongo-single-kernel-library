@@ -81,8 +81,6 @@ BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
 REMAPPING_PATTERN = r"\ABackup doesn't match current cluster topology - it has different replica set names. Extra shards in the backup will cause this, for a simple example. The extra/unknown replica set names found in the backup are: ([\w\d\-,\s]+)([.] Backup has no data for the config server or sole replicaset)?\Z"
 
-# Already yaml encoded blackhole config to bootstrap pbm config
-EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
 logger = logging.getLogger(__name__)
 
@@ -478,8 +476,8 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
     def set_certificate(self, credentials: dict) -> None:
         """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
-        file_on_disk = self.dependent.get_ca_cert_from_trust_store(TrustStoreFiles.PBM)
         if cert_chain_list := credentials.get("tls-ca-chain", None):
+            file_on_disk = self.dependent.get_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
