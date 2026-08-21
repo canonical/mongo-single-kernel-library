@@ -82,13 +82,15 @@ jobs:
           bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
       - name: Run actionlint
         run: |
-          '${{ steps.install.outputs.executable }}' -color
+          "${EXECUTABLE}" -color
+        env:
+          EXECUTABLE: ${{ steps.install.outputs.executable }}
     permissions:
       contents: read
 
   lint-workflows:
     name: Lint .github/workflows/
-    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v50.2.1
     permissions:
       contents: read
 
