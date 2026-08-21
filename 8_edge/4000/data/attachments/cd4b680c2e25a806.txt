@@ -1,0 +1,81 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  02:44:26Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Address         Exposed  Message
+config-server     8.0.23   waiting      3  mongodb-k8s                  0  10.152.183.42   no       Waiting for shards to upgrade/downgrade to revision test/0.0.0+dirty-locally built.
+continuous-write           waiting      1  continuous-write             0  10.152.183.193  no       
+shard-one         8.0.23   blocked      3  mongodb-k8s                  1  10.152.183.37   no       Refreshing. Check units >=2 are healthy & run `resume-refresh` on leader. To rollback, see docs or `juju debug-log`
+shard-two         8.0.23   blocked      3  mongodb-k8s       8/edge   231  10.152.183.239  no       Charm revision (231) is not up-to date with config-server (test/0.0.0+dirty-locally built).
+
+Unit                 Workload  Agent  Address     Ports  Message
+config-server/0*     active    idle   10.1.53.59         
+config-server/1      active    idle   10.1.53.58         
+config-server/2      active    idle   10.1.53.57         Primary.
+continuous-write/0*  waiting   idle   10.1.53.56         
+shard-one/0*         active    idle   10.1.53.32         
+shard-one/1          active    idle   10.1.53.41         Primary.
+shard-one/2          blocked   idle   10.1.53.60         Refresh incompatible. Rollback with instructions in Charmhub docs or see `juju debug-log`
+shard-two/0*         active    idle   10.1.53.48         
+shard-two/1          active    idle   10.1.53.55         Primary.
+shard-two/2          active    idle   10.1.53.53         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-shard-two-0: 01:57:13 ERROR unit.shard-two/0.juju-log database-peers:11: single_kernel_mongo.core.k8s_workload:Change Error: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 1 -----
+2026-08-21T01:57:12Z INFO Most recent service output:
+    
+2026-08-21T01:57:12Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/single_kernel_mongo/core/k8s_workload.py", line 70, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2627, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2527, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-shard-two-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 1 -----
+2026-08-21T01:57:12Z INFO Most recent service output:
+    
+2026-08-21T01:57:12Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+unit-shard-two-0: 01:57:13 ERROR unit.shard-two/0.juju-log database-peers:11: single_kernel_mongo.managers.config:Failed to restart logrotate: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+unit-shard-two-0: 01:57:13 ERROR unit.shard-two/0.juju-log database-peers:11: single_kernel_mongo.managers.mongodb_operator:Could not restart the related services.
+unit-shard-one-0: 01:58:02 ERROR unit.shard-one/0.juju-log database-peers:6: single_kernel_mongo.managers.mongodb_operator:Not reconfiguring: error=Waiting for all members to finish syncing before adding new member.
+unit-config-server-0: 02:01:52 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:05 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:07 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:17 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:19 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:21 ERROR unit.config-server/0.juju-log config-server:15: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:32 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:34 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:36 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:47 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:49 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:02:50 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:07 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:09 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:10 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:11 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:21 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:22 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:24 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:25 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-two shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:31 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:31 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:03:32 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:04:02 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:04:04 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+unit-config-server-0: 02:04:05 ERROR unit.config-server/0.juju-log config-server:16: single_kernel_mongo.managers.sharding:shard-one shard does not have the same auth as the config server.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
