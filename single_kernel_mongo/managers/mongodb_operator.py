@@ -421,6 +421,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.info("Cluster is not healthy after restart: %s", err)
                 return
 
+        self.config_server_manager.update_mongos_hosts()
+        self.shard_manager.reconcile_shard_after_restart()
+
         if not (backup_relation := self.backup_events.current_relation):
             return
         manager = self.backup_events.manager_for(backup_relation.name)
@@ -576,6 +579,10 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.update_ips_in_databag()
         if len(self.state.peer_database_addresses) < self.state.planned_units:
             raise NotReadyError("Waiting for peer database addresses")
+
+        # Update the roles and information on mongos and shards
+        self.shard_manager.reconcile_shard_after_restart()
+        self.config_server_manager.update_mongos_hosts()
 
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before
@@ -1443,6 +1450,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         # After a restart we can always recompute the shard manager statuses.
         self.shard_manager.recompute_statuses_for_scope(scope="unit")
         self.shard_manager.reconcile_shard_after_restart()
+        self.config_server_manager.update_mongos_hosts()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
