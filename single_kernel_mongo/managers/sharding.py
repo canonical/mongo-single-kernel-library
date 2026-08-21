@@ -121,6 +121,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
                 sorted(cidrs(self.state.cluster_network().bind_addresses))
             ),
+            AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
         }
 
         if self.state.s3_relation:
@@ -267,6 +268,11 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
     def update_mongos_hosts(self) -> None:
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+            return
+
         for relation in self.state.config_server_relation:
             if self.data_interface.fetch_relation_field(relation.id, "requested-secrets") is None:
                 logger.info(f"Database Requested event has not run yet for relation {relation.id}")
@@ -280,6 +286,7 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
                     AppShardingComponentKeys.MONGOS_CIDRS.value: json.dumps(
                         sorted(cidrs(self.state.cluster_network().bind_addresses))
                     ),
+                    AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: self.state.app_peer_data.replica_set,
                 },
             )
 
@@ -366,12 +373,16 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
         for relation in self.state.config_server_relation:
-            if relation.app.name not in cluster_shards:
+            shard_name = self.state.config_server_state(relation).shard_replset
+            if shard_name and shard_name not in cluster_shards:
                 self.add_shard(relation)
 
     def add_shard(self, relation: Relation) -> None:
         """Adds a shard to the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.state.config_server_state(relation).shard_replset
+        if not shard_name:
+            logger.info("replica set name not yet added in databag, skipping")
+            return
 
         hosts = self.get_shard_hosts_from_relation(relation)
         if not len(hosts):
@@ -421,7 +432,12 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
         with MongoConnection(self.state.mongos_config) as mongo:
             cluster_shards = mongo.get_shard_members()
 
-        relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+        relation_shards = {
+            replica_set_name
+            for relation in self.state.config_server_relation
+            if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+            is not None
+        }
 
         for shard_name in cluster_shards - relation_shards:
             try:
@@ -436,7 +452,11 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
 
     def remove_shard_from_relation(self, relation: Relation) -> None:
         """Removes a shard from the cluster."""
-        shard_name = relation.app.name
+        shard_name = self.state.config_server_state(relation).shard_replset
+
+        if not shard_name:
+            logger.info("No shard name in databag to remove.")
+            return
 
         self.remove_shard(shard_name)
 
@@ -724,6 +744,9 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
         if not self.state.shard_relation:
             return
 
+        # We send the name of our replicaset to the config server
+        self.state.shard_state.shard_replset = self.state.app_peer_data.replica_set
+
         # Let's send the IPs of our replicaset.
         self.state.shard_state.rs_hosts = list(self.state.internal_hosts)
 
@@ -915,6 +938,11 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
                 raise WaitingForCertificatesError()
             if keyfile_changed:
                 self.async_shard_restart_on_key_file()
+            else:
+                # If we don't need to restart, we still want to ensure that all the data is correct
+                # EG: we add and remove a shard, the auth will be unchanged, yet we want to fill
+                # the databag with all it needs filling.
+                self.reconcile_shard_after_restart()
             return
 
         # Edge case: shard has TLS enabled before having connected to the config-server. For TLS in
@@ -929,6 +957,10 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
         if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
             self.state.app_peer_data.mongos_hosts = hosts
         self.state.shard_state.rs_hosts = self.state.internal_hosts
