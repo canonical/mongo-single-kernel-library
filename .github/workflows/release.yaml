@@ -19,22 +19,26 @@ jobs:
     uses: ./.github/workflows/ci-quick.yaml
     permissions:
       pull-requests: write
-    secrets: inherit
 
   ci-tests:
     uses: ./.github/workflows/ci.yaml
     permissions:
       contents: write # Needed for Allure Report
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+      GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
+      GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
 
   release-part1:
     needs:
       - ci-quick-tests
       - ci-tests
     name: Release to PyPI (part 1)
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v31.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part1.yaml@v50.2.1
     permissions:
-      contents: write  # Needed to create git tag
+      contents: write # Needed to create git tag
 
   # Separate job needed to workaround https://github.com/pypi/warehouse/issues/11096
   release-trusted-publishing:
@@ -46,25 +50,25 @@ jobs:
     environment: production
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.release-part1.outputs.artifact-name }}
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1.14.2 # This is an immutable release
     permissions:
-      id-token: write  # Needed for PyPI trusted publishing
+      id-token: write # Needed for PyPI trusted publishing
 
   release-part2:
     name: Release to PyPI (part 2)
     needs:
       - release-part1
       - release-trusted-publishing
-    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v31.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_python_package_part2.yaml@v50.2.1
     with:
       git-tag: ${{ needs.release-part1.outputs.git-tag }}
     permissions:
-      contents: write  # Needed to create GitHub release
+      contents: write # Needed to create GitHub release
 
   wait-for-pypi-available:
     name: Wait for PyPI release to be available
@@ -76,7 +80,7 @@ jobs:
       - name: Wait for PyPI release to be available
         run: |
           set -euo pipefail
-          TAG="${{ needs.release-part1.outputs.git-tag }}"
+          TAG="${NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG}"
           DEP_NAME="mongo-charms-single-kernel"
           VERSION_NUMBER="${TAG#v}"
           URL="https://pypi.org/pypi/${DEP_NAME}/${VERSION_NUMBER}/json"
@@ -93,6 +97,10 @@ jobs:
 
           echo "Timed out waiting for ${DEP_NAME}==${VERSION_NUMBER} on PyPI."
           exit 1
+        env:
+          NEEDS_RELEASE_PART1_OUTPUTS_GIT_TAG: ${{ needs.release-part1.outputs.git-tag }}
+    permissions:
+      contents: read
 
   trigger-bump-dependent-charms:
     name: Trigger bump-dependent-charms workflow
@@ -107,4 +115,6 @@ jobs:
     permissions: # Needed to create PRs in dependent charm repos
       contents: write
       pull-requests: write
-    secrets: inherit
+    secrets:
+      PAT: ${{ secrets.PAT }}
+      CI_COMMITS_SSH_SIGNING_KEY: secrets.CI_COMMITS_SSH_SIGNING_KEY

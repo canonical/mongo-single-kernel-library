@@ -54,13 +54,14 @@ class VersionChecker:
                 )
 
         if self.state.is_role(MongoDBRoles.SHARD):
+            related_app_name = ""
+            if relation := self.state.shard_relation:
+                related_app_name = relation.app.name
             config_server_revision = self.version_checker.get_version_of_related_app(
-                self.state.config_server_name or ""
+                related_app_name
             )
             remote_local_identifier = (
-                "-locally built"
-                if self.version_checker.is_local_charm(self.state.config_server_name or "")
-                else ""
+                "-locally built" if self.version_checker.is_local_charm(related_app_name) else ""
             )
             return ShardStatuses.shard_needs_upgrade(
                 current_charms_version,
