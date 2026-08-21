@@ -274,6 +274,7 @@ def test_is_shard_added_to_cluster_success(
     state.app_peer_data.role = MongoDBRoles.SHARD
     state.app_peer_data.mongos_hosts = ["a-host", "another-host"]
     state.shard_state.shard_integrated = True
+    state.shard_state.config_server_replset = "config-server"
 
     assert state.is_shard_added_to_cluster()
 
