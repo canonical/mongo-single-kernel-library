@@ -594,7 +594,7 @@ class CharmState(Object, AbstractStatusesState):
         )
 
     def config_server_state(self, relation: Relation) -> AppShardingComponentState:
-        """The app shard state."""
+        """The app config-server state state for a given relation."""
         return AppShardingComponentState(
             relation=relation,
             data_interface=self.config_server_data_interface,

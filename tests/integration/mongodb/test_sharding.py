@@ -331,7 +331,7 @@ async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substr
     """Tests safe removal of a shard that is not primary."""
     # add back a shard so we can safely remove a shard.
 
-    logging.info("Adding shard two to config server")
+    logging.info("Adding %s to config server", SHARD_TWO_APP_NAME)
     await ops_test.model.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
@@ -350,7 +350,7 @@ async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substr
         raise_on_error=False,
     )
 
-    logging.info("Removing shard two from config server")
+    logging.info("Removing %s from config server", SHARD_TWO_APP_NAME)
     await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",

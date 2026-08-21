@@ -133,5 +133,5 @@ class ClusterState(AbstractRelationState[Data]):
 
     @replica_set.setter
     def replica_set(self, value: str):
-        """Sets the auth-updated field."""
+        """Sets the replset field."""
         self.update({ClusterStateKeys.REPLICA_SET.value: value})

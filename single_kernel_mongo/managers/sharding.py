@@ -957,6 +957,10 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
         if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
             self.state.app_peer_data.mongos_hosts = hosts
         self.state.shard_state.rs_hosts = self.state.internal_hosts

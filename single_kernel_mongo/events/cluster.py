@@ -80,10 +80,8 @@ class ClusterConfigServerEventHandler(Object):
         try:
             self.manager.share_secret_to_mongos(event.relation, initial_event=True)
         except DeferrableFailedHookChecksError as e:
-            logger.info("Deferring database requested event: hook checks did not pass.")
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except DeferrableError as e:
-            logger.info("Deferring database requested event: %s", str(e))
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -97,7 +95,6 @@ class ClusterConfigServerEventHandler(Object):
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except DeferrableError as e:
-            logger.info("Deferring relation changed requested event: %s", str(e))
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -111,7 +108,6 @@ class ClusterConfigServerEventHandler(Object):
         except DeferrableFailedHookChecksError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except DeferrableError as e:
-            logger.info("Deferring cleaning user: %s", str(e))
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
