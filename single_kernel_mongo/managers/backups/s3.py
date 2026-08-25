@@ -196,7 +196,9 @@ class S3BackupManager(CommonBackupManager):
                 return False
 
             if not storage_s3.get("region"):
-                logger.info("Missing region - this is required for AWS")
+                logger.info(
+                    "Missing region - this is recommended for S3. Default region `us-east-1` will be used."
+                )
 
             if not storage_s3.get("endpointUrl"):
                 logger.info("Missing S3 endpoint.")
