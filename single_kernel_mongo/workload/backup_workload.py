@@ -29,14 +29,9 @@ class PBMPaths(MongoPaths):
         return Path(f"{self.etc_path}/pbm/pbm-agent.yaml")
 
     @property
-    def pbm_agent_log_dir(self) -> Path:
-        """PBM Agent log dir."""
-        return Path(f"{self.var_path}/log/pbm")
-
-    @property
     def pbm_agent_log_file(self) -> Path:
         """PBM Agent log file."""
-        return Path(f"{self.var_path}/log/pbm/pbm-agent.json")
+        return Path(f"{self.pbm_agent_log_dir}/pbm-agent.json")
 
 
 class PBMWorkload(WorkloadBase):

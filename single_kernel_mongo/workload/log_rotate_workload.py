@@ -36,6 +36,7 @@ class LogRotateWorkload(WorkloadBase):
 
         rendered_template = template.render(
             logs_directory=self.paths.logs_path,
+            pbm_logs=self.paths.pbm_agent_log_dir,
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
