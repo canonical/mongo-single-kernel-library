@@ -5,8 +5,9 @@
 """PBM service workloads definition."""
 
 from pathlib import Path
+from typing import ClassVar
 
-from ops import Container
+from ops.model import Container
 from ops.pebble import Layer
 from typing_extensions import override
 
@@ -17,11 +18,6 @@ from single_kernel_mongo.exceptions import WorkloadServiceError
 
 class PBMPaths(MongoPaths):
     """Vault Agent specific paths."""
-
-    @property
-    def pbm_config(self) -> Path:
-        """PBM Configuration file path."""
-        return Path(f"{self.etc_path}/pbm/pbm_config.yaml")
 
     @property
     def pbm_agent_config_path(self) -> Path:
@@ -37,12 +33,11 @@ class PBMPaths(MongoPaths):
 class PBMWorkload(WorkloadBase):
     """MongoDB Workload definition."""
 
-    service = "pbm-agent"
-    layer_name = "pbm-agent"
-    bin_cmd = "pbm"
-    env_var = "PBM_MONGODB_URI"
-    snap_param = "pbm-uri"
-    paths: PBMPaths
+    service: ClassVar[str] = "pbm-agent"
+    layer_name: ClassVar[str] = "pbm-agent"
+    bin_cmd: ClassVar[str] = "pbm"
+    env_var: ClassVar[str] = "PBM_MONGODB_URI"
+    snap_param: ClassVar[str] = "pbm-uri"
 
     def __init__(self, role: CharmSpec, container: Container | None) -> None:
         super().__init__(role, container)
