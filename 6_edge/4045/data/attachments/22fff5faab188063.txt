@@ -1,0 +1,66 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/0 [idle] active: Primary.
+  mongodb/1 [idle] active: 
+  mongodb/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  02:46:24Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+continuous-write                   active      1  continuous-write                           0  no       
+mongodb                   6.0.28   active      3  mongodb                                    0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports      Message
+continuous-write/0*          active    idle   4        10.30.52.102               
+mongodb/0*                   active    idle   0        10.30.52.15     27017/tcp  Primary.
+mongodb/1                    active    idle   1        10.30.52.206    27017/tcp  
+mongodb/2                    active    idle   2        10.30.52.217    27017/tcp  
+self-signed-certificates/0*  active    idle   3        10.30.52.211               
+
+Machine  State    Address       Inst id        Base          AZ             Message
+0        started  10.30.52.15   juju-fa755d-0  ubuntu@22.04  runnervmec1zy  Running
+1        started  10.30.52.206  juju-fa755d-1  ubuntu@22.04  runnervmec1zy  Running
+2        started  10.30.52.217  juju-fa755d-2  ubuntu@22.04  runnervmec1zy  Running
+3        started  10.30.52.211  juju-fa755d-3  ubuntu@22.04  runnervmec1zy  Running
+4        started  10.30.52.102  juju-fa755d-4  ubuntu@22.04  runnervmec1zy  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 02:20:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 02:20:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 02:21:21 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 02:21:21 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-2: 02:22:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 02:22:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:27 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 02:22:27 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-2: 02:22:45 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 02:22:45 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:22:48 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 02:22:48 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 02:25:43 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 02:25:43 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:27:38 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 02:27:38 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-1: 02:28:03 ERROR unit.mongodb/1.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-0: 02:28:03 ERROR unit.mongodb/0.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-2: 02:28:03 ERROR unit.mongodb/2.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-0: 02:28:04 ERROR unit.mongodb/0.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-1: 02:28:04 ERROR unit.mongodb/1.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-2: 02:28:04 ERROR unit.mongodb/2.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-0: 02:32:18 ERROR unit.mongodb/0.juju-log database-peers:2: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a8cfeb1bf9bf2db0a2c8209, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.30.52.15', 27017) server_type: RSSecondary, rtt: 0.0017530979998809926>, <ServerDescription ('10.30.52.206', 27017) server_type: RSSecondary, rtt: 0.002444869999862931>, <ServerDescription ('10.30.52.217', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a8cfea203ed02604d5fdb2d'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 1650}")>]>
+unit-mongodb-0: 02:32:23 ERROR unit.mongodb/0.juju-log database-peers:2: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a8cfeb58e2ef51cdb3117a8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.30.52.15', 27017) server_type: RSSecondary, rtt: 0.0011212279998744634>, <ServerDescription ('10.30.52.206', 27017) server_type: RSSecondary, rtt: 0.003202549999969051>, <ServerDescription ('10.30.52.217', 27017) server_type: RSSecondary, rtt: 0.0010166399999889109>]>
+unit-mongodb-0: 02:40:28 ERROR unit.mongodb/0.juju-log database-peers:2: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a8d009ba056dc718abc0113, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.30.52.15', 27017) server_type: RSSecondary, rtt: 0.0007417759998133988>, <ServerDescription ('10.30.52.206', 27017) server_type: RSSecondary, rtt: 0.006198442999902909>, <ServerDescription ('10.30.52.217', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6a8d008ccf149bb43abbb757'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 1386}")>]>
+unit-mongodb-0: 02:40:33 ERROR unit.mongodb/0.juju-log status-peers:0: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6a8d009f64109d5c0dc1ac6d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.30.52.15', 27017) server_type: RSSecondary, rtt: 0.0006655410002167628>, <ServerDescription ('10.30.52.206', 27017) server_type: RSSecondary, rtt: 0.0009492340000178956>, <ServerDescription ('10.30.52.217', 27017) server_type: RSSecondary, rtt: 0.0007359379997069482>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
