@@ -481,7 +481,7 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
-            should_restart = file_on_disk.strip() == "\n".join(cert_chain_list).strip()
+            should_restart = file_on_disk.strip() != "\n".join(cert_chain_list).strip()
             self.configure_and_restart(force=should_restart)
 
     def set_config_options(self, credentials: dict) -> None:
