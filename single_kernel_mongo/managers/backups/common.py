@@ -12,7 +12,6 @@ This user is named "charmed-backup".
 
 from __future__ import annotations
 
-import itertools
 import json
 import logging
 import re
@@ -20,7 +19,7 @@ import time
 from abc import abstractmethod
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, ClassVar, NewType, override
+from typing import TYPE_CHECKING, Any, ClassVar, NewType, override
 
 from botocore.exceptions import ConnectTimeoutError, SSLError
 from data_platform_helpers.advanced_statuses.models import StatusObject
@@ -34,7 +33,6 @@ from ops.model import (
     Relation,
 )
 from tenacity import (
-    Retrying,
     retry,
     retry_if_exception_type,
     retry_if_not_exception_type,
@@ -42,6 +40,7 @@ from tenacity import (
 )
 from tenacity.before import before_log
 from tenacity.wait import wait_fixed
+from yaml import safe_dump
 
 from single_kernel_mongo.config.literals import (
     TRUST_STORE_PATH,
@@ -59,7 +58,6 @@ from single_kernel_mongo.exceptions import (
     InvalidPBMStatusError,
     InvalidStorageCredentialsError,
     ListBackupError,
-    PBMBusyError,
     RestoreError,
     ResyncError,
     SetPBMConfigError,
@@ -68,7 +66,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.managers.config import BackupConfigManager
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.config_server_state import AppShardingComponentKeys
-from single_kernel_mongo.utils.mongo_connection import MongoConnection
 from single_kernel_mongo.workload import get_pbm_workload_for_substrate
 from single_kernel_mongo.workload.backup_workload import PBMWorkload
 
@@ -84,8 +81,6 @@ BACKUP_RESTORE_MAX_ATTEMPTS = 10
 BACKUP_RESTORE_ATTEMPT_COOLDOWN = 15
 REMAPPING_PATTERN = r"\ABackup doesn't match current cluster topology - it has different replica set names. Extra shards in the backup will cause this, for a simple example. The extra/unknown replica set names found in the backup are: ([\w\d\-,\s]+)([.] Backup has no data for the config server or sole replicaset)?\Z"
 
-# Already yaml encoded blackhole config to bootstrap pbm config
-EMPTY_CONFIG = "storage:\n  type: blackhole\n"
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +104,7 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
     """Common Manager for the backups and storage integrators."""
 
     CONFIG_MAP: ClassVar[dict[str, str]] = {}
-    BASIC_CONFIG: ClassVar[dict[str, str]] = {}
+    BASIC_CONFIG: ClassVar[dict[str, dict[str, str]]] = {}
     invalid_integration_status: StatusObject
     backend: ClassVar[str]
 
@@ -166,46 +161,25 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
         """Create a bucket if needed by the storage integrator."""
         pass
 
-    def resync_config_options(self):
-        """Attempts to resync config options and sets status in case of failure."""
-        # Set environment before starting
-        self.set_environment()
-        self.workload.start()
-
-        # Clear statuses before resync as we want to update it anyway.
-        self.state.statuses.clear(scope="unit", component=self.name)
-
-        # pbm has a flakely resync and it is necessary to wait for no actions to be running before
-        # resync-ing. See: https://jira.percona.com/browse/PBM-1038
-        for attempt in Retrying(
-            stop=stop_after_attempt(20),
-            wait=wait_fixed(5),
-            reraise=True,
-        ):
-            with attempt:
-                match self.backup_state():
-                    case (
-                        BackupState.BACKUP_RUNNING
-                        | BackupState.RESTORE_RUNNING
-                        | BackupState.WAITING_TO_SYNC
-                    ):
-                        raise PBMBusyError
-                    case _:
-                        continue
-
-        # wait for re-sync and update charm status based on pbm syncing status. Need to wait for
-        # 2 seconds for pbm_agent to receive the resync command before verifying.
-        self.workload.run_bin_command("config", ["--force-resync"], environment=self.environment)
-        time.sleep(2)
-        self._wait_pbm_status()
-
-    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, str]:
+    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, Any]:
         """Simple mapping from integrator config to PBM config keys."""
-        return self.BASIC_CONFIG | {
-            self.CONFIG_MAP[s3_option]: s3_value
-            for s3_option, s3_value in credentials.items()
-            if self.CONFIG_MAP.get(s3_option)
-        }
+        output_dict: dict[str, Any] = self.BASIC_CONFIG
+        # Iterate on all configuration values
+        for s3_option, s3_value in credentials.items():
+            # Create a ref to the dict on which we'll walk
+            tmp_dict = output_dict
+            # Skip invalid values
+            if not (path := self.CONFIG_MAP.get(s3_option)):
+                continue
+            # Split the path on the dots
+            parts = path.split(".")
+            # Create all the subdicts
+            for part in parts[:-1]:
+                tmp_dict = tmp_dict.setdefault(part, {})
+            # Set the value
+            tmp_dict[parts[-1]] = s3_value
+
+        return output_dict
 
     @cached_property
     def credentials(self) -> dict[str, str]:
@@ -503,10 +477,12 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
         """Sets the certificate on the file system if needed."""
         # Add certificate to trust store
         if cert_chain_list := credentials.get("tls-ca-chain", None):
+            file_on_disk = self.dependent.get_ca_cert_from_trust_store(TrustStoreFiles.PBM)
             self.dependent.save_ca_cert_to_trust_store(TrustStoreFiles.PBM, cert_chain_list)
             self.share_certificate_with_shards(cert_chain_list)
             # Restart after setting all configurations
-            self.configure_and_restart(force=True)
+            should_restart = file_on_disk.strip() != "\n".join(cert_chain_list).strip()
+            self.configure_and_restart(force=should_restart)
 
     def set_config_options(self, credentials: dict) -> None:
         """Apply the configuration provided by S3 integrator.
@@ -514,29 +490,14 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
         Args:
             credentials: A dictionary provided by backup event handler.
         """
-        # First check if we ever had received a config
-        with MongoConnection(self.state.backup_config) as conn:
-            has_config = conn.client.admin["pbmConfig"].find_one()
-
-        if not has_config:
-            # Clear the current config file.
-            self.clear_pbm_config_file()
-
         config = self.map_config_to_pbm_config(credentials)
 
         try:
             _ = self.workload.run_bin_command(
-                "config",
-                list(
-                    itertools.chain(
-                        *[
-                            ("--set", f"{pbm_key}={pbm_value}")
-                            for pbm_key, pbm_value in config.items()
-                        ],
-                    )
-                ),
-                environment=self.environment,
+                "config", ["--file=-"], environment=self.environment, input=safe_dump(config)
             )
+            time.sleep(2)
+            self._wait_pbm_status()
         except WorkloadExecError as err:
             # In case of resync in progress, raise a ResyncError that will set a waiting status.
             if "resync" in err.stderr.lower():
@@ -551,19 +512,6 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
                 {"return_code": err.return_code, "stdout": err.stdout, "stderr": err.stderr},
             )
             raise SetPBMConfigError(err.stderr)
-
-    def clear_pbm_config_file(self) -> None:
-        """Overwrites the PBM config file with the one provided by default."""
-        # Bootstrap the config with blackhole configuration.
-        self.workload.write(
-            self.workload.paths.pbm_config,
-            "# this file is to be left empty. Changes in this file will be ignored.\n"
-            + EMPTY_CONFIG,
-        )
-        _ = self.workload.exec(["chmod", "640", f"{self.workload.paths.pbm_config}"])
-        _ = self.workload.run_bin_command(
-            "config", ["--file", f"{self.workload.paths.pbm_config}"], environment=self.environment
-        )
 
     def retrieve_error_message(self, pbm_status: dict) -> str:
         """Parses pbm status for an error message from the current unit.
@@ -733,8 +681,8 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
                 return
 
     @retry(
-        stop=stop_after_attempt(120),
-        wait=wait_fixed(5),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(10),
         reraise=True,
         retry=retry_if_exception_type(ResyncError),
         before=before_log(logger, logging.DEBUG),
