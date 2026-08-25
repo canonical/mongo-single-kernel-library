@@ -343,6 +343,13 @@ class OperatorProtocol(
         ):
             self.workload.exec(["chmod", "600", f"{path}"])
 
+    def get_ca_cert_from_trust_store(self, file: TrustStoreFiles) -> str:
+        """Reads the certificate from the file system."""
+        full_path = TRUST_STORE_PATH / file.value
+        if not self.workload.exists(full_path):
+            return ""
+        return "\n".join(self.workload.read(full_path))
+
     def save_ca_cert_to_trust_store(self, file: TrustStoreFiles, chain: list[str]) -> None:
         """Saves the certificate in the trust store.
 

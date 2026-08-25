@@ -62,10 +62,6 @@ class SetPBMConfigError(Exception):
     """Raised when pbm cannot configure a given option."""
 
 
-class PBMBusyError(Exception):
-    """Raised when PBM is busy and cannot run another operation."""
-
-
 class RestoreError(Exception):
     """Raised when restore backup operation is failed."""
 
