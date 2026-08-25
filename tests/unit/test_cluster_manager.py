@@ -210,27 +210,39 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
 
 @pytest.mark.parametrize(
     (
-        "mongo_has_tls",
-        "config_server_has_tls",
+        "peer_tls_status",
+        "client_tls_status",
         "is_waiting_for_a_cert",
         "expected_error",
     ),
     (
         (
-            False,
+            None,
+            MongosStatuses.missing_tls(internal=True),
             True,
-            True,
-            "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method.",
+            "Invalid TLS integration, check logs.",
         ),
         (
+            MongosStatuses.missing_tls(internal=False),
+            None,
             True,
-            False,
-            True,
-            "Mongos uses peer TLS but config-server does not. Please synchronise encryption method.",
+            "Invalid TLS integration, check logs.",
         ),
         (
-            False,
-            False,
+            None,
+            MongosStatuses.invalid_tls(internal=True),
+            True,
+            "Invalid TLS integration, check logs.",
+        ),
+        (
+            MongosStatuses.invalid_tls(internal=False),
+            None,
+            True,
+            "Invalid TLS integration, check logs.",
+        ),
+        (
+            None,
+            None,
             True,
             "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
         ),
@@ -239,10 +251,10 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
 def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
-    mongo_has_tls,
-    is_waiting_for_a_cert,
-    config_server_has_tls,
-    expected_error,
+    peer_tls_status: StatusObject | None,
+    client_tls_status: StatusObject | None,
+    is_waiting_for_a_cert: bool,
+    expected_error: Exception,
 ):
     manager = mongos_harness.charm.operator.cluster_manager
 
@@ -250,8 +262,13 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_peer_tls_status",
-        return_value=(mongo_has_tls, config_server_has_tls),
+        "single_kernel_mongo.state.cluster_state.ClusterState.has_received_credentials",
+        return_value=True,
+    )
+
+    mocker.patch(
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_status",
+        side_effect=(peer_tls_status, client_tls_status),
     )
     mocker.patch(
         "single_kernel_mongo.managers.tls.TLSManager.is_waiting_for_a_cert",
