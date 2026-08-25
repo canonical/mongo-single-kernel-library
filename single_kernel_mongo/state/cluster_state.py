@@ -135,3 +135,12 @@ class ClusterState(AbstractRelationState[Data]):
     def replica_set(self, value: str):
         """Sets the replset field."""
         self.update({ClusterStateKeys.REPLICA_SET.value: value})
+
+    def has_received_credentials(self) -> bool:
+        """Checks if the config-server has sent credentials."""
+        if not self.relation:
+            return False
+        return (
+            self.relation_data.get(ClusterStateKeys.USERNAME.value, None) is not None
+            and self.relation_data.get(ClusterStateKeys.PASSWORD.value, None) is not None
+        )

@@ -82,7 +82,7 @@ class MongosOperator(OperatorProtocol, Object):
     name = CharmKind.MONGOS.value
     workload: MongosWorkload
 
-    def __init__(self, charm: AbstractMongoCharm):
+    def __init__(self, charm: AbstractMongoCharm[MongosCharmConfig, MongosOperator]):
         super(OperatorProtocol, self).__init__(charm, self.name)
         self.charm = charm
         self.substrate: Substrates = self.charm.substrate
@@ -100,7 +100,7 @@ class MongosOperator(OperatorProtocol, Object):
         self.workload = get_mongos_workload_for_substrate(self.substrate)(
             role=self.role, container=container
         )
-        self.mongos_config_manager = MongosConfigManager(
+        self.config_manager = MongosConfigManager(
             self.config,
             self.workload,
             self.state,
@@ -122,7 +122,6 @@ class MongosOperator(OperatorProtocol, Object):
             cluster_id=self.state.get_cluster_id(),
             callback_targets={
                 RollingOpsCallbackId.RESTART_CHARM_SERVICES: self.restart_charm_services_callback,
-                RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART: self.cluster_manager.update_mongos_and_restart_callback,
             },
         )
         self.upgrades_manager = MongoDBUpgradesManager(self, self.state, self.workload)
@@ -255,7 +254,7 @@ class MongosOperator(OperatorProtocol, Object):
         # Sets directory permissions
         self.set_permissions()
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
 
         # Instantiate the keyfile
         if self.state.mongos_cluster_relation:
@@ -349,7 +348,8 @@ class MongosOperator(OperatorProtocol, Object):
             logger.info("Failed to update k8s service: %s", e)
 
         # Always update certs on k8s since the IP/external connectivity could change
-        self.tls_events.refresh_certificates()
+        if self.tls_manager.is_waiting_for_a_cert():
+            self.tls_events.refresh_certificates()
 
     @override
     def prepare_storage(self) -> None:
@@ -394,7 +394,8 @@ class MongosOperator(OperatorProtocol, Object):
             # from Juju so we must monitor it and request TLS integration to update
             # our SANS as necessary.
             # The connection info will be updated when we receive the new certificates.
-            if self.substrate == Substrates.K8S:
+            # We first check if we need a refresh to prevent useless restarts.
+            if self.substrate == Substrates.K8S and self.tls_manager.is_waiting_for_a_cert():
                 self.tls_events.refresh_certificates()
 
     @override
@@ -428,7 +429,7 @@ class MongosOperator(OperatorProtocol, Object):
         if not self.refresh or not self.refresh.workload_allowed_to_start:
             raise WorkloadServiceError("Workload not allowed to start")
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
         self.workload.start()
 
     @override
@@ -453,7 +454,7 @@ class MongosOperator(OperatorProtocol, Object):
             self.charm.status_handler.set_running_status(
                 MongosStatuses.RESTARTING.value, scope="unit"
             )
-            self.mongos_config_manager.configure_and_restart(force=force)
+            self.cluster_manager.update_mongos_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
             self.charm.state.statuses.add(
@@ -659,7 +660,7 @@ class MongosOperator(OperatorProtocol, Object):
         if self.workload.config_server_db == config_server_db_uri:
             return False
 
-        self.mongos_config_manager.set_environment()
+        self.config_manager.set_environment()
         return True
 
     def is_mongos_running(self) -> bool:

@@ -17,7 +17,6 @@ from pymongo.errors import PyMongoError
 
 from single_kernel_mongo.config.literals import (
     RollingOpsCallbackId,
-    Scope,
     Substrates,
 )
 from single_kernel_mongo.config.relations import RelationNames
@@ -41,7 +40,6 @@ from single_kernel_mongo.exceptions import (
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProviderData,
 )
-from single_kernel_mongo.state.app_peer_state import AppPeerDataKeys
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL
@@ -55,6 +53,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
+@final
 class ClusterProvider(Object):
     """Manage relations between the config server and mongos router on the config-server side."""
 
@@ -292,18 +291,21 @@ class ClusterRequirer(Object):
 
     def assert_pass_hook_checks(self) -> None:
         """Runs pre-hook checks, raises if one fails."""
-        mongos_peer_tls, config_server_peer_tls = self.mongos_and_config_server_peer_tls_status()
-        match (mongos_peer_tls, config_server_peer_tls):
-            case False, True:
-                raise DeferrableFailedHookChecksError(
-                    "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method."
-                )
-            case True, False:
-                raise DeferrableFailedHookChecksError(
-                    "Mongos uses peer TLS but config-server does not. Please synchronise encryption method."
-                )
-            case _:
-                pass
+        if not self.state.cluster.has_received_credentials():
+            raise WaitingForSecretsError
+
+        if internal_tls_status := self.get_tls_status(internal=True):
+            self.state.statuses.add(
+                internal_tls_status, scope="unit", component=self.dependent.name
+            )
+        if external_tls_status := self.get_tls_status(internal=False):
+            self.state.statuses.add(
+                external_tls_status, scope="unit", component=self.dependent.name
+            )
+
+        if internal_tls_status or external_tls_status:
+            raise DeferrableFailedHookChecksError("Invalid TLS integration, check logs.")
+
         if self.dependent.tls_manager.is_waiting_for_a_cert():
             raise DeferrableFailedHookChecksError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
@@ -340,8 +342,7 @@ class ClusterRequirer(Object):
             return
 
         logger.info("Database and user created for mongos application.")
-        self.state.secrets.set(AppPeerDataKeys.USERNAME.value, username, Scope.APP)
-        self.state.secrets.set(AppPeerDataKeys.PASSWORD.value, password, Scope.APP)
+        self.state.set_user_credentials(username=username, password=password)
 
     def _set_cluster_id(self):
         """Take the cluster ID from the cluster state and set it in the charm state."""
@@ -351,12 +352,9 @@ class ClusterRequirer(Object):
             return
         self.state.set_cluster_id(new_cluster_id)
 
-    def update_mongos_and_restart(self) -> None:
+    def update_mongos_and_restart(self, force: bool = False) -> None:
         """Start/restarts mongos with config server information."""
         self.assert_pass_hook_checks()
-
-        if not self.state.cluster.username or not self.state.cluster.password:
-            raise WaitingForSecretsError("Waiting for username and password.")
 
         key_file_contents = self.state.cluster.keyfile
         config_server_db_uri = self.state.cluster.config_server_uri
@@ -377,7 +375,7 @@ class ClusterRequirer(Object):
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
             try:
-                self.dependent.restart_charm_services(force=False)
+                self.dependent.config_manager.configure_and_restart(force=force)
             except MissingConfigServerError as e:
                 raise NonDeferrableFailedHookChecksError from e
             except WorkloadServiceError as e:
@@ -409,10 +407,10 @@ class ClusterRequirer(Object):
 
         self.dependent.ldap_manager.update_hash_status()
 
-    def update_mongos_and_restart_callback(self) -> OperationResult:
+    def update_mongos_and_restart_callback(self, force: bool = False) -> OperationResult:
         """Callback use during update mongos and restart rolling operation."""
         try:
-            self.update_mongos_and_restart()
+            self.update_mongos_and_restart(force=force)
             return OperationResult.RELEASE
         except (
             DeferrableError,
@@ -432,12 +430,19 @@ class ClusterRequirer(Object):
             )
             return OperationResult.RELEASE
 
-    def async_update_mongos_and_restart(self):
+    def async_update_mongos_and_restart(self, force: bool = False):
         """Async update mongos and restart.
 
         Raises:
             RollingOpsNoRelationError: If an async lock is requested too early.
         """
+        self.assert_pass_hook_checks()
+
+        self.state.statuses.delete(
+            MongosStatuses.CONNECTING_TO_CONFIG_SERVER.value,
+            scope="unit",
+            component=self.dependent.name,
+        )
         self.state.statuses.add(
             MongosStatuses.WAITING_FOR_MONGOS_START.value,
             scope="unit",
@@ -451,7 +456,7 @@ class ClusterRequirer(Object):
             self.workload.paths.config_server_ext_ca_file.unlink(missing_ok=True)
 
         self.dependent.rollingops_manager.request_async_lock(
-            callback_id=RollingOpsCallbackId.UPDATE_MONGOS_AND_RESTART,
+            callback_id=RollingOpsCallbackId.RESTART_CHARM_SERVICES, kwargs={"force": force}
         )
         logger.info("Requested and async lock to update Mongos and restart.")
 
@@ -509,8 +514,7 @@ class ClusterRequirer(Object):
             return
 
         logger.info("Cleaning database and user removed for mongos application")
-        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
-        self.state.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
+        self.state.cleanup_user_credentials()
 
         if self.substrate == Substrates.VM:
             self.dependent.remove_connection_info()
