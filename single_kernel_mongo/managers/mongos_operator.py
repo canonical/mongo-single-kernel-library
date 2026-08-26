@@ -50,6 +50,7 @@ from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
     MissingConfigServerError,
+    UpgradeInProgressError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -332,6 +333,12 @@ class MongosOperator(OperatorProtocol, Object):
                 component=self.name,
             )
             self.update_config_on_k8s()
+
+        if self.refresh_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
 
         # Always update connection information.
         self.share_connection_info()
