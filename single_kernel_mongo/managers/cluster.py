@@ -372,7 +372,9 @@ class ClusterRequirer(Object):
         updated_keyfile = self.dependent.update_keyfile(key_file_contents)
         updated_config = self.dependent.update_config_server_db(config_server_db_uri)
 
-        if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
+        should_restart = updated_keyfile or updated_config
+
+        if force or should_restart or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
             try:
                 self.dependent.config_manager.configure_and_restart(force=force)
