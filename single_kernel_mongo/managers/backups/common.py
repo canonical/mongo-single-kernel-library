@@ -205,6 +205,18 @@ class CommonBackupManager(Object, BackupConfigManager, AbstractManagerStatus[Cha
         """Validates that the S3/GCS config is complete."""
         raise NotImplementedError
 
+    def prepare_log_dir(self) -> None:
+        """Prepares the log directory for PBM agent."""
+        if not self.workload.exists(self.workload.paths.pbm_agent_log_dir):
+            self.workload.mkdir(self.workload.paths.pbm_agent_log_dir, make_parents=True)
+            self.workload.exec(
+                [
+                    "chown",
+                    f"{self.workload.users.user}:{self.workload.users.group}",
+                    f"{self.workload.paths.pbm_agent_log_dir}",
+                ]
+            )
+
     def cleanup_certs_and_restart(self, relation: Relation) -> None:
         """On relation broken event, we need to remove the certificate from the trust store."""
         if self.state.is_scaling_down(relation.id):

@@ -1260,11 +1260,15 @@ def test_pbm_connect_not_active(harness: Harness[MongoTestCharm], mocker):
     mock_set_env = mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
     )
+    mock_write_config_file = mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.write_config_file"
+    )
 
     harness.charm.operator.s3_backup_manager.configure_and_restart()
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
+    mock_write_config_file.assert_called()
 
 
 def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], mocker):
@@ -1284,6 +1288,9 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
     mock_set_env = mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.set_environment"
     )
+    mock_write_config_file = mocker.patch(
+        "single_kernel_mongo.managers.config.BackupConfigManager.write_config_file"
+    )
     mocker.patch(
         "single_kernel_mongo.managers.config.BackupConfigManager.get_environment",
         return_value="deadbeef",
@@ -1293,6 +1300,7 @@ def test_pbm_connect_active_other_password(harness: Harness[MongoTestCharm], moc
     mock_start.assert_called()
     mock_stop.assert_called()
     mock_set_env.assert_called()
+    mock_write_config_file.assert_called()
 
 
 def test_relation_joined_non_leader_does_nothing(harness: Harness[MongoTestCharm], mocker):

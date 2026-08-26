@@ -42,6 +42,7 @@ from tests.integration.helpers.common import (
     get_address_of_unit,
     get_app_name,
     get_password,
+    has_file,
     relate_mongodb_and_application,
     remove_units,
     secondary_mongo_uris_with_sync_delay,
@@ -145,6 +146,23 @@ async def test_unit_is_running_as_replica_set(
 
     # close connection
     client.close()
+
+
+@pytest.mark.abort_on_fail
+async def test_pbm_agent_log_file_exists(ops_test: OpsTest, substrate: Substrate) -> None:
+    """Checks that all units have a PBM log file."""
+    assert ops_test.model
+    app_name = await get_app_name(ops_test)
+
+    if substrate == "lxd":
+        dir_path = "/var/snap/charmed-mongodb/common/var/log/pbm/"
+    else:
+        dir_path = "/var/log/pbm/"
+
+    for unit in ops_test.model.applications[app_name].units:
+        assert has_file(
+            ops_test, substrate=substrate, unit=unit, dir_path=dir_path, filename="pbm-agent.json"
+        )
 
 
 @pytest.mark.abort_on_fail
