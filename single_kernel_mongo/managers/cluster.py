@@ -9,7 +9,6 @@ import json
 from logging import getLogger
 from typing import TYPE_CHECKING, final
 
-from charmlibs.rollingops import OperationResult
 from data_platform_helpers.advanced_statuses.models import StatusObject
 from ops.framework import Object
 from ops.model import Relation
@@ -32,7 +31,6 @@ from single_kernel_mongo.exceptions import (
     DeferrableFailedHookChecksError,
     FailedToGetHostsError,
     MissingConfigServerError,
-    MissingCredentialsError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
     WorkloadServiceError,
@@ -408,29 +406,6 @@ class ClusterRequirer(Object):
         self.dependent.share_connection_info()
 
         self.dependent.ldap_manager.update_hash_status()
-
-    def update_mongos_and_restart_callback(self, force: bool = False) -> OperationResult:
-        """Callback use during update mongos and restart rolling operation."""
-        try:
-            self.update_mongos_and_restart(force=force)
-            return OperationResult.RELEASE
-        except (
-            DeferrableError,
-            DeferrableFailedHookChecksError,
-        ) as e:
-            logger.info("Deferrable error during mongos update and restart. %s", e)
-            return OperationResult.RETRY_RELEASE
-        except NonDeferrableFailedHookChecksError as e:
-            logger.info("Non deferrable error during mongos update and restart. %s", e)
-            return OperationResult.RELEASE
-        except (WaitingForSecretsError, MissingCredentialsError) as e:
-            logger.info("Skipping mongos update and restart: %s", e)
-            self.state.statuses.add(
-                MongosStatuses.WAITING_FOR_SECRETS.value,
-                scope="unit",
-                component=self.charm.name,
-            )
-            return OperationResult.RELEASE
 
     def async_update_mongos_and_restart(self, force: bool = False):
         """Async update mongos and restart.
