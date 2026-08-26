@@ -264,6 +264,27 @@ def test_start_waits_for_peer_database_addresses(
     configure.assert_not_called()
 
 
+@pytest.mark.skip_if_substrate("lxd")
+def test_storage_attached_defers_when_pebble_is_not_ready(harness, mocker):
+    """The storage hook retries when Pebble cannot execute the /tmp chmod yet."""
+    exec_mock = mocker.patch.object(
+        harness.charm.workload,
+        "exec",
+        side_effect=WorkloadExecError(
+            "chmod 1777 /tmp",
+            -1,
+            "Pebble client can't connect to the socket.",
+            None,
+        ),
+    )
+    event = mocker.Mock()
+
+    harness.charm.lifecycle.on_storage_attached(event)
+
+    exec_mock.assert_called_once_with(["chmod", "1777", "/tmp"])
+    event.defer.assert_called_once_with()
+
+
 def test_start_failure_doesnt_init(harness, mocker, mock_fs_interactions):
     open_ports_mock = mocker.patch(
         "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.open_ports"
