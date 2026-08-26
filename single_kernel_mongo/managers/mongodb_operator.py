@@ -1086,6 +1086,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         Set the permissions for the common and tmp dir.
         """
+        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
         if self.substrate == Substrates.K8S:
             return
 
@@ -1186,7 +1187,11 @@ class MongoDBOperator(OperatorProtocol, Object):
 
     @override
     def upgrade_charm(self) -> None:
-        """Set storage permissions after revision upgrade."""
+        """Set storage permissions after revision upgrade.
+
+        Raises:
+            WorkloadExecError: If the workload is not ready to execute commands.
+        """
         self.prepare_storage()
 
     @override
