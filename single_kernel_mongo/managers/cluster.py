@@ -454,14 +454,14 @@ class ClusterRequirer(Object):
         updated_keyfile = self.dependent.update_keyfile(key_file_contents)
         updated_config = self.dependent.update_config_server_db(config_server_db_uri)
 
-        if force or updated_keyfile or updated_config or not self.dependent.is_mongos_running():
-            logger.info("Restarting mongos with new secrets.")
-            try:
-                self.dependent.config_manager.configure_and_restart(force=force)
-            except MissingConfigServerError as e:
-                raise NonDeferrableFailedHookChecksError from e
-            except WorkloadServiceError as e:
-                raise DeferrableError from e
+        force = force or updated_keyfile or updated_config
+
+        try:
+            self.dependent.config_manager.configure_and_restart(force=force)
+        except MissingConfigServerError as e:
+            raise NonDeferrableFailedHookChecksError from e
+        except WorkloadServiceError as e:
+            raise DeferrableError from e
 
     def async_update_mongos_and_restart(self, force: bool = False):
         """Async update mongos and restart.
