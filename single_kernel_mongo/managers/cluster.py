@@ -18,6 +18,7 @@ from single_kernel_mongo.config.literals import (
     RollingOpsCallbackId,
     Substrates,
 )
+from single_kernel_mongo.config.models import MongosTLSState
 from single_kernel_mongo.config.relations import RelationNames
 from single_kernel_mongo.config.statuses import (
     CharmStatuses,
@@ -30,7 +31,10 @@ from single_kernel_mongo.exceptions import (
     DeferrableError,
     DeferrableFailedHookChecksError,
     FailedToGetHostsError,
+    IncompatibleMongosTLSError,
+    InvalidMongosTLSError,
     MissingConfigServerError,
+    MissingMongosTLSError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
     WorkloadServiceError,
@@ -292,14 +296,24 @@ class ClusterRequirer(Object):
         if not self.state.cluster.has_received_credentials():
             raise WaitingForSecretsError
 
-        if internal_tls_status := self.get_tls_status(internal=True):
-            self.state.statuses.add(
-                internal_tls_status, scope="unit", component=self.dependent.name
-            )
-        if external_tls_status := self.get_tls_status(internal=False):
-            self.state.statuses.add(
-                external_tls_status, scope="unit", component=self.dependent.name
-            )
+        internal_tls_state = self.get_tls_state(internal=True)
+        external_tls_state = self.get_tls_state(internal=False)
+
+        tls_flag = internal_tls_state | external_tls_state
+
+        if internal_tls_status := self.map_tls_state_to_status(internal_tls_state):
+            self.state.statuses.add(internal_tls_status, scope="all", component=self.dependent.name)
+        if external_tls_status := self.map_tls_state_to_status(external_tls_state):
+            self.state.statuses.add(external_tls_status, scope="all", component=self.dependent.name)
+
+        if MongosTLSState.any_missing(tls_flag):
+            raise MissingMongosTLSError("Invalid TLS integration, check logs.")
+
+        if MongosTLSState.any_invalid(tls_flag):
+            raise InvalidMongosTLSError("Invalid TLS integration, check logs.")
+
+        if MongosTLSState.any_incompatible(tls_flag):
+            raise IncompatibleMongosTLSError("Invalid TLS integration, check logs.")
 
         if internal_tls_status or external_tls_status:
             raise DeferrableFailedHookChecksError("Invalid TLS integration, check logs.")
@@ -350,18 +364,31 @@ class ClusterRequirer(Object):
             return
         self.state.set_cluster_id(new_cluster_id)
 
-    def update_mongos_and_restart(self, force: bool = False) -> None:
-        """Start/restarts mongos with config server information."""
-        self.assert_pass_hook_checks()
-
-        key_file_contents = self.state.cluster.keyfile
-        config_server_db_uri = self.state.cluster.config_server_uri
-
+    def _set_ldap_user_to_dn(self):
+        """Take the LDAP User to DN Mapping and set it in the charm state."""
         if self.charm.unit.is_leader():
             if ldap_user_to_dn_mapping := self.state.cluster.ldap_user_to_dn_mapping:
                 logger.debug("Received a userToDNMapping, storing it in databag.")
                 self.state.ldap.ldap_user_to_dn_mapping = ldap_user_to_dn_mapping
 
+    def update_mongos_and_restart(self, force: bool = False) -> None:
+        """Start/restarts mongos with config server information.
+
+        It is important that this is called through a callback so that whatever event asks for a
+        start/restart, we can do it.
+        """
+        if self.state.db_initialised:
+            self._restart_mongos(force=force)
+        else:
+            self._start_mongos()
+
+    def _start_mongos(self):
+        self.assert_pass_hook_checks()
+
+        key_file_contents = self.state.cluster.keyfile
+        config_server_db_uri = self.state.cluster.config_server_uri
+
+        self._set_ldap_user_to_dn()
         self._set_cluster_id()
 
         if not key_file_contents or not config_server_db_uri:
@@ -370,26 +397,23 @@ class ClusterRequirer(Object):
         updated_keyfile = self.dependent.update_keyfile(key_file_contents)
         updated_config = self.dependent.update_config_server_db(config_server_db_uri)
 
-        should_restart = updated_keyfile or updated_config
-
-        if force or should_restart or not self.dependent.is_mongos_running():
+        if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
             try:
-                self.dependent.config_manager.configure_and_restart(force=force)
+                self.dependent.config_manager.configure_and_restart(force=True)
             except MissingConfigServerError as e:
                 raise NonDeferrableFailedHookChecksError from e
             except WorkloadServiceError as e:
                 raise DeferrableError from e
 
-            # Restart on highly loaded databases can be very slow (up to 10-20 minutes).
-            if not self.dependent.is_mongos_running():
-                logger.info("Mongos has not started yet, deferring")
-                self.state.statuses.set(
-                    MongosStatuses.WAITING_FOR_MONGOS_START.value,
-                    scope="unit",
-                    component=self.dependent.name,
-                )
-                raise DeferrableError("Mongos is not running.")
+        if not self.dependent.is_mongos_running():
+            logger.info("Mongos has not started yet, deferring")
+            self.state.statuses.set(
+                MongosStatuses.WAITING_FOR_MONGOS_START.value,
+                scope="unit",
+                component=self.dependent.name,
+            )
+            raise DeferrableError("Mongos is not running.")
 
         self.state.statuses.set(
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
@@ -404,8 +428,40 @@ class ClusterRequirer(Object):
             self.update_users_for_k8s_routers()
 
         self.dependent.share_connection_info()
-
         self.dependent.ldap_manager.update_hash_status()
+
+    def _restart_mongos(self, force: bool = False):
+        self.charm.status_handler.set_running_status(MongosStatuses.RESTARTING.value, scope="unit")
+        try:
+            self.assert_pass_hook_checks()
+        except (InvalidMongosTLSError, WaitingForSecretsError):
+            logger.info("Not restart mongos: mongos has TLS but not config-server.")
+            raise
+        except (MissingMongosTLSError, IncompatibleMongosTLSError):
+            logger.info(
+                "Restarting mongos for security reasons: missing mongos certificate or incompatible CA."
+            )
+
+        key_file_contents = self.state.cluster.keyfile
+        config_server_db_uri = self.state.cluster.config_server_uri
+
+        self._set_ldap_user_to_dn()
+        self._set_cluster_id()
+
+        if not key_file_contents or not config_server_db_uri:
+            raise WaitingForSecretsError("Waiting for keyfile or config server db uri")
+
+        updated_keyfile = self.dependent.update_keyfile(key_file_contents)
+        updated_config = self.dependent.update_config_server_db(config_server_db_uri)
+
+        if force or updated_keyfile or updated_config or not self.dependent.is_mongos_running():
+            logger.info("Restarting mongos with new secrets.")
+            try:
+                self.dependent.config_manager.configure_and_restart(force=force)
+            except MissingConfigServerError as e:
+                raise NonDeferrableFailedHookChecksError from e
+            except WorkloadServiceError as e:
+                raise DeferrableError from e
 
     def async_update_mongos_and_restart(self, force: bool = False):
         """Async update mongos and restart.
@@ -461,8 +517,6 @@ class ClusterRequirer(Object):
                 f"Secret unrelated to this sharding relation {relation.id} is changing, ignoring event."
             )
             return
-
-        self.assert_pass_hook_checks()
 
         # This will take care of updating everything that needs updating
         self.async_update_mongos_and_restart()
@@ -614,8 +668,8 @@ class ClusterRequirer(Object):
 
         return False, False
 
-    def get_tls_status(self, internal: bool):
-        """Computes the TLS status for the scope.
+    def get_tls_state(self, internal: bool):
+        """Computes the state of TLS for mongos.
 
         Args:
             internal: (bool) if true, represents the internal TLS, otherwise external TLS.
@@ -632,12 +686,12 @@ class ClusterRequirer(Object):
                 logger.warning(
                     "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method."
                 )
-                return MongosStatuses.missing_tls(internal=internal)
+                return MongosTLSState.missing(internal=internal)
             case True, False:
                 logger.warning(
                     "Mongos uses peer TLS but config-server does not. Please synchronise encryption method."
                 )
-                return MongosStatuses.invalid_tls(internal=internal)
+                return MongosTLSState.invalid(internal=internal)
             case _:
                 pass
 
@@ -645,9 +699,37 @@ class ClusterRequirer(Object):
             logger.error(
                 "Mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components."
             )
-            return MongosStatuses.incompatible_ca(internal=internal)
+            return MongosTLSState.incompatible(internal=internal)
 
-        return None
+        return MongosTLSState.VALID
+
+    def get_tls_status(self, internal: bool) -> StatusObject | None:
+        """Computes the TLS status for the scope.
+
+        Args:
+            internal: (bool) if true, represents the internal TLS, otherwise external TLS.
+        """
+        state = self.get_tls_state(internal=internal)
+
+        return self.map_tls_state_to_status(state)
+
+    def map_tls_state_to_status(self, state: MongosTLSState) -> StatusObject | None:
+        """Maps the state to a status."""
+        match state:
+            case MongosTLSState.INTERNAL_MISSING:
+                return MongosStatuses.missing_tls(internal=True)
+            case MongosTLSState.EXTERNAL_MISSING:
+                return MongosStatuses.missing_tls(internal=False)
+            case MongosTLSState.INTERNAL_INVALID:
+                return MongosStatuses.invalid_tls(internal=True)
+            case MongosTLSState.EXTERNAL_INVALID:
+                return MongosStatuses.invalid_tls(internal=False)
+            case MongosTLSState.INTERNAL_INCOMPATIBLE:
+                return MongosStatuses.incompatible_ca(internal=True)
+            case MongosTLSState.EXTERNAL_INCOMPATIBLE:
+                return MongosStatuses.incompatible_ca(internal=False)
+            case _:
+                return None
 
     def tls_statuses(self) -> list[StatusObject]:
         """Return statuses relevant to TLS."""

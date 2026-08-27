@@ -49,8 +49,10 @@ from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
     ContainerNotReadyError,
     DeferrableError,
+    DeferrableFailedHookChecksError,
     MissingConfigServerError,
     UpgradeInProgressError,
+    WaitingForSecretsError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -458,9 +460,6 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             should_restart = self.tls_manager.reconcile_tls()
             force = force or should_restart
-            self.charm.status_handler.set_running_status(
-                MongosStatuses.RESTARTING.value, scope="unit"
-            )
             self.cluster_manager.update_mongos_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
@@ -475,6 +474,7 @@ class MongosOperator(OperatorProtocol, Object):
     def finalize_after_restart(self) -> None:
         """Run a series of code that should always run after a restart."""
         self.share_connection_info()
+        self.ldap_manager.update_hash_status()
 
     def restart_charm_services_callback(self, force: bool = False) -> OperationResult:
         """Callback to be used as a rolling operation."""
@@ -486,12 +486,13 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             self.restart_charm_services(force=force)
             self.recompute_statuses()
-        except MissingConfigServerError as e:
+        except (MissingConfigServerError, WaitingForSecretsError) as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except (WorkloadServiceError, DeferrableError) as e:
+        except (WorkloadServiceError, DeferrableError, DeferrableFailedHookChecksError) as e:
+            # No need to retry, it can only be resolved by manual intervention
             logger.info("Deferrable error during mongos restart. %s", e)
-            return OperationResult.RETRY_RELEASE
+            return OperationResult.RELEASE
         return OperationResult.RELEASE
 
     def recompute_statuses(self) -> None:

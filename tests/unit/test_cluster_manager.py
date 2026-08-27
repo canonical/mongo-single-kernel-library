@@ -10,6 +10,7 @@ from ops.model import Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import MongosTLSState
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -217,32 +218,32 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     ),
     (
         (
-            None,
-            MongosStatuses.missing_tls(internal=True),
+            MongosTLSState.VALID,
+            MongosTLSState.missing(internal=True),
             True,
             "Invalid TLS integration, check logs.",
         ),
         (
-            MongosStatuses.missing_tls(internal=False),
-            None,
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.VALID,
             True,
             "Invalid TLS integration, check logs.",
         ),
         (
-            None,
-            MongosStatuses.invalid_tls(internal=True),
+            MongosTLSState.VALID,
+            MongosTLSState.invalid(internal=True),
             True,
             "Invalid TLS integration, check logs.",
         ),
         (
-            MongosStatuses.invalid_tls(internal=False),
-            None,
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.VALID,
             True,
             "Invalid TLS integration, check logs.",
         ),
         (
-            None,
-            None,
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
             True,
             "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
         ),
@@ -251,8 +252,8 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
 def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
-    peer_tls_status: StatusObject | None,
-    client_tls_status: StatusObject | None,
+    peer_tls_status: MongosTLSState,
+    client_tls_status: MongosTLSState,
     is_waiting_for_a_cert: bool,
     expected_error: Exception,
 ):
@@ -267,7 +268,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     )
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_status",
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_state",
         side_effect=(peer_tls_status, client_tls_status),
     )
     mocker.patch(
@@ -363,7 +364,7 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     manager.update_mongos_and_restart()
     statuses = mongos_harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+        scope="unit", component=mongos_harness.charm.operator.name
     )
     assert statuses[0].status == "active"
     assert manager.state.db_initialised

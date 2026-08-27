@@ -283,3 +283,15 @@ class WaitingForVaultError(DeferrableError):
 
 class ImpossibleToRotateMasterKeyError(Exception):
     """Raised when it's impossible to rotate the master key."""
+
+
+class MissingMongosTLSError(DeferrableFailedHookChecksError):
+    """Raised when Mongos is missing it's TLS while Config Server has it."""
+
+
+class InvalidMongosTLSError(DeferrableFailedHookChecksError):
+    """Raised when Mongos has TLS while Config Server is missing it."""
+
+
+class IncompatibleMongosTLSError(DeferrableFailedHookChecksError):
+    """Raised when Mongos and Config Server have incompatible TLS CAs."""
