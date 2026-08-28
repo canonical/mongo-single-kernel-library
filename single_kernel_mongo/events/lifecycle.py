@@ -268,7 +268,7 @@ class LifecycleEventsHandler(Object):
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError, WorkloadServiceError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError, DeferrableFailedHookChecksError):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return
