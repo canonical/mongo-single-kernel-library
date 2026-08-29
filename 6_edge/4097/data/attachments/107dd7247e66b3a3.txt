@@ -1,0 +1,81 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/self-signed-certificates-264
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [executing] maintenance: Disabling TLS...
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  self-signed-certificates-separate/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongos/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  02:39:23Z
+
+App                                Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server                      6.0.28   active       1  mongodb-k8s                                0  10.152.183.100  no       
+mongos                             6.0.28   blocked      1  mongos-k8s                                 0  10.152.183.159  no       The mongos CA and Config-Server CA don't match.
+self-signed-certificates                    active       1  self-signed-certificates  latest/stable  264  10.152.183.238  no       
+self-signed-certificates-separate           active       1  self-signed-certificates  latest/stable  264  10.152.183.66   no       
+shard-one                          6.0.28   active       1  mongodb-k8s                                1  10.152.183.40   no       
+test-routing-application                    active       1  continuous-write                           0  10.152.183.192  no       
+
+Unit                                  Workload  Agent  Address       Ports  Message
+config-server/0*                      active    idle   10.1.219.139         Primary.
+mongos/0*                             blocked   idle   10.1.219.146         The mongos CA and Config-Server CA don't match.
+self-signed-certificates-separate/0*  active    idle   10.1.219.148         
+self-signed-certificates/0*           active    idle   10.1.219.147         
+shard-one/0*                          active    idle   10.1.219.144         Primary.
+test-routing-application/0*           active    idle   10.1.219.145         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-0: 02:13:26 ERROR unit.config-server/0.juju-log cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 0 -----
+2026-08-29T02:13:25Z INFO Service "logrotate" has never been started.
+----- Logs from task 1 -----
+2026-08-29T02:13:26Z INFO Most recent service output:
+    
+2026-08-29T02:13:26Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/k8s_workload.py", line 69, in restart
+    self.container.restart(self.service)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2451, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2374, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-config-server-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2401, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+----- Logs from task 0 -----
+2026-08-29T02:13:25Z INFO Service "logrotate" has never been started.
+----- Logs from task 1 -----
+2026-08-29T02:13:26Z INFO Most recent service output:
+    
+2026-08-29T02:13:26Z ERROR service start attempt: exited quickly with code 0, will restart
+-----
+unit-config-server-0: 02:13:26 ERROR unit.config-server/0.juju-log Failed to restart logrotate: cannot perform the following tasks:
+- Start service "logrotate" (service start attempt: exited quickly with code 0, will restart)
+unit-config-server-0: 02:13:26 ERROR unit.config-server/0.juju-log Could not restart the related services.
+unit-mongos-0: 02:16:46 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:16:46 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:18:38 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:18:38 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:18:38 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:18:39 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:34:15 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:34:15 ERROR unit.mongos/0.juju-log certificates:19: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:36:57 ERROR unit.mongos/0.juju-log certificates:20: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 02:36:58 ERROR unit.mongos/0.juju-log certificates:20: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongos-0: 02:39:19 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:39:19 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+unit-mongos-0: 02:39:19 ERROR unit.mongos/0.juju-log mongos is integrated to a different CA than the config server. Please use the same CA for all cluster components.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
