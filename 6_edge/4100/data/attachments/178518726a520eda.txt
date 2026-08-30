@@ -1,0 +1,107 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [idle] blocked: The sharding interface cannot be used by replica sets.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  replication/0 [idle] blocked: Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.27   unsupported  01:48:37Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Exposed  Message
+application                        active       1  application                                0  no       
+config-server             6.0.28   active       1  mongodb                                    0  no       
+config-server-two         6.0.28   active       1  mongodb                                    1  no       
+data-integrator                    blocked      1  data-integrator           latest/stable  417  no       Please specify either topic, index, database name, keyspace name, or prefix
+mongos                    6.0.28   waiting      1  mongos                                     0  no       Connecting to config-server.... Run `status-detail`: 0 action required; 1 additional statuses.
+replication               6.0.28   blocked      1  mongodb                                    3  no       The sharding interface cannot be used by replica sets.
+s3-integrator                      blocked      1  s3-integrator             latest/edge    628  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  264  no       
+shard-one                 6.0.28   blocked      1  mongodb                                    2  no       The s3-credentials relation can only be used by config servers or replica sets.
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+application/0*               active    idle   7        10.199.23.203                    
+config-server-two/0*         blocked   idle   1        10.199.23.197   27017-27018/tcp  Missing relation to shard(s).
+config-server/0*             active    idle   0        10.199.23.48    27017-27018/tcp  Primary.
+data-integrator/0*           blocked   idle   5        10.199.23.141                    Please specify either topic, index, database name, keyspace name, or prefix
+  mongos/0*                  waiting   idle            10.199.23.141   27018/tcp        Connecting to config-server.... Run `status-detail`: 0 action required; 1 additional statuses.
+replication/0*               blocked   idle   6        10.199.23.147   27017/tcp        Invalid sharding relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+s3-integrator/0*             blocked   idle   4        10.199.23.29                     Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   3        10.199.23.13                     
+shard-one/0*                 blocked   idle   2        10.199.23.168   27017/tcp        Invalid s3-credentials relation.. Run `status-detail`: 2 action required; 1 additional statuses.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.199.23.48   juju-b30a04-0  ubuntu@22.04  github-runner  Running
+1        started  10.199.23.197  juju-b30a04-1  ubuntu@22.04  github-runner  Running
+2        started  10.199.23.168  juju-b30a04-2  ubuntu@22.04  github-runner  Running
+3        started  10.199.23.13   juju-b30a04-3  ubuntu@22.04  github-runner  Running
+4        started  10.199.23.29   juju-b30a04-4  ubuntu@22.04  github-runner  Running
+5        started  10.199.23.141  juju-b30a04-5  ubuntu@22.04  github-runner  Running
+6        started  10.199.23.147  juju-b30a04-6  ubuntu@22.04  github-runner  Running
+7        started  10.199.23.203  juju-b30a04-7  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:27:09 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:27:09 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:27:17 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:27:17 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:27:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:27:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:28:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:28:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:28:21 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:28:21 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:28:29 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:28:29 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-5: 01:28:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:28:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:28:44 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:28:44 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:28:56 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:28:56 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-replication-0: 01:29:50 ERROR unit.replication/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-replication-0: 01:29:50 ERROR unit.replication/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 01:29:51 ERROR unit.config-server-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-two-0: 01:29:51 ERROR unit.config-server-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:32:26 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:32:26 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:32:34 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:32:35 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:32:35 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:32:38 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:33:28 ERROR unit.shard-one/0.juju-log Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:33:28 ERROR unit.shard-one/0.juju-log Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-shard-one-0: 01:33:28 ERROR unit.shard-one/0.juju-log Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:33:40 ERROR unit.config-server/0.juju-log Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:33:41 ERROR unit.config-server/0.juju-log Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:33:41 ERROR unit.config-server/0.juju-log Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:33:41 ERROR unit.config-server/0.juju-log Cannot operate as a config-server when deployed as a bare replica set
+unit-shard-one-0: 01:33:47 ERROR unit.shard-one/0.juju-log database:24: Charm is in sharding role: MongoDBRoles.SHARD. Does not support RelationNames.DATABASE interface.
+unit-config-server-0: 01:33:48 ERROR unit.config-server/0.juju-log database:25: Charm is in sharding role: MongoDBRoles.CONFIG_SERVER. Does not support RelationNames.DATABASE interface.
+unit-application-0: 01:33:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "bef3d6a8-0fa3-475e-860c-eb5104b30a04:r#25#config-server": settings bef3d6a8-0fa3-475e-860c-eb5104b30a04:r#25#config-server not found (not found)
+unit-config-server-0: 01:33:48 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "bef3d6a8-0fa3-475e-860c-eb5104b30a04:r#25#application": settings bef3d6a8-0fa3-475e-860c-eb5104b30a04:r#25#application not found (not found)
+unit-replication-0: 01:38:36 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:38:36 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:38:36 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:38:37 ERROR unit.replication/0.juju-log Cannot use a replica as a shard.
+machine-6: 01:38:54 ERROR juju.api.watcher error trying to stop watcher: bad catacomb ErrDying: still alive
+unit-replication-0: 01:38:54 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: bad catacomb ErrDying: still alive
+unit-replication-0: 01:40:05 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:40:05 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-replication-0: 01:40:05 ERROR unit.replication/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-mongos-0: 01:40:12 ERROR unit.mongos/0.juju-log cluster:28: Can't delete secret for relation 22
+unit-shard-one-0: 01:41:40 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:41:40 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-shard-one-0: 01:41:40 ERROR unit.shard-one/0.juju-log Charm is not a config-server, cannot integrate mongos
+unit-mongos-0: 01:41:50 ERROR unit.mongos/0.juju-log cluster:29: Can't delete secret for relation 22
+unit-replication-0: 01:42:47 ERROR unit.replication/0.juju-log certificates:31: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-replication-0: 01:42:48 ERROR unit.replication/0.juju-log certificates:31: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:46:48 ERROR unit.config-server/0.juju-log replication shard does not have the same auth as the config server.
+unit-replication-0: 01:48:01 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:48:01 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:48:01 ERROR unit.replication/0.juju-log Charm is in replication role: MongoDBRoles.REPLICATION. Does not support RelationNames.SHARDING interface.
+unit-replication-0: 01:48:02 ERROR unit.replication/0.juju-log Cannot use a replica as a shard.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
