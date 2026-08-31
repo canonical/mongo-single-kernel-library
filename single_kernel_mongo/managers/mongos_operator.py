@@ -314,6 +314,12 @@ class MongosOperator(OperatorProtocol, Object):
         share connection information with client. This is because when we
         change our connectivity we update the IP address of mongos.
         """
+        if self.refresh_in_progress:
+            logger.warning(
+                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
+            )
+            raise UpgradeInProgressError
+
         if self.substrate == Substrates.K8S:
             if self.config.expose_external == ExposeExternal.UNKNOWN:
                 logger.error(
@@ -335,12 +341,6 @@ class MongosOperator(OperatorProtocol, Object):
                 component=self.name,
             )
             self.update_config_on_k8s()
-
-        if self.refresh_in_progress:
-            logger.warning(
-                "Changing config options is not permitted during an upgrade. The charm may be in a broken, unrecoverable state."
-            )
-            raise UpgradeInProgressError
 
         # Always update connection information.
         self.share_connection_info()
@@ -491,7 +491,7 @@ class MongosOperator(OperatorProtocol, Object):
             return OperationResult.RELEASE
         except (WorkloadServiceError, DeferrableError, DeferrableFailedHookChecksError) as e:
             # No need to retry, it can only be resolved by manual intervention
-            logger.info("Deferrable error during mongos restart. %s", e)
+            logger.info("Error during mongos restart: %s.", e)
             return OperationResult.RELEASE
         return OperationResult.RELEASE
 

@@ -776,3 +776,134 @@ def test_cluster_requirer_get_tls_statuses(
 
     # Actual check
     assert manager.tls_statuses() == expected_status
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_missing(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_missing(internal_tls_state | external_tls_state) == expected
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_invalid(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_invalid(internal_tls_state | external_tls_state) == expected
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.invalid(internal=True),
+            False,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_incompatible(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_incompatible(internal_tls_state | external_tls_state) == expected

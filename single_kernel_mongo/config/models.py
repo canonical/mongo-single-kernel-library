@@ -248,17 +248,20 @@ class MongosTLSState(Flag):
     @classmethod
     def any_missing(cls, flag: MongosTLSState) -> bool:
         """Check if any TLS is missing."""
-        return flag in cls.INTERNAL_MISSING | cls.EXTERNAL_MISSING
+        any_missing = flag & (cls.INTERNAL_MISSING | cls.EXTERNAL_MISSING)
+        return any_missing.value != 0
 
     @classmethod
     def any_invalid(cls, flag: MongosTLSState) -> bool:
         """Check if any TLS is invalid."""
-        return flag in cls.INTERNAL_INVALID | cls.EXTERNAL_INVALID
+        any_invalid = flag & (cls.INTERNAL_INVALID | cls.EXTERNAL_INVALID)
+        return any_invalid.value != 0
 
     @classmethod
     def any_incompatible(cls, flag: MongosTLSState) -> bool:
         """Check if any TLS is incompatible."""
-        return flag in cls.INTERNAL_INCOMPATIBLE | cls.EXTERNAL_INCOMPATIBLE
+        any_incompatible = flag & (cls.INTERNAL_INCOMPATIBLE | cls.EXTERNAL_INCOMPATIBLE)
+        return any_incompatible.value != 0
 
 
 @dataclass
