@@ -1631,7 +1631,9 @@ class MongoDBOperator(OperatorProtocol, Object):
                 for relation in self.state.cluster_relations:
                     self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
         except DatabaseRequestedHasNotRunYetError:
-            logger.info("Database requested has not run yet. Users and DB will be reconciled later.")
+            logger.info(
+                "Database requested has not run yet. Users and DBs will be reconciled later."
+            )
         self.state.app_peer_data.db_initialised = True
 
     @property
