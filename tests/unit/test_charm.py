@@ -26,6 +26,7 @@ from single_kernel_mongo.config.statuses import (
 )
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
+    DatabaseRequestedHasNotRunYetError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     ShardingMigrationError,
@@ -389,6 +390,27 @@ def test_start_success(harness, mocker, mock_fs_interactions):
     assert harness.charm.operator.state.db_initialised
 
 
+def test_initialise_config_server_before_reconciling_cluster_users(harness, mocker):
+    """Config-server initialisation is not blocked by an unready cluster relation."""
+    harness.set_leader(True)
+    harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
+    harness.charm.operator.state.db_initialised = False
+    harness.add_relation("cluster", "mongos")
+
+    mocker.patch.object(harness.charm.operator.mongo_manager, "initialise_replica_set")
+    mocker.patch.object(harness.charm.operator.mongo_manager, "initialise_charm_admin_users")
+    reconcile_users = mocker.patch.object(
+        harness.charm.operator.mongo_manager,
+        "reconcile_mongo_users_and_dbs",
+        side_effect=DatabaseRequestedHasNotRunYetError,
+    )
+
+    harness.charm.operator._initialise_replica_set()
+
+    reconcile_users.assert_called_once()
+    assert harness.charm.operator.state.db_initialised
+
+
 def test_start_already_initialised(harness, mocker, mock_refresh, mock_fs_interactions):
     """Tests that if the replica set has already been set up that we return.
 
@@ -474,7 +496,10 @@ def test_start_mongod_error_overseeing_users(
     # presets
     harness.set_leader(True)
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
-    harness.add_relation("database", "client-app")
+    with harness.hooks_disabled():
+        relation_id = harness.add_relation("database", "client-app")
+        harness.add_relation_unit(relation_id, "client-app/0")
+        harness.update_relation_data(relation_id, "client-app", {"database": "client-db"})
 
     for exception, _ in PYMONGO_EXCEPTIONS:
         user_exists.side_effect = exception
