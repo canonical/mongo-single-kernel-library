@@ -100,7 +100,7 @@ def test_s3_credentials_no_db(harness: Harness[MongoTestCharm], mocker):
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.REPLICATION
     defer = mocker.patch("ops.framework.EventBase.defer")
     mocker.patch(
-        "single_kernel_mongo.events.backups.S3Requirer.get_s3_connection_info",
+        "single_kernel_mongo.events.backups.S3Requirer.get_storage_connection_info",
         return_value={"access-key": "noneya", "secret-key": "business"},
     )
 
