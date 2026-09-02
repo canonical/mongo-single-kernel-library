@@ -14,7 +14,7 @@ These modules support integrations for:
 - TLS via [self-signed-certificates](https://charmhub.io/self-signed-certificates)
 - Encryption at rest via [vault](https://charmhub.io/vault)
 - LDAP via [glauth-k8s](https://charmhub.io/glauth-k8s)
-- Sharded clusters via the [`mongos` router](https://charmhub.io/mongos)
+- Sharded clusters via the [`mongos`](https://charmhub.io/mongos) and [`mongos-k8s`](https://charmhub.io/mongos-k8s) routers
 
 ## Prerequisites
 
@@ -70,7 +70,7 @@ Get access to the sharded cluster product Terraform module code:
 :sync: vm
 
     git clone https://github.com/canonical/mongodb-operator.git
-    ./cd mongodb-operator
+    cd ./mongodb-operator
 ```
 
 ```{tab-item} K8s
