@@ -83,6 +83,7 @@ from single_kernel_mongo.events.vault import VaultEventHandler
 from single_kernel_mongo.exceptions import (
     BalancerNotEnabledError,
     ContainerNotReadyError,
+    DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
     EarlyRemovalOfConfigServerError,
@@ -1622,13 +1623,17 @@ class MongoDBOperator(OperatorProtocol, Object):
         self.mongo_manager.initialise_replica_set()
         self.mongo_manager.initialise_charm_admin_users()
         logger.info("Manage client relation users")
-        if self.state.is_role(MongoDBRoles.REPLICATION):
-            for relation in self.state.client_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-        elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
-            for relation in self.state.cluster_relations:
-                self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
-
+        try:
+            if self.state.is_role(MongoDBRoles.REPLICATION):
+                for relation in self.state.client_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+            elif self.state.is_role(MongoDBRoles.CONFIG_SERVER):
+                for relation in self.state.cluster_relations:
+                    self.mongo_manager.reconcile_mongo_users_and_dbs(relation)
+        except DatabaseRequestedHasNotRunYetError:
+            logger.info(
+                "Database requested has not run yet. Users and DBs will be reconciled later."
+            )
         self.state.app_peer_data.db_initialised = True
 
     @property
