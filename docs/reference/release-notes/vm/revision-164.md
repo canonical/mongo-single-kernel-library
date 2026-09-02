@@ -16,7 +16,7 @@ We strongly encourage users to **transition to the `6/stable` track to ensure th
 ## Highlights
 
 * Major snap upgrade to from charmed-mongodb/5 >charmed-mongodb/6:
-  * MongoDB upgrade: `5.0 >` [`6.0.6-5`](https://www.mongodb.com/docs/v6.0/release-notes/6.0#release-notes-for-mongodb-6.0)
+  * MongoDB upgrade: `5.0 >` [`6.0.6-5`](https://www.mongodb.com/docs/v6.0/release-notes/6.0)
   * PBM upgrade: `2.0.5 > 2.4.0`
   * MongoDB exporter upgrade: `0.37.0 > 0.40.0`
 * `juju 3` support
