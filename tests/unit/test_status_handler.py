@@ -21,6 +21,7 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 
 @pytest.mark.skip_if_substrate("microk8s")
@@ -61,29 +62,38 @@ def test_mongo_get_status_no_error_lxd(
     ("replset_status", "expected_status"),
     (
         ({}, MaintenanceStatus("Adding member...")),
-        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "PRIMARY"}, ActiveStatus("Primary.")),
-        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "SECONDARY"}, ActiveStatus("")),
         (
-            {"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP"},
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "PRIMARY"},
+            ActiveStatus("Primary."),
+        ),
+        (
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "SECONDARY"},
+            ActiveStatus(""),
+        ),
+        (
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "STARTUP"},
             MaintenanceStatus("Syncing member..."),
         ),
         (
-            {"mongodb-k8s-0.mongodb-k8s-endpoints": "STARTUP2"},
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "STARTUP2"},
             MaintenanceStatus("Syncing member..."),
         ),
         (
-            {"mongodb-k8s-0.mongodb-k8s-endpoints": "ROLLBACK"},
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "ROLLBACK"},
             MaintenanceStatus("Syncing member..."),
         ),
         (
-            {"mongodb-k8s-0.mongodb-k8s-endpoints": "RECOVERING"},
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "RECOVERING"},
             MaintenanceStatus("Syncing member..."),
         ),
         (
-            {"mongodb-k8s-0.mongodb-k8s-endpoints": "REMOVED"},
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "REMOVED"},
             MaintenanceStatus("Removing member..."),
         ),
-        ({"mongodb-k8s-0.mongodb-k8s-endpoints": "ERROR"}, BlockedStatus("ERROR")),
+        (
+            {f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}": "ERROR"},
+            BlockedStatus("ERROR"),
+        ),
     ),
 )
 def test_mongo_get_status_no_error_microk8s(

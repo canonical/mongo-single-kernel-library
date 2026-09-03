@@ -44,10 +44,13 @@ from single_kernel_mongo.utils.mongodb_users import (
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 PEER_ADDR = {
     "lxd": {"private-address": "127.4.5.6"},
-    "microk8s": {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+    "microk8s": {
+        "private-address": f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+    },
 }
 PYMONGO_EXCEPTIONS = [
     (ConnectionFailure("error message"), ConnectionFailure),

@@ -5,12 +5,16 @@
 """Helpers for network interfaces."""
 
 import os
+import socket
 import subprocess  # nosec: B404
 from collections.abc import Sequence
 from ipaddress import ip_address, ip_network
+from logging import getLogger
 
 from ops import Relation
 from ops.hookcmds import BindAddress, Network, network_get
+
+logger = getLogger(__name__)
 
 
 def ip_addresses(bind_addresses: Sequence[BindAddress]) -> Sequence[str]:
@@ -91,3 +95,35 @@ def get_cidr_for_ip_list(ip_list: list[str]) -> str:
         acc.append("0")
 
     return ip_network(split_sign.join(acc) + f"/{slash}").compressed
+
+
+def k8s_fqdn(service_name: str) -> str:
+    """Returns the canonical k8S seed host for a unit."""
+    if not service_name:
+        return ""
+
+    """Resolve the canonical FQDN for a Kubernetes service or pod name."""
+    try:
+        info = socket.getaddrinfo(
+            host=service_name,
+            port=None,
+            family=socket.AF_UNSPEC,
+            flags=socket.AI_CANONNAME,
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as e:
+        logger.warning(
+            "Failed to resolve canonical name for %s: %s. \nFalling back on default fqdn.",
+            service_name,
+            e,
+        )
+        return socket.getfqdn(service_name)
+
+    for entry in info:
+        if canonname := entry[3]:
+            return canonname
+
+    logger.warning(
+        "Failed to resolve canonical name for %s. \nFalling back on default fqdn.", service_name
+    )
+    return socket.getfqdn(service_name)

@@ -965,7 +965,7 @@ class CharmState(Object, AbstractStatusesState):
         """All the hosts to listen to."""
         if self.substrate == Substrates.VM:
             return set()
-        return {self.unit_peer_data.internal_address}
+        return {self.unit_peer_data.internal_address, self.unit_peer_data.unit_service_name}
 
     def listen_ips(self) -> set[str]:
         """All the IPs to listen to."""
