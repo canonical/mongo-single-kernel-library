@@ -220,12 +220,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         Returns:
             True if workload TLS files changed and services need a restart.
         """
-        try:
-            self._propagate_ca_secrets()
-        except PrematureDataAccessError:
-            logger.info(
-                "Premature data access error while propagating CA secrets. CA will be propagated when the data is available."
-            )
+        self._propagate_ca_secrets()
 
         need_restart = False
         for internal in (True, False):
@@ -635,22 +630,36 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         if not self.state.is_role(MongoDBRoles.CONFIG_SERVER):
             return
         for relation in self.state.cluster_relations:
-            if new_ca is None:
-                self.state.cluster_provider_data_interface.delete_relation_data(
-                    relation.id, [cluster_databag_key]
-                )
-            else:
-                self.state.cluster_provider_data_interface.update_relation_data(
-                    relation.id, {cluster_databag_key: new_ca}
+            try:
+                if new_ca is None:
+                    self.state.cluster_provider_data_interface.delete_relation_data(
+                        relation.id, [cluster_databag_key]
+                    )
+                else:
+                    self.state.cluster_provider_data_interface.update_relation_data(
+                        relation.id, {cluster_databag_key: new_ca}
+                    )
+            except PrematureDataAccessError:
+                logger.info(
+                    "Relation %s:%s is not initialized; skipping CA propagation for now.",
+                    relation.name,
+                    relation.id,
                 )
         for relation in self.state.config_server_relation:
-            if new_ca is None:
-                self.state.config_server_data_interface.delete_relation_data(
-                    relation.id, [sharding_databag_key]
-                )
-            else:
-                self.state.config_server_data_interface.update_relation_data(
-                    relation.id, {sharding_databag_key: new_ca}
+            try:
+                if new_ca is None:
+                    self.state.config_server_data_interface.delete_relation_data(
+                        relation.id, [sharding_databag_key]
+                    )
+                else:
+                    self.state.config_server_data_interface.update_relation_data(
+                        relation.id, {sharding_databag_key: new_ca}
+                    )
+            except PrematureDataAccessError:
+                logger.info(
+                    "Relation %s:%s is not initialized; skipping CA propagation for now.",
+                    relation.name,
+                    relation.id,
                 )
 
     def _propagate_client_ca_as_replicaset(self, new_ca: str | None) -> None:
