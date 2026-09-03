@@ -379,7 +379,11 @@ class ClusterRequirer(Object):
         else:
             self._start_mongos()
 
-    def _start_mongos(self):
+    def _start_mongos(self) -> None:
+        """Runs the initial start of mongos.
+
+        All subsequent restarts will be handled by `_restart_mongos`.
+        """
         self.assert_pass_hook_checks()
 
         key_file_contents = self.state.cluster.keyfile
@@ -422,7 +426,18 @@ class ClusterRequirer(Object):
         self.dependent.share_connection_info()
         self.dependent.ldap_manager.update_hash_status()
 
-    def _restart_mongos(self, force: bool = False):
+    def _restart_mongos(self, force: bool = False) -> None:
+        """Runs a restart of mongos.
+
+        It first validates the hook checks, but still restarts in some cases if an invalid state is
+        reached.
+
+        It runs a few updates such as the LDAP User to DN field and the Cluster ID field.
+        If the keyfile or the config server URI has changed, always restart.
+
+        This is for security reasons, and it happens on TLS CA incompatibility or missing TLS on
+        mongos.
+        """
         self.charm.status_handler.set_running_status(MongosStatuses.RESTARTING.value, scope="unit")
         try:
             self.assert_pass_hook_checks()
