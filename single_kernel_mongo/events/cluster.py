@@ -20,6 +20,7 @@ from ops.framework import Object
 from typing_extensions import final
 
 from single_kernel_mongo.exceptions import (
+    ClusterTLSError,
     DatabaseRequestedHasNotRunYetError,
     DeferrableError,
     DeferrableFailedHookChecksError,
@@ -172,7 +173,7 @@ class ClusterMongosEventHandler(Object):
             if self.manager.state.peer_tls_relation or self.manager.state.client_tls_relation:
                 self.dependent.tls_events.refresh_certificates()
             self.manager.share_credentials_to_clients(event.username, event.password)
-        except (DeferrableFailedHookChecksError,) as e:
+        except (ClusterTLSError, DeferrableFailedHookChecksError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -188,11 +189,11 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except RollingOpsNoRelationError as e:
+        except (RollingOpsNoRelationError, DeferrableFailedHookChecksError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (
             WaitingForSecretsError,
-            DeferrableFailedHookChecksError,  # We don't defer on the failed hook checks because we know it will solve later.
+            ClusterTLSError,  # We don't defer on the failed hook checks because we know it will solve later.
             NonDeferrableFailedHookChecksError,
         ) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
@@ -208,7 +209,7 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.async_update_mongos_and_restart()
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
+        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError, ClusterTLSError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (WaitingForSecretsError, NonDeferrableFailedHookChecksError) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")

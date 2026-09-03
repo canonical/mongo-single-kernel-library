@@ -18,10 +18,11 @@ from single_kernel_mongo.config.relations import (
 from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
-    DeferrableError,
+    ClusterTLSError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
@@ -276,7 +277,7 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
         return_value=is_waiting_for_a_cert,
     )
 
-    with pytest.raises(DeferrableFailedHookChecksError) as err:
+    with pytest.raises(ClusterTLSError) as err:
         manager.assert_pass_hook_checks()
 
     assert err.value.args[0] == expected_error
@@ -461,7 +462,7 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     )
 
     # Check that we raise a deferrable error because mongos is not running after restart
-    with pytest.raises(DeferrableError):
+    with pytest.raises(WorkloadServiceError):
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status

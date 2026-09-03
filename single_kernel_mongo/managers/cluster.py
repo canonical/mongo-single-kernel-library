@@ -33,9 +33,9 @@ from single_kernel_mongo.exceptions import (
     FailedToGetHostsError,
     IncompatibleMongosTLSError,
     InvalidMongosTLSError,
-    MissingConfigServerError,
     MissingMongosTLSError,
     NonDeferrableFailedHookChecksError,
+    WaitingForACertError,
     WaitingForSecretsError,
     WorkloadServiceError,
 )
@@ -315,11 +315,8 @@ class ClusterRequirer(Object):
         if MongosTLSState.any_incompatible(tls_flag):
             raise IncompatibleMongosTLSError("Invalid TLS integration, check logs.")
 
-        if internal_tls_status or external_tls_status:
-            raise DeferrableFailedHookChecksError("Invalid TLS integration, check logs.")
-
         if self.dependent.tls_manager.is_waiting_for_a_cert():
-            raise DeferrableFailedHookChecksError(
+            raise WaitingForACertError(
                 "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos."
             )
 
@@ -399,12 +396,7 @@ class ClusterRequirer(Object):
 
         if updated_keyfile or updated_config or not self.dependent.is_mongos_running():
             logger.info("Restarting mongos with new secrets.")
-            try:
-                self.dependent.config_manager.configure_and_restart(force=True)
-            except MissingConfigServerError as e:
-                raise NonDeferrableFailedHookChecksError from e
-            except WorkloadServiceError as e:
-                raise DeferrableError from e
+            self.dependent.config_manager.configure_and_restart(force=True)
 
         if not self.dependent.is_mongos_running():
             logger.info("Mongos has not started yet, deferring")
@@ -413,7 +405,7 @@ class ClusterRequirer(Object):
                 scope="unit",
                 component=self.dependent.name,
             )
-            raise DeferrableError("Mongos is not running.")
+            raise WorkloadServiceError("Mongos is not running.")
 
         self.state.statuses.set(
             CharmStatuses.ACTIVE_IDLE.value, scope="unit", component=self.dependent.name
@@ -456,12 +448,7 @@ class ClusterRequirer(Object):
 
         force = force or updated_keyfile or updated_config
 
-        try:
-            self.dependent.config_manager.configure_and_restart(force=force)
-        except MissingConfigServerError as e:
-            raise NonDeferrableFailedHookChecksError from e
-        except WorkloadServiceError as e:
-            raise DeferrableError from e
+        self.dependent.config_manager.configure_and_restart(force=force)
 
     def async_update_mongos_and_restart(self, force: bool = False):
         """Async update mongos and restart.

@@ -47,9 +47,10 @@ from single_kernel_mongo.events.database import DatabaseEventsHandler
 from single_kernel_mongo.events.ldap import LDAPEventHandler
 from single_kernel_mongo.events.tls import TLSEventsHandler
 from single_kernel_mongo.exceptions import (
+    ClusterTLSError,
     ContainerNotReadyError,
     DeferrableError,
-    DeferrableFailedHookChecksError,
+    InvalidLdapStateError,
     MissingConfigServerError,
     UpgradeInProgressError,
     WaitingForSecretsError,
@@ -454,7 +455,7 @@ class MongosOperator(OperatorProtocol, Object):
             raise MissingConfigServerError("Cannot start mongos without a config server db")
 
         if self.ldap_manager.should_not_restart():
-            raise DeferrableError(
+            raise InvalidLdapStateError(
                 "Workload not allowed to restart: LDAP is in an inconsistent state."
             )
         try:
@@ -486,13 +487,15 @@ class MongosOperator(OperatorProtocol, Object):
         try:
             self.restart_charm_services(force=force)
             self.recompute_statuses()
-        except (MissingConfigServerError, WaitingForSecretsError) as e:
+        except (MissingConfigServerError, InvalidLdapStateError, ClusterTLSError) as e:
+            logger.warning("Invalid state before mongos restart: %s.", e)
+        except (WaitingForSecretsError,) as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
-        except (WorkloadServiceError, DeferrableError, DeferrableFailedHookChecksError) as e:
+        except WorkloadServiceError as e:
             # No need to retry, it can only be resolved by manual intervention
             logger.info("Error during mongos restart: %s.", e)
-            return OperationResult.RELEASE
+            return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
 
     def recompute_statuses(self) -> None:
