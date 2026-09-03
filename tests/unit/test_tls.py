@@ -14,6 +14,9 @@ from ops.testing import Harness
 from single_kernel_mongo.config.literals import Scope
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    PrematureDataAccessError,
+)
 from single_kernel_mongo.state.tls_state import SECRET_CA_LABEL, SECRET_KEY_LABEL
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 
@@ -793,6 +796,19 @@ def test_reconcile_tls_files_propagates_ca_secrets(
     relation_data = harness.get_relation_data(relation_id, harness.charm.app.name)
     assert relation_data["tls"] == "True"
     assert relation_data["tls-ca"] == "ext-ca"
+
+
+def test_reconcile_tls_files_does_not_raise_on_premature_ca_secret_propagation(
+    harness: Harness[MongoTestCharm], mocker, mock_fs_interactions
+):
+    manager = harness.charm.operator.tls_manager
+    mocker.patch.object(
+        manager,
+        "_propagate_ca_secrets",
+        side_effect=PrematureDataAccessError,
+    )
+
+    assert manager.reconcile_tls() is False
 
 
 def test_tls_config_changed_invalid_key(

@@ -36,6 +36,9 @@ from single_kernel_mongo.config.literals import CharmKind, Substrates, TLSType
 from single_kernel_mongo.config.statuses import TLSStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoDBRoles
+from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
+    PrematureDataAccessError,
+)
 from single_kernel_mongo.state.charm_state import CharmState
 from single_kernel_mongo.state.cluster_state import ClusterStateKeys
 from single_kernel_mongo.state.config_server_state import (
@@ -217,7 +220,13 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         Returns:
             True if workload TLS files changed and services need a restart.
         """
-        self._propagate_ca_secrets()
+        try:
+            self._propagate_ca_secrets()
+        except PrematureDataAccessError:
+            logger.info(
+                "Premature data access error while propagating CA secrets. CA will be propagated when the data is available."
+            )
+
         need_restart = False
         for internal in (True, False):
             has_secrets = self._has_tls_secrets(internal)
