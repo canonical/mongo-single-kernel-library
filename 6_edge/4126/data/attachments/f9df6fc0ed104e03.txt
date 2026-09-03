@@ -1,0 +1,63 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.28   unsupported  01:42:52Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Exposed  Message
+config-server             6.0.28   active      1  mongodb                                    0  no       
+mongos                    6.0.28   active      1  mongos                                     0  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  no       
+shard-one                 6.0.28   active      1  mongodb                                    1  no       
+test-routing-application           active      1  continuous-write                           0  no       
+
+Unit                         Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*             active    idle   0        10.72.232.50    27017-27018/tcp  Primary.
+self-signed-certificates/0*  active    idle   3        10.72.232.150                    
+shard-one/0*                 active    idle   1        10.72.232.94    27017/tcp        Primary.
+test-routing-application/0*  active    idle   2        10.72.232.43                     
+  mongos/0*                  active    idle            10.72.232.43    27018/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.72.232.50   juju-9e5f62-0  ubuntu@22.04  runnervm76wwg  Running
+1        started  10.72.232.94   juju-9e5f62-1  ubuntu@22.04  runnervm76wwg  Running
+2        started  10.72.232.43   juju-9e5f62-2  ubuntu@22.04  runnervm76wwg  Running
+3        started  10.72.232.150  juju-9e5f62-3  ubuntu@22.04  runnervm76wwg  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-2: 01:27:55 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:27:55 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:27:57 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:27:57 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-0: 01:28:21 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:28:21 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-1: 01:28:50 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:28:50 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-0: 01:29:11 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:29:11 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-3: 01:33:05 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:33:05 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongos-0: 01:33:35 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongos-0: 01:33:36 ERROR unit.mongos/0.juju-log certificates:16: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 01:35:24 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:35:24 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 01:35:24 ERROR unit.config-server/0.juju-log certificates:17: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-0: 01:35:25 ERROR unit.shard-one/0.juju-log certificates:18: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-test-routing-application-0: 01:42:49 ERROR unit.test-routing-application/0.juju-log Unable to query the database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/src/charm.py", line 213, in _stop_continuous_writes
+    with open(self.last_written_filename(db_name, collection_name)) as fd:
+FileNotFoundError: [Errno 2] No such file or directory: 'last_written_value-continuous_writes_database-continuous_writes_collection'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/src/charm.py", line 211, in _stop_continuous_writes
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 347, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-test-routing-application-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 326, in iter
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7fc9ae9985b0 state=finished raised FileNotFoundError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

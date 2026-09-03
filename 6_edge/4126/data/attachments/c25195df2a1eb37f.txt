@@ -1,0 +1,70 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb/2 [idle] active: 
+  mongodb/3 [idle] active: Primary.
+  application/0 [executing] active: received database credentials of the second database
+  application/1 [executing] active: received database credentials of the second database
+  another-database/0 [idle] active: Primary.
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 1, stdout: , stderr: MongoServerError: Authentication failed.
+
+[31m[1mERROR   [0m integration.helpers.common:common.py:942 Failed to execute rs.status(): stderr='MongoServerError: Authentication failed.\n', stdout=''
+[32mINFO    [0m integration.helpers.common:common.py:939 ret_code: 0, stdout: {"ok":1,"$clusterTime":{"clusterTime":{"$timestamp":{"t":1788399656,"i":2}},"signature":{"hash":{"$binary":{"base64":"fq8bpE7S+27t4p+zsHpfj/M6coE=","subType":"00"}},"keyId":7681115268738712000}},"operationTime":{"$timestamp":{"t":1788399656,"i":2}}}
+, stderr:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.28   unsupported  01:40:58Z
+
+App                  Version  Status  Scale  Charm        Channel  Rev  Exposed  Message
+another-application           active      1  application             1  no       received database credentials of the first database
+another-database     6.0.28   active      1  mongodb                 1  no       
+application                   active      2  application             0  no       received database credentials of the second database
+mongodb              6.0.28   active      2  mongodb                 0  no       
+
+Unit                    Workload  Agent  Machine  Public address  Ports      Message
+another-application/0*  active    idle   7        10.110.39.110              received database credentials of the first database
+another-database/0*     active    idle   4        10.110.39.254   27017/tcp  Primary.
+application/0*          active    idle   0        10.110.39.75               received database credentials of the second database
+application/1           active    idle   1        10.110.39.50               received database credentials of the second database
+mongodb/2*              active    idle   5        10.110.39.194   27017/tcp  
+mongodb/3               active    idle   6        10.110.39.82    27017/tcp  Primary.
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.110.39.75   juju-fa8932-0  ubuntu@22.04  runnervm76wwg  Running
+1        started  10.110.39.50   juju-fa8932-1  ubuntu@22.04  runnervm76wwg  Running
+4        started  10.110.39.254  juju-fa8932-4  ubuntu@22.04  runnervm76wwg  Running
+5        started  10.110.39.194  juju-fa8932-5  ubuntu@22.04  runnervm76wwg  Running
+6        started  10.110.39.82   juju-fa8932-6  ubuntu@22.04  runnervm76wwg  Running
+7        started  10.110.39.110  juju-fa8932-7  ubuntu@22.04  runnervm76wwg  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-0: 01:28:48 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-0: 01:28:48 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:29:07 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:29:07 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:29:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:29:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:29:15 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:29:15 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:35 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:29:35 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-0: 01:29:55 ERROR unit.mongodb/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-0: 01:29:55 ERROR unit.mongodb/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:30:10 ERROR unit.mongodb/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-1: 01:30:10 ERROR unit.mongodb/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-another-database-0: 01:30:14 ERROR unit.another-database/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-another-database-0: 01:30:14 ERROR unit.another-database/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-6: 01:32:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-6: 01:32:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:32:53 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:32:53 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-mongodb-3: 01:33:25 ERROR unit.mongodb/3.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-3: 01:33:25 ERROR unit.mongodb/3.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:33:35 ERROR unit.mongodb/2.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-mongodb-2: 01:33:35 ERROR unit.mongodb/2.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+machine-2: 01:35:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-2: 01:35:43 ERROR juju.api.watcher error trying to stop watcher: connection is shutdown before send: connection is shut down
+machine-7: 01:37:58 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-7: 01:37:58 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
