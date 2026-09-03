@@ -16,7 +16,7 @@ We strongly encourage users to **transition to the `6/stable` track to ensure th
 ## Highlights
 
 * Major snap upgrade to from charmed-mongodb/5 >charmed-mongodb/6:
-  * MongoDB upgrade: `5.0 >` [`6.0.6-5`](https://www.mongodb.com/docs/v6.0/release-notes/6.0/#release-notes-for-mongodb-6.0)
+  * MongoDB upgrade: `5.0 >` [`6.0.6-5`](https://www.mongodb.com/docs/v6.0/release-notes/6.0)
   * PBM upgrade: `2.0.5 > 2.4.0`
   * MongoDB exporter upgrade: `0.37.0 > 0.40.0`
 * `juju 3` support
@@ -43,7 +43,7 @@ For a more detailed list of features and commits throughout all revisions, check
 ([#379](https://github.com/canonical/mongodb-operator/issues/379))
   * This might be an issue with the `self-signed-certificates` charm.
 
-For known issues of official MongoDB, check [MongoDB | 6.0 Release Notes > Known Issues](https://www.mongodb.com/docs/v6.0/release-notes/6.0/#known-issues) and [MongoDB | Open Issues](https://jira.mongodb.org/browse/SERVER-52164?filter=-5)
+For known issues of official MongoDB, check [MongoDB | 6.0 Release Notes > Known Issues](https://www.mongodb.com/docs/v6.0/release-notes/6.0#known-issues) and [MongoDB | Open Issues](https://jira.mongodb.org/browse/SERVER-52164?filter=-5)
 
 ## Useful links
 
