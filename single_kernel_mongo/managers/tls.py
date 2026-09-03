@@ -641,7 +641,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
                     )
             except PrematureDataAccessError:
                 logger.info(
-                    "Relation %s:%s is not initialized; skipping CA propagation for now.",
+                    "Relation %s:%s is not initialized. Skipping CA propagation for now.",
                     relation.name,
                     relation.id,
                 )
@@ -657,7 +657,7 @@ class TLSManager(AbstractManagerStatus[CharmState]):
                     )
             except PrematureDataAccessError:
                 logger.info(
-                    "Relation %s:%s is not initialized; skipping CA propagation for now.",
+                    "Relation %s:%s is not initialized. Skipping CA propagation for now.",
                     relation.name,
                     relation.id,
                 )
