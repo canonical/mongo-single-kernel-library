@@ -278,6 +278,15 @@ class MongoManager(Object, AbstractManagerStatus[CharmState]):
             self.model,
             relation.name,
         )
+        # We do nothing if the Database Requested event has not run yet.
+        if not data_interface.fetch_relation_field(relation.id, "database"):
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
+        if not relation.units:
+            logger.info(f"Database Requested for {relation} has not run yet, skipping.")
+            raise DatabaseRequestedHasNotRunYetError
+
         actual_data = data_interface.fetch_relation_data([relation.id]).get(relation.id, {})
         new_data = {key: value for key, value in actual_data.items() if key != "data"}
         data_interface.update_relation_data(relation.id, {"data": json.dumps(new_data)})
