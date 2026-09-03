@@ -17,7 +17,7 @@ This is the second release of Charmed MongoDB and Mongos 8 for VM, featuring rep
 
 * Patch for CVE-2025-14847 (MongoBleed)
 
-## Bugfixes
+## Bug fixes
 
 * Correct URI for mongodb_exporter
 * Small statuses improvements
