@@ -489,11 +489,13 @@ class MongosOperator(OperatorProtocol, Object):
             self.recompute_statuses()
         except (MissingConfigServerError, InvalidLdapStateError, ClusterTLSError) as e:
             logger.warning("Invalid state before mongos restart: %s.", e)
+            # No need to retry, it can only be resolved by manual intervention
+            return OperationResult.RELEASE
         except (WaitingForSecretsError,) as e:
             logger.warning("Non-deferrable error during mongos restart. %s", e)
             return OperationResult.RELEASE
         except WorkloadServiceError as e:
-            # No need to retry, it can only be resolved by manual intervention
+            # Retry later
             logger.info("Error during mongos restart: %s.", e)
             return OperationResult.RETRY_RELEASE
         return OperationResult.RELEASE
