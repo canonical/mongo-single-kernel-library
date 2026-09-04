@@ -529,7 +529,10 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             return unreachable_hosts
 
         for relation in self.state.config_server_relation:
-            shard_name = relation.app.name
+            shard_name = self.state.config_server_state(relation).shard_replset
+            if not shard_name:
+                logger.info("replica set name not yet added in databag, skipping")
+                continue
             hosts = []
             for unit in relation.units:
                 unit_state = self.state.unit_peer_data_for(unit, relation)
