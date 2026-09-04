@@ -98,11 +98,10 @@ def get_cidr_for_ip_list(ip_list: list[str]) -> str:
 
 
 def k8s_fqdn(service_name: str) -> str:
-    """Returns the canonical k8S seed host for a unit."""
+    """Resolve the canonical FQDN for a Kubernetes service or pod name."""
     if not service_name:
         return ""
 
-    """Resolve the canonical FQDN for a Kubernetes service or pod name."""
     try:
         info = socket.getaddrinfo(
             host=service_name,
