@@ -31,6 +31,7 @@ from single_kernel_mongo.state.tls_state import (
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 #################
 # Mongo DB Side #
@@ -388,7 +389,10 @@ def test_cluster_requirer_update_mongos_and_restart(
             # on k8s, the router generates the password and user ids.
             assert data["username"] == f"relation-{relation.id}"
             assert len(data["password"]) == 32
-            assert data["endpoints"] == "mongos-k8s-0.mongos-k8s-endpoints"
+            assert (
+                data["endpoints"]
+                == f"mongos-k8s-0.mongos-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+            )
             assert mongos_harness.charm.operator.state.get_cluster_id() is None
         assert data["database"] == "test-db"
 

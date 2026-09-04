@@ -294,11 +294,16 @@ async def mongodb_uri(
     hostnames: bool = False,
 ) -> str:
     """Build the URI for mongodb, to run on a charm unit (not from the host running the test)."""
+    assert ops_test.model
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
     if substrate == "microk8s" and hostnames:
-        addresses = [f"{app_name}-{unit_id}.{app_name}-endpoints" for unit_id in unit_ids]
+        model = ops_test.model.name
+        addresses = [
+            f"{app_name}-{unit_id}.{app_name}-endpoints.{model}.svc.cluster.local"
+            for unit_id in unit_ids
+        ]
     else:
         addresses = [
             await get_address_of_unit(ops_test, substrate, unit_id, app_name)

@@ -49,6 +49,7 @@ from single_kernel_mongo.state.tls_state import (
     SECRET_KEY_LABEL,
     TlsManagementState,
 )
+from single_kernel_mongo.utils.network_helpers import k8s_fqdn
 from single_kernel_mongo.workload.mongodb_workload import MongoDBWorkload
 from single_kernel_mongo.workload.mongos_workload import MongosWorkload
 
@@ -106,13 +107,17 @@ class TLSManager(AbstractManagerStatus[CharmState]):
         """
         unit_id = self.charm.unit.name.split("/")[1]
 
+        dns_list = {
+            f"{self.charm.app.name}-{unit_id}",
+            socket.getfqdn(),
+            "localhost",
+        }
+
+        if self.substrate == Substrates.K8S:
+            dns_list.add(k8s_fqdn(self.state.unit_peer_data.unit_service_name))
+
         sans = Sans(
-            sans_dns=[
-                f"{self.charm.app.name}-{unit_id}",
-                socket.getfqdn(),
-                "localhost",
-                f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
-            ],
+            sans_dns=sorted(dns_list),
             sans_ips=sorted(
                 {
                     *self.state.listen_ips(),

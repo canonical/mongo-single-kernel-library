@@ -40,6 +40,7 @@ from tests.integration.helpers.ha import (
     all_db_processes_down,
     db_step_down,
     fetch_replica_set_members,
+    host_to_unit,
     insert_release_to_cluster,
     kill_unit_process,
     kubectl_delete,
@@ -432,9 +433,9 @@ async def test_scale_down_capabilities_microk8s(
     assert primary is not None, "replica set has no primary"
 
     # check that the primary is one of the remaining units
-    assert (
-        f"{primary.name.replace('/', '-')}.mongodb-k8s-endpoints" in hostnames
-    ), "replica set primary is not one of the available units"
+    assert primary.name in [
+        host_to_unit(hostname) for hostname in hostnames
+    ], "replica set primary is not one of the available units"
 
     # verify that the configuration of mongodb no longer has the deleted ip
     member_hosts = await fetch_replica_set_members(ops_test, substrate, app_name)
