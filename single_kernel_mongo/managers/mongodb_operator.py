@@ -1470,7 +1470,7 @@ class MongoDBOperator(OperatorProtocol, Object):
         except WorkloadServiceError as e:
             logger.warning("Non-deferrable error during mongod restart. %s", e)
             return OperationResult.RELEASE
-        except DeferrableError as e:
+        except (DeferrableError, DeferrableFailedHookChecksError) as e:
             self.charm.state.statuses.add(
                 MongoDBStatuses.WAITING_FOR_RESTART.value,
                 scope="unit",
