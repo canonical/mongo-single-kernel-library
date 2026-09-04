@@ -8,6 +8,7 @@ import os
 import socket
 import subprocess  # nosec: B404
 from collections.abc import Sequence
+from functools import cache
 from ipaddress import ip_address, ip_network
 from logging import getLogger
 
@@ -97,6 +98,7 @@ def get_cidr_for_ip_list(ip_list: list[str]) -> str:
     return ip_network(split_sign.join(acc) + f"/{slash}").compressed
 
 
+@cache
 def k8s_fqdn(service_name: str) -> str:
     """Resolve the canonical FQDN for a Kubernetes service or pod name."""
     if not service_name:

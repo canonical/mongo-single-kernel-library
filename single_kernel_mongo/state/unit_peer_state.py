@@ -176,6 +176,4 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
         if self.substrate == Substrates.VM:
             return self.relation_data.get(f"{relation_name}-address", "")
         # K8s Case.
-        return k8s_fqdn(
-            self.unit_service_name
-        )
+        return k8s_fqdn(self.unit_service_name)
