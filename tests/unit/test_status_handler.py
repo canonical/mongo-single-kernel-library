@@ -309,7 +309,7 @@ def test_config_server_get_status_shard_draining(
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
     harness.update_relation_data(
         rel_id,
-        "shard0",
+        "shard",
         {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
     )
 
@@ -344,7 +344,7 @@ def test_config_server_get_status_unreachable_shards(
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
     harness.update_relation_data(
         rel_id,
-        "shard0",
+        "shard",
         {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
     )
 
@@ -380,7 +380,7 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
     rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
     harness.update_relation_data(
         rel_id,
-        "shard0",
+        "shard",
         {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
     )
     mocker.patch(
