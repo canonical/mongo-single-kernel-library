@@ -348,7 +348,12 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             with MongoConnection(self.state.mongos_config) as mongo:
                 cluster_shards = mongo.get_shard_members()
 
-            relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+            relation_shards = {
+                replica_set_name
+                for relation in self.state.config_server_relation
+                if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+                is not None
+            }
             if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
