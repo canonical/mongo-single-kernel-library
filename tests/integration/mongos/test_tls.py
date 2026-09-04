@@ -158,8 +158,6 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         raise_on_blocked=False,
     )
 
-    await assert_mongos_tls_disabled(ops_test, substrate)
-
     await wait_for_mongodb_units_blocked(
         ops_test,
         substrate,
@@ -174,6 +172,8 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         status="blocked",
         message="Peer TLS must be enabled in mongos, since it is enabled on the config-server in the cluster relation.",
     )
+
+    await assert_mongos_tls_disabled(ops_test, substrate)
 
 
 @pytest.mark.abort_on_fail

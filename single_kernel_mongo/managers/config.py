@@ -115,7 +115,7 @@ class FileBasedConfigManager(CommonConfigManager):
             logger.info("Workload config changed. Writing the new config.")
             self.workload.write(self.file, safe_dump(new_content))
         if should_restart:
-            logger.info("Workload will be restarted now.")
+            logger.info("Workload %s will be restarted now.", self.workload.service)
             self.workload.restart()
 
 

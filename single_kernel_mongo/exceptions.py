@@ -253,6 +253,10 @@ class UnableToBindError(Exception):
     """Raised when we're unable to bind with GLAuth."""
 
 
+class InvalidLdapStateError(Exception):
+    """Raised when mongos is unable to bind with GLAuth or it has the wrong server."""
+
+
 class WaitingForLeaderError(Exception):
     """Raised when we haven't elected a leader yet but we need it."""
 
@@ -283,3 +287,23 @@ class WaitingForVaultError(DeferrableError):
 
 class ImpossibleToRotateMasterKeyError(Exception):
     """Raised when it's impossible to rotate the master key."""
+
+
+class ClusterTLSError(Exception):
+    """Raised when an invalid TLS state is detected on the mongos side of the cluster."""
+
+
+class MissingMongosTLSError(ClusterTLSError):
+    """Raised when Mongos is missing it's TLS while Config Server has it."""
+
+
+class InvalidMongosTLSError(ClusterTLSError):
+    """Raised when Mongos has TLS while Config Server is missing it."""
+
+
+class IncompatibleMongosTLSError(ClusterTLSError):
+    """Raised when Mongos and Config Server have incompatible TLS CAs."""
+
+
+class WaitingForACertError(ClusterTLSError):
+    """Raised when Mongos is waiting for a certificate."""

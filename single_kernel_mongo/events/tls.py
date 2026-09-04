@@ -102,12 +102,12 @@ class TLSEventsHandler(Object):
         if self.manager.state.is_role(MongoDBRoles.MONGOS):
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_PEER_TLS_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.dependent.name,
             )
             self.manager.state.statuses.delete(
                 MongosStatuses.MISSING_CLIENT_TLS_REL.value,
-                scope="unit",
+                scope="all",
                 component=self.dependent.name,
             )
 
