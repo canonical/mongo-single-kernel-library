@@ -177,5 +177,5 @@ class UnitPeerReplicaSet(AbstractRelationState[DataPeerUnitData]):
             return self.relation_data.get(f"{relation_name}-address", "")
         # K8s Case.
         return k8s_fqdn(
-            f"{self.unit.name.split('/')[0]}-{self.unit_id}.{self.unit.name.split('/')[0]}-endpoints"
+            self.unit_service_name
         )
