@@ -409,10 +409,22 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
     harness.add_relation_unit(rel_id_bis, "shard1/0")
 
     harness.update_relation_data(
-        rel_id, "shard0", {"requested-secrets": '["unused"]', "database": "unused"}
+        rel_id,
+        "shard0",
+        {
+            "requested-secrets": '["unused"]',
+            "database": "unused",
+            "rs-hosts": '["shard-0-endpoints"]',
+        },
     )
     harness.update_relation_data(
-        rel_id_bis, "shard1", {"requested-secrets": '["unused"]', "database": "unused"}
+        rel_id_bis,
+        "shard1",
+        {
+            "requested-secrets": '["unused"]',
+            "database": "unused",
+            "rs-hosts": '["shard-1-endpoints"]',
+        },
     )
 
     assert set(manager.get_unreachable_shards()) == {"shard0", "shard1"}
