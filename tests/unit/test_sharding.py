@@ -415,6 +415,7 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
             "requested-secrets": '["unused"]',
             "database": "unused",
             "rs-hosts": '["shard-0-endpoints"]',
+            "shard-replset": "shard0",
         },
     )
     harness.update_relation_data(
@@ -424,6 +425,7 @@ def test_config_server_get_unreachable_shards(harness: Harness[MongoTestCharm], 
             "requested-secrets": '["unused"]',
             "database": "unused",
             "rs-hosts": '["shard-1-endpoints"]',
+            "shard-replset": "shard1",
         },
     )
 

@@ -316,7 +316,12 @@ def test_config_server_get_status_shard_draining(
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
+    rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
+    harness.update_relation_data(
+        rel_id,
+        "shard",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
+    )
 
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
@@ -346,7 +351,12 @@ def test_config_server_get_status_unreachable_shards(
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
+    rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
+    harness.update_relation_data(
+        rel_id,
+        "shard",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
+    )
 
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
@@ -377,8 +387,12 @@ def test_config_server_all_active(harness: Harness[MongoTestCharm], mocker, mock
     harness.charm.operator.state.db_initialised = True
     harness.charm.operator.state.app_peer_data.role = MongoDBRoles.CONFIG_SERVER
 
-    harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
-
+    rel_id = harness.add_relation(RelationNames.CONFIG_SERVER.value, "shard")
+    harness.update_relation_data(
+        rel_id,
+        "shard",
+        {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard"},
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.mongod_ready",
         return_value=True,
