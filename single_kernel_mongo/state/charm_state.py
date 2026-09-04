@@ -470,6 +470,7 @@ class CharmState(Object, AbstractStatusesState):
         """Returns true if all the charmed users have a password."""
         return all(self.get_user_password(user) for user in InternalUsers)
 
+    ### BEGIN: MONGOS USER CREDENTIALS
     def get_user_credentials(self) -> tuple[str | None, str | None]:
         """Retrieve the user credentials."""
         return (
@@ -477,6 +478,19 @@ class CharmState(Object, AbstractStatusesState):
             self.secrets.get_for_key(Scope.APP, key=AppPeerDataKeys.PASSWORD.value),
         )
 
+    def set_user_credentials(self, username: str, password: str) -> None:
+        """Store the user credentials."""
+        self.secrets.set(key=AppPeerDataKeys.USERNAME.value, content=username, scope=Scope.APP)
+        self.secrets.set(key=AppPeerDataKeys.PASSWORD.value, content=password, scope=Scope.APP)
+
+    def cleanup_user_credentials(self) -> None:
+        """Cleans up the credentials in the secrets."""
+        self.secrets.remove(Scope.APP, AppPeerDataKeys.USERNAME.value)
+        self.secrets.remove(Scope.APP, AppPeerDataKeys.PASSWORD.value)
+
+    ### END: MONGOS USER CREDENTIALS
+
+    ### BEGIN: KEYFILE MANAGEMENT
     def set_keyfile(self, keyfile_content: str) -> str:
         """Sets the keyfile content in the secret."""
         return self.secrets.set(AppPeerDataKeys.KEYFILE.value, keyfile_content, Scope.APP).label
@@ -485,6 +499,9 @@ class CharmState(Object, AbstractStatusesState):
         """Gets the keyfile content from the secret."""
         return self.secrets.get_for_key(Scope.APP, AppPeerDataKeys.KEYFILE.value)
 
+    ### END: KEYFILE MANAGEMENT
+
+    ### BEGIN: CLUSTER ID MANAGEMENT
     def set_cluster_id(self, cluster_id_content: str) -> str:
         """Sets the cluster id content in the secret."""
         return self.secrets.set(
@@ -500,6 +517,8 @@ class CharmState(Object, AbstractStatusesState):
     def remove_cluster_id(self) -> None:
         """Remove the content of cluster id from the secret."""
         self.secrets.remove(key=AppPeerDataKeys.CLUSTER_ID.value, scope=Scope.APP)
+
+    ### END: CLUSTER ID MANAGEMENT
 
     @property
     def planned_units(self) -> int:

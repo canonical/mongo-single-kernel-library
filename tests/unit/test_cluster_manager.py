@@ -10,6 +10,7 @@ from ops.model import Relation, WaitingStatus
 from ops.testing import Harness
 
 from single_kernel_mongo.config.literals import Scope
+from single_kernel_mongo.config.models import MongosTLSState
 from single_kernel_mongo.config.relations import (
     ExternalRequirerRelations,
     RelationNames,
@@ -17,10 +18,11 @@ from single_kernel_mongo.config.relations import (
 from single_kernel_mongo.config.statuses import MongosStatuses
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from single_kernel_mongo.exceptions import (
-    DeferrableError,
+    ClusterTLSError,
     DeferrableFailedHookChecksError,
     NonDeferrableFailedHookChecksError,
     WaitingForSecretsError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.state.tls_state import (
     SECRET_CA_LABEL,
@@ -210,27 +212,39 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
 
 @pytest.mark.parametrize(
     (
-        "mongo_has_tls",
-        "config_server_has_tls",
+        "peer_tls_status",
+        "client_tls_status",
         "is_waiting_for_a_cert",
         "expected_error",
     ),
     (
         (
-            False,
+            MongosTLSState.VALID,
+            MongosTLSState.missing(internal=True),
             True,
-            True,
-            "Config-Server uses peer TLS but mongos does not. Please synchronise encryption method.",
+            "Invalid TLS integration, check logs.",
         ),
         (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.VALID,
             True,
-            False,
-            True,
-            "Mongos uses peer TLS but config-server does not. Please synchronise encryption method.",
+            "Invalid TLS integration, check logs.",
         ),
         (
-            False,
-            False,
+            MongosTLSState.VALID,
+            MongosTLSState.invalid(internal=True),
+            True,
+            "Invalid TLS integration, check logs.",
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.VALID,
+            True,
+            "Invalid TLS integration, check logs.",
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
             True,
             "Mongos was waiting for config-server to enable TLS. Wait for TLS to be enabled until starting mongos.",
         ),
@@ -239,10 +253,10 @@ def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
 def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness: Harness[MongosTestCharm],
     mocker,
-    mongo_has_tls,
-    is_waiting_for_a_cert,
-    config_server_has_tls,
-    expected_error,
+    peer_tls_status: MongosTLSState,
+    client_tls_status: MongosTLSState,
+    is_waiting_for_a_cert: bool,
+    expected_error: Exception,
 ):
     manager = mongos_harness.charm.operator.cluster_manager
 
@@ -250,15 +264,20 @@ def test_cluster_requirer_assert_pass_hook_checks_fail(
     mongos_harness.charm.operator.state.app_peer_data.role = MongoDBRoles.MONGOS
 
     mocker.patch(
-        "single_kernel_mongo.managers.cluster.ClusterRequirer.mongos_and_config_server_peer_tls_status",
-        return_value=(mongo_has_tls, config_server_has_tls),
+        "single_kernel_mongo.state.cluster_state.ClusterState.has_received_credentials",
+        return_value=True,
+    )
+
+    mocker.patch(
+        "single_kernel_mongo.managers.cluster.ClusterRequirer.get_tls_state",
+        side_effect=(peer_tls_status, client_tls_status),
     )
     mocker.patch(
         "single_kernel_mongo.managers.tls.TLSManager.is_waiting_for_a_cert",
         return_value=is_waiting_for_a_cert,
     )
 
-    with pytest.raises(DeferrableFailedHookChecksError) as err:
+    with pytest.raises(ClusterTLSError) as err:
         manager.assert_pass_hook_checks()
 
     assert err.value.args[0] == expected_error
@@ -346,7 +365,7 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     manager.update_mongos_and_restart()
     statuses = mongos_harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=mongos_harness.charm.operator.name
+        scope="unit", component=mongos_harness.charm.operator.name
     )
     assert statuses[0].status == "active"
     assert manager.state.db_initialised
@@ -443,7 +462,7 @@ def test_cluster_requirer_update_mongos_and_restart_mongos_not_running(
     )
 
     # Check that we raise a deferrable error because mongos is not running after restart
-    with pytest.raises(DeferrableError):
+    with pytest.raises(WorkloadServiceError):
         manager.update_mongos_and_restart()
 
     # Check that we have the correct status
@@ -758,3 +777,134 @@ def test_cluster_requirer_get_tls_statuses(
 
     # Actual check
     assert manager.tls_statuses() == expected_status
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_missing(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_missing(internal_tls_state | external_tls_state) == expected
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.invalid(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_invalid(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_invalid(internal_tls_state | external_tls_state) == expected
+
+
+@pytest.mark.parametrize(
+    ("internal_tls_state", "external_tls_state", "expected"),
+    (
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.VALID,
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.incompatible(internal=False),
+            MongosTLSState.missing(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.missing(internal=False),
+            MongosTLSState.incompatible(internal=True),
+            True,
+        ),
+        (
+            MongosTLSState.invalid(internal=False),
+            MongosTLSState.invalid(internal=True),
+            False,
+        ),
+        (
+            MongosTLSState.VALID,
+            MongosTLSState.VALID,
+            False,
+        ),
+    ),
+)
+def test_tls_mongos_state_any_incompatible(
+    internal_tls_state: MongosTLSState, external_tls_state: MongosTLSState, expected: bool
+):
+    ### Checks all the possible states for mongos tls state validation.
+    assert MongosTLSState.any_incompatible(internal_tls_state | external_tls_state) == expected
