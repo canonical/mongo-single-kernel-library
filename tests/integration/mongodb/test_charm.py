@@ -496,8 +496,10 @@ async def test_scale_up(ops_test: OpsTest, substrate):
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
+            service_name = ops_test.model.name
             juju_hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints:27017" for unit_id in range(num_units)
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{service_name}.svc.cluster.local:27017"
+                for unit_id in range(num_units)
             ]
         case _:
             raise Exception("Invalid substrate")
