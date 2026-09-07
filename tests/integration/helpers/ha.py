@@ -291,7 +291,11 @@ async def replica_set_primary(
         unit_name = host_to_unit(primary_ip)
 
     # return None if primary is no longer in the replica set
-    if substrate == Substrate.lxd and primary_ip is not None and primary_ip not in replica_set_hosts:
+    if (
+        substrate == Substrate.lxd
+        and primary_ip is not None
+        and primary_ip not in replica_set_hosts
+    ):
         return None
 
     for unit in ops_test.model.applications[app_name].units:
@@ -325,7 +329,11 @@ async def replica_set_secondary(
         unit_name = host_to_unit(primary_ip)
 
     # return None if primary is no longer in the replica set
-    if substrate == Substrate.lxd and primary_ip is not None and primary_ip not in replica_set_hosts:
+    if (
+        substrate == Substrate.lxd
+        and primary_ip is not None
+        and primary_ip not in replica_set_hosts
+    ):
         return None
 
     for unit in ops_test.model.applications[app_name].units:

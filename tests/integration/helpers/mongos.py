@@ -158,7 +158,11 @@ async def build_cluster(
     if integrate_with_client:
         await ops_test.model.integrate(MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME)
         await wait_for_mongodb_units_blocked(
-            ops_test, substrate, MONGOS_APP_NAME, timeout=TIMEOUT, subordinate=(substrate == Substrate.lxd)
+            ops_test,
+            substrate,
+            MONGOS_APP_NAME,
+            timeout=TIMEOUT,
+            subordinate=(substrate == Substrate.lxd),
         )
 
     # prepare sharded cluster

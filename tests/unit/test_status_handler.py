@@ -23,6 +23,7 @@ from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
+
 @pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),

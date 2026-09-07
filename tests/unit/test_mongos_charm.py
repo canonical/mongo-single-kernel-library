@@ -9,8 +9,8 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     WorkloadNotReadyError,
 )
-from tests.integration.helpers.types import Substrate
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
 CLUSTER_ALIAS = "cluster"
 MONGOS_SOCKET_URI_FMT = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"

@@ -25,6 +25,7 @@ from single_kernel_mongo.state.vault_state import VaultState
 from single_kernel_mongo.workload import VMMongoDBWorkload, VMMongosWorkload
 from tests.integration.helpers.types import Substrate
 
+
 @pytest.mark.parametrize(
     "role,expected_parameter",
     (
