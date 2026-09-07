@@ -93,7 +93,7 @@ async def verify_sharding_cluster_ip_source_allowlists(
             for unit in ops_test.model.applications[app_name].units
         }
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         for app_name in shard_apps | {config_server_app}:
             await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
         return
@@ -150,7 +150,7 @@ async def deploy_cluster_components(
     if channel is None:
         my_charm = mongodb_charm
     else:
-        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+        my_charm = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,

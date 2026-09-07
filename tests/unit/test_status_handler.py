@@ -21,9 +21,9 @@ from single_kernel_mongo.config.statuses import (
 from single_kernel_mongo.core.structured_config import MongoDBRoles
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
-
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
@@ -56,7 +56,7 @@ def test_mongo_get_status_no_error_lxd(
     assert as_status(status) == expected_status
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 @pytest.mark.parametrize(
     ("replset_status", "expected_status"),
     (
@@ -86,7 +86,7 @@ def test_mongo_get_status_no_error_lxd(
         ({"mongodb-k8s-0.mongodb-k8s-endpoints": "ERROR"}, BlockedStatus("ERROR")),
     ),
 )
-def test_mongo_get_status_no_error_microk8s(
+def test_mongo_get_status_no_error_k8s(
     harness: Harness[MongoTestCharm], mocker, replset_status, expected_status
 ):
     harness.set_leader(True)

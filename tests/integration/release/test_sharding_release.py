@@ -122,7 +122,7 @@ async def test_deploy_apps(
             charm=mongos_charm_name,
             substrate=substrate,
             app_name=MONGOS_APP_NAME,
-            num_units=(1 if substrate == "microk8s" else 0),
+            num_units=(1 if substrate == Substrate.k8s else 0),
         ),
         deploy_charm(
             ops_test=ops_test,
@@ -130,7 +130,7 @@ async def test_deploy_apps(
             charm=mongos_charm_name,
             substrate=substrate,
             app_name=MONGOS_BIS_APP_NAME,
-            num_units=(1 if substrate == "microk8s" else 0),
+            num_units=(1 if substrate == Substrate.k8s else 0),
         ),
         deploy_charm(
             ops_test=ops_test,
@@ -138,7 +138,7 @@ async def test_deploy_apps(
             charm=mongos_charm_name,
             substrate=substrate,
             app_name=MONGOS_TER_APP_NAME,
-            num_units=(1 if substrate == "microk8s" else 0),
+            num_units=(1 if substrate == Substrate.k8s else 0),
         ),
         ops_test.model.deploy(
             TLS_CERTIFICATES_APP_NAME,

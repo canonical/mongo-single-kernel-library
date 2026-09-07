@@ -78,7 +78,7 @@ async def test_build_and_deploy(
         await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
         return
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         storage = {"data": {"pool": "lxd", "size": 2048}}
     else:
         storage = None
@@ -106,7 +106,7 @@ async def test_cluster_ip_source_allowlist_contains_all_replica_set_ips(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
@@ -156,8 +156,8 @@ async def test_storage_re_use_lxd(ops_test, substrate: Substrate, continuous_wri
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
-async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuous_writes_to_db):
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+async def test_storage_re_use_k8s(ops_test, substrate: Substrate, continuous_writes_to_db):
     """Verifies that database units with attached storage correctly repurpose storage.
 
     It is not enough to verify that Juju attaches the storage. Hence test checks that the mongod
@@ -212,7 +212,7 @@ async def test_storage_re_use_microk8s(ops_test, substrate: Substrate, continuou
 
 
 @pytest.mark.skip("This is currently unsupported on MongoDB charm.")
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 @pytest.mark.abort_on_fail
 async def test_storage_re_use_different_cluster(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
@@ -310,7 +310,7 @@ async def test_scale_up_capabilities(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 async def test_scale_down_capabilities_lxd(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
@@ -394,8 +394,8 @@ async def test_scale_down_capabilities_lxd(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
-async def test_scale_down_capabilities_microk8s(
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+async def test_scale_down_capabilities_k8s(
     ops_test: OpsTest, substrate: Substrate, continuous_writes_to_db
 ) -> None:
     """Tests clusters behavior when scaling down a minority and removing a primary replica."""

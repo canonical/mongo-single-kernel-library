@@ -154,7 +154,7 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
         assert False, "Hosts are not correct in application data."
 
     # verify application metadata is correct after adding units.
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[db_app_name].add_units(count=2)
     else:
         await ops_test.model.applications[db_app_name].scale(scale_change=2)
@@ -171,7 +171,7 @@ async def test_app_relation_metadata_change(ops_test: OpsTest, substrate: Substr
     except RetryError:
         assert False, "Hosts not updated in application data after adding units."
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         # verify application metadata is correct after removing the pre-existing units. This is
         # this is important since we want to test that the application related will work with
         # only the newly added units from above.

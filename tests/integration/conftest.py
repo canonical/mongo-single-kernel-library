@@ -93,7 +93,7 @@ def mongos_client_application_path(architecture: str) -> str:
 @pytest.fixture
 def mongodb_charm(substrate, mongod_base_path, architecture: str) -> str:
     """The MongoDB charm path, to deploy charms, according to the substrate."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return f"./{mongod_base_path}/mongodb-k8s_ubuntu@24.04-{architecture}.charm"
     return f"./{mongod_base_path}/mongodb_ubuntu@24.04-{architecture}.charm"
 
@@ -101,7 +101,7 @@ def mongodb_charm(substrate, mongod_base_path, architecture: str) -> str:
 @pytest.fixture
 def mongos_charm(substrate, mongos_base_path, architecture: str) -> str:
     """The Mongos charm path, to deploy charms, according to the substrate."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return f"./{mongos_base_path}/mongos-k8s_ubuntu@24.04-{architecture}.charm"
     return f"./{mongos_base_path}/mongos_ubuntu@24.04-{architecture}.charm"
 
@@ -116,7 +116,7 @@ def mongod_metadata(mongod_base_path) -> dict[str, Any]:
 @pytest.fixture
 def mongod_resource(mongod_metadata, substrate) -> dict[str, Any]:
     """The MongoDB charm resources for k8s charms."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return {"mongodb-image": mongod_metadata["resources"]["mongodb-image"]["upstream-source"]}
     return {}
 
@@ -131,19 +131,19 @@ def mongos_metadata(mongos_base_path) -> dict[str, Any]:
 @pytest.fixture
 def mongos_resource(mongos_metadata, substrate) -> dict[str, Any]:
     """The Mongos charm resources for k8s charms."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return {"mongodb-image": mongos_metadata["resources"]["mongodb-image"]["upstream-source"]}
     return {}
 
 
 @pytest.fixture
 def mongodb_charm_name(substrate: Substrate) -> str:
-    return "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    return "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
 
 @pytest.fixture
 def mongos_charm_name(substrate: Substrate) -> str:
-    return "mongos" if substrate == "lxd" else "mongos-k8s"
+    return "mongos" if substrate == Substrate.lxd else "mongos-k8s"
 
 
 @pytest.fixture
@@ -503,7 +503,7 @@ def s3_bucket(storage_credentials, storage_config) -> None:
 
 @pytest.fixture(scope="session")
 def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    path = "mongodb-vm" if substrate == Substrate.lxd else "mongodb-k8s"
     configs: dict[str, str] = {
         "endpoint": "https://s3.amazonaws.com",
         "bucket": "data-charms-testing",
@@ -519,7 +519,7 @@ def cloud_configs_aws(substrate: Substrate) -> CloudConfiguration:
 
 @pytest.fixture(scope="session")
 def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    path = "mongodb-vm" if substrate == Substrate.lxd else "mongodb-k8s"
     configs: dict[str, str] = {
         "bucket": "data-charms-testing",
         "endpoint": "https://storage.googleapis.com",
@@ -535,7 +535,7 @@ def cloud_configs_gcp(substrate: Substrate) -> CloudConfiguration:
 
 @pytest.fixture(scope="session")
 def cloud_configs_gcs(substrate: Substrate) -> CloudConfiguration:
-    path = "mongodb-vm" if substrate == "lxd" else "mongodb-k8s"
+    path = "mongodb-vm" if substrate == Substrate.lxd else "mongodb-k8s"
     configs: dict[str, str] = {
         "bucket": "data-charms-testing",
         "path": f"{path}/{uuid.uuid4()}",

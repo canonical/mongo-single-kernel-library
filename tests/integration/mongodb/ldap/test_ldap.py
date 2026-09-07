@@ -167,7 +167,7 @@ async def test_ldap_user_to_dn_mapping(ops_test: OpsTest, substrate: Substrate):
 
     path = mongodb_config_path(substrate)
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         cat_cmd = "exec --unit {} -- cat {}"
     else:
         cat_cmd = "ssh --container mongod {} cat {}"

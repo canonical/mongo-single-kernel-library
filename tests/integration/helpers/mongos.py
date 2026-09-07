@@ -100,7 +100,7 @@ async def deploy_cluster_components(
         }
 
     if channel is not None:
-        mongos_charm = "mongos" if substrate == "lxd" else "mongos-k8s"
+        mongos_charm = "mongos" if substrate == Substrate.lxd else "mongos-k8s"
 
     await deploy_charm(
         ops_test,
@@ -126,7 +126,7 @@ async def deploy_cluster_components(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=0 if substrate == "lxd" else mongos_units,
+        num_units=0 if substrate == Substrate.lxd else mongos_units,
         channel=channel,
     )
 
@@ -138,7 +138,7 @@ async def deploy_cluster_components(
     )
 
     apps_to_wait_for = [config_server_name, shard_one_name, MONGOS_CLIENT_APPLICATION]
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         apps_to_wait_for.append(MONGOS_APP_NAME)
 
     await ops_test.model.wait_for_idle(
@@ -158,7 +158,7 @@ async def build_cluster(
     if integrate_with_client:
         await ops_test.model.integrate(MONGOS_CLIENT_APPLICATION, MONGOS_APP_NAME)
         await wait_for_mongodb_units_blocked(
-            ops_test, substrate, MONGOS_APP_NAME, timeout=TIMEOUT, subordinate=(substrate == "lxd")
+            ops_test, substrate, MONGOS_APP_NAME, timeout=TIMEOUT, subordinate=(substrate == Substrate.lxd)
         )
 
     # prepare sharded cluster
@@ -207,9 +207,9 @@ async def generate_mongos_uri(
     mongos_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     mongos_unit_id = get_unit_id(mongos_unit.name)
 
-    if not external and substrate == "lxd":
+    if not external and substrate == Substrate.lxd:
         host = MONGOS_SOCKET
-    elif external and substrate == "lxd":
+    elif external and substrate == Substrate.lxd:
         host = f"{await mongos_unit.get_public_address()}:{MONGOS_PORT}"
     else:
         host = f"{await get_address_of_unit(ops_test, substrate, mongos_unit_id, app_name)}:{MONGOS_PORT}"
@@ -217,7 +217,7 @@ async def generate_mongos_uri(
     if not auth:
         return f"mongodb://{host}"
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         rel_name = "mongos"
     else:
         rel_name = "mongodb"
@@ -262,7 +262,7 @@ async def exec_on_mongos(
     # traditional pymongo methods
     ssh_command = " ".join(
         ["ssh", "--container", "mongos", unit.name]
-        if substrate == "microk8s"
+        if substrate == Substrate.k8s
         else ["ssh", unit.name, "sudo"]
     )
     check_cmd = f"{ssh_command} {mongos_check}"
@@ -599,13 +599,13 @@ async def assert_app_uri_matches_external_setting(
     This means that it contains the correct host and port.
     """
     uri = await generate_mongos_uri(
-        ops_test, "microk8s", auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
+        ops_test, Substrate.k8s, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
     )
 
     pulic_ip_present_in_uri = get_k8s_public_ip() in uri
     assert pulic_ip_present_in_uri == external, f"client URI for {app_name} has incorrect hosts."
 
-    hostnames = await get_unit_hostnames(ops_test, "microk8s", MONGOS_APP_NAME)
+    hostnames = await get_unit_hostnames(ops_test, Substrate.k8s, MONGOS_APP_NAME)
     for host in hostnames:
         local_host_in_ip = host in uri
         assert local_host_in_ip != external, f"client URI for {app_name} has incorrect hosts."

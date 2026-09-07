@@ -316,7 +316,7 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
         expected_databases_on_shard=["animals_database_1", "animals_database_2"],
     ), "Not all databases on final shard"
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await verify_sharding_cluster_ip_source_allowlists(
             ops_test,
             substrate,

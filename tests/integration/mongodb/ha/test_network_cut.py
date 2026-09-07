@@ -91,7 +91,7 @@ async def test_network_cut(
 
     model_name = ops_test.model.info.name
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         primary_hostname = await unit_hostname(ops_test, primary.name)
     else:
         primary_hostname = primary.name
@@ -117,7 +117,7 @@ async def test_network_cut(
             ops_test, substrate, primary, unit, "(not reachable/healthy)", app_name
         )
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         logger.info("Checking reachability from controller")
         controller: str = await get_controller_machine(ops_test)
         assert not is_machine_reachable_from(
@@ -164,7 +164,7 @@ async def test_network_cut(
         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
     # verify we have connection to the old primary
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         new_ip = instance_ip(model_name, primary_hostname)
         assert await mongod_ready(
             ops_test, new_ip, app_name=app_name

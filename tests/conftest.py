@@ -5,17 +5,15 @@ from pathlib import Path
 
 import pytest
 from _pytest.config.argparsing import Parser
-
 from tests.integration.helpers.types import Substrate
-
 
 def pytest_addoption(parser: Parser):
     parser.addoption(
         "--substrate",
         action="store",
-        help="Substrate to test, either lxd or microk8s",
-        choices=("lxd", "microk8s"),
-        default="lxd",
+        help="Substrate to test, either lxd or k8s",
+        choices=(Substrate.lxd, Substrate.k8s),
+        default=Substrate.lxd,
     )
     parser.addoption(
         "--mongodb-revision",
@@ -58,7 +56,7 @@ def skip_for_substrate(request, substrate: Substrate):
 @pytest.fixture
 def mongod_base_path(substrate) -> Path:
     """The base path for the files of the mongodb charms, according to the substrate."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return Path("tests/charms/mongodb_k8s_test_charm")
     return Path("tests/charms/mongodb_test_charm")
 
@@ -66,6 +64,6 @@ def mongod_base_path(substrate) -> Path:
 @pytest.fixture
 def mongos_base_path(substrate) -> Path:
     """The base path for the files of the mongos charms, according to the substrate."""
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return Path("tests/charms/mongos_k8s_test_charm")
     return Path("tests/charms/mongos_test_charm")

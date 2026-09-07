@@ -154,7 +154,7 @@ async def test_pbm_agent_log_file_exists(ops_test: OpsTest, substrate: Substrate
     assert ops_test.model
     app_name = await get_app_name(ops_test)
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         dir_path = "/var/snap/charmed-mongodb/common/var/log/pbm/"
     else:
         dir_path = "/var/log/pbm/"
@@ -166,7 +166,7 @@ async def test_pbm_agent_log_file_exists(ops_test: OpsTest, substrate: Substrate
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 async def test_check_max_tasks(ops_test: OpsTest, substrate: Substrate):
     app_name = await get_app_name(ops_test)
     for unit in ops_test.model.applications[app_name].units:
@@ -376,10 +376,10 @@ async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
     """Test that audit log was created and contains actual audit data."""
     app_name = await get_app_name(ops_test)
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/audit.log"
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
-        case "microk8s":
+        case Substrate.k8s:
             audit_log_path = "/var/log/mongodb/audit.log"
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
         case _:
@@ -412,10 +412,10 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     logrotate_timeout = 61
 
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/"
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
-        case "microk8s":
+        case Substrate.k8s:
             audit_log_path = "/var/log/mongodb/"
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
         case _:
@@ -486,7 +486,7 @@ async def test_scale_up(ops_test: OpsTest, substrate):
     assert num_units == 5
 
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 await get_address_of_unit(
                     ops_test, substrate, int(unit.name.split("/")[1]), app_name
@@ -495,7 +495,7 @@ async def test_scale_up(ops_test: OpsTest, substrate):
             ]
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
-        case "microk8s":
+        case Substrate.k8s:
             juju_hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints:27017" for unit_id in range(num_units)
             ]
@@ -547,7 +547,7 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
 
     # grab juju hosts
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 await get_address_of_unit(
                     ops_test, substrate, int(unit.name.split("/")[1]), app_name
@@ -556,7 +556,7 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
             ]
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
-        case "microk8s":
+        case Substrate.k8s:
             juju_hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints:27017" for unit_id in range(num_units)
             ]

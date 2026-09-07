@@ -3,4 +3,4 @@
 
 from typing import Literal, TypeAlias
 
-Substrate: TypeAlias = Literal["lxd", "microk8s"]
+Substrate: TypeAlias = Literal["lxd", "k8s"]

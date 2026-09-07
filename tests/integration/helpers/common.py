@@ -90,26 +90,26 @@ logger = logging.getLogger(__name__)
 
 def mongosh(substrate: Substrate) -> str:
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             return "charmed-mongodb.mongosh"
-        case "microk8s":
+        case Substrate.k8s:
             return "mongosh"
 
 
 def external_cert_path(substrate: Substrate):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
 
 
 def external_pem_path(substrate: Substrate):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
     return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
 
 
 def internal_cert_path(substrate: Substrate):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
     return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
 
@@ -140,7 +140,7 @@ async def deploy_charm(
 ):
     if revision is not None:
         channel = "8/beta"
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         series = series or "noble"
         await ops_test.model.deploy(
             charm,
@@ -248,7 +248,7 @@ async def get_address_of_unit(
 ) -> str:
     """Retrieves the address of the unit based on provided id."""
     status: FullStatus = await ops_test.model.get_status()
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["address"]
     return status["applications"][app_name]["units"][f"{app_name}/{unit_id}"]["public-address"]
 
@@ -297,7 +297,7 @@ async def mongodb_uri(
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
-    if substrate == "microk8s" and hostnames:
+    if substrate == Substrate.k8s and hostnames:
         addresses = [f"{app_name}-{unit_id}.{app_name}-endpoints" for unit_id in unit_ids]
     else:
         addresses = [
@@ -678,7 +678,7 @@ async def check_or_scale_app(
     if current_units == required_units:
         return
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         count = required_units - current_units
         await ops_test.model.applications[user_app_name].scale(scale_change=count)
         await ops_test.model.wait_for_idle()
@@ -699,7 +699,7 @@ async def remove_units(
     ops_test: OpsTest, substrate: Substrate, app_name: str, units: list[JujuUnit]
 ):
     """Removes the correct units (number of units for kubernetes."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[app_name].destroy_unit(*(unit.name for unit in units))
     else:
         count = len(units)
@@ -784,7 +784,7 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
 
 
 async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         return [
             f"{unit.name.replace('/', '-')}.{app_name}-endpoints"
             for unit in ops_test.model.applications[app_name].units
@@ -799,7 +799,7 @@ async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: 
 async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate, unit_name: str):
     """Get the hostname for a unit in mongodb."""
     unit_id, app_name = get_unit_app(unit_name)
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
     return f"{unit_name.replace('/', '-')}.{app_name}-endpoints"
 
@@ -822,11 +822,11 @@ async def get_application_units(ops_test: OpsTest, substrate: Substrate, app: st
     for u_name, unit in raw_app["units"].items():
         unit_id = int(u_name.split("/")[-1])
 
-        if substrate == "lxd" and not (address := unit.get("public-address")):
+        if substrate == Substrate.lxd and not (address := unit.get("public-address")):
             # unit not ready yet...
             continue
 
-        if substrate == "microk8s" and not (address := unit.get("address")):
+        if substrate == Substrate.k8s and not (address := unit.get("address")):
             # unit not ready yet...
             continue
 
@@ -836,7 +836,7 @@ async def get_application_units(ops_test: OpsTest, substrate: Substrate, app: st
             ip=address,
             hostname=await get_unit_hostname(ops_test, unit_id, app),
             is_leader=unit.get("leader", False),
-            machine_id=int(unit["machine"]) if substrate == "lxd" else -1,
+            machine_id=int(unit["machine"]) if substrate == Substrate.lxd else -1,
             workload_status=Status(
                 value=unit["workload-status"]["current"],
                 since=unit["workload-status"]["since"],
@@ -1079,7 +1079,7 @@ async def execute_on_mongod(
 ) -> CommandResult:
     """Executes the command with mongosh."""
     leader_id = await get_leader_id(ops_test, app_name)
-    ssh_command = ["ssh", "--container", container_name] if substrate == "microk8s" else ["ssh"]
+    ssh_command = ["ssh", "--container", container_name] if substrate == Substrate.k8s else ["ssh"]
     tls_string = ""
     if tls:
         tls_string = f"--tls --tlsCAFile {external_cert_path(substrate)}"
@@ -1323,7 +1323,7 @@ async def secondary_mongo_uris_with_sync_delay(
     Returns the ascending list of Secondaries, the first secondary is the
     one with the lowest data sync delay.
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         hosts = {
             get_unit_id(unit.name): await get_address_of_unit(
                 ops_test, substrate, get_unit_id(unit.name), app_name
@@ -1409,7 +1409,7 @@ async def get_connection_string(
 
 def mongodb_log_path(substrate: Substrate) -> str:
     """The path of mongodb log file."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mongodb_common_dir = "/var/snap/charmed-mongodb/common"
     else:
         mongodb_common_dir = ""
@@ -1477,9 +1477,9 @@ async def has_file(
 ) -> bool:
     """Checks if the file exists or not."""
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {unit.name} sudo"
-        case "microk8s":
+        case Substrate.k8s:
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {unit.name}"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
@@ -1502,9 +1502,9 @@ async def execute_on_server(
 ) -> str:
     """Executes a command on the server."""
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {unit.name} sudo"
-        case "microk8s":
+        case Substrate.k8s:
             base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container {container} {unit.name}"
         case _:
             raise Exception(f"Invalid substrate {substrate}")
@@ -1523,7 +1523,7 @@ async def scp_file_preserve_ctime(
     """Returns the unix timestamp of when a file was created on a specified unit."""
     # Retrieving the file
     filename = path.split("/")[-1]
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         complete_command = f"exec --unit {unit_name} -- sudo cat {path}"
         return_code, stdout, stderr = await ops_test.juju(*complete_command.split(), check=True)
         with open(filename, mode="w") as fd:
@@ -1545,7 +1545,7 @@ async def scp_file_preserve_ctime(
 
 
 def mongodb_base_path(substrate: Substrate) -> str:
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         return "/var/snap/charmed-mongodb/current/etc/mongod/"
     return "/etc/mongod/"
 
@@ -1562,7 +1562,7 @@ async def delete_file_on_remote(
     filepath: str,
     container: str = "mongod",
 ):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         complete_command = f"exec --unit {unit_name} -- sudo rm {filepath}"
         return_code, _, stderr = await ops_test.juju(*complete_command.split(), check=True)
     else:
@@ -1589,10 +1589,10 @@ async def read_remote_file(
     """Read a file on a remote unit and return its stdout.
 
     Uses `juju ssh` for LXD (adds sudo) and `juju ssh --container` for
-    microk8s so callers don't need to duplicate the command construction.
+    k8s so callers don't need to duplicate the command construction.
     Raises `ProcessError` when the command exits with a non-zero code.
     """
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         cmd = ["ssh", "--container", container, unit_name, "cat", filepath]
     else:
         cmd = ["ssh", unit_name, "sudo", "cat", filepath]

@@ -46,8 +46,8 @@ from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
 
 PEER_ADDR = {
-    "lxd": {"private-address": "127.4.5.6"},
-    "microk8s": {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+    Substrate.lxd: {"private-address": "127.4.5.6"},
+    Substrate.k8s: {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
 }
 PYMONGO_EXCEPTIONS = [
     (ConnectionFailure("error message"), ConnectionFailure),
@@ -65,7 +65,7 @@ VALID_SYSTEM_USERS = {
 INVALID_SYSTEM_USERS = {"invalid-user": "123"}
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_install_blocks_snap_install_failure(harness, mocker):
     mock_exec = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch.object(harness.charm.status_handler, "set_running_status")
@@ -78,7 +78,7 @@ def test_install_blocks_snap_install_failure(harness, mocker):
     mock_exec.assert_any_call(["systemctl", "is-active", "--quiet", "snapd.service"])
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_mongod_pebble_ready(harness, mocker):
     """Tests that under regular conditions, the service is set and defer has not been called."""
     mocker.patch(
@@ -128,7 +128,7 @@ def test_mongod_pebble_ready(harness, mocker):
     defer.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_pebble_ready_container_cannot_connect(harness, mocker, mock_fs_interactions):
     """Test verifies behavior when cannot connect to container in pebble ready function.
 
@@ -149,7 +149,7 @@ def test_pebble_ready_container_cannot_connect(harness, mocker, mock_fs_interact
     defer.assert_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_pebble_ready_push_keyfile_to_workload_failure(harness, mocker, mock_fs_interactions):
     """Test verifies behavior when setting keyfile fails.
 
@@ -181,7 +181,7 @@ def test_pebble_ready_push_keyfile_to_workload_failure(harness, mocker, mock_fs_
         defer.assert_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_pebble_ready_no_storage_yet(harness, mocker, mock_fs_interactions):
     """Test to ensure that the pebble ready event is deferred until the storage is ready."""
     defer = mocker.patch("ops.framework.EventBase.defer")
@@ -200,7 +200,7 @@ def test_pebble_ready_no_storage_yet(harness, mocker, mock_fs_interactions):
     defer.assert_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_start_container_cannot_connect(harness, mocker, mock_fs_interactions):
     """Tests inability to connect results in deferral.
 
@@ -269,7 +269,7 @@ def test_start_waits_for_peer_database_addresses(
     configure.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_storage_attached_defers_when_pebble_is_not_ready(harness, mocker):
     """The storage hook retries when Pebble cannot execute the /tmp chmod yet."""
     exec_mock = mocker.patch.object(
@@ -338,7 +338,7 @@ def test_on_start_mongod_not_ready_defer(harness, mocker, mock_fs_interactions):
     patched_mongo_initialise.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_start_unable_to_open_tcp_doesnt_init(harness, mocker, mock_fs_interactions):
     # This also tests that we call the hook on the workload.
     def mock_exec(command, *_, **__):
@@ -974,7 +974,7 @@ def test_on_leader_elected_dont_rotate_passwords_already_set(harness):
     assert state.get_user_password(CharmedBackupUser) == backup_password
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_on_leader_elected_dont_rotate_cluster_id_already_set_vm(harness):
     harness.set_leader(True)
     cluster_id = harness.charm.operator.state.get_cluster_id()
@@ -985,7 +985,7 @@ def test_on_leader_elected_dont_rotate_cluster_id_already_set_vm(harness):
     assert cluster_id == new_cluster_id
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_on_leader_elected_cluster_id_is_none(harness):
     harness.set_leader(True)
     cluster_id = harness.charm.operator.state.get_cluster_id()
@@ -1185,7 +1185,7 @@ def test_on_secret_changed_unknown(harness: Harness[MongoTestCharm], mocker):
     mock_get.assert_not_called()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_connect_mongodb_exporter_success(
     harness: Harness[MongoTestCharm],
     mocker,

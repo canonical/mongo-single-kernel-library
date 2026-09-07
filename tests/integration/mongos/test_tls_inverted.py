@@ -47,7 +47,7 @@ async def test_build_and_deploy(
         mongos_resource,
         application_path,
     )
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[MONGOS_CLIENT_APPLICATION].set_config(
             {"external-connectivity": "false"}
         )
@@ -81,7 +81,7 @@ async def test_mongos_tls_enabled_on_cluster(ops_test: OpsTest, substrate: Subst
         MONGOS_APP_NAME,
         status="Missing peer-certificates relation.",
         timeout=TIMEOUT,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
     await check_status_detail(
         ops_test,

@@ -152,15 +152,15 @@ async def test_rollback_on_config_server(
     )
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, CONFIG_SERVER_APP_NAME):
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = config_server_unit
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (
-            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
         ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 

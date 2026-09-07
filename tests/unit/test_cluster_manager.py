@@ -132,7 +132,7 @@ def test_share_secret_to_mongos(
     assert len(data.get("key-file", "")) == 1024
 
     assert data.get("config-server-db") == f"{harness.charm.app.name}/{mongodb_hostname}:27017"
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert len(data.get("cluster-id")) == 8
     else:
         assert data.get("cluster-id") is None
@@ -181,7 +181,7 @@ def test_share_secret_to_mongos_also_shares_ldap_config(
     assert data.get("ldap-user-to-dn-mapping") == json.dumps(valid_mapping)
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_cleanup_users(harness: Harness[MongoTestCharm], mocker):
     manager = harness.charm.operator.cluster_manager
 
@@ -372,7 +372,7 @@ def test_cluster_requirer_update_mongos_and_restart(
 
     for relation in operator.state.client_relations:
         data = relation.data[mongos_harness.charm.app]
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             assert data["username"] == "charmed-operator"
             assert data["password"] == "password"
             assert (
