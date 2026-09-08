@@ -791,7 +791,7 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
 async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
     if substrate == "microk8s":
         return [
-            f"{unit.name.replace('/', '-')}.{app_name}-endpoints"
+            f"{unit.name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
             for unit in ops_test.model.applications[app_name].units
         ]
 
@@ -806,7 +806,7 @@ async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate,
     unit_id, app_name = get_unit_app(unit_name)
     if substrate == "lxd":
         return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints"
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
 
 
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:
@@ -1328,6 +1328,7 @@ async def secondary_mongo_uris_with_sync_delay(
     Returns the ascending list of Secondaries, the first secondary is the
     one with the lowest data sync delay.
     """
+    assert ops_test.model
     if substrate == "lxd":
         hosts = {
             get_unit_id(unit.name): await get_address_of_unit(
@@ -1337,7 +1338,9 @@ async def secondary_mongo_uris_with_sync_delay(
         }
     else:
         hosts = {
-            get_unit_id(unit.name): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
+            get_unit_id(
+                unit.name
+            ): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints.{ops_test.model.name}.svc.cluster.local"
             for unit in ops_test.model.applications[app_name].units
         }
 
