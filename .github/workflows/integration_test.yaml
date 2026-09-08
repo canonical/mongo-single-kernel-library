@@ -125,7 +125,7 @@ jobs:
         timeout-minutes: 1
         if: ${{ contains(matrix.job.runner, 'self-hosted') }}
         run: df --human-readable
-      - name: Purge Docker
+      - name: (GitHub hosted) Purge Docker
         # GitHub-hosted Azure runners ship Docker pre-installed and active.
         # Canonical K8s requires "A system with no previous installations
         # of containerd/docker as this may cause conflicts"
@@ -134,25 +134,15 @@ jobs:
         # Completely purging Docker requires also
         # deleting the Docker-specific `iptables-nft` rulesets
         # created on installation.
+        # Skipped on self-hosted runners: apt/dpkg lock contention there
+        # (from cloud-init/apt-daily/unattended-upgrades on the freshly
+        # provisioned VM) makes this step hang until timeout, and
+        # self-hosted runner images don't ship Docker pre-installed/active
+        # the way GitHub-hosted ones do, so purging isn't needed there.
+        if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
         timeout-minutes: 5
-        env:
-          DEBIAN_FRONTEND: noninteractive
-          NEEDRESTART_MODE: a
         run: |
-          sudo systemctl stop docker.socket docker.service containerd.service 2>/dev/null || true
-
-          # On freshly-provisioned (self-hosted) runners, cloud-init/apt-daily/
-          # unattended-upgrades may still be running in the background and holding
-          # the dpkg/apt lock. Stop them & wait for the lock instead of letting
-          # `apt-get remove` silently block until the step times out.
-          sudo systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
-          sudo killall --wait apt apt-get unattended-upgrade 2>/dev/null || true
-          while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
-            echo "Waiting for apt/dpkg lock..."
-            sleep 2
-          done
-
-          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd || true
+          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
           sudo nft flush ruleset
           sudo ip link delete docker0 2>/dev/null || true
       - name: Remove podman CNI bridge config
