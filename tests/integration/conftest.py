@@ -19,6 +19,7 @@ from typing import Any
 
 import boto3
 import botocore.exceptions
+import jubilant
 import pytest
 import tomli
 import tomli_w
@@ -553,3 +554,12 @@ def cloud_configs(
     cloud_configs_gcs: CloudConfiguration,
 ) -> Generator[CloudConfigs]:
     yield {"AWS": cloud_configs_aws, "GCP": cloud_configs_gcp, "GCS": cloud_configs_gcs}
+
+
+@pytest.fixture(scope="module")
+def juju(architecture: str) -> Generator[jubilant.Juju, Any, None]:
+    # `testing` is the default model created by concierge
+    juju = jubilant.Juju(model="testing")
+    juju.wait_timeout = 1000
+    juju.cli("set-model-constraints", f"arch={architecture}")
+    yield juju

@@ -928,6 +928,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if not self.charm.unit.is_leader() or not self.state.db_initialised:
             return
 
+        self.state.statuses.clear(scope="unit", component=self.mongo_manager.name)
+
         if state := self.vault_manager.get_degraded_state():
             logger.warning(
                 "Encryption at rest may be degraded. Vault agent state: %s. This must be fixed first.",
@@ -947,7 +949,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_RECONFIG.value,
+                scope="unit",
+                component=self.mongo_manager.name,
             )
             raise
 

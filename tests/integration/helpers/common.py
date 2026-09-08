@@ -768,7 +768,7 @@ def instance_ip(model: str, instance: str) -> str:
     return ""
 
 
-def audit_log_line_sanity_check(entry) -> bool:
+def audit_log_line_sanity_check(entry: dict[str, str | None]) -> bool:
     fields = ["atype", "ts", "local", "remote", "users", "roles", "param", "result"]
     for field in fields:
         if entry.get(field) is None:
