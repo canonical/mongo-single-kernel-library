@@ -135,7 +135,11 @@ jobs:
         # deleting the Docker-specific `iptables-nft` rulesets
         # created on installation.
         timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
         run: |
+          sudo systemctl stop docker.socket docker.service containerd.service 2>/dev/null || true
           sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
           sudo nft flush ruleset
           sudo ip link delete docker0 2>/dev/null || true
