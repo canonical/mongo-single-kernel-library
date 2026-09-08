@@ -27,7 +27,7 @@ jobs:
       - name: Install CLI
         run: pipx install git+https://github.com/canonical/data-platform-workflows@v31.1.1#subdirectory=python/cli
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install tox & poetry
@@ -51,7 +51,7 @@ jobs:
           sudo snap install charmcraft --classic
           pipx install charmcraftcache
       - name: Set up python environment
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.10"
           cache: "poetry"
@@ -66,7 +66,7 @@ jobs:
         id: path-in-artifact
         run: compute-path-in-artifact '${{ matrix.path }}'
       - name: Upload charm
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: packed-charm-${{ steps.path-in-artifact.outputs.path }}
           path: |
@@ -82,7 +82,7 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.2.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v52.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
