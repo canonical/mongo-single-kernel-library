@@ -138,6 +138,12 @@ async def deploy_charm(
     constraints: dict[str, list[str]] | None = None,
     bind: dict[str, str] | None = None,
 ):
+    if not charm:
+        raise ValueError(
+            f"deploy_charm called with an empty/falsy charm name: {charm=} {app_name=} "
+            f"{substrate=} {channel=} {revision=}. Juju would otherwise report this as a "
+            'cryptic "cannot parse name and/or revision in URL" error.'
+        )
     if revision is not None:
         channel = "8/beta"
     if substrate == Substrate.k8s:
