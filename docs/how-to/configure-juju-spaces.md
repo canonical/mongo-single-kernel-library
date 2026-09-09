@@ -1,6 +1,12 @@
 (configure-juju-spaces)=
 # How to configure Juju spaces
 
+```{admonition} Caution
+:class: warning
+
+Juju spaces are only available on VM charms.
+```
+
 Use [Juju spaces](https://documentation.ubuntu.com/juju/3.6/reference/space/) to select separate networks for MongoDB traffic and client connections. This guide configures spaces at deployment time for Charmed MongoDB on machines (VM), using a local LXD deployment.
 
 The example uses these endpoint bindings:
