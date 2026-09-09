@@ -233,15 +233,6 @@ prepare: |
   if [[ $SPREAD_SUITE == *"lxd"* ]]
   then
     concierge prepare --trace -c concierge-lxd.yaml
-    if [[ $SPREAD_TASK == *"ldap"* ]]
-    then
-      mkdir -p ~/.kube
-      k8s kubectl config view --raw > ~/.kube/config
-      export LOCAL_IP="127.0.0.1"
-      export PUBLIC_IP=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
-      sed -i 's/'${LOCAL_IP}'/'${PUBLIC_IP}'/g' ~/.kube/config
-      cat ~/.kube/config | juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
-    fi
   fi
 
   # Install charmcraft & pipx (on lxd-vm backend)
@@ -269,6 +260,13 @@ prepare-each: |
     juju switch concierge-lxd
   else
     juju switch concierge-k8s
+  fi
+
+  if [[ $SPREAD_TASK == *"ldap"* ]]
+  then
+    mkdir -p ~/.kube
+    k8s config > ~/.kube/config
+    chmod 600 ~/.kube/config
   fi
 
   # Unable to set constraint on all models because of Juju bug:
