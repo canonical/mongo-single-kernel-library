@@ -3,12 +3,10 @@
 
 import json
 import logging
-import math
 import re
 import subprocess
 from base64 import b64decode
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from random import choices
 from string import ascii_lowercase, digits
@@ -16,7 +14,6 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import yaml
-from bson.json_util import dumps as bson_dumps
 from dateutil.parser import parse
 from juju.application import Application
 from juju.client.client import FullStatus
@@ -1254,44 +1251,6 @@ def generate_collection_id() -> str:
     return f"collection_{new_id}"
 
 
-async def check_if_test_documents_stored(
-    ops_test: OpsTest, app_name: str, substrate: Substrate, uri: str, collection: str
-) -> None:
-    """Check to see if some documents for the `TEST_DOCUMENT` dict were stored."""
-    # serialize the str test documents into json
-    o_test_docs = json.loads(TEST_DOCUMENTS)
-
-    # query filter
-    formatted_list = bson_dumps([{"uid": test_doc["uid"]} for test_doc in o_test_docs])
-    # Needed to escape the $ properly
-    query_filter = f"{{\\$or: {formatted_list}}}"
-
-    count_documents = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.{collection}.countDocuments({query_filter})",
-    )
-    assert count_documents.data == 2
-
-    # descending order to match insertion order of the test documents
-    find_documents = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.{collection}.find({query_filter}).sort({{uid: 1}}).toArray()",
-    )
-    assert len(find_documents.data) == 2
-
-    for index, test_doc in zip(range(len(o_test_docs)), o_test_docs):
-        db_doc = find_documents.data[index]
-
-        for key, val in test_doc.items():
-            assert db_doc[key] == val
-
-
 def get_unit_id(unit_name: str) -> int:
     """Unit id from unit name."""
     return int(unit_name.split("/")[1])
@@ -1313,51 +1272,6 @@ def get_unit_id_from_host(units: dict[int, str], host: str) -> int:
         if host == _host:
             return unit_id
     raise Exception("no host found", units, host)
-
-
-async def secondary_mongo_uris_with_sync_delay(
-    ops_test: OpsTest, substrate: Substrate, app_name: str, rs_status_data: dict
-):
-    """Returns the list of secondaries and their sync delay with the master.
-
-    Returns the ascending list of Secondaries, the first secondary is the
-    one with the lowest data sync delay.
-    """
-    if substrate == "lxd":
-        hosts = {
-            get_unit_id(unit.name): await get_address_of_unit(
-                ops_test, substrate, get_unit_id(unit.name), app_name
-            )
-            for unit in ops_test.model.applications[app_name].units
-        }
-    else:
-        hosts = {
-            get_unit_id(unit.name): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
-            for unit in ops_test.model.applications[app_name].units
-        }
-
-    primary_optime_date = [
-        datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        for member in rs_status_data["members"]
-        if member["stateStr"].upper() == "PRIMARY"
-    ][0]
-
-    secondaries = []
-    for member in rs_status_data["members"]:
-        if member["stateStr"].upper() != "SECONDARY":
-            continue
-
-        unit_id = get_unit_id_from_host(hosts, member["name"].split(":")[0])
-        member_optime_date = datetime.strptime(member["optimeDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-
-        host = await mongodb_uri(ops_test, substrate, app_name, unit_ids=[unit_id])
-        delay_seconds = (primary_optime_date - member_optime_date).total_seconds()
-
-        secondaries.append({"uri": host, "delay": math.fabs(delay_seconds)})
-
-    secondaries.sort(key=lambda o: o["delay"])
-
-    return secondaries
 
 
 async def get_secret_data(ops_test: OpsTest, secret_uri: str):
