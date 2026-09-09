@@ -1406,6 +1406,7 @@ def test_peer_changed_updates_cluster_ip_source_allowlist(
         "single_kernel_mongo.managers.vault.VaultManager.get_degraded_state", return_value=None
     )
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
+    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_unremoved_units")
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.update_users_local_auth_restrictions"
     )
@@ -1641,7 +1642,9 @@ def test_reconfigure_peer_not_ready_replica_set_is_added(
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
-    get_replset.return_value = {mongodb_name}
+    get_replset.return_value = {
+        f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+    }
 
     rel = harness.charm.model.get_relation("database-peers")
 
@@ -1726,6 +1729,7 @@ def test_on_relation_departed_not_leader(
 
     mock_update_allowlist.reset_mock()
     mock_sync_allowlist.reset_mock()
+    update_host_mock.reset_mock()
     harness.set_leader(False)
     harness.remove_relation_unit(rel.id, "mongodb/1")
 
