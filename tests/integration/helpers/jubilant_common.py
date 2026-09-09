@@ -464,7 +464,7 @@ def relate_application(juju: jubilant.Juju, mongodb_application_name: str, clien
         )
     )
     juju.wait(
-        lambda status: are_apps_active_and_agents_idle(
+        lambda status: are_agents_idle(
             status, mongodb_application_name, client_app_name, idle_period=30, unit_count=1
         ),
         timeout=1000,
