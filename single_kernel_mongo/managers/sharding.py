@@ -693,8 +693,8 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
         self._set_cluster_id()
 
-        self.dependent.sync_cluster_network_access_restrictions()
         self.update_member_auth(keyfile, tls_ca, external_tls_ca)
+        self.dependent.sync_cluster_network_access_restrictions()
 
     def handle_pbm(self, relation: Relation):
         """Updates PBM certificates and restart if needed."""
