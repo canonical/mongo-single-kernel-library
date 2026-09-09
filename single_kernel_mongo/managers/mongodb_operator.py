@@ -34,6 +34,7 @@ from tenacity import (
     stop_after_attempt,
     wait_fixed,
 )
+from ops.pebble import ConnectionError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (
@@ -398,7 +399,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     state,
                 )
                 return
-        except ValueError as e:
+        except (ValueError, ConnectionError) as e:
             logger.warning(
                 f"Encryption at rest may be degraded. Error: {e}. This must be fixed first."
             )
@@ -568,6 +569,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
             try:
                 self.vault_manager.prepare_vault_agent(data)
+            except ConnectionError:
+                raise NotReadyError("Pebble connection error while preparing vault agent.")
             except ValueError:
                 # This will get caught right after.
                 pass

@@ -169,11 +169,6 @@ prepare: |
   cd "$SPREAD_PATH"
   snap install --classic concierge
 
-  if [[ $SPREAD_SUITE == *"lxd"* ]]
-  then
-    concierge prepare --trace -c concierge-lxd.yaml
-  fi
-
   if [[ $SPREAD_SUITE == *"k8s"* ]] || [[ $SPREAD_TASK == *"ldap"* ]]
   then
     # Canonical K8s defaults its pod CIDR to 10.1.0.0/16 — the same range the GitHub-hosted
@@ -233,6 +228,20 @@ prepare: |
             echo "Skipping rollout status for missing $res"
         fi
         done
+  fi
+
+  if [[ $SPREAD_SUITE == *"lxd"* ]]
+  then
+    concierge prepare --trace -c concierge-lxd.yaml
+    if [[ $SPREAD_TASK == *"ldap"* ]]
+    then
+      mkdir -p ~/.kube
+      k8s kubectl config view --raw > ~/.kube/config
+      export LOCAL_IP="127.0.0.1"
+      export PUBLIC_IP=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
+      sed -i 's/'${LOCAL_IP}'/'${PUBLIC_IP}'/g' ~/.kube/config
+      cat ~/.kube/config | juju add-k8s uk8s --client --controller $(/snap/bin/juju show-controller | yq "keys | .[0]")
+    fi
   fi
 
   # Install charmcraft & pipx (on lxd-vm backend)
