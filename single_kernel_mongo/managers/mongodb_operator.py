@@ -25,6 +25,7 @@ from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
+from ops.pebble import ConnectionError
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import (
     RetryError,
@@ -34,7 +35,6 @@ from tenacity import (
     stop_after_attempt,
     wait_fixed,
 )
-from ops.pebble import ConnectionError
 from typing_extensions import override
 
 from single_kernel_mongo.config.literals import (

@@ -25,6 +25,7 @@ from tests.integration.helpers.sharding import (
     SHARD_TWO_APP_NAME,
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
+    SMALL_K8S_STORAGE,
     count_shard_writes,
     deploy_cluster_components,
     integrate_sharding_components,
@@ -54,6 +55,7 @@ async def test_build_and_deploy(
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,

@@ -31,6 +31,7 @@ from tests.integration.helpers.sharding import (
     SHARD_REL_NAME,
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
+    SMALL_K8S_STORAGE,
     has_correct_shards,
     shard_has_databases,
     verify_data_mongodb,
@@ -60,6 +61,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "config-server"},
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await deploy_charm(
         ops_test,
@@ -69,6 +71,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await deploy_charm(
         ops_test,
@@ -78,6 +81,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await deploy_charm(
         ops_test,
@@ -87,6 +91,7 @@ async def test_build_and_deploy(
         mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
 
     await ops_test.model.wait_for_idle(

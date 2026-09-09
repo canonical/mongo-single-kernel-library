@@ -18,6 +18,7 @@ from ops import (
     Object,
     UpdateStatusEvent,
 )
+from ops.pebble import ConnectionError
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import VaultStatuses
@@ -28,7 +29,6 @@ from single_kernel_mongo.exceptions import (
 )
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
-from ops.pebble import ConnectionError
 
 if TYPE_CHECKING:
     from single_kernel_mongo.abstract_charm import AbstractMongoCharm
