@@ -402,14 +402,19 @@ def is_relation_joined(
     if app_two not in status.apps:
         return False
 
-    for rel_name, relations in status.apps[app_one].relations.items():
-        if rel_name != endpoint_one:
-            continue
-        for rel in relations:
-            if rel.related_app == app_two and rel.interface == endpoint_two:
-                return True
-
-    return False
+    rels = {app_one: False, app_two: False}
+    for app, endpoint, remote_app in (
+        (app_one, endpoint_one, app_two),
+        (app_two, endpoint_two, app_one),
+    ):
+        for rel_name, relations in status.apps[app].relations.items():
+            if rel_name != endpoint:
+                continue
+            for rel in relations:
+                if rel.related_app == remote_app:
+                    rels[app] = True
+                    break
+    return rels[app_one] and rels[app_two]
 
 
 def deploy_application(
