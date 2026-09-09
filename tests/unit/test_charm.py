@@ -1406,7 +1406,9 @@ def test_peer_changed_updates_cluster_ip_source_allowlist(
         "single_kernel_mongo.managers.vault.VaultManager.get_degraded_state", return_value=None
     )
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
-    mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_unremoved_units")
+    mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.process_unremoved_units"
+    )
     mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.update_users_local_auth_restrictions"
     )
@@ -1619,6 +1621,7 @@ def test_reconfigure_peer_not_ready_replica_set_is_added(
     mock_fs_interactions,
     substrate: Substrate,
     mongodb_name: str,
+    mongodb_hostname: str,
 ):
     """Tests reconfigure does not proceed when the adding member is not ready.
 
@@ -1642,9 +1645,7 @@ def test_reconfigure_peer_not_ready_replica_set_is_added(
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
-    get_replset.return_value = {
-        f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
-    }
+    get_replset.return_value = {mongodb_hostname}
 
     rel = harness.charm.model.get_relation("database-peers")
 
