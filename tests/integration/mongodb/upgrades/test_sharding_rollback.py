@@ -169,6 +169,7 @@ async def test_rollback_on_config_server(
     await ops_test.model.wait_for_idle(
         apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
         timeout=1000,
+        status="active",
         idle_period=30,
     )
 
