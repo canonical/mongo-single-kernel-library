@@ -94,7 +94,7 @@ async def test_rollback_on_shard_and_config_server(
     revision = "test/0.0.0+dirty"
 
     # Wait for statuses to settle down
-    asyncio.gather(
+    await asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
         check_app_status(
@@ -114,7 +114,7 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    asyncio.gather(
+    await asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
         check_app_status(
