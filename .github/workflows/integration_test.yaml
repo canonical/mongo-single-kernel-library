@@ -111,13 +111,7 @@ jobs:
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
     steps:
-      - name: (GitHub hosted) Setup tmate session
-        if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
-        uses: mxschmitt/action-tmate@v3
-        with:
-          detached: true
-      - name: (IS hosted) Setup tmate session
-        if: ${{ contains(matrix.job.runner, 'self-hosted') }}
+      - name: Setup tmate session
         uses: canonical/action-tmate@main
         with:
           detached: true
