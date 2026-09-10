@@ -168,8 +168,10 @@ def verify_unit_count(
         apps: A list of applications whose statuses to test against
         unit_count: The desired number of units to wait for, can be >= to -1
             if set as int, this value is expected for all apps but if more granularity is needed,
-            pass a dictionary such as: {"app1": 2, "app2": 1, ...}, if set to -1, the check
-            only happens at the application level.
+            pass a dictionary such as: {"app1": 2, "app2": 1, ...}
+            If set to -1, the check only happens at the application level.
+            Each application not in the dict is not checked for unit counts.
+            Each application set to -1 is not verified as well.
     """
     if not unit_count:
         return True
@@ -178,11 +180,7 @@ def verify_unit_count(
         if unit_count == 0:
             return True
         unit_count = dict.fromkeys(apps, unit_count)
-    elif not unit_count:
-        unit_count = dict.fromkeys(apps, -1)
-    else:
-        for app in apps:
-            if app not in unit_count:
-                unit_count[app] = 1
 
-    return all(count == len(status.get_units(app)) for app, count in unit_count.items())
+    return all(
+        count == len(status.get_units(app)) for app, count in unit_count.items() if count >= 0
+    )
