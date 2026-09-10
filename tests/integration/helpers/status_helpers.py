@@ -177,8 +177,6 @@ def verify_unit_count(
         return True
 
     if isinstance(unit_count, int):
-        if unit_count == 0:
-            return True
         unit_count = dict.fromkeys(apps, unit_count)
 
     return all(

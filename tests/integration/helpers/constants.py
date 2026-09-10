@@ -22,6 +22,8 @@ INTERNAL_USER_PASSWORD_CONFIG = "system-users"
 CONTINUOUS_WRITE_APPLICATION = "continuous-write"
 CONTINUOUS_WRITE_APPLICATION_BIS = "continuous-write-bis"
 READER_APPLICATION = "reader-application"
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
+
 # Keep in sync with tests/integration/applications/continuous_write_charm/src/charm.py
 DEFAULT_DATABASE_NAME = "continuous_writes_database"
 DEFAULT_COLLECTION_NAME = "continuous_writes_collection"
@@ -48,5 +50,3 @@ TEST_DOCUMENTS = """[
 
 
 MONGOS_APP_NAME = "mongos"
-
-DATA_INTEGRATOR_APP_NAME = "data-integrator"

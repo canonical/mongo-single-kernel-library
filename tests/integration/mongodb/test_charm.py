@@ -1,4 +1,4 @@
-#!/usr/bpython3
+#!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -35,9 +35,9 @@ from tests.integration.helpers.constants import (
     UNIT_IDS,
 )
 from tests.integration.helpers.continuous_writes_helpers import (
-    clear_continous_writes,
-    start_continous_writes,
-    stop_continous_writes,
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
 )
 from tests.integration.helpers.jubilant_common import (
     check_if_test_documents_stored,
@@ -540,14 +540,14 @@ def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path:
     # We want to speed up the test because it requires a lot of writing to
     # ensure a log rotation so we write on 10 concurrent jobs.
     for i in range(10):
-        start_continous_writes(
+        start_continuous_writes(
             juju,
             client_app_name=CONTINUOUS_WRITE_APPLICATION,
             coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",
         )
     time.sleep(time_to_write_200m_of_data)
     for i in range(10):
-        stop_continous_writes(
+        stop_continuous_writes(
             juju,
             client_app_name=CONTINUOUS_WRITE_APPLICATION,
             coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",
@@ -555,7 +555,7 @@ def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path:
 
     time.sleep(logrotate_timeout)  # Just to make sure that logrotate will run
     for i in range(10):
-        clear_continous_writes(
+        clear_continuous_writes(
             juju,
             client_app_name=CONTINUOUS_WRITE_APPLICATION,
             coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",

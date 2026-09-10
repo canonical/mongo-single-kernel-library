@@ -62,7 +62,7 @@ def existing_app(
         if charm_name in app_status.charm_name:
             if app_name in test_deployments:
                 logger.debug(
-                    "%s app name '%' was deployed by the tests, not by the user",
+                    "%s app name '%s' was deployed by the tests, not by the user",
                     charm_name,
                     app_name,
                 )

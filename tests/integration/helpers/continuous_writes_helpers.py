@@ -28,7 +28,7 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
-def start_continous_writes(
+def start_continuous_writes(
     juju: jubilant.Juju,
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
@@ -42,7 +42,7 @@ def start_continous_writes(
     )
 
 
-def start_continous_reads(
+def start_continuous_reads(
     juju: jubilant.Juju,
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
@@ -56,7 +56,7 @@ def start_continous_reads(
     )
 
 
-def stop_continous_writes(
+def stop_continuous_writes(
     juju: jubilant.Juju,
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
@@ -70,7 +70,7 @@ def stop_continous_writes(
     )
 
 
-def stop_continous_reads(
+def stop_continuous_reads(
     juju: jubilant.Juju,
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
@@ -86,7 +86,7 @@ def stop_continous_reads(
     return int(result.results["reads"]), result.results["failed-reads"]
 
 
-def clear_continous_writes(
+def clear_continuous_writes(
     juju: jubilant.Juju,
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
@@ -115,7 +115,7 @@ def count_writes(
 ) -> int:
     """Count the number of writes written on a specific column and database."""
     host = get_ip_from_unit(substrate, unit_info)
-    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    password = get_password(juju, app_name=app_name, username=username)
     uri = unit_uri(username, password, host, replica_set=app_name, mongos=mongos)
 
     if tls:
