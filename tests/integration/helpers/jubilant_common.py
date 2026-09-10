@@ -136,7 +136,7 @@ def remove_number_units(
             # get units names
             unit_names = list(juju.status().get_units(app))
             # remove units by name until num_units have been removed
-            juju.remove_unit(*unit_names[:-num_units])
+            juju.remove_unit(*unit_names[:num_units])
 
 
 def ensure_app_number_units(
@@ -470,7 +470,7 @@ def relate_application(juju: jubilant.Juju, mongodb_application_name: str, clien
     )
     juju.wait(
         lambda status: are_agents_idle(
-            status, mongodb_application_name, client_app_name, idle_period=30, unit_count=1
+            status, mongodb_application_name, client_app_name, idle_period=30
         ),
         timeout=1000,
         delay=5,
