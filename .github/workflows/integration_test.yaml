@@ -111,6 +111,16 @@ jobs:
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 230 # Sum of steps `timeout-minutes` + 5
     steps:
+      - name: (GitHub hosted) Setup tmate session
+        if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+      - name: (IS hosted) Setup tmate session
+        if: ${{ contains(matrix.job.runner, 'self-hosted') }}
+        uses: canonical/action-tmate@main
+        with:
+          detached: true
       - name: (GitHub hosted) Free up disk space
         timeout-minutes: 3
         if: ${{ ! contains(matrix.job.runner, 'self-hosted') }}
@@ -145,7 +155,7 @@ jobs:
           sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
           sudo nft flush ruleset
           sudo ip link delete docker0 2>/dev/null || true
-      - name: (self-hosted) Purge Docker
+      - name: (IS hosted) Purge Docker
         if: ${{ contains(matrix.job.runner, 'self-hosted') }}
         timeout-minutes: 5
         run: |
