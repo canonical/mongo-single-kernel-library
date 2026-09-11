@@ -608,14 +608,14 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
             model_name = juju.model
             hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
                 for unit_id in range(num_units)
             ]
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
+
+    juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
 
     password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     uri = replica_set_uri(
