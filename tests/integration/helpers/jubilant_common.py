@@ -227,11 +227,9 @@ def _uri(
 ) -> str:
     port = MONGOS_PORT if mongos else MONGOD_PORT
     _hosts = ",".join(f"{host}:{port}" for host in hosts)
-    if mongos:
-        return f"mongodb://{username}:{password}@{_hosts}/admin"
     if replica_set:
-        return f"mongodb://{username}:{password}@{hosts}:{_hosts}/admin?replicaSet={replica_set}"
-    return f"mongodb://{username}:{password}@{hosts}:{_hosts}/admin"
+        return f"mongodb://{username}:{password}@{_hosts}/admin?replicaSet={replica_set}"
+    return f"mongodb://{username}:{password}@{_hosts}/admin"
 
 
 def unit_uri(
