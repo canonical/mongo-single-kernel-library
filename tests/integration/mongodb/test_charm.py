@@ -2,54 +2,67 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+
 import json
 import logging
 import pathlib
-import subprocess
 import time
-from subprocess import check_output
 
+import jubilant
 import pytest
+import tomllib
 from bson.json_util import loads as bson_loads
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
-from pytest_operator.plugin import OpsTest
 from tenacity import RetryError
 
+from single_kernel_mongo.config.statuses import PasswordManagementStatuses
 from tests.integration.helpers.common import (
+    audit_log_line_sanity_check,
+    generate_collection_id,
+    get_unit_id,
+)
+from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     CHARMED_STATS_USERNAME,
+    CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
     DEPLOYMENT_TIMEOUT,
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     TEST_DOCUMENTS,
+    TIMEOUT,
     UNIT_IDS,
-    audit_log_line_sanity_check,
-    check_app_status,
+)
+from tests.integration.helpers.continuous_writes_helpers import (
+    clear_continuous_writes,
+    start_continuous_writes,
+    stop_continuous_writes,
+)
+from tests.integration.helpers.jubilant_common import (
     check_if_test_documents_stored,
-    check_or_scale_app,
-    clear_continous_writes,
     count_primaries,
     deploy_application,
     deploy_charm,
+    ensure_app_number_units,
     execute_on_mongod,
-    execute_on_server,
-    find_unit,
-    generate_collection_id,
-    generate_mongodb_client,
-    get_address_of_unit,
-    get_app_name,
+    existing_app,
+    find_leader,
+    get_ip_from_unit,
     get_password,
-    has_file,
-    relate_mongodb_and_application,
-    remove_units,
+    relate_application,
+    remove_number_units,
+    replica_set_uri,
+    run_command_on_server,
     secondary_mongo_uris_with_sync_delay,
     set_password,
-    start_continous_writes,
-    stop_continous_writes,
+    unit_has_file,
     unit_uri,
+)
+from tests.integration.helpers.status_helpers import (
+    are_apps_active_and_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -60,134 +73,165 @@ OPERATOR_PASSWORD = "SOMETHING"
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource, base_app_name
-):
-    """Build and deploy one unit of MongoDB."""
-    # it is possible for users to provide their own cluster for testing. Hence check if there
-    # is a pre-existing cluster.
-    app_name = await get_app_name(ops_test)
+@pytest.mark.juju_setup
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
+    base_app_name: str,
+) -> None:
+    """Build the charm-under-test and deploy it with three units."""
+    app_name = existing_app(juju)
     if app_name:
-        await check_or_scale_app(ops_test, substrate, app_name, len(UNIT_IDS))
+        ensure_app_number_units(juju, substrate, app_name, required_units=len(UNIT_IDS))
         return
 
-    await deploy_charm(
-        ops_test=ops_test,
+    app_name = base_app_name
+    deploy_charm(
+        juju=juju,
         charm=mongodb_charm,
         substrate=substrate,
         mongod_resource=mongod_resource,
-        app_name=base_app_name,
+        app_name=app_name,
         num_units=len(UNIT_IDS),
     )
-    await ops_test.model.wait_for_idle(timeout=DEPLOYMENT_TIMEOUT, status="active")
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
 
 
 @pytest.mark.abort_on_fail
-async def test_consistency_between_workload_and_metadata(
-    ops_test: OpsTest, substrate: Substrate, mongod_base_path: str
+def test_consistency_between_workload_and_metadata(
+    juju: jubilant.Juju, substrate: Substrate, mongod_base_path: str
 ):
-    app_name = await get_app_name(ops_test)
-    leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
-    password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
-    ip_address = await get_address_of_unit(
-        ops_test, substrate, int(leader_unit.name.split("/")[1]), app_name
-    )
+    app_name = existing_app(juju)
+    assert app_name
 
-    client = MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
+    _, leader_unit_info = find_leader(juju=juju, app_name=app_name)
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    ip_address = get_ip_from_unit(substrate=substrate, unit_info=leader_unit_info)
+
+    client = MongoClient(
+        unit_uri(
+            username=CHARMED_OPERATOR_USERNAME,
+            ip_address=ip_address,
+            password=password,
+            replica_set=app_name,
+        ),
+        directConnection=True,
+    )
 
     mongod_version = client.server_info()["version"].split("-")[0]
 
-    local_version = pathlib.Path(mongod_base_path, "workload_version").read_text().strip()
+    versions_file = pathlib.Path(mongod_base_path, "refresh_versions.toml").read_text().strip()
+    local_version = tomllib.loads(versions_file)["workload"]
 
     assert (
         mongod_version == local_version
     ), f"Version of mongod running is invalid ({mongod_version}), should be {local_version}"
 
 
-async def test_status(ops_test: OpsTest) -> None:
+@pytest.mark.abort_on_fail
+def test_status_is_active(juju: jubilant.Juju) -> None:
     """Verifies that the application and unit are active."""
-    app_name = await get_app_name(ops_test)
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
-    assert len(ops_test.model.applications[app_name].units) == len(UNIT_IDS)
+    app_name = existing_app(juju)
+    assert app_name
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=600,
+        delay=5,
+        successes=3,
+    )
 
 
-async def test_tmp_permissions(ops_test: OpsTest, substrate: Substrate) -> None:
+@pytest.mark.abort_on_fail
+def test_tmp_permissions(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verifies that every unit's temporary directory has the expected permissions."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
-    for unit in ops_test.model.applications[app_name].units:
-        permissions = await execute_on_server(
-            ops_test,
-            substrate,
-            unit,
-            "stat -c %a /tmp",
+    for unit_name in juju.status().get_units(app_name):
+        permissions = run_command_on_server(
+            juju, substrate=substrate, unit_name=unit_name, command="stat -c %a /tmp"
         )
 
-        assert permissions.strip() == "1777", f"invalid /tmp permissions on {unit.name}"
+        assert permissions.strip() == "1777", f"invalid /tmp permissions on {unit_name}"
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.parametrize("unit_id", UNIT_IDS)
-async def test_unit_is_running_as_replica_set(
-    ops_test: OpsTest, substrate: Substrate, unit_id: int
-) -> None:
+def test_unit_is_running_as_replica_set(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that mongodb is running as a replica set for the application unit."""
     # connect to mongo replica set
-    app_name = await get_app_name(ops_test)
-    address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    connection = address + ":" + str(MONGOD_PORT)
-    client = MongoClient(connection, replicaset=app_name, directConnection=True)
+    app_name = existing_app(juju)
+    assert app_name
+    for unit_info in juju.status().get_units(app_name).values():
+        address = get_ip_from_unit(substrate, unit_info)
+        connection = address + ":" + str(MONGOD_PORT)
+        client = MongoClient(connection, replicaset=app_name, directConnection=True)
+        # check mongo replica set is ready
+        try:
+            client.server_info()
+        except ServerSelectionTimeoutError:
+            assert False, "server is not ready"
 
-    # check mongo replica set is ready
-    try:
-        client.server_info()
-    except ServerSelectionTimeoutError:
-        assert False, "server is not ready"
-
-    # close connection
-    client.close()
+        # close connection
+        client.close()
 
 
 @pytest.mark.abort_on_fail
-async def test_pbm_agent_log_file_exists(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Checks that all units have a PBM log file."""
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
 
     if substrate == "lxd":
         dir_path = "/var/snap/charmed-mongodb/common/var/log/pbm/"
     else:
         dir_path = "/var/log/pbm/"
 
-    for unit in ops_test.model.applications[app_name].units:
-        assert has_file(
-            ops_test, substrate=substrate, unit=unit, dir_path=dir_path, filename="pbm-agent.json"
+    for unit_name in juju.status().get_units(app_name):
+        assert unit_has_file(
+            juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            dir_path=dir_path,
+            filename="pbm-agent.json",
         )
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate("microk8s")
-async def test_check_max_tasks(ops_test: OpsTest, substrate: Substrate):
-    app_name = await get_app_name(ops_test)
-    for unit in ops_test.model.applications[app_name].units:
-        output = await execute_on_server(
-            ops_test,
-            substrate,
-            unit,
-            "systemctl show --property TasksMax snap.charmed-mongodb.mongod",
+def test_check_max_tasks(juju: jubilant.Juju, substrate: Substrate):
+    app_name = existing_app(juju)
+    assert app_name
+    for unit_name in juju.status().get_units(app_name):
+        output = run_command_on_server(
+            juju=juju,
+            substrate=substrate,
+            unit_name=unit_name,
+            command="systemctl show --property TasksMax snap.charmed-mongodb.mongod",
         )
-        assert "infinity" in output, f"Unit {unit.name} has an invalid TasksMax value"
+        assert "infinity" in output, f"Unit {unit_name} has an invalid TasksMax value"
 
 
 @pytest.mark.abort_on_fail
-async def test_exactly_one_primary(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_exactly_one_primary(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that there is exactly one primary in the deployed units."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
     try:
-        password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name=app_name)
-        number_of_primaries = await count_primaries(
-            ops_test, substrate, password, app_name=app_name
-        )
+        number_of_primaries = count_primaries(juju, substrate, app_name=app_name)
     except RetryError:
         number_of_primaries = 0
 
@@ -198,20 +242,32 @@ async def test_exactly_one_primary(ops_test: OpsTest, substrate: Substrate) -> N
 
 
 @pytest.mark.abort_on_fail
-async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
+def test_get_primary_action(juju: jubilant.Juju, substrate: Substrate):
     """Tests that action get-primary outputs the correct unit with the primary replica."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
+    units = juju.status().get_units(app_name)
+
     expected_primary = None
-    for unit in ops_test.model.applications[app_name].units:
-        unit_id = int(unit.name.split("/")[1])
-        ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+    for unit_name, unit_info in units.items():
+        ip_address = get_ip_from_unit(substrate, unit_info)
         # connect to mongod
-        password = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name)
-        client = MongoClient(unit_uri(ip_address, password, app_name), directConnection=True)
+        password = get_password(juju, app_name, CHARMED_OPERATOR_USERNAME)
+
+        client = MongoClient(
+            unit_uri(
+                username=CHARMED_OPERATOR_USERNAME,
+                password=password,
+                ip_address=ip_address,
+                replica_set=app_name,
+            ),
+            directConnection=True,
+        )
 
         # check primary status
         if client.is_primary:
-            expected_primary = unit.name
+            expected_primary = unit_name
             break
 
     # verify that there is a primary
@@ -219,10 +275,9 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 
     # check if get-primary returns the correct primary unit regardless of
     # which unit the action is run on
-    for unit in ops_test.model.applications[app_name].units:
+    for unit_name in units.keys():
         # use get-primary action to find primary
-        action = await unit.run_action("get-primary")
-        action = await action.wait()
+        action = juju.run(unit_name, "get-primary")
         identified_primary = action.results["replica-set-primary"]
 
         # assert get-primary returned the right primary
@@ -230,24 +285,41 @@ async def test_get_primary_action(ops_test: OpsTest, substrate: Substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_update_operator_password(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that update config sets the new password in app data and mongod."""
-    app_name = await get_app_name(ops_test)
-    await set_password(ops_test, CHARMED_OPERATOR_USERNAME, OPERATOR_PASSWORD, app_name)
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+    app_name = existing_app(juju)
+    assert app_name
 
-    new_password_reported = await get_password(ops_test, CHARMED_OPERATOR_USERNAME, app_name)
+    set_password(
+        juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME, password=OPERATOR_PASSWORD
+    )
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    new_password_reported = get_password(
+        juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME
+    )
 
     assert OPERATOR_PASSWORD == new_password_reported
 
-    unit = await find_unit(ops_test, leader=True)
-    unit_id = int(unit.name.split("/")[1])
-    ip_address = await get_address_of_unit(ops_test, substrate, unit_id, app_name)
+    _, unit_info = find_leader(juju, app_name=app_name)
+    ip_address = get_ip_from_unit(substrate, unit_info=unit_info)
 
     # verify that the password is updated in mongod by inserting into the collection.
     try:
         client = MongoClient(
-            unit_uri(ip_address, OPERATOR_PASSWORD, app_name),
+            unit_uri(
+                username=CHARMED_OPERATOR_USERNAME,
+                password=OPERATOR_PASSWORD,
+                ip_address=ip_address,
+                replica_set=app_name,
+            ),
             directConnection=True,
         )
         client[DEFAULT_DATABASE_NAME].list_collection_names()
@@ -258,138 +330,185 @@ async def test_update_operator_password(ops_test: OpsTest, substrate: Substrate)
 
 
 @pytest.mark.abort_on_fail
-async def test_not_granted_secret_for_password_update(ops_test: OpsTest) -> None:
+def test_not_granted_secret_for_password_update(juju: jubilant.Juju) -> None:
     """Test password update for a secret not granted to the application."""
+    app_name = existing_app(juju)
+    assert app_name
+
     new_password = "NEW-PASSWORD"
     secret_name = "test-secret"
-    secret_id = await ops_test.model.add_secret(
-        name=secret_name, data_args=[f"{CHARMED_OPERATOR_USERNAME}={new_password}"]
-    )
-    app_name = await get_app_name(ops_test)
-    await ops_test.model.applications[app_name].set_config(
-        {INTERNAL_USER_PASSWORD_CONFIG: secret_id}
-    )
-    expected_message = "Secret in system-users not granted."
-    await check_app_status(ops_test, app_name, "blocked", expected_message)
 
-    reported_password = await get_password(
-        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name
+    current_password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+
+    secret_id = juju.add_secret(name=secret_name, content={CHARMED_OPERATOR_USERNAME: new_password})
+
+    juju.config(app_name, {INTERNAL_USER_PASSWORD_CONFIG: secret_id})
+
+    juju.wait(
+        lambda status: does_status_match(
+            status,
+            expected_unit_statuses=None,
+            expected_app_statuses={app_name: [PasswordManagementStatuses.SECRET_NOT_GRANTED.value]},
+        ),
+        timeout=TIMEOUT,
     )
+
+    reported_password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     # The password remained unchanged
-    assert OPERATOR_PASSWORD == reported_password
+    assert current_password == reported_password
 
-    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
-
-    reported_password = await get_password(
-        ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=app_name
+    juju.grant_secret(identifier=secret_id, app=app_name)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
+
+    reported_password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     assert new_password == reported_password
 
 
 @pytest.mark.abort_on_fail
-async def test_update_password_for_charmed_stats_user(ops_test: OpsTest) -> None:
+def test_update_password_for_charmed_stats_user(juju: jubilant.Juju) -> None:
     """Test password is updated for the charmed-stats user."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
     new_password = STATS_PASSWORD
-    await set_password(
-        ops_test, username=CHARMED_STATS_USERNAME, password=new_password, app_name=app_name
+    set_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME, password=new_password)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
-    password = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
-    assert password == new_password
+
+    reported_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
+    assert reported_password == new_password
 
 
 @pytest.mark.abort_on_fail
-async def test_charmed_stats_user(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_charmed_stats_user(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test verifies that the charmed stats user can perform operations such as 'rs.conf()'."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
     password = STATS_PASSWORD
     replica_set_hosts = [
-        await get_address_of_unit(ops_test, substrate, int(unit.name.split("/")[1]), app_name)
-        for unit in ops_test.model.applications[app_name].units
+        get_ip_from_unit(substrate, unit_info=unit_info)
+        for unit_info in juju.status().get_units(app_name).values()
     ]
 
-    hosts = ",".join(replica_set_hosts)
-    replica_set_uri = (
-        f"mongodb://{CHARMED_STATS_USERNAME}:{password}@{hosts}/admin?replicaSet={app_name}"
+    rs_uri = replica_set_uri(
+        username=CHARMED_STATS_USERNAME,
+        password=password,
+        ip_addresses=replica_set_hosts,
+        replica_set=app_name,
     )
 
     admin_mongod_cmd = "rs.conf()"
 
-    result = await execute_on_mongod(
-        ops_test, app_name, substrate, replica_set_uri, admin_mongod_cmd
+    result = execute_on_mongod(
+        juju,
+        substrate,
+        app_name,
+        uri=rs_uri,
+        command=admin_mongod_cmd,
+        expecting_output=False,
     )
     assert result.succeeded, f"Failed to get conf with {CHARMED_STATS_USERNAME} user."
 
 
 @pytest.mark.abort_on_fail
-async def test_empty_password(ops_test: OpsTest) -> None:
+def test_empty_password(juju: jubilant.Juju) -> None:
     """Test that the password can't be set to an empty string."""
-    app_name = await get_app_name(ops_test)
-    password1 = STATS_PASSWORD
-    await set_password(ops_test, username=CHARMED_STATS_USERNAME, password=" ", app_name=app_name)
+    app_name = existing_app(juju)
+    assert app_name
 
-    expected_message = "Invalid secret in system-users config."
-    await check_app_status(ops_test, app_name, "blocked", expected_message)
+    current_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
+    set_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME, password=" ")
+    juju.wait(
+        lambda status: does_status_match(
+            status,
+            expected_unit_statuses=None,
+            expected_app_statuses={
+                app_name: [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
+            },
+        ),
+        timeout=TIMEOUT,
+    )
 
-    password2 = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
+    reported_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
     # The password remained unchanged
-    assert password1 == password2
+    assert current_password == reported_password
 
     # Restore valid password
-    await set_password(
-        ops_test, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD, app_name=app_name
+    set_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
 
 @pytest.mark.abort_on_fail
-async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
+def test_no_password_change_on_invalid_password(juju: jubilant.Juju) -> None:
     """Test that in general, there is no change when password validation fails."""
-    app_name = await get_app_name(ops_test)
-    password1 = STATS_PASSWORD
+    app_name = existing_app(juju)
+    assert app_name
 
-    # The password has to be maximum 4096-character long
-    await set_password(
-        ops_test,
-        username=CHARMED_STATS_USERNAME,
-        password="c" * 4097,
-        app_name=app_name,
+    current_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
+    set_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME, password="c" * 4097)
+
+    juju.wait(
+        lambda status: does_status_match(
+            status,
+            expected_unit_statuses=None,
+            expected_app_statuses={
+                app_name: [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
+            },
+        ),
+        timeout=TIMEOUT,
     )
-    expected_message = "Invalid secret in system-users config."
-    await check_app_status(ops_test, app_name, "blocked", expected_message)
 
-    password2 = await get_password(ops_test, username=CHARMED_STATS_USERNAME, app_name=app_name)
-
-    # The password didn't change
-    assert password1 == password2
+    reported_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
+    # The password remained unchanged
+    assert current_password == reported_password
 
     # Restore valid password
-    await set_password(
-        ops_test, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD, app_name=app_name
+    set_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME, password=STATS_PASSWORD)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
 
 
-async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
+@pytest.mark.abort_on_fail
+def test_audit_log(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test that audit log was created and contains actual audit data."""
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/audit.log"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
         case "microk8s":
             audit_log_path = "/var/log/mongodb/audit.log"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
-        case _:
-            raise Exception(f"Invalid substrate {substrate}")
 
-    audit_log = check_output(
-        f"{base_command} cat {audit_log_path}",
-        stderr=subprocess.PIPE,
-        shell=True,
-        universal_newlines=True,
+    audit_log = run_command_on_server(
+        juju, substrate, f"{app_name}/leader", f"cat {audit_log_path}"
     )
 
     for line in audit_log.splitlines():
@@ -401,12 +520,15 @@ async def test_audit_log(ops_test: OpsTest, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_path: str) -> None:
+def test_log_rotate(juju: jubilant.Juju, substrate: Substrate, application_path: str) -> None:
     """Test that log are being rotated."""
-    app_name = await get_app_name(ops_test)
-    application_name = "application"
-    await deploy_application(ops_test, application_path=application_path, app_name=application_name)
-    await relate_mongodb_and_application(ops_test, app_name, application_name)
+    app_name = existing_app(juju)
+    assert app_name
+
+    deploy_application(juju, application_path, app_name=CONTINUOUS_WRITE_APPLICATION)
+    relate_application(
+        juju, mongodb_application_name=app_name, client_app_name=CONTINUOUS_WRITE_APPLICATION
+    )
 
     time_to_write_200m_of_data = 60 * 25
     logrotate_timeout = 61
@@ -414,102 +536,99 @@ async def test_log_rotate(ops_test: OpsTest, substrate: Substrate, application_p
     match substrate:
         case "lxd":
             audit_log_path = "/var/snap/charmed-mongodb/common/var/log/mongodb/"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh {app_name}/leader sudo"
         case "microk8s":
             audit_log_path = "/var/log/mongodb/"
-            base_command = f"JUJU_MODEL={ops_test.model_full_name} juju ssh --container mongod {app_name}/leader"
-        case _:
-            raise Exception(f"Invalid substrate {substrate}")
 
-    log_files = check_output(
-        f"{base_command} ls {audit_log_path}",
-        stderr=subprocess.PIPE,
-        shell=True,
-        universal_newlines=True,
-    )
-
-    log_not_rotated = "audit.log.1" not in log_files
-    assert log_not_rotated, f"Found rotated log in {log_files}"
+    assert not unit_has_file(
+        juju, substrate, f"{app_name}/leader", audit_log_path, "audit.log.1"
+    ), "Found rotated log in log files"
 
     # We want to speed up the test because it requires a lot of writing to
     # ensure a log rotation so we write on 10 concurrent jobs.
     for i in range(10):
-        await start_continous_writes(
-            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        start_continuous_writes(
+            juju,
+            client_app_name=CONTINUOUS_WRITE_APPLICATION,
+            coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",
         )
     time.sleep(time_to_write_200m_of_data)
     for i in range(10):
-        await stop_continous_writes(
-            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        stop_continuous_writes(
+            juju,
+            client_app_name=CONTINUOUS_WRITE_APPLICATION,
+            coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",
         )
 
     time.sleep(logrotate_timeout)  # Just to make sure that logrotate will run
     for i in range(10):
-        await clear_continous_writes(
-            ops_test, client_app_name=application_name, coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}"
+        clear_continuous_writes(
+            juju,
+            client_app_name=CONTINUOUS_WRITE_APPLICATION,
+            coll_name=f"{DEFAULT_COLLECTION_NAME}_{i}",
         )
 
-    log_files = check_output(
-        f"{base_command} ls {audit_log_path}",
-        stderr=subprocess.PIPE,
-        shell=True,
-        universal_newlines=True,
-    )
-
-    log_rotated = "audit.log.1" in log_files
-    assert log_rotated, f"Could not find rotated log in {log_files}"
-
-    audit_log_exists = "audit.log" in log_files
-    assert audit_log_exists, f"Could not find audit.log log in {log_files}"
+    assert unit_has_file(
+        juju, substrate, f"{app_name}/leader", audit_log_path, "audit.log.1"
+    ), "Could not find audit.log.1 in log files"
+    assert unit_has_file(
+        juju, substrate, f"{app_name}/leader", audit_log_path, "audit.log"
+    ), "Could not find audit.log in log files"
 
 
 @pytest.mark.abort_on_fail
-async def test_scale_up(ops_test: OpsTest, substrate):
+def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
     """Tests juju add-unit functionality.
 
     Verifies that when a new unit is added to the MongoDB application that it is added to the
     MongoDB replica set configuration.
     """
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    assert juju.model
+    app_name = existing_app(juju)
     assert app_name
-    n_units = len(ops_test.model.applications[app_name].units)
+
+    n_units = len(juju.status().get_units(app_name))
+
     # add two units and wait for idle
-    await ops_test.model.applications[app_name].add_unit(2)
-    # TODO: Remove the `raise_on_error` when we move to juju 3.5 (DPE-4996)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=n_units + 2,
-        raise_on_error=False,
+    juju.add_unit(app_name, num_units=2)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=n_units + 2
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    num_units = len(ops_test.model.applications[app_name].units)
-    assert num_units == 5
+    num_units = len(juju.status().get_units(app_name))
+    assert num_units == n_units + 2
 
     match substrate:
         case "lxd":
             hosts = [
-                await get_address_of_unit(
-                    ops_test, substrate, int(unit.name.split("/")[1]), app_name
-                )
-                for unit in ops_test.model.applications[app_name].units
+                get_ip_from_unit(substrate, unit_info)
+                for unit_info in juju.status().get_units(app_name).values()
             ]
-
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
-            model_name = ops_test.model.name
-            juju_hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
+            model_name = juju.model
+            hosts = [
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
                 for unit_id in range(num_units)
             ]
-        case _:
-            raise Exception("Invalid substrate")
 
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
+    juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    uri = replica_set_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
+        ip_addresses=hosts,
+        replica_set=app_name,
+    )
 
     # connect to replica set uri and get replica set members
-    rs_status = await execute_on_mongod(ops_test, app_name, substrate, uri, "rs.status()")
+    rs_status = execute_on_mongod(
+        juju, substrate=substrate, app_name=app_name, uri=uri, command="rs.status()"
+    )
 
     assert rs_status.succeeded, "Failed to get status from replica set."
 
@@ -526,59 +645,65 @@ async def test_scale_up(ops_test: OpsTest, substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
+async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
     """Tests juju remove-unit functionality.
 
     This test verifies:
     1. multiple units can be removed while still maintaining a majority (ie remove a minority)
     2. Replica set hosts are properly updated on unit removal
     """
-    assert ops_test.model
-    app_name = await get_app_name(ops_test)
+    assert juju.model
+    app_name = existing_app(juju)
     assert app_name
-    n_units = len(ops_test.model.applications[app_name].units)
-    units = ops_test.model.applications[app_name].units[-2:]
+
+    initial_n_units = len(juju.status().get_units(app_name))
+
     # remove two units and wait for idle
-    await remove_units(ops_test, substrate, app_name, units)
-    # TODO: Remove the `raise_on_error` when we move to juju 3.5 (DPE-4996)
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=n_units - 2,
-        raise_on_error=False,
+    remove_number_units(juju, substrate, app_name, 2)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status, app_name, idle_period=30, unit_count=initial_n_units - 2
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
-    num_units = len(ops_test.model.applications[app_name].units)
-    assert num_units == n_units - 2
+
+    post_scale_n_units = len(juju.status().get_units(app_name))
+    assert post_scale_n_units == initial_n_units - 2
 
     # grab juju hosts
     match substrate:
         case "lxd":
             hosts = [
-                await get_address_of_unit(
-                    ops_test, substrate, int(unit.name.split("/")[1]), app_name
-                )
-                for unit in ops_test.model.applications[app_name].units
+                get_ip_from_unit(substrate, unit_info)
+                for unit_info in juju.status().get_units(app_name).values()
             ]
-
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
-            model_name = ops_test.model.name
-            juju_hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
-                for unit_id in range(num_units)
+            model_name = juju.model
+            hosts = [
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
+                for unit_id in range(post_scale_n_units)
             ]
-        case _:
-            raise Exception("Invalid substrate")
 
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
+    juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
+
+    password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
+    uri = replica_set_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
+        ip_addresses=hosts,
+        replica_set=app_name,
+    )
 
     # connect to replica set uri and get replica set members
-    rs_status = await execute_on_mongod(ops_test, app_name, substrate, uri, "rs.status()")
+    rs_status = execute_on_mongod(
+        juju, substrate=substrate, app_name=app_name, uri=uri, command="rs.status()"
+    )
 
-    assert rs_status.succeeded, "Failed to get replica set status."
+    assert rs_status.succeeded, "Failed to get status from replica set."
 
-    # connect to replica set uri and get replica set members
     mongodb_hosts = [member["name"] for member in rs_status.data["members"]]
 
     # verify that the replica set members have the correct units
@@ -599,37 +724,60 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
 
 
 @pytest.mark.abort_on_fail
-async def test_replication_data_consistency(ops_test: OpsTest, substrate: Substrate):
+async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Substrate):
     """Test the data consistency between the primary and secondaries.
 
     Verifies that after writing data to the primary the data on
     the secondaries match.
     """
-    app_name = await get_app_name(ops_test)
+    app_name = existing_app(juju)
+    assert app_name
+
     # generate a collection id
     collection_id = generate_collection_id()
 
-    uri = await generate_mongodb_client(ops_test, substrate, app_name, mongos=False)
+    # grab juju hosts
+    match substrate:
+        case "lxd":
+            hosts = [
+                get_ip_from_unit(substrate, unit_info)
+                for unit_info in juju.status().get_units(app_name).values()
+            ]
+        case "microk8s":
+            hosts = [
+                f"mongodb-k8s-{get_unit_id(unit_name)}.mongodb-k8s-endpoints"
+                for unit_name in juju.status().get_units(app_name)
+            ]
+
+    username = CHARMED_OPERATOR_USERNAME
+    password = get_password(juju=juju, app_name=app_name, username=username)
+
+    uri = replica_set_uri(
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
+        ip_addresses=hosts,
+        replica_set=app_name,
+    )
 
     # Create a database and a collection (lazily)
-    create_collection = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.createCollection('{collection_id}')",
+    create_collection = execute_on_mongod(
+        juju,
+        substrate=substrate,
+        app_name=app_name,
+        uri=uri,
+        command=f"db.createCollection('{collection_id}')",
     )
 
     assert create_collection.succeeded, "Failed to create collection."
     assert create_collection.data["ok"] == 1
 
     # Store a few test documents
-    insert_many_docs = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        f"db.{collection_id}.insertMany({bson_loads(TEST_DOCUMENTS)})",
+    insert_many_docs = execute_on_mongod(
+        juju,
+        substrate=substrate,
+        app_name=app_name,
+        uri=uri,
+        command=f"db.{collection_id}.insertMany({bson_loads(TEST_DOCUMENTS)})",
     )
 
     assert len(insert_many_docs.data["insertedIds"]) == 2
@@ -640,48 +788,65 @@ async def test_replication_data_consistency(ops_test: OpsTest, substrate: Substr
     time.sleep(24)
 
     # query the primary only
-    result = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        "db.getMongo().setReadPref('primary')",
-        expecting_output=False,
+    result = execute_on_mongod(
+        juju,
+        substrate=substrate,
+        app_name=app_name,
+        uri=uri,
+        command="db.getMongo().setReadPref('primary')",
+        expecting_output=True,
     )
     assert result.succeeded, "Failed to set read preference to primary."
-    await check_if_test_documents_stored(ops_test, app_name, substrate, uri, collection_id)
+    check_if_test_documents_stored(
+        juju, substrate=substrate, app_name=app_name, uri=uri, collection=collection_id
+    )
 
     # query only from the secondaries
-    result = await execute_on_mongod(
-        ops_test,
-        app_name,
-        substrate,
-        uri,
-        "db.getMongo().setReadPref('secondary')",
+    result = execute_on_mongod(
+        juju,
+        substrate=substrate,
+        app_name=app_name,
+        uri=uri,
+        command="db.getMongo().setReadPref('secondary')",
+        expecting_output=True,
     )
     assert result.succeeded, "Failed to set read preference to secondary."
-    await check_if_test_documents_stored(ops_test, app_name, substrate, uri, collection_id)
+    check_if_test_documents_stored(
+        juju, substrate=substrate, app_name=app_name, uri=uri, collection=collection_id
+    )
 
     # query the secondaries by targeting units
-    rs_status = await execute_on_mongod(
-        ops_test, app_name, substrate, uri, "JSON.stringify(rs.status())", stringify=False
+    # connect to replica set uri and get replica set members
+    rs_status = execute_on_mongod(
+        juju,
+        substrate=substrate,
+        app_name=app_name,
+        uri=uri,
+        command="JSON.stringify(rs.status())",
+        stringify=False,
     )
     assert rs_status.succeeded, "Failed to get rs status on secondary."
 
     # get the secondaries ordered ASC by the least amount of data sync delay
     # compared to the primary, so that we can attempt to delay the documents
     # query until after the said delay is elapsed (using time.sleep)
-    secondaries = await secondary_mongo_uris_with_sync_delay(
-        ops_test, substrate, app_name, rs_status.data
+    secondaries = secondary_mongo_uris_with_sync_delay(
+        juju,
+        app_name,
+        rs_status.data,
     )
 
     # verify that each secondary contains the data
     synced_secondaries_count = 0
     for secondary in secondaries:
-        time.sleep(secondary["delay"] + 2)  # probably useless, but attempting
+        time.sleep(secondary.delay + 2)  # probably useless, but attempting
         try:
-            await check_if_test_documents_stored(
-                ops_test, app_name, substrate, secondary["uri"], collection_id
+            check_if_test_documents_stored(
+                juju,
+                substrate=substrate,
+                app_name=app_name,
+                uri=secondary.uri,
+                collection=collection_id,
             )
         except Exception:
             # there may need some time to finish replicating to this specific secondary
