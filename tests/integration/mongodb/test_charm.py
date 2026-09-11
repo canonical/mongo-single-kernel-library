@@ -612,7 +612,7 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
         case "microk8s":
             model_name = juju.model
             hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
                 for unit_id in range(num_units)
             ]
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
