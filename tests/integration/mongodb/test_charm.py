@@ -28,6 +28,7 @@ from tests.integration.helpers.constants import (
     CONTINUOUS_WRITE_APPLICATION,
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DATABASE_NAME,
+    DEPLOYMENT_TIMEOUT,
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     TEST_DOCUMENTS,
@@ -99,7 +100,7 @@ def test_build_and_deploy(
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
         successes=3,
     )
