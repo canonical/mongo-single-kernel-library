@@ -60,6 +60,7 @@ from single_kernel_mongo.exceptions import (
     InvalidLdapUserToDnMappingError,
     NonDeferrableFailedHookChecksError,
     SetPasswordError,
+    ShardAuthError,
     UpgradeInProgressError,
     WaitingForLeaderError,
     WaitingForVaultError,
@@ -268,7 +269,13 @@ class LifecycleEventsHandler(Object):
             logger.info(f"Deferring {event}: Upgrade in progress.")
             event.defer()
             return
-        except (NotReadyError, PyMongoError, WorkloadServiceError, DeferrableFailedHookChecksError):
+        except (
+            NotReadyError,
+            PyMongoError,
+            ShardAuthError,
+            WorkloadServiceError,
+            DeferrableFailedHookChecksError,
+        ):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return

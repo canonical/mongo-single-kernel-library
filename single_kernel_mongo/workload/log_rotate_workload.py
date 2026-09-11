@@ -40,9 +40,7 @@ class LogRotateWorkload(WorkloadBase):
             mongo_user=self.users.user,
             max_log_size=LogRotateConfig.max_log_size,
             max_rotations=LogRotateConfig.max_rotations_to_keep,
-            get_uri=get_logrotate_uri(
-                Substrates(self.substrate), service_name=self.service, env_variable=self.env_var
-            ),
+            get_uri=get_logrotate_uri(Substrates(self.substrate), env_variable=self.env_var),
             shell=self.paths.shell_path,
         )
 
