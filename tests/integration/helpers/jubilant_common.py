@@ -34,6 +34,7 @@ from tests.integration.helpers.common import (
     find_json,
     mongosh,
 )
+from tests.integration.helpers.constants import BASE, TIMEOUT
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
@@ -46,7 +47,7 @@ logger = logging.getLogger(__name__)
 def existing_app(
     juju: jubilant.Juju, charm_name: str = "mongodb", test_deployments: list[str] | None = None
 ) -> str | None:
-    """Return the name of an existing valkey cluster.
+    """Return the name of an existing mongodb application.
 
     Args:
         juju: the Jubilant juju object.
@@ -91,7 +92,7 @@ def deploy_charm(
     if revision is not None:
         channel = "8/beta"
     if substrate == "microk8s":
-        base = base or "ubuntu@24.04"
+        base = base or BASE
         juju.deploy(
             charm,
             app=app_name,
@@ -119,7 +120,7 @@ def deploy_charm(
 
 
 def remove_number_units(
-    juju: jubilant.Juju, substrate: Substrate, app: str, num_units: int
+    juju: jubilant.Juju, substrate: Substrate, app_name: str, num_units: int
 ) -> None:
     """Remove a specified number of units from an application.
 
@@ -131,10 +132,10 @@ def remove_number_units(
     """
     match substrate:
         case "microk8s":
-            juju.remove_unit(app, num_units=num_units)
+            juju.remove_unit(app_name, num_units=num_units)
         case "lxd":
             # get units names
-            unit_names = list(juju.status().get_units(app))
+            unit_names = list(juju.status().get_units(app_name))
             # remove units by name until num_units have been removed
             juju.remove_unit(*unit_names[:num_units])
 
@@ -151,7 +152,9 @@ def ensure_app_number_units(
 
     if current_units > required_units:
         units_to_remove = current_units - required_units
-        remove_number_units(juju=juju, substrate=substrate, app=app_name, num_units=units_to_remove)
+        remove_number_units(
+            juju=juju, substrate=substrate, app_name=app_name, num_units=units_to_remove
+        )
     else:
         units_to_add = required_units - current_units
         juju.add_unit(app_name, num_units=units_to_add)
@@ -160,7 +163,7 @@ def ensure_app_number_units(
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=10, unit_count=required_units
         ),
-        timeout=1200,
+        timeout=TIMEOUT,
     )
 
 
@@ -218,17 +221,17 @@ def unit_has_file(
 def _uri(
     username: str,
     password: str,
-    hosts: str,
+    hosts: list[str],
     replica_set: str | None = None,
     mongos: bool = False,
 ) -> str:
+    port = MONGOS_PORT if mongos else MONGOD_PORT
+    _hosts = ",".join(f"{host}:{port}" for host in hosts)
     if mongos:
-        return f"mongodb://{username}:{password}@{hosts}:{MONGOS_PORT}/admin"
+        return f"mongodb://{username}:{password}@{_hosts}/admin"
     if replica_set:
-        return (
-            f"mongodb://{username}:{password}@{hosts}:{MONGOD_PORT}/admin?replicaSet={replica_set}"
-        )
-    return f"mongodb://{username}:{password}@{hosts}:{MONGOD_PORT}/admin"
+        return f"mongodb://{username}:{password}@{hosts}:{_hosts}/admin?replicaSet={replica_set}"
+    return f"mongodb://{username}:{password}@{hosts}:{_hosts}/admin"
 
 
 def unit_uri(
@@ -247,7 +250,7 @@ def unit_uri(
         replica_set: name of application which has the cluster.
         mongos: If true, we connect to mongos, hence use port 27108. Ignores replica_set parameter
     """
-    return _uri(username, password, ip_address, replica_set, mongos)
+    return _uri(username, password, [ip_address], replica_set, mongos)
 
 
 def replica_set_uri(
@@ -255,7 +258,6 @@ def replica_set_uri(
     password: str,
     ip_addresses: list[str],
     replica_set: str,
-    mongos: bool = False,
 ) -> str:
     """Generates URI that is used by MongoDB to connect to a replica set.
 
@@ -264,9 +266,23 @@ def replica_set_uri(
         password: password of database.
         ip_addresses: list of ip addresses of the units
         replica_set: name of application which has the cluster.
-        mongos: If true, we connect to mongos, hence use port 27108. Ignores replica_set parameter
     """
-    return _uri(username, password, ",".join(ip_addresses), replica_set, mongos)
+    return _uri(username, password, ip_addresses, replica_set, mongos=False)
+
+
+def mongos_uri(
+    username: str,
+    password: str,
+    ip_addresses: list[str],
+):
+    """Generates URI that is used by MongoDB to connect to some mongos instances.
+
+    Args:
+        username: the username we're trying to connect with
+        password: password of database.
+        ip_addresses: list of ip addresses of the units
+    """
+    return _uri(username, password, ip_addresses, replica_set=None, mongos=True)
 
 
 @retry(
@@ -316,9 +332,9 @@ def set_password(
 
     Args:
         juju: An instance of Jubilant's Juju class on which to run Juju commands
-        password: password to use
-        username: the user to set the password
-        application: the application the created secret will be granted to
+        app_name: the application the created secret will be granted to
+        username: the user to set the password for
+        password: the password to use
     """
     secret_name = "system_users_secret"
 
@@ -434,14 +450,14 @@ def deploy_application(
         charm=application_path,
         app=app_name,
         num_units=1,
-        base="ubuntu@24.04",
+        base=BASE,
         constraints=constraints,
         config={"database-name": database_name},
         bind=bind,
     )
     juju.wait(
         lambda status: are_agents_idle(status, app_name, idle_period=30, unit_count=1),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -472,7 +488,7 @@ def relate_application(juju: jubilant.Juju, mongodb_application_name: str, clien
         lambda status: are_agents_idle(
             status, mongodb_application_name, client_app_name, idle_period=30
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -481,7 +497,7 @@ def relate_application(juju: jubilant.Juju, mongodb_application_name: str, clien
 def scp_file_preserve_ctime(
     juju: jubilant.Juju, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> str:
-    """Returns the unix timestamp of when a file was created on a specified unit."""
+    """Returns the filename that we've copied this file to."""
     # Retrieving the file
     filename = path.split("/")[-1]
     return_code = 0

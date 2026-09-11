@@ -296,7 +296,7 @@ def test_update_operator_password(juju: jubilant.Juju, substrate: Substrate) -> 
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -349,7 +349,7 @@ def test_not_granted_secret_for_password_update(juju: jubilant.Juju) -> None:
             expected_unit_statuses=None,
             expected_app_statuses={app_name: [PasswordManagementStatuses.SECRET_NOT_GRANTED.value]},
         ),
-        timeout=1200,
+        timeout=TIMEOUT,
     )
 
     reported_password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
@@ -361,7 +361,7 @@ def test_not_granted_secret_for_password_update(juju: jubilant.Juju) -> None:
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -382,7 +382,7 @@ def test_update_password_for_charmed_stats_user(juju: jubilant.Juju) -> None:
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -403,7 +403,12 @@ def test_charmed_stats_user(juju: jubilant.Juju, substrate: Substrate) -> None:
         for unit_info in juju.status().get_units(app_name).values()
     ]
 
-    rs_uri = replica_set_uri(CHARMED_STATS_USERNAME, password, replica_set_hosts, app_name)
+    rs_uri = replica_set_uri(
+        username=CHARMED_STATS_USERNAME,
+        password=password,
+        ip_addresses=replica_set_hosts,
+        replica_set=app_name,
+    )
 
     admin_mongod_cmd = "rs.conf()"
 
@@ -434,7 +439,7 @@ def test_empty_password(juju: jubilant.Juju) -> None:
                 app_name: [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
             },
         ),
-        timeout=1200,
+        timeout=TIMEOUT,
     )
 
     reported_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
@@ -447,7 +452,7 @@ def test_empty_password(juju: jubilant.Juju) -> None:
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -470,7 +475,7 @@ def test_no_password_change_on_invalid_password(juju: jubilant.Juju) -> None:
                 app_name: [PasswordManagementStatuses.INVALID_SYSTEM_USERS.value]
             },
         ),
-        timeout=1200,
+        timeout=TIMEOUT,
     )
 
     reported_password = get_password(juju, app_name=app_name, username=CHARMED_STATS_USERNAME)
@@ -483,7 +488,7 @@ def test_no_password_change_on_invalid_password(juju: jubilant.Juju) -> None:
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=len(UNIT_IDS)
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -588,7 +593,7 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=n_units + 2
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -608,11 +613,10 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
 
     password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     uri = replica_set_uri(
-        CHARMED_OPERATOR_USERNAME,
-        password,
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
         ip_addresses=hosts,
         replica_set=app_name,
-        mongos=False,
     )
 
     # connect to replica set uri and get replica set members
@@ -654,7 +658,7 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
         lambda status: are_apps_active_and_agents_idle(
             status, app_name, idle_period=30, unit_count=initial_n_units - 2
         ),
-        timeout=1000,
+        timeout=TIMEOUT,
         delay=5,
         successes=3,
     )
@@ -679,11 +683,10 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
 
     password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     uri = replica_set_uri(
-        CHARMED_OPERATOR_USERNAME,
-        password,
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
         ip_addresses=hosts,
         replica_set=app_name,
-        mongos=False,
     )
 
     # connect to replica set uri and get replica set members
@@ -742,11 +745,10 @@ async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Subs
     password = get_password(juju=juju, app_name=app_name, username=username)
 
     uri = replica_set_uri(
-        CHARMED_OPERATOR_USERNAME,
-        password,
+        username=CHARMED_OPERATOR_USERNAME,
+        password=password,
         ip_addresses=hosts,
         replica_set=app_name,
-        mongos=False,
     )
 
     # Create a database and a collection (lazily)

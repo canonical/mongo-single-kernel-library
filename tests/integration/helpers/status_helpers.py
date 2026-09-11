@@ -159,26 +159,35 @@ def _check_apps_idle_period(status: jubilant.Status, *apps: str, idle_period: in
 
 
 def verify_unit_count(
-    status: jubilant.Status, *apps: str, unit_count: int | dict[str, int] | None = None
+    status: jubilant.Status, *apps: str, unit_count: int | dict[str, int | None] | None = None
 ):
     """Verify the unit count for an application.
 
     Args:
         status: represents the jubilant model's current status
         apps: A list of applications whose statuses to test against
-        unit_count: The desired number of units to wait for, can be >= to -1
+        unit_count: The desired number of units to wait for, can be >= 0
             if set as int, this value is expected for all apps but if more granularity is needed,
             pass a dictionary such as: {"app1": 2, "app2": 1, ...}
-            If set to -1, the check only happens at the application level.
+            If set to None, the check only happens at the application level.
             Each application not in the dict is not checked for unit counts.
-            Each application set to -1 is not verified as well.
+            Each application set to None is not verified as well.
     """
-    if not unit_count:
+    if unit_count is None:
+        return True
+
+    if unit_count == {}:
         return True
 
     if isinstance(unit_count, int):
-        unit_count = dict.fromkeys(apps, unit_count)
+        if unit_count < 0:
+            logger.info("Invalid value received: %s", unit_count)
+            return False
+
+        _unit_count = dict.fromkeys(apps, unit_count)
+    else:
+        _unit_count = {key: value for key, value in unit_count.items() if value is not None}
 
     return all(
-        count == len(status.get_units(app)) for app, count in unit_count.items() if count >= 0
+        count == len(status.get_units(app)) for app, count in _unit_count.items() if count >= 0
     )
