@@ -30,7 +30,7 @@ CLUSTER_COMPONENTS = [
 async def test_build_and_deploy(
     ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource: dict[str, str]
 ) -> None:
-    charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    charm = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
     await deploy_charm(
         ops_test,
         charm,

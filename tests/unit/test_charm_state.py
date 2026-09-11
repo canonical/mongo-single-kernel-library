@@ -17,8 +17,8 @@ from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
 from tests.integration.helpers.types import Substrate
 
 PEER_ADDR = {
-    "lxd": {"private-address": "127.4.5.6"},
-    "microk8s": {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+    Substrate.lxd: {"private-address": "127.4.5.6"},
+    Substrate.k8s: {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
 }
 
 
@@ -75,7 +75,7 @@ def test_app_peer_data(harness: Harness[MongoTestCharm], mongodb_name, substrate
     assert not state.app_peer_data.external_connectivity
     state.app_peer_data.external_connectivity = True
     assert state.app_peer_data.external_connectivity
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert len(state.get_cluster_id()) == 8
     else:
         assert state.get_cluster_id() is None
@@ -140,7 +140,7 @@ def test_local_auth_restrictions_use_peer_database_addresses(
     ]
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_config_server_local_auth_restrictions_include_shard_hosts(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
@@ -163,7 +163,7 @@ def test_config_server_local_auth_restrictions_include_shard_hosts(
     ]
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_shard_local_auth_restrictions_include_config_server_hosts(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
@@ -186,8 +186,8 @@ def test_shard_local_auth_restrictions_include_config_server_hosts(
     ]
 
 
-@pytest.mark.skip_if_substrate("lxd")
-def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -206,8 +206,8 @@ def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
     ]
 
 
-@pytest.mark.skip_if_substrate("lxd")
-def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_microk8s(
+@pytest.mark.skip_if_substrate(Substrate.lxd)
+def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -292,7 +292,7 @@ def test_state_cluster_id_in_app_data(
     state.app_peer_data.role = role
     state.set_cluster_id("1234")
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert state.get_cluster_id() == "1234"
     else:
         assert state.get_cluster_id() is None
@@ -322,7 +322,7 @@ def test_state_cluster_id_mongos_stored_in_app_peer_data(
     state = mongos_harness.charm.operator.state
     state.set_cluster_id("1234")
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert state.get_cluster_id() == "1234"
     else:
         assert state.get_cluster_id() is None

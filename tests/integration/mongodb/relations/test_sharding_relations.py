@@ -86,7 +86,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=(1 if substrate == "microk8s" else 0),
+        num_units=(1 if substrate == Substrate.k8s else 0),
     )
     await ops_test.model.deploy(
         TLS_CERTIFICATES_APP_NAME, channel=TLS_CERTIFICATES_CHANNEL, base=TLS_CERTIFICATES_BASE

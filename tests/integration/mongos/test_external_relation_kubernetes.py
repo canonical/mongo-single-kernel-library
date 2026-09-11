@@ -31,7 +31,7 @@ from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_build_and_deploy(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -74,7 +74,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=0 if substrate == "lxd" else 1,
+        num_units=0 if substrate == Substrate.lxd else 1,
     )
     await ops_test.model.wait_for_idle(
         apps=[
@@ -113,7 +113,7 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_mongos_external_connections(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos is accessible externally."""
     configuration_parameters = {"expose-external": "nodeport"}
@@ -127,7 +127,7 @@ async def test_mongos_external_connections(ops_test: OpsTest, substrate: Substra
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
     """Tests that new mongos units are accessible externally."""
     await ops_test.model.applications[MONGOS_APP_NAME].scale(2)
@@ -139,7 +139,7 @@ async def test_mongos_external_connections_scale(ops_test: OpsTest) -> None:
 
 async def test_mongos_bad_configuration(ops_test: OpsTest, substrate: Substrate) -> None:
     """Tests that mongos is accessible externally."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         pytest.skip(reason="Only runs on K8S.")
     configuration_parameters = {"expose-external": "nonsensical-setting"}
 
@@ -171,7 +171,7 @@ async def test_mongos_bad_configuration(ops_test: OpsTest, substrate: Substrate)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_all_clients_use_nodeport(ops_test: OpsTest) -> None:
     """Test that all clients use nodeport."""
     await assert_app_uri_matches_external_setting(
@@ -183,7 +183,7 @@ async def test_all_clients_use_nodeport(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_mongos_disable_external_connections(ops_test: OpsTest) -> None:
     """Tests that mongos can disable external connections."""
     # get exposed node port before toggling off exposure

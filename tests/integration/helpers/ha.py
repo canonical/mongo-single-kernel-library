@@ -73,7 +73,7 @@ def cut_network_from_unit(ops_test: OpsTest, substrate: Substrate, machine_name:
     Args:
         machine_name: lxc container hostname or pod
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         # apply a mask (device type `none`)
         cut_network_command = f"lxc config device add {machine_name} eth0 none"
         subprocess.check_call(cut_network_command.split())
@@ -101,7 +101,7 @@ def cut_network_from_unit(ops_test: OpsTest, substrate: Substrate, machine_name:
             env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
             try:
                 command_result = subprocess.check_output(
-                    " ".join(["microk8s", "kubectl", "apply", "-f", temp_file.name]),
+                    " ".join(["sudo", "k8s", "kubectl", "apply", "-f", temp_file.name]),
                     shell=True,
                     env=env,
                     stderr=subprocess.STDOUT,
@@ -120,7 +120,7 @@ def restore_network_for_unit(ops_test: OpsTest, substrate: Substrate, machine_na
     Args:
         machine_name: lxc container hostname
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         # remove mask from eth0
         restore_network_command = f"lxc config device remove {machine_name} eth0"
         subprocess.check_call(restore_network_command.split())
@@ -128,7 +128,7 @@ def restore_network_for_unit(ops_test: OpsTest, substrate: Substrate, machine_na
         env = os.environ
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(
-            f"microk8s kubectl -n {ops_test.model.info.name} delete networkchaos network-loss-primary",
+            f"sudo k8s kubectl -n {ops_test.model.info.name} delete networkchaos network-loss-primary",
             shell=True,
             env=env,
         )
@@ -150,7 +150,7 @@ async def wait_network_restore(
         hostname: The name of the instance
         old_ip: old registered IP address
     """
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         if instance_ip(model_name, hostname) == old_ip:
             raise Exception("Network not restored, IP address has not changed yet.")
     else:
@@ -217,12 +217,12 @@ async def wait_until_unit_in_status(
             unit_hostname = await get_mongodb_hostname_for_unit(
                 ops_test, substrate, unit_to_check.name
             )
-            if substrate == "microk8s" and unit_to_check.name == unit_name:
+            if substrate == Substrate.k8s and unit_to_check.name == unit_name:
                 assert (
                     member["stateStr"] == status
                 ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
                 return
-            if substrate == "lxd" and unit_hostname == member["name"].split(":")[0]:
+            if substrate == Substrate.lxd and unit_hostname == member["name"].split(":")[0]:
                 assert (
                     member["stateStr"] == status
                 ), f"{unit_to_check.name} status is not {status}. Actual status: {member['stateStr']}"
@@ -287,17 +287,21 @@ async def replica_set_primary(
     """
     primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name)
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         unit_name = host_to_unit(primary_ip)
 
     # return None if primary is no longer in the replica set
-    if substrate == "lxd" and primary_ip is not None and primary_ip not in replica_set_hosts:
+    if (
+        substrate == Substrate.lxd
+        and primary_ip is not None
+        and primary_ip not in replica_set_hosts
+    ):
         return None
 
     for unit in ops_test.model.applications[app_name].units:
-        if substrate == "microk8s" and unit_name == unit.name:
+        if substrate == Substrate.k8s and unit_name == unit.name:
             return unit
-        if substrate == "lxd" and unit.public_address == str(primary_ip):
+        if substrate == Substrate.lxd and unit.public_address == str(primary_ip):
             return unit
 
     return None
@@ -321,17 +325,21 @@ async def replica_set_secondary(
     """
     primary_ip = await fetch_primary(replica_set_hosts, ops_test, substrate, app_name)
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         unit_name = host_to_unit(primary_ip)
 
     # return None if primary is no longer in the replica set
-    if substrate == "lxd" and primary_ip is not None and primary_ip not in replica_set_hosts:
+    if (
+        substrate == Substrate.lxd
+        and primary_ip is not None
+        and primary_ip not in replica_set_hosts
+    ):
         return None
 
     for unit in ops_test.model.applications[app_name].units:
-        if substrate == "microk8s" and unit_name != unit.name:
+        if substrate == Substrate.k8s and unit_name != unit.name:
             return unit
-        if substrate == "lxd" and unit.public_address != str(primary_ip):
+        if substrate == Substrate.lxd and unit.public_address != str(primary_ip):
             return unit
 
     return None
@@ -401,9 +409,9 @@ async def reused_storage(
         provided.
     """
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             base_command = f"ssh {unit_name} sudo"
-        case "microk8s":
+        case Substrate.k8s:
             base_command = f"ssh --container mongod {unit_name}"
 
     cat_cmd = f"{base_command} cat {mongodb_log_path(substrate)}"
@@ -473,7 +481,7 @@ async def scale_application(
     if count == 0:
         return
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         await ops_test.model.applications[application_name].scale(scale_change=count)
 
     else:
@@ -565,7 +573,8 @@ async def verify_writes(
 async def kubectl_delete(ops_test: OpsTest, unit: JujuUnit, wait: bool = True) -> None:
     """Delete the underlying pod for a unit."""
     kubectl_cmd = (
-        "microk8s",
+        "sudo",
+        "k8s",
         "kubectl",
         "delete",
         "pod",
@@ -648,7 +657,7 @@ async def kill_unit_process(
     # killing the only replica can be disastrous
     app_name = app_name or await get_app_name(ops_test)
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         kill_cmd = f"exec --unit {unit_name} -- pkill --signal {kill_code} -f {VM_DB_PROCESS}"
     else:
         kill_cmd = f"ssh --container mongod {unit_name} pkill --signal {kill_code} {K8S_DB_PROCESS}"
@@ -727,7 +736,7 @@ async def update_restart_delay(
 
     When the DB service fails it will now wait for `delay` number of seconds.
     """
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         modify_pebble_restart_delay(
             ops_test,
             unit.name,
@@ -896,7 +905,7 @@ def copy_file_into_pod(
 
 async def all_db_processes_down(ops_test: OpsTest, substrate: Substrate, app_name: str) -> bool:
     """Verifies that all units of the charm do not have the DB process running."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         search_db_template = "exec --unit {unit_name} pgrep -x mongod"
     else:
         search_db_template = "ssh --container mongod {unit_name} pgrep -x mongod"

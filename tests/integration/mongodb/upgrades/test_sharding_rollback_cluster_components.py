@@ -25,6 +25,7 @@ from tests.integration.helpers.sharding import (
     SHARD_TWO_APP_NAME,
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
+    SMALL_K8S_STORAGE,
     count_shard_writes,
     deploy_cluster_components,
     integrate_sharding_components,
@@ -54,6 +55,7 @@ async def test_build_and_deploy(
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -92,7 +94,7 @@ async def test_rollback_on_shard_and_config_server(
     revision = "test/0.0.0+dirty"
 
     # Wait for statuses to settle down
-    asyncio.gather(
+    await asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
         check_app_status(
@@ -112,7 +114,7 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    asyncio.gather(
+    await asyncio.gather(
         wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
         check_app_status(

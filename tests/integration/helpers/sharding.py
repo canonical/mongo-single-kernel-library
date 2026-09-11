@@ -38,6 +38,10 @@ from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
+# Opt-in storage for sharding tests without large backup or log-rotation workloads.
+# Rawfile CSI reserves each PVC's capacity, so keep the per-unit total under 2 GiB.
+SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "256M"}
+
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
 SHARD_TWO_APP_NAME = "shard-two"
@@ -93,7 +97,7 @@ async def verify_sharding_cluster_ip_source_allowlists(
             for unit in ops_test.model.applications[app_name].units
         }
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         for app_name in shard_apps | {config_server_app}:
             await verify_cluster_ip_source_allowlist(ops_test, substrate, app_name)
         return
@@ -139,6 +143,7 @@ async def deploy_cluster_components(
     channel: str | None = None,
     series: str | None = None,
     extra_config_config_server: dict[str, str] = {},
+    storage: dict[str, str] | None = None,
 ) -> None:
     if not num_units_cluster_config:
         num_units_cluster_config = {
@@ -150,7 +155,7 @@ async def deploy_cluster_components(
     if channel is None:
         my_charm = mongodb_charm
     else:
-        my_charm = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+        my_charm = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,
@@ -162,6 +167,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "config-server"} | extra_config_config_server,
         series=series,
+        storage=storage,
     )
     await deploy_charm(
         ops_test,
@@ -173,6 +179,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "shard"},
         series=series,
+        storage=storage,
     )
     await deploy_charm(
         ops_test,
@@ -184,6 +191,7 @@ async def deploy_cluster_components(
         channel=channel,
         config={"role": "shard"},
         series=series,
+        storage=storage,
     )
 
     await ops_test.model.wait_for_idle(

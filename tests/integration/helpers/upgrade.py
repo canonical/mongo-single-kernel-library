@@ -49,7 +49,7 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
 async def refresh_charm(
     ops_test: OpsTest, substrate: Substrate, app_name: str, mongo_charm: str, mongod_resource: dict
 ):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[app_name].refresh(path=mongo_charm)
     else:
         await ops_test.model.applications[app_name].refresh(
@@ -105,15 +105,15 @@ async def assert_successful_run_upgrade_sequence(
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
         logger.info(f"Calling resume-refresh for {app_name}")
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = leader_unit
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (
-            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
         ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 

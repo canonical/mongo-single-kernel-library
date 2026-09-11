@@ -28,7 +28,7 @@ UPGRADE_TIMEOUT = 15 * 60
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mongodb_charm_name = "mongodb"
     else:
         mongodb_charm_name = "mongodb-k8s"
@@ -38,7 +38,7 @@ async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_ap
         channel="8/edge",
         num_units=3,
         application_name=base_app_name,
-        trust=(substrate == "microk8s"),
+        trust=(substrate == Substrate.k8s),
     )
 
     await ops_test.model.wait_for_idle(
@@ -61,7 +61,7 @@ async def test_rollback(
     leader_unit = await find_unit(ops_test, leader=True, app_name=app_name)
     leader_id = get_unit_id(leader_unit.name)
 
-    resources = mongod_resource if substrate == "microk8s" else None
+    resources = mongod_resource if substrate == Substrate.k8s else None
 
     refresh_order = sorted(
         mongodb_application.units,
@@ -111,15 +111,15 @@ async def test_rollback(
     await ops_test.model.wait_for_idle(apps=[app_name], idle_period=20)
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = leader_unit
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (
-            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
         ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 

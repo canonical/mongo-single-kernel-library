@@ -25,6 +25,7 @@ from data_platform_helpers.advanced_statuses.types import Scope as DPHScope
 from data_platform_helpers.version_check import CrossAppVersionChecker, get_charm_revision
 from ops.framework import Object
 from ops.model import Container, ModelError, SecretNotFoundError, Unit
+from ops.pebble import ConnectionError
 from pymongo.errors import OperationFailure, PyMongoError, ServerSelectionTimeoutError
 from tenacity import (
     RetryError,
@@ -398,7 +399,7 @@ class MongoDBOperator(OperatorProtocol, Object):
                     state,
                 )
                 return
-        except ValueError as e:
+        except (ValueError, ConnectionError) as e:
             logger.warning(
                 f"Encryption at rest may be degraded. Error: {e}. This must be fixed first."
             )
@@ -568,6 +569,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         if self.state.enable_encryption_at_rest and (data := self.state.vault_state.get()):
             try:
                 self.vault_manager.prepare_vault_agent(data)
+            except ConnectionError:
+                raise NotReadyError("Pebble connection error while preparing vault agent.")
             except ValueError:
                 # This will get caught right after.
                 pass

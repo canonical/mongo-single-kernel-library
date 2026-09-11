@@ -10,12 +10,13 @@ from single_kernel_mongo.exceptions import (
     WorkloadNotReadyError,
 )
 from tests.charms.mongos_test_charm.src.charm import MongosTestCharm
+from tests.integration.helpers.types import Substrate
 
 CLUSTER_ALIAS = "cluster"
 MONGOS_SOCKET_URI_FMT = "%2Fvar%2Fsnap%2Fcharmed-mongodb%2Fcommon%2Fvar%2Fmongodb-27018.sock"
 
 
-@pytest.mark.skip_if_substrate("microk8s")
+@pytest.mark.skip_if_substrate(Substrate.k8s)
 def test_install_blocks_snap_install_failure(harness, mocker):
     mock_exec = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.exec")
     mocker.patch.object(harness.charm.status_handler, "set_running_status")

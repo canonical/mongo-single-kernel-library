@@ -23,6 +23,7 @@ from tests.integration.helpers.sharding import (
     SHARD_REL_NAME,
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
+    SMALL_K8S_STORAGE,
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
@@ -55,6 +56,7 @@ async def test_tls_then_build_cluster(
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     # deploy the self-signed-certificates charm
     await ops_test.model.deploy(
@@ -205,6 +207,7 @@ async def test_invalid_relation_not_yet_established(
         mongod_resource=mongod_resource,
         num_units=1,
         config={"role": "shard"},
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await ops_test.model.wait_for_idle(
         apps=[SHARD_THREE_APP_NAME],

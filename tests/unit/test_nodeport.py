@@ -8,12 +8,13 @@ from ops.testing import Harness
 
 from single_kernel_mongo.exceptions import DeployedWithoutTrustError
 from tests.charms.mongos_k8s_test_charm.src.charm import MongosKubernetesTestCharm
+from tests.integration.helpers.types import Substrate
 
 STATUS_JUJU_TRUST = "Insufficient permissions, try: `juju trust mongos-k8s --scope=cluster`"
 CLUSTER_ALIAS = "cluster"
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_delete_unit_service_has_no_metadata(
     mongos_harness: Harness[MongosKubernetesTestCharm], mocker
 ):
@@ -27,7 +28,7 @@ def test_delete_unit_service_has_no_metadata(
         mongos_harness.charm.operator.k8s.delete_service()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_delete_unit_service_raises_apierror(
     mongos_harness: Harness[MongosKubernetesTestCharm], mocker
 ):
@@ -59,7 +60,7 @@ def test_delete_unit_service_raises_apierror(
         mongos_harness.charm.operator.k8s.delete_service()
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 def test_delete_unit_service_needs_juju_trust(
     mongos_harness: Harness[MongosKubernetesTestCharm], mocker
 ):

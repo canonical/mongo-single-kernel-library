@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
 from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
+    SMALL_K8S_STORAGE,
     check_cluster_tls_disabled,
     check_cluster_tls_enabled,
     deploy_cluster_components,
@@ -39,6 +40,7 @@ async def test_build_and_deploy(
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     # deploy the self-signed-certificates charm
     await ops_test.model.deploy(

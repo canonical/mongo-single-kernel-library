@@ -82,7 +82,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
         MONGOS_APP_NAME,
         status="Invalid peer-certificates relation.",
         timeout=TIMEOUT,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
     await check_status_detail(
@@ -104,7 +104,7 @@ async def test_mongos_tls_enabled(ops_test: OpsTest, substrate: Substrate) -> No
     await assert_mongos_tls_enabled(ops_test, substrate)
 
 
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 @pytest.mark.abort_on_fail
 async def test_mongos_tls_nodeport(ops_test: OpsTest, substrate: Substrate):
     """Tests that TLS is stable on nodeport enablement/removal."""
@@ -164,7 +164,7 @@ async def test_mongos_tls_disabled(ops_test: OpsTest, substrate: Substrate) -> N
         MONGOS_APP_NAME,
         status="Missing peer-certificates relation.",
         timeout=TIMEOUT,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
     await check_status_detail(
         ops_test,
@@ -225,7 +225,7 @@ async def test_mongos_tls_ca_mismatch(ops_test: OpsTest, substrate: Substrate) -
         MONGOS_APP_NAME,
         status="Peer CA mismatch.",
         timeout=TIMEOUT,
-        subordinate=(substrate == "lxd"),
+        subordinate=(substrate == Substrate.lxd),
     )
 
     await check_status_detail(

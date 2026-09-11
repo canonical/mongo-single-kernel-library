@@ -59,7 +59,7 @@ def test_config_server_database_requested(
     assert data.get("charmed-operator-password") is not None
     assert data.get("charmed-backup-password") is not None
     assert data.get("host") == f'["{mongodb_hostname}"]'
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert len(data.get("cluster-id")) == 8
     else:
         assert data.get("cluster-id") is None
@@ -238,7 +238,7 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
         "shard0",
         {"requested-secrets": '["unused"]', "database": "unused", "shard-replset": "shard0"},
     )
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         harness.update_relation_data(rel_id, "shard0", {"rs-hosts": '["2.2.2.2"]'})
     else:
         harness.update_relation_data(
@@ -247,7 +247,7 @@ def test_config_server_add_shard(harness: Harness[MongoTestCharm], mocker, subst
 
     manager.add_shard(relation)
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mocked_add_shard.assert_called_with("shard0", ["2.2.2.2"])
     else:
         mocked_add_shard.assert_called_with("shard0", ["shard0-0.shard0-endpoints"])
@@ -567,7 +567,7 @@ def test_shard_manager_synchronise_member_auth_success(
 
     # The auth-updated flag should be set to True after the restart.
     assert manager.data_requirer.as_dict(rel_id).get("auth-updated", "false") == "false"
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert manager.state.get_cluster_id() == "secret:1234"
     else:
         assert manager.state.get_cluster_id() is None

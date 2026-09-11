@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""
-    mongodb_charm_name = "mongodb" if substrate == "lxd" else "mongodb-k8s"
+    mongodb_charm_name = "mongodb" if substrate == Substrate.lxd else "mongodb-k8s"
 
     await deploy_charm(
         ops_test,
@@ -96,15 +96,15 @@ async def test_upgrade(
     if "resume-refresh" in mongodb_application.status_message:
         logger.info("Continue refresh on all other units with `resume-refresh` action")
         logger.info("Calling resume refresh")
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = leader_unit
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (
-            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
         ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 

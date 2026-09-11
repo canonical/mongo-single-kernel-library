@@ -18,6 +18,7 @@ from ops import (
     Object,
     UpdateStatusEvent,
 )
+from ops.pebble import ConnectionError
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import VaultStatuses
@@ -114,9 +115,13 @@ class VaultEventHandler(Object):
         )
         try:
             self.manager.prepare_vault_agent(data)
+        except ConnectionError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except WaitingForLeaderError:
             logger.info(f"Deferring {event}: Still waiting for leader.")
             event.defer()
+            return
         except ValueError:
             logger.info("Vault connectivity check failed.")
             self.manager.set_status(VaultStatuses.VAULT_UNREACHABLE.value, scope="unit")
@@ -132,6 +137,9 @@ class VaultEventHandler(Object):
         try:
             self.manager.ensures_value_is_not_updated()
             self.manager.configure_self_signed_certificates(restart=True)
+        except ConnectionError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except WaitingForLeaderError as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
@@ -173,6 +181,8 @@ class VaultEventHandler(Object):
             return
         try:
             self.manager.configure_self_signed_certificates(restart=True)
+        except ConnectionError:
+            return
         except WaitingForLeaderError:
             return
 

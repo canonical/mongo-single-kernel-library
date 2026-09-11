@@ -32,7 +32,7 @@ from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_build_and_deploy(
     ops_test: OpsTest,
     substrate: Substrate,
@@ -58,7 +58,7 @@ async def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_integrate_with_internal_client(ops_test: OpsTest):
     """Tests that when a client is integrated with mongos, it receives the connection info."""
     await ops_test.model.integrate(
@@ -107,7 +107,7 @@ async def test_user_can_connect(ops_test: OpsTest, substrate: Substrate) -> None
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) -> None:
     """Check that we can create user with extra roles, and that it is accessible."""
     cmd = f"db.createUser({{user: '{TEST_USER_NAME}', pwd: '{TEST_USER_PWD}', roles: [{{'role': 'readWrite', 'db': '{TEST_DB_NAME}'}}]}})"
@@ -139,7 +139,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest, substrate: Substrate) ->
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_substrate("lxd")
+@pytest.mark.skip_if_substrate(Substrate.lxd)
 async def test_removed_relation_no_longer_has_access(ops_test: OpsTest, substrate: Substrate):
     """Verify removed applications no longer have access to the database."""
     # before removing relation we need its authorisation via connection string
