@@ -498,7 +498,7 @@ async def test_scale_up(ops_test: OpsTest, substrate):
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
 
-       case Substrate.k8s:
+        case Substrate.k8s:
             model_name = ops_test.model.name
             juju_hosts = [
                 f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"

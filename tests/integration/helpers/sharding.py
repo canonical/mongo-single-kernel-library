@@ -40,7 +40,7 @@ logger = getLogger(__name__)
 
 # Opt-in storage for sharding tests without large backup or log-rotation workloads.
 # Rawfile CSI reserves each PVC's capacity, so keep the per-unit total under 2 GiB.
-SMALL_K8S_STORAGE = {"data": "1G", "logs": "256M", "archive": "128M", "temp": "256M"}
+SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "256M"}
 
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
