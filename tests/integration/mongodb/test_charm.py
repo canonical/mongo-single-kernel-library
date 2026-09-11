@@ -470,7 +470,9 @@ async def test_scale_up(ops_test: OpsTest, substrate):
     Verifies that when a new unit is added to the MongoDB application that it is added to the
     MongoDB replica set configuration.
     """
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
+    assert app_name
     n_units = len(ops_test.model.applications[app_name].units)
     # add two units and wait for idle
     await ops_test.model.applications[app_name].add_unit(2)
@@ -496,8 +498,10 @@ async def test_scale_up(ops_test: OpsTest, substrate):
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
+            model_name = ops_test.model.name
             juju_hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints:27017" for unit_id in range(num_units)
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
+                for unit_id in range(num_units)
             ]
         case _:
             raise Exception("Invalid substrate")
@@ -529,7 +533,9 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
     1. multiple units can be removed while still maintaining a majority (ie remove a minority)
     2. Replica set hosts are properly updated on unit removal
     """
+    assert ops_test.model
     app_name = await get_app_name(ops_test)
+    assert app_name
     n_units = len(ops_test.model.applications[app_name].units)
     units = ops_test.model.applications[app_name].units[-2:]
     # remove two units and wait for idle
@@ -557,8 +563,10 @@ async def test_scale_down(ops_test: OpsTest, substrate: Substrate):
 
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
+            model_name = ops_test.model.name
             juju_hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints:27017" for unit_id in range(num_units)
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
+                for unit_id in range(num_units)
             ]
         case _:
             raise Exception("Invalid substrate")

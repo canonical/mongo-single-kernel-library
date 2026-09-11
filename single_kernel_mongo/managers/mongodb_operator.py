@@ -944,6 +944,8 @@ class MongoDBOperator(OperatorProtocol, Object):
         try:
             # Adds the newly added/updated units.
             self.mongo_manager.process_added_units()
+            # Remove the units that we don't need anymore
+            self.process_unremoved_units()
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
