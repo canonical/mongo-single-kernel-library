@@ -581,6 +581,7 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
     Verifies that when a new unit is added to the MongoDB application that it is added to the
     MongoDB replica set configuration.
     """
+    assert juju.model
     app_name = existing_app(juju)
     assert app_name
 
@@ -608,7 +609,11 @@ def test_scale_up(juju: jubilant.Juju, substrate: Substrate):
             ]
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
-            hosts = [f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints" for unit_id in range(num_units)]
+            model_name = juju.model
+            hosts = [
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local:27017"
+                for unit_id in range(num_units)
+            ]
             juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
 
     password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
@@ -646,6 +651,7 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
     1. multiple units can be removed while still maintaining a majority (ie remove a minority)
     2. Replica set hosts are properly updated on unit removal
     """
+    assert juju.model
     app_name = existing_app(juju)
     assert app_name
 
@@ -673,13 +679,14 @@ async def test_scale_down(juju: jubilant.Juju, substrate: Substrate):
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
         case "microk8s":
+            model_name = juju.model
             hosts = [
-                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints"
+                f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
                 for unit_id in range(post_scale_n_units)
             ]
-            juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
+
+    juju_hosts = [f"{host}:{MONGOD_PORT}" for host in hosts]
 
     password = get_password(juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
     uri = replica_set_uri(

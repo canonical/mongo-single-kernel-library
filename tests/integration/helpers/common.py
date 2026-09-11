@@ -291,11 +291,16 @@ async def mongodb_uri(
     hostnames: bool = False,
 ) -> str:
     """Build the URI for mongodb, to run on a charm unit (not from the host running the test)."""
+    assert ops_test.model
     if unit_ids is None:
         unit_ids = range(0, len(ops_test.model.applications[app_name].units))
 
     if substrate == "microk8s" and hostnames:
-        addresses = [f"{app_name}-{unit_id}.{app_name}-endpoints" for unit_id in unit_ids]
+        model = ops_test.model.name
+        addresses = [
+            f"{app_name}-{unit_id}.{app_name}-endpoints.{model}.svc.cluster.local"
+            for unit_id in unit_ids
+        ]
     else:
         addresses = [
             await get_address_of_unit(ops_test, substrate, unit_id, app_name)
@@ -783,7 +788,7 @@ async def get_unit_hostname(ops_test: OpsTest, unit_id: int, app: str) -> str:
 async def get_unit_hostnames(ops_test: OpsTest, substrate: Substrate, app_name: str) -> list[str]:
     if substrate == "microk8s":
         return [
-            f"{unit.name.replace('/', '-')}.{app_name}-endpoints"
+            f"{unit.name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
             for unit in ops_test.model.applications[app_name].units
         ]
 
@@ -798,7 +803,7 @@ async def get_mongodb_hostname_for_unit(ops_test: OpsTest, substrate: Substrate,
     unit_id, app_name = get_unit_app(unit_name)
     if substrate == "lxd":
         return await get_address_of_unit(ops_test, substrate, unit_id, app_name)
-    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints"
+    return f"{unit_name.replace('/', '-')}.{app_name}-endpoints.{ops_test.model.name}.svc.cluster.local"
 
 
 async def get_raw_application(ops_test: OpsTest, app: str) -> dict[str, Any]:

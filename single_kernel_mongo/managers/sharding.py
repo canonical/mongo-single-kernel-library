@@ -348,7 +348,12 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             with MongoConnection(self.state.mongos_config) as mongo:
                 cluster_shards = mongo.get_shard_members()
 
-            relation_shards = {relation.app.name for relation in self.state.config_server_relation}
+            relation_shards = {
+                replica_set_name
+                for relation in self.state.config_server_relation
+                if (replica_set_name := self.state.config_server_state(relation).shard_replset)
+                is not None
+            }
             if shard_draining := (cluster_shards - relation_shards):
                 draining = ",".join(shard_draining)
                 status = ConfigServerStatuses.draining_shard(draining)
@@ -524,13 +529,13 @@ class ConfigServerManager(Object, AbstractManagerStatus[CharmState]):
             return unreachable_hosts
 
         for relation in self.state.config_server_relation:
-            shard_name = relation.app.name
-            hosts = []
-            for unit in relation.units:
-                unit_state = self.state.unit_peer_data_for(unit, relation)
-                hosts.append(unit_state.internal_address)
+            shard_name = self.state.config_server_state(relation).shard_replset
+            if not shard_name:
+                logger.info("replica set name not yet added in databag, skipping")
+                continue
+            hosts = self.get_shard_hosts_from_relation(relation)
             if not hosts:
-                return unreachable_hosts
+                continue
 
             # use a URI that is not dependent on the charmed-operator password, as we are
             # not guaranteed that the shard has received the password yet.
