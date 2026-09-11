@@ -44,10 +44,13 @@ from single_kernel_mongo.utils.mongodb_users import (
 )
 from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm
 from tests.integration.helpers.types import Substrate
+from tests.unit.helpers import CLUSTER_NAME, MODEL_NAME
 
 PEER_ADDR = {
     Substrate.lxd: {"private-address": "127.4.5.6"},
-    Substrate.k8s: {"private-address": "mongodb-k8s-1.mongodb-k8s-endpoints"},
+    Substrate.k8s: {
+        "private-address": f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
+    },
 }
 PYMONGO_EXCEPTIONS = [
     (ConnectionFailure("error message"), ConnectionFailure),
@@ -1404,6 +1407,9 @@ def test_peer_changed_updates_cluster_ip_source_allowlist(
     )
     mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.process_added_units")
     mocker.patch(
+        "single_kernel_mongo.managers.mongodb_operator.MongoDBOperator.process_unremoved_units"
+    )
+    mocker.patch(
         "single_kernel_mongo.managers.mongo.MongoManager.update_users_local_auth_restrictions"
     )
     mock_update = mocker.patch(
@@ -1615,6 +1621,7 @@ def test_reconfigure_peer_not_ready_replica_set_is_added(
     mock_fs_interactions,
     substrate: Substrate,
     mongodb_name: str,
+    mongodb_hostname: str,
 ):
     """Tests reconfigure does not proceed when the adding member is not ready.
 
@@ -1638,7 +1645,7 @@ def test_reconfigure_peer_not_ready_replica_set_is_added(
 
     harness.set_leader(True)
     harness.charm.operator.state.db_initialised = True
-    get_replset.return_value = {mongodb_name}
+    get_replset.return_value = {mongodb_hostname}
 
     rel = harness.charm.model.get_relation("database-peers")
 
@@ -1723,6 +1730,7 @@ def test_on_relation_departed_not_leader(
 
     mock_update_allowlist.reset_mock()
     mock_sync_allowlist.reset_mock()
+    update_host_mock.reset_mock()
     harness.set_leader(False)
     harness.remove_relation_unit(rel.id, "mongodb/1")
 
