@@ -1,0 +1,58 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: Primary.
+  mongodb-k8s/1 [idle] active: 
+  mongodb-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  01:49:51Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+continuous-write                   active      1  continuous-write                           0  10.152.183.247  no       
+mongodb-k8s               6.0.28   active      3  mongodb-k8s                                0  10.152.183.72   no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.168  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+continuous-write/0*          active    idle   10.1.179.84         
+mongodb-k8s/0*               active    idle   10.1.179.80         Primary.
+mongodb-k8s/1                active    idle   10.1.179.82         
+mongodb-k8s/2                active    idle   10.1.179.81         
+self-signed-certificates/0*  active    idle   10.1.179.83         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-2: 01:36:13 ERROR unit.mongodb-k8s/2.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-k8s-1: 01:36:13 ERROR unit.mongodb-k8s/1.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-k8s-0: 01:36:13 ERROR unit.mongodb-k8s/0.juju-log certificates:5: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-mongodb-k8s-1: 01:36:13 ERROR unit.mongodb-k8s/1.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-k8s-2: 01:36:14 ERROR unit.mongodb-k8s/2.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-k8s-0: 01:36:14 ERROR unit.mongodb-k8s/0.juju-log certificates:5: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-mongodb-k8s-0: 01:36:46 ERROR unit.mongodb-k8s/0.juju-log database-peers:0: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa5fe2d37543b0227622ee4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013856069999746978>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016763950000040495>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0020410080001056485>]>
+unit-continuous-write-0: 01:40:58 ERROR unit.continuous-write/0.juju-log Unable to query the database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 213, in _stop_continuous_writes
+    with open(self.last_written_filename(db_name, collection_name)) as fd:
+FileNotFoundError: [Errno 2] No such file or directory: 'last_written_value-continuous_writes_database-continuous_writes_collection'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/src/charm.py", line 211, in _stop_continuous_writes
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 347, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-continuous-write-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 326, in iter
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7f8ab7adca00 state=finished raised FileNotFoundError>]
+unit-mongodb-k8s-0: 01:41:44 ERROR unit.mongodb-k8s/0.juju-log database-peers:0: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa5ff57b882ed6c90594ad3, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0012894229998892115>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007053960000575898>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6aa5ff503a7b6a2fd90784a6'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12429}")>]>
+unit-mongodb-k8s-0: 01:44:46 ERROR unit.mongodb-k8s/0.juju-log database-peers:0: Not reconfiguring: error=No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa6000c4be6c050e3035478, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0013151190000826318>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSSecondary, rtt: 0.0023243980003826437>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-2.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
