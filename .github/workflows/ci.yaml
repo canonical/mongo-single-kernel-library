@@ -8,6 +8,19 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    secrets:
+      AWS_ACCESS_KEY:
+        required: true
+      AWS_SECRET_KEY:
+        required: true
+      GCP_ACCESS_KEY:
+        required: true
+      GCP_SECRET_KEY:
+        required: true
+      GCS_SERVICE_ACCOUNT:
+        required: true
+      CHARMHUB_TOKEN:
+        required: true
 
 jobs:
   pre-commit:
@@ -16,14 +29,14 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install tox & poetry
         run: |
           pipx install tox poetry
       - name: Set up python environment
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "poetry"
@@ -38,6 +51,8 @@ jobs:
       - name: Run pre-commit hooks
         run: |
           poetry run pre-commit run --all-files
+    permissions:
+      contents: read
 
   check-pyproject-dynamic-versioning:
     name: Poetry dynamic versioning check
@@ -45,7 +60,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install deps
@@ -62,6 +77,8 @@ jobs:
           then
             exit 1
           fi
+    permissions:
+      contents: read
 
   actionlint:
     name: Lint .github/workflows/
@@ -69,7 +86,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install actionlint
         id: install
         run: |
@@ -78,7 +97,17 @@ jobs:
           bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
       - name: Run actionlint
         run: |
-          '${{ steps.install.outputs.executable }}' -color
+          "${EXECUTABLE}" -color
+        env:
+          EXECUTABLE: ${{ steps.install.outputs.executable }}
+    permissions:
+      contents: read
+
+  lint-workflows:
+    name: Lint .github/workflows/
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@50.2.1
+    permissions:
+      contents: read
 
   lib-check:
     name: Check libraries
@@ -86,9 +115,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.7.0
         continue-on-error: true
@@ -98,6 +128,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       pull-requests: write
+      contents: read
 
   tox-lint:
     name: tox run -e lint
@@ -105,7 +136,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install tox & poetry
         run: |
           pipx install tox poetry
@@ -120,6 +153,8 @@ jobs:
           sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Run linters
         run: tox run -e lint
+    permissions:
+      contents: read
 
   unit-test:
     strategy:
@@ -132,7 +167,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install tox & poetry
@@ -149,6 +184,8 @@ jobs:
           sudo apt install -y  build-essential python3-dev libldap-dev libsasl2-dev
       - name: Run tests
         run: tox run -e unit-${{ matrix.env }}
+    permissions:
+      contents: read
 
   build:
     strategy:
@@ -164,6 +201,8 @@ jobs:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   build-helpers:
     strategy:
@@ -173,11 +212,13 @@ jobs:
           - tests/integration/applications/continuous_write_charm
           - tests/integration/applications/mongos_client_charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
     with:
       path-to-charm-directory: ${{ matrix.path }}
       artifact-prefix: packed-charm
       cache: true
+    permissions:
+      contents: read
 
   integration-test:
     name: Integration test charm
@@ -189,6 +230,11 @@ jobs:
     uses: ./.github/workflows/integration_test.yaml
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+      GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
+      GCS_SERVICE_ACCOUNT: ${{ secrets.GCS_SERVICE_ACCOUNT }}
     permissions:
       contents: write # Needed for Allure Report

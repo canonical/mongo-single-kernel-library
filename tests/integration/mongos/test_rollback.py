@@ -10,16 +10,15 @@ import pytest
 import tenacity
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.upgrade import refresh_charm
-
-from ..helpers.common import MONGOS_APP_NAME, TIMEOUT, get_juju_status
-from ..helpers.mongos import (
+from tests.integration.helpers.common import MONGOS_APP_NAME, TIMEOUT, get_juju_status
+from tests.integration.helpers.mongos import (
     MONGOS_CLIENT_APPLICATION,
     build_cluster,
     deploy_cluster_components,
     exec_on_mongos,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +76,10 @@ async def test_failed_upgrade_and_rollback(
     time.sleep(15)
 
     await ops_test.model.block_until(
-        lambda: all(unit.workload_status == "active" for unit in mongos_application.units)
-        and all(unit.agent_status == "idle" for unit in mongos_application.units)
+        lambda: (
+            all(unit.workload_status == "active" for unit in mongos_application.units)
+            and all(unit.agent_status == "idle" for unit in mongos_application.units)
+        )
     )
 
     logger.info("Wait for the charm to be rolled back")

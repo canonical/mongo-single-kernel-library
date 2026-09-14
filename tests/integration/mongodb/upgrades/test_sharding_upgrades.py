@@ -5,15 +5,15 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     find_unit,
     stop_continous_writes,
     unit_hostname,
 )
-from ...helpers.ha import cut_network_from_unit, restore_network_for_unit
-from ...helpers.sharding import (
+from tests.integration.helpers.ha import cut_network_from_unit, restore_network_for_unit
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -26,8 +26,8 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import assert_successful_run_upgrade_sequence
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import assert_successful_run_upgrade_sequence
 
 
 @pytest.mark.abort_on_fail

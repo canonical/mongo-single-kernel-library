@@ -5,14 +5,14 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     CONTINUOUS_WRITE_APPLICATION,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
     find_unit,
     stop_continous_writes,
 )
-from ...helpers.sharding import (
+from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     SHARD_ONE_APP_NAME,
@@ -25,8 +25,8 @@ from ...helpers.sharding import (
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import refresh_charm, refresh_with_juju
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import refresh_charm, refresh_with_juju
 
 
 @pytest.mark.abort_on_fail

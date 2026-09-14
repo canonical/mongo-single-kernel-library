@@ -27,9 +27,12 @@ from typing import ClassVar, Generic, TypeVar
 
 from data_platform_helpers.advanced_statuses.handler import StatusHandler
 from data_platform_helpers.advanced_statuses.models import StatusObject
-from data_platform_helpers.advanced_statuses.protocol import ManagerStatusProtocol
+from data_platform_helpers.advanced_statuses.protocol import (
+    AbstractManagerStatus,
+)
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.charm import CharmBase
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from single_kernel_mongo.config.literals import CharmKind, Substrates
 from single_kernel_mongo.config.relations import PeerRelationNames
@@ -37,6 +40,8 @@ from single_kernel_mongo.config.statuses import CharmStatuses, MongoDBStatuses
 from single_kernel_mongo.core.operator import OperatorProtocol
 from single_kernel_mongo.core.structured_config import MongoConfigModel, MongoDBRoles
 from single_kernel_mongo.events.lifecycle import LifecycleEventsHandler
+from single_kernel_mongo.exceptions import WorkloadExecError
+from single_kernel_mongo.state.charm_state import CharmState
 
 T = TypeVar("T", bound=MongoConfigModel)
 U = TypeVar("U", bound=OperatorProtocol)
@@ -44,7 +49,7 @@ U = TypeVar("U", bound=OperatorProtocol)
 logger = logging.getLogger(__name__)
 
 
-class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
+class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], CharmBase):
     """An abstract mongo charm.
 
     This class is meant to be inherited from to define an actual charm.
@@ -62,7 +67,7 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
     substrate: ClassVar[Substrates]
     peer_rel_name: ClassVar[PeerRelationNames]
     status_peer_rel_name: ClassVar[PeerRelationNames] = PeerRelationNames.STATUS_PEERS
-    name: ClassVar[str]
+    name: str
 
     def __init__(self, *args):
         # Init the Juju object Object
@@ -95,12 +100,25 @@ class AbstractMongoCharm(ManagerStatusProtocol, Generic[T, U], CharmBase):
         """Return the config parsed as a pydantic model."""
         return self.config_type.model_validate(self.model.config)
 
+    @retry(
+        stop=stop_after_attempt(10),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(WorkloadExecError),
+        reraise=True,
+    )
+    def _wait_for_snapd(self) -> None:
+        """Wait until the snapd service is active."""
+        self.workload.exec(["systemctl", "is-active", "--quiet", "snapd.service"])
+
     def on_install(self, _):
         """First install event handler."""
         if self.substrate == Substrates.VM:
             self.status_handler.set_running_status(
                 CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
             )
+            logger.info("Restarting snapd before installing the MongoDB workload snap")
+            self.workload.exec(["systemctl", "restart", "snapd.service"])
+            self._wait_for_snapd()
             self.workload.install()
 
     def on_leader_elected(self, event):

@@ -10,7 +10,7 @@ In this class, we manage the S3 specific code for backups.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, NewType, final, override
+from typing import TYPE_CHECKING, Any, NewType, final, override
 
 import boto3
 from botocore.client import Config as BotoConfig
@@ -70,7 +70,7 @@ class S3BackupManager(CommonBackupManager):
         "endpoint": "storage.s3.endpointUrl",
         "storage-class": "storage.s3.storageClass",
     }
-    BASIC_CONFIG = {"storage.type": "s3"}
+    BASIC_CONFIG = {"storage": {"type": "s3"}}
     backend = "s3"
 
     def __init__(
@@ -189,16 +189,20 @@ class S3BackupManager(CommonBackupManager):
             logger.info("Missing bucket")
             return False
 
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.region"
-        ):
-            logger.info("Missing region - this is required for AWS")
+        if provided_configs.get("storage", {}).get("type", "") == "s3":
+            storage_s3 = provided_configs.get("storage", {}).get("s3", {})
+            if not storage_s3:
+                logger.info("Missing S3 Config")
+                return False
 
-        if provided_configs.get("storage.type") == "s3" and not provided_configs.get(
-            "storage.s3.endpointUrl"
-        ):
-            logger.info("Missing S3 endpoint.")
-            return False
+            if not storage_s3.get("region"):
+                logger.info(
+                    "Missing region - this is recommended for S3. Default region `us-east-1` will be used."
+                )
+
+            if not storage_s3.get("endpointUrl"):
+                logger.info("Missing S3 endpoint.")
+                return False
 
         return True
 
@@ -208,14 +212,26 @@ class S3BackupManager(CommonBackupManager):
         This can still happen for now through the s3 integrator for already integrated clients.
         When PBM completely disables that support, it will be removed.
         """
-        return {"storage.type": "gcs"} | {
-            GCS_PBM_OPTION_MAP[s3_option]: s3_value
-            for s3_option, s3_value in credentials.items()
-            if GCS_PBM_OPTION_MAP.get(s3_option)
-        }
+        output_dict: dict[str, Any] = {"storage": {"type": "gcs"}}
+        # Iterate on all configuration values
+        for s3_option, s3_value in credentials.items():
+            # Create a ref to the dict on which we'll walk
+            tmp_dict = output_dict
+            # Skip invalid values
+            if not (path := GCS_PBM_OPTION_MAP.get(s3_option)):
+                continue
+            # Split the path on the dots
+            parts = path.split(".")
+            # Create all the subdicts
+            for part in parts[:-1]:
+                tmp_dict = tmp_dict.setdefault(part, {})
+            # Set the value
+            tmp_dict[parts[-1]] = s3_value
+
+        return output_dict
 
     @override
-    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, str]:
+    def map_config_to_pbm_config(self, credentials: dict[str, str]) -> dict[str, Any]:
         if "googleapis" in credentials.get("endpoint", ""):
             return self._gcs_obsolecte_map(credentials)
         return super().map_config_to_pbm_config(credentials)

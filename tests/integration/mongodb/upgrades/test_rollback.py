@@ -10,14 +10,14 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ...helpers.common import (
+from tests.integration.helpers.common import (
     DEPLOYMENT_TIMEOUT,
     find_unit,
     get_app_name,
     get_juju_status,
 )
-from ...helpers.types import Substrate
-from ...helpers.upgrade import get_workload_version
+from tests.integration.helpers.types import Substrate
+from tests.integration.helpers.upgrade import get_workload_version
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +82,10 @@ async def test_rollback(
 
     time.sleep(15)
     await ops_test.model.block_until(
-        lambda: all(unit.workload_status == "active" for unit in mongodb_application.units)
-        and all(unit.agent_status == "idle" for unit in mongodb_application.units),
+        lambda: (
+            all(unit.workload_status == "active" for unit in mongodb_application.units)
+            and all(unit.agent_status == "idle" for unit in mongodb_application.units)
+        ),
         wait_period=15,
     )
 
