@@ -1,0 +1,65 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: Primary.
+  config-server/2 [idle] active: 
+  shard-one/0 [idle] active: 
+  shard-one/1 [idle] active: Primary.
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.28   unsupported  02:14:21Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     6.0.28   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         6.0.28   active       3  mongodb                      1  no       
+shard-two         6.0.28   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*     active    idle   0        10.211.49.172   27017-27018/tcp  Primary.
+config-server/1      active    idle   1        10.211.49.230   27017-27018/tcp  
+config-server/2      active    idle   2        10.211.49.18    27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.211.49.197                    
+shard-one/0          active    idle   3        10.211.49.64    27017/tcp        
+shard-one/1          active    idle   4        10.211.49.251   27017/tcp        Primary.
+shard-one/2*         active    idle   5        10.211.49.132   27017/tcp        
+shard-two/0*         active    idle   6        10.211.49.198   27017/tcp        Primary.
+shard-two/1          active    idle   7        10.211.49.200   27017/tcp        
+shard-two/2          active    idle   8        10.211.49.215   27017/tcp        
+
+Machine  State    Address        Inst id        Base          AZ             Message
+0        started  10.211.49.172  juju-30c7aa-0  ubuntu@22.04  github-runner  Running
+1        started  10.211.49.230  juju-30c7aa-1  ubuntu@22.04  github-runner  Running
+2        started  10.211.49.18   juju-30c7aa-2  ubuntu@22.04  github-runner  Running
+3        started  10.211.49.64   juju-30c7aa-3  ubuntu@22.04  github-runner  Running
+4        started  10.211.49.251  juju-30c7aa-4  ubuntu@22.04  github-runner  Running
+5        started  10.211.49.132  juju-30c7aa-5  ubuntu@22.04  github-runner  Running
+6        started  10.211.49.198  juju-30c7aa-6  ubuntu@22.04  github-runner  Running
+7        started  10.211.49.200  juju-30c7aa-7  ubuntu@22.04  github-runner  Running
+8        started  10.211.49.215  juju-30c7aa-8  ubuntu@22.04  github-runner  Running
+9        started  10.211.49.197  juju-30c7aa-9  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-2: 01:56:08 ERROR unit.shard-one/2.juju-log upgrade-version-a:6: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa754371d16b6515467ae1d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.211.49.132', 27017) server_type: RSSecondary, rtt: 0.000822063999976308>, <ServerDescription ('10.211.49.251', 27017) server_type: RSSecondary, rtt: 0.0018065920000935876>, <ServerDescription ('10.211.49.64', 27017) server_type: RSSecondary, rtt: 0.001237978000062867>]>
+unit-shard-one-2: 01:58:28 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa754c3fb1a7248aeb827e8, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.211.49.132', 27017) server_type: RSSecondary, rtt: 0.0021095259999128757>, <ServerDescription ('10.211.49.251', 27017) server_type: RSSecondary, rtt: 0.00202123400003984>, <ServerDescription ('10.211.49.64', 27017) server_type: RSSecondary, rtt: 0.0014607819998673222>]>
+unit-shard-one-2: 01:58:32 ERROR unit.shard-one/2.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa754c7fb1a7248aeb827e9, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.211.49.132', 27017) server_type: RSSecondary, rtt: 0.0010514180000882334>, <ServerDescription ('10.211.49.251', 27017) server_type: RSSecondary, rtt: 0.0022933019999982207>, <ServerDescription ('10.211.49.64', 27017) server_type: RSSecondary, rtt: 0.0005283230000259209>]>
+unit-shard-two-0: 02:03:12 ERROR unit.shard-two/0.juju-log status-peers:10: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa755de63a1632dd2ee6257, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.211.49.198', 27017) server_type: RSSecondary, rtt: 0.0048402850002275954>, <ServerDescription ('10.211.49.200', 27017) server_type: RSSecondary, rtt: 0.0009445779996894998>, <ServerDescription ('10.211.49.215', 27017) server_type: RSSecondary, rtt: 0.0028423059998203826>]>
+unit-shard-two-0: 02:03:16 ERROR unit.shard-two/0.juju-log status-peers:10: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aa755e363a1632dd2ee6258, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.211.49.198', 27017) server_type: RSSecondary, rtt: 0.0007094750003489025>, <ServerDescription ('10.211.49.200', 27017) server_type: RSSecondary, rtt: 0.00115852899989477>, <ServerDescription ('10.211.49.215', 27017) server_type: RSSecondary, rtt: 0.0012995710003451677>]>
+unit-config-server-0: 02:12:26 ERROR unit.config-server/0.juju-log Cluster cannot read/write to replicas
+unit-shard-one-2: 02:12:51 ERROR unit.shard-one/2.juju-log Cluster cannot read/write to replicas
+unit-shard-two-0: 02:13:16 ERROR unit.shard-two/0.juju-log Cluster cannot read/write to replicas
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
