@@ -362,7 +362,7 @@ def mock_getfqdn(name=""):
 
 @pytest.fixture(autouse=True)
 def patched_addrinfo(mocker, substrate: Substrate):
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         with mocker.patch("socket.getaddrinfo", side_effect=mock_addrinfo) as addrinfo:
             yield addrinfo
     else:
@@ -371,7 +371,7 @@ def patched_addrinfo(mocker, substrate: Substrate):
 
 @pytest.fixture(autouse=True)
 def patched_getfqdn(mocker, substrate: Substrate):
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         with mocker.patch(
             "socket.getfqdn",
             side_effect=mock_getfqdn,

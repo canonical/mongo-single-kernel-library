@@ -1105,7 +1105,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
-        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
