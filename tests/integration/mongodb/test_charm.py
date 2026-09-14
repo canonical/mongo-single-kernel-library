@@ -160,7 +160,7 @@ async def test_pbm_agent_log_file_exists(ops_test: OpsTest, substrate: Substrate
         dir_path = "/var/log/pbm/"
 
     for unit in ops_test.model.applications[app_name].units:
-        assert has_file(
+        assert await has_file(
             ops_test, substrate=substrate, unit=unit, dir_path=dir_path, filename="pbm-agent.json"
         )
 
