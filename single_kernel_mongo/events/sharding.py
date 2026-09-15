@@ -264,7 +264,7 @@ class ShardEventHandler(Object):
             )
             try:
                 self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-            except WorkloadServiceError as e:
-                logger.error(f"Failed to remove PBM CA certificate: {str(e)}")
+            except WorkloadServiceError as err:
+                logger.error(f"Failed to remove PBM CA certificate: {str(err)}")
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             return
