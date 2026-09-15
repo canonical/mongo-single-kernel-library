@@ -62,6 +62,9 @@ class KubernetesWorkload(WorkloadBase):
         except ChangeError as e:
             logger.exception(str(e))
             raise WorkloadServiceError(e.err) from e
+        except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def restart(self) -> None:
@@ -80,7 +83,11 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def mkdir(self, path: Path, make_parents: bool = False) -> None:
-        self.container.make_dir(path, make_parents=make_parents)
+        try:
+            self.container.make_dir(path, make_parents=make_parents)
+        except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
 
     @property
     def service_exists(self) -> bool:
@@ -90,34 +97,49 @@ class KubernetesWorkload(WorkloadBase):
 
     @override
     def exists(self, path: Path) -> bool:
-        return self.container.exists(path)
+        try:
+            return self.container.exists(path)
+        except ConnectionError as e:
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def read(self, path: Path) -> list[str]:
-        if not self.container.exists(path):
-            return []
-        with self.container.pull(path) as f:
-            return f.read().split("\n")
+        try:
+            if not self.container.exists(path):
+                return []
+            with self.container.pull(path) as f:
+                return f.read().split("\n")
+        except ConnectionError as e:
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def write(self, path: Path, content: str, mode: str = "w") -> None:
-        self.container.push(
-            path,
-            content,
-            make_dirs=True,
-            permissions=0o400,
-            user=self.users.user,
-            group=self.users.group,
-        )
+        try:
+            self.container.push(
+                path,
+                content,
+                make_dirs=True,
+                permissions=0o400,
+                user=self.users.user,
+                group=self.users.group,
+            )
+        except ConnectionError as e:
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def delete(self, path: Path) -> None:
-        self.container.remove_path(path)
+        try:
+            self.container.remove_path(path)
+        except ConnectionError as e:
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def copy_to_unit(self, src: Path, destination: Path):
-        license_file = self.container.pull(path=src)
-        destination.write_text(license_file.read())
+        try:
+            license_file = self.container.pull(path=src)
+            destination.write_text(license_file.read())
+        except ConnectionError as e:
+            raise WorkloadServiceError(*e.args) from e
 
     @override
     def get_env(self) -> dict[str, str]:

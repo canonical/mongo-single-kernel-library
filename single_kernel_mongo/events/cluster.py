@@ -189,7 +189,11 @@ class ClusterMongosEventHandler(Object):
         """
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (RollingOpsNoRelationError, DeferrableFailedHookChecksError) as e:
+        except (
+            RollingOpsNoRelationError,
+            DeferrableFailedHookChecksError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except (
             WaitingForSecretsError,

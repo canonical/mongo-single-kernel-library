@@ -26,6 +26,7 @@ from data_platform_helpers.advanced_statuses.protocol import (
 )
 from data_platform_helpers.advanced_statuses.types import Scope
 from ops.framework import Object
+from ops.pebble import ConnectionError
 
 from single_kernel_mongo.config.literals import TRUST_STORE_PATH, Substrates, TrustStoreFiles
 from single_kernel_mongo.config.models import VaultConfigurationState
@@ -36,6 +37,7 @@ from single_kernel_mongo.exceptions import (
     InvalidConfigError,
     WaitingForLeaderError,
     WorkloadExecError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.state.charm_state import CharmState
@@ -192,8 +194,13 @@ class VaultManager(Object, AbstractManagerStatus[CharmState]):
             (self.workload.paths.vault_agent_cert, unit_certificate),
             (self.workload.paths.vault_agent_key, unit_private_key),
         ):
-            self.workload.write(path, data)
-            self.workload.exec(["chmod", "640", f"{path}"])
+            try:
+                self.workload.write(path, data)
+                self.workload.exec(["chmod", "640", f"{path}"])
+            except ConnectionError as e:
+                raise WorkloadServiceError(
+                    f"Failed to configure certs for {self.workload.service}: {e}"
+                ) from e
 
         if restart and self.is_ready():
             self.config_manager.configure_and_restart(force=True)

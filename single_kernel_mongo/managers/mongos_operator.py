@@ -54,6 +54,7 @@ from single_kernel_mongo.exceptions import (
     MissingConfigServerError,
     UpgradeInProgressError,
     WaitingForSecretsError,
+    WorkloadExecError,
     WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -197,11 +198,14 @@ class MongosOperator(OperatorProtocol, Object):
 
         # always apply the current charm revision's config -> no need to "migrate" configuration
         # this charm revision's config is the one supported by the targeted workload version
-        self._configure_workloads()
+        try:
+            self._configure_workloads()
 
-        if self.state.mongos_cluster_relation:
-            logger.info("Restarting workloads")
-            self.start_charm_services()
+            if self.state.mongos_cluster_relation:
+                logger.info("Restarting workloads")
+                self.start_charm_services()
+        except (WorkloadServiceError, WorkloadExecError):
+            return
 
         logger.debug("Running post refresh checks to verify mongos is not broken after refresh")
         if not self.state.db_initialised:

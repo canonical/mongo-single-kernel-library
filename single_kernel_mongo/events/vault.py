@@ -18,7 +18,6 @@ from ops import (
     Object,
     UpdateStatusEvent,
 )
-from ops.pebble import ConnectionError
 
 from single_kernel_mongo.config.relations import ExternalRequirerRelations
 from single_kernel_mongo.config.statuses import VaultStatuses
@@ -26,6 +25,8 @@ from single_kernel_mongo.exceptions import (
     ImpossibleToRotateMasterKeyError,
     InvalidConfigError,
     WaitingForLeaderError,
+    WorkloadExecError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.vault_k8s.v0 import vault_kv
 from single_kernel_mongo.utils.event_helpers import defer_event_with_info_log
@@ -115,7 +116,7 @@ class VaultEventHandler(Object):
         )
         try:
             self.manager.prepare_vault_agent(data)
-        except ConnectionError as e:
+        except (WorkloadServiceError, WorkloadExecError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
         except WaitingForLeaderError:
@@ -126,6 +127,7 @@ class VaultEventHandler(Object):
             logger.info("Vault connectivity check failed.")
             self.manager.set_status(VaultStatuses.VAULT_UNREACHABLE.value, scope="unit")
             event.defer()
+            return
 
     def _on_leader_elected(self, event: LeaderElectedEvent):
         """Handler for leader elected events that ensures that the config option is stored."""
@@ -137,10 +139,7 @@ class VaultEventHandler(Object):
         try:
             self.manager.ensures_value_is_not_updated()
             self.manager.configure_self_signed_certificates(restart=True)
-        except ConnectionError as e:
-            defer_event_with_info_log(logger, event, str(type(event)), str(e))
-            return
-        except WaitingForLeaderError as e:
+        except (WaitingForLeaderError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
         except InvalidConfigError:
@@ -181,9 +180,7 @@ class VaultEventHandler(Object):
             return
         try:
             self.manager.configure_self_signed_certificates(restart=True)
-        except ConnectionError:
-            return
-        except WaitingForLeaderError:
+        except (WaitingForLeaderError, WorkloadServiceError):
             return
 
     def _on_rotate_master_key(self, event: ActionEvent):

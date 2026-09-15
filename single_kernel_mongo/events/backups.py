@@ -277,7 +277,11 @@ class BackupEventsHandler(Object):
             logger.warning("Two relations combined, exiting early.")
             return
 
-        manager.cleanup_certs_and_restart(event.relation)
+        try:
+            manager.cleanup_certs_and_restart(event.relation)
+        except WorkloadServiceError as e:
+            defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         manager.state.statuses.clear(scope="unit", component=manager.name)
 
     def _on_create_backup_action(self, event: ActionEvent) -> None:
