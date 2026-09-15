@@ -12,18 +12,7 @@
     sharedscripts
     postrotate
         uri={{get_uri}}
-        if [ -z "${uri}" ]; then
-            echo "ERROR: logrotate URI is empty or missing" >&2
-            exit 1
-        fi
-        echo "Logrotate URI is set"
-
-        {{shell}} "${uri}" --quiet --eval \
-            'const r = db.adminCommand({logRotate: "server"}); printjson(r); quit(r.ok === 1 ? 0 : 1);'
-
-        rc=$?
-        echo "MongoDB logRotate exit code: $rc"
-        exit "$rc"
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'server'})"
     endscript
 }
 {{logs_directory}}/audit.log
@@ -40,18 +29,7 @@
     sharedscripts
     postrotate
         uri={{get_uri}}
-        if [ -z "${uri}" ]; then
-            echo "ERROR: logrotate URI is empty or missing" >&2
-            exit 1
-        fi
-        echo "Logrotate URI is set"
-
-        {{shell}} "${uri}" --quiet --eval \
-            'const r = db.adminCommand({logRotate: "audit"}); printjson(r); quit(r.ok === 1 ? 0 : 1);'
-
-        rc=$?
-        echo "MongoDB logRotate exit code: $rc"
-        exit "$rc"
+        {{shell}} ${uri} --quiet --eval "db.adminCommand({logRotate: 'audit'})"
     endscript
 }
 {{pbm_logs}}/pbm-agent.json

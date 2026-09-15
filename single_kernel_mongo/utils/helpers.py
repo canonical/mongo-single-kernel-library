@@ -34,7 +34,7 @@ def get_logrotate_pid_command(substrate: Substrates, log_dir: str) -> str:
 def get_logrotate_uri(substrate: Substrates, env_variable: str) -> str:
     """How to get the logrotate URI ?"""
     if substrate == Substrates.K8S:
-        # Pebble already supplies this variable to the logrotate process.
+        # The logorate URI is set as an env variable in the pebble layer, so we can use it directly.
         return f'"${{{env_variable}}}"'
     return "$(snap get charmed-mongodb logrotate-uri)"
 

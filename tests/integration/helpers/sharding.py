@@ -38,8 +38,8 @@ from tests.integration.helpers.types import Substrate
 
 logger = getLogger(__name__)
 
-# Opt-in storage for sharding tests without large backup or log-rotation workloads.
-# Rawfile CSI reserves each PVC's capacity, so keep the per-unit total under 2 GiB.
+# K8s storage is limited in self-hosted runners, so we use smaller storage for sharding
+# tests to avoid running out of space. Keep the per-unit total under 2 GiB.
 SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "256M"}
 
 MONGODB_CHARM_NAME = "mongodb"
