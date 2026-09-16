@@ -116,9 +116,9 @@ backends:
       LD_LIBRARY_PATH: "$(HOST: echo $LD_LIBRARY_PATH)"
       PKG_CONFIG_PATH: "$(HOST: echo $PKG_CONFIG_PATH)"
     systems:
-      - ubuntu-22.04:
+      - ubuntu-24.04:
           username: runner
-      - ubuntu-22.04-arm:
+      - ubuntu-24.04-arm:
           username: runner
       - self-hosted-linux-amd64-noble-medium:
           username: ubuntu
@@ -146,7 +146,6 @@ environment:
   PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
   CONCIERGE_JUJU_CHANNEL: 3.6/stable
   CHARM_UBUNTU_BASE: 24.04
-  pythonLocation: "$(HOST: echo $pythonLocation)"
 prepare: |
   snap refresh --hold
   chown -R root:root "$SPREAD_PATH"
@@ -193,10 +192,8 @@ prepare: |
   # Install charmcraft & pipx (on lxd-vm backend)
   pipx install tox poetry
 
-  #TODO: Remove this when we runners are fixed.
   pipx ensurepath
 
-  $(pipx environment --value PIPX_BIN_DIR)/poetry env use $pythonLocation/bin/python
 prepare-each: |
   cd "$SPREAD_PATH"
 
@@ -222,8 +219,5 @@ prepare-each: |
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
-
-  #TODO: Remove this when we runners are fixed.
-  $(pipx environment --value PIPX_BIN_DIR)/poetry env use $pythonLocation/bin/python
 
 # Only restore on lxd backend—no need to restore on CI
