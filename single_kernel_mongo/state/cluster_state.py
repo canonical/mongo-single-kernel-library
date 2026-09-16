@@ -72,7 +72,7 @@ class ClusterState(AbstractRelationState[Data]):
     def extra_user_roles(self) -> set[str]:
         """Return extra user roles value in the databag."""
         return set(  # type: ignore[return-value]
-            self.relation_data.get(ClusterStateKeys.EXTRA_USER_ROLES.value, "default").split(",")
+            self.relation_data.get(ClusterStateKeys.EXTRA_USER_ROLES.value, "").split(",")
         )
 
     @extra_user_roles.setter
