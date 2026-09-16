@@ -342,7 +342,7 @@ class MongosOperator(OperatorProtocol, Object):
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
                 raise MissingConfigServerError()
-            keyfile = self.state.get_keyfile()
+            keyfile = self.state.cluster.keyfile
             if not keyfile:
                 logger.error("Cannot start mongos without a keyfile")
                 raise MissingConfigServerError()
