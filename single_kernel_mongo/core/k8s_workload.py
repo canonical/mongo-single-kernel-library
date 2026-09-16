@@ -56,7 +56,7 @@ class KubernetesWorkload(WorkloadBase):
         try:
             self.restart()
         except ChangeError as e:
-            logger.exception(str(e))
+            logger.exception(f"Change Error: {e}")
             raise WorkloadServiceError(e.err) from e
 
     @override
@@ -75,7 +75,7 @@ class KubernetesWorkload(WorkloadBase):
                 return
             self.container.stop(self.service)
         except ChangeError as e:
-            logger.exception(str(e))
+            logger.exception(f"Change Error: {e}")
             raise WorkloadServiceError(e.err) from e
         except ConnectionError as e:
             logger.exception(f"Connection Error: {e}")
@@ -122,6 +122,12 @@ class KubernetesWorkload(WorkloadBase):
         except ConnectionError as e:
             logger.exception(f"Connection Error: {e}")
             raise WorkloadServiceError(*e.args) from e
+        except ChangeError as e:
+            logger.exception(f"Change Error: {e}")
+            raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
 
     @property
     def _service_exists(self) -> bool:
@@ -146,6 +152,10 @@ class KubernetesWorkload(WorkloadBase):
         try:
             return self.container.exists(path)
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -168,6 +178,10 @@ class KubernetesWorkload(WorkloadBase):
             with self.container.pull(path) as f:
                 return f.read().split("\n")
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -195,6 +209,13 @@ class KubernetesWorkload(WorkloadBase):
                 group=self.users.group,
             )
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except ChangeError as e:
+            logger.exception(f"Change Error: {e}")
+            raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -210,6 +231,13 @@ class KubernetesWorkload(WorkloadBase):
         try:
             self.container.remove_path(path)
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except ChangeError as e:
+            logger.exception(f"Change Error: {e}")
+            raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -227,6 +255,13 @@ class KubernetesWorkload(WorkloadBase):
             license_file = self.container.pull(path=src)
             destination.write_text(license_file.read())
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except ChangeError as e:
+            logger.exception(f"Change Error: {e}")
+            raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -246,6 +281,10 @@ class KubernetesWorkload(WorkloadBase):
                 .get("environment", {})
             )
         except ConnectionError as e:
+            logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
         return env
 
@@ -371,6 +410,9 @@ class KubernetesWorkload(WorkloadBase):
             return self.container.get_service(self.service).is_running()
         except ConnectionError as e:
             logger.exception(f"Connection Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
             raise WorkloadServiceError(*e.args) from e
 
     @override

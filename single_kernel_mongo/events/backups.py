@@ -212,7 +212,13 @@ class BackupEventsHandler(Object):
             )
             return
 
-        if not manager.workload.active():
+        try:
+            is_active = manager.workload.active()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while checking PBM service status.")
+            is_active = False
+
+        if not is_active:
             defer_event_with_info_log(
                 logger,
                 event,
