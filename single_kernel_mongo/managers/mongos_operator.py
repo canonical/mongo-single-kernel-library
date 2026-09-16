@@ -161,6 +161,9 @@ class MongosOperator(OperatorProtocol, Object):
         # Setup systemd overrides to prevent mongos/mongodb from cutting connections
         self.setup_systemd_overrides()
 
+        if content := self.state.get_keyfile():
+            self.update_keyfile(content)
+
         # Update licenses
         self.handle_licenses()
         self.set_permissions()
@@ -339,6 +342,11 @@ class MongosOperator(OperatorProtocol, Object):
             if not self.state.cluster.config_server_uri:
                 logger.error("Cannot start mongos without a config server db")
                 raise MissingConfigServerError()
+            keyfile = self.state.get_keyfile()
+            if not keyfile:
+                logger.error("Cannot start mongos without a keyfile")
+                raise MissingConfigServerError()
+            self.update_keyfile(keyfile)
             self.mongos_config_manager.configure_and_restart(force=force)
         except WorkloadServiceError as e:
             logger.error("An exception occurred when starting mongos agent, error: %s.", str(e))
