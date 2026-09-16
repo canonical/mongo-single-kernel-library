@@ -239,7 +239,11 @@ class LifecycleEventsHandler(Object):
 
     def on_update_status(self, event: UpdateStatusEvent):
         """Update Status Event."""
-        self.dependent.update_status()
+        try:
+            self.dependent.update_status()
+        except WorkloadServiceError:
+            logger.warning("Error occurred while updating status.")
+            return
 
     def on_secret_changed(self, event: SecretChangedEvent):
         """Secret changed event."""
@@ -310,7 +314,7 @@ class LifecycleEventsHandler(Object):
         """Relation departed event."""
         try:
             self.dependent.peer_leaving(departing_unit=event.departing_unit)
-        except (NotReadyError, PyMongoError):
+        except (NotReadyError, PyMongoError, WorkloadServiceError):
             logger.info(f"Deferring {event}: Not ready yet.")
             event.defer()
             return

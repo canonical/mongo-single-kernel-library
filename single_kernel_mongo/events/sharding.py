@@ -101,6 +101,7 @@ class ConfigServerEventHandler(Object):
             NotDrainedError,
             NotReadyError,
             BalancerNotEnabledError,
+            WorkloadServiceError,
             PyMongoError,
             OperationFailure,
         ) as e:
@@ -206,6 +207,7 @@ class ShardEventHandler(Object):
             PyMongoError,
             RollingOpsNoRelationError,
             WaitingForCertificatesError,
+            WorkloadServiceError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -235,10 +237,13 @@ class ShardEventHandler(Object):
             WorkloadServiceError,
         ):
             event.defer()
+            return
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
         except WaitingForSecretsError:
             logger.info("Missing secrets, ignoring")
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""

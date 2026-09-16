@@ -1239,6 +1239,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Still draining shard.")
             except NotReadyError:
                 logger.warning("Not ready.")
+            except WorkloadServiceError:
+                logger.warning("Workload service error.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""

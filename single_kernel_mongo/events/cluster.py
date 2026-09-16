@@ -195,12 +195,14 @@ class ClusterMongosEventHandler(Object):
             WorkloadServiceError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
+            return
         except (
             WaitingForSecretsError,
             ClusterTLSError,  # We don't defer on the failed hook checks because we know it will solve later.
             NonDeferrableFailedHookChecksError,
         ) as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
         """Relation changed event handler.
