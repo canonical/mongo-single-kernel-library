@@ -1151,6 +1151,7 @@ async def secondary_mongo_uris_with_sync_delay(
     Returns the ascending list of Secondaries, the first secondary is the
     one with the lowest data sync delay.
     """
+    assert ops_test.model
     if substrate == "lxd":
         hosts = {
             get_unit_id(unit.name): await get_address_of_unit(
@@ -1160,7 +1161,9 @@ async def secondary_mongo_uris_with_sync_delay(
         }
     else:
         hosts = {
-            get_unit_id(unit.name): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints"
+            get_unit_id(
+                unit.name
+            ): f"{unit.name.replace('/', '-')}.mongodb-k8s-endpoints.{ops_test.model.name}.svc.cluster.local"
             for unit in ops_test.model.applications[app_name].units
         }
 
