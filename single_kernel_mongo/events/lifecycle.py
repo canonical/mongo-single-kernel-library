@@ -330,6 +330,11 @@ class LifecycleEventsHandler(Object):
                 str(type(event)),
                 f"Workload is not ready: {e}",
             )
+            self.state.statuses.add(
+                CharmStatuses.MONGODB_NOT_INSTALLED.value,
+                scope="app",
+                component=self.name,
+            )
 
     def on_storage_detaching(self, event: StorageDetachingEvent):
         """Storage Detaching Event."""

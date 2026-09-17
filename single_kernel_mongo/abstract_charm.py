@@ -120,8 +120,10 @@ class AbstractMongoCharm(AbstractManagerStatus[CharmState], Generic[T, U], Charm
 
     def on_install(self, _):
         """First install event handler."""
-        self.status_handler.set_running_status(CharmStatuses.INSTALLING_MONGODB.value, scope="unit")
         if self.substrate == Substrates.VM:
+            self.status_handler.set_running_status(
+                CharmStatuses.INSTALLING_MONGODB.value, scope="unit"
+            )
             logger.info("Restarting snapd before installing the MongoDB workload snap")
             self.workload.exec(["systemctl", "restart", "snapd.service"])
             self._wait_for_snapd()
