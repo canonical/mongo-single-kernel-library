@@ -40,7 +40,7 @@ logger = getLogger(__name__)
 
 # K8s storage is limited in self-hosted runners, so we use smaller storage for sharding
 # tests to avoid running out of space. Keep the per-unit total under 2 GiB.
-SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "256M"}
+SMALL_K8S_STORAGE = {"data": "1G", "logs": "512M", "archive": "10M", "temp": "200M"}
 
 MONGODB_CHARM_NAME = "mongodb"
 SHARD_ONE_APP_NAME = "shard-one"
