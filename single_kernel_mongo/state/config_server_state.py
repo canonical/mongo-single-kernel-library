@@ -154,7 +154,7 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     @config_server_replset.setter
     def config_server_replset(self, value: str):
-        """Sets the auth-updated field."""
+        """Sets the cfgsvr-replset field."""
         self.update({AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: value})
 
     @property
@@ -166,7 +166,7 @@ class AppShardingComponentState(AbstractRelationState[Data]):
 
     @shard_replset.setter
     def shard_replset(self, value: str):
-        """Sets the auth-updated field."""
+        """Sets the shard-replset field."""
         self.update({AppShardingComponentKeys.SHARD_REPLICA_SET.value: value})
 
 
