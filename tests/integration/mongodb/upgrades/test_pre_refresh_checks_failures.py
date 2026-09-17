@@ -27,6 +27,10 @@ from tests.integration.helpers.types import Substrate
 logger = logging.getLogger(__name__)
 
 
+# TODO: Re-enable on Kubernetes after a new release is available on 8/edge.
+pytestmark = pytest.mark.skip_if_substrate(Substrate.k8s)
+
+
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, substrate: Substrate, base_app_name) -> None:
     """Build and deploy one unit of MongoDB."""

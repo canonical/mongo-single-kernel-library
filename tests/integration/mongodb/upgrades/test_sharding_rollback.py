@@ -38,6 +38,10 @@ from tests.integration.mongodb.upgrades.test_rollback import UPGRADE_TIMEOUT
 logger = logging.getLogger()
 
 
+# TODO: Re-enable on Kubernetes after a new release is available on 8/edge.
+pytestmark = pytest.mark.skip_if_substrate(Substrate.k8s)
+
+
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(
     ops_test: OpsTest, substrate: Substrate, mongodb_charm, mongod_resource
