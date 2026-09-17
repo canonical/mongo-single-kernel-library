@@ -1,0 +1,69 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:jammy/continuous-write-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  continuous-write/0 [allocating] waiting: installing agent
+[32mINFO    [0m integration.helpers.upgrade:upgrade.py:52 Upgrading config-server
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  config-server/1 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  config-server/2 [idle] active: MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  config-server/1 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  config-server/2 [idle] active: MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  config-server/1 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+[32mINFO    [0m integration.helpers.upgrade:upgrade.py:68 Calling resume-refresh for config-server
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  01:43:21Z
+
+App               Version  Status   Scale  Charm             Channel   Rev  Address         Exposed  Message
+config-server     6.0.28   blocked      3  mongodb-k8s                   0  10.152.183.89   no       Refreshing. Verify highest unit is healthy & run `resume-refresh` action. To rollback, `juju refresh` to last revision.
+continuous-write           waiting      1  continuous-write              0  10.152.183.118  no       
+shard-one         6.0.24   active       3  mongodb-k8s       6/stable  117  10.152.183.141  no       
+shard-two         6.0.24   active       1  mongodb-k8s       6/stable  117  10.152.183.149  no       
+
+Unit                 Workload     Agent  Address     Ports  Message
+config-server/0      active       idle   10.1.53.14         MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+config-server/1*     maintenance  idle   10.1.53.32         
+config-server/2      active       idle   10.1.53.31         MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+continuous-write/0*  waiting      idle   10.1.53.30         
+shard-one/0*         active       idle   10.1.53.24         
+shard-one/1          active       idle   10.1.53.27         
+shard-one/2          active       idle   10.1.53.28         Primary.
+shard-two/0*         active       idle   10.1.53.29         Primary.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-config-server-1: 01:28:17 ERROR unit.config-server/1.juju-log Not reconfiguring: error=
+unit-shard-one-0: 01:28:18 ERROR unit.shard-one/0.juju-log database-peers:4: Not reconfiguring: error=
+unit-config-server-1: 01:28:20 ERROR unit.config-server/1.juju-log Not reconfiguring: error=New replica set configuration version and term must be greater than old, but {version: 3, term: 1} is not greater than {version: 3, term: 1} for replica set config-server, full error: {'ok': 0.0, 'errmsg': 'New replica set configuration version and term must be greater than old, but {version: 3, term: 1} is not greater than {version: 3, term: 1} for replica set config-server', 'code': 103, 'codeName': 'NewReplicaSetConfigurationIncompatible', 'lastCommittedOpTime': Timestamp(1789608500, 1), '$clusterTime': {'clusterTime': Timestamp(1789608500, 1), 'signature': {'hash': b'L\xcc\x00\xdcR\xc4\xcfO8\x98dI\x16\xec\x8d\xcf\xa8\xa3[\xf8', 'keyId': 7686309911424139289}}, 'operationTime': Timestamp(1789608500, 1)}
+unit-shard-one-0: 01:29:33 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aab427c7ce4f01ad317454a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0037475449998964905>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0010615329999836831>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0019365669998023805>]>
+unit-shard-one-0: 01:29:37 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aab42807ce4f01ad317454b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0011492149999412504>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6aab4279ba9b11f2eb148091'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12918}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6aab4279e70160a2dc0720d6'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12637}")>]>
+unit-shard-one-0: 01:29:57 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aab42944857675d35ab9551, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0036436779998894053>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0021092659999339958>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004743819999930565>]>
+unit-shard-one-0: 01:30:02 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aab42994857675d35ab9552, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0006519989999560494>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6aab42932c2b3f7f9f8f1d00'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13298, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1789608597, 3), 'signature': {'hash': b'\\xba$\\xe6\\x19\\x05N\\x8b[i?)_\\x0e\\x19\\n\\x03\\x92@\\x82\\t', 'keyId': 7686309911424139289}}, 'operationTime': Timestamp(1789608590, 2)}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6aab42943b7c9406a7b45f71'), 'counter': 5}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14086, 'lastCommittedOpTime': Timestamp(0, 0), '$clusterTime': {'clusterTime': Timestamp(1789608597, 3), 'signature': {'hash': b'\\xba$\\xe6\\x19\\x05N\\x8b[i?)_\\x0e\\x19\\n\\x03\\x92@\\x82\\t', 'keyId': 7686309911424139289}}, 'operationTime': Timestamp(1789608590, 2)}")>]>
+unit-shard-one-0: 01:30:23 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aab42ae7bb226a117315ec0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0004642060000605852>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005529699999442528>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005988189998333837>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
