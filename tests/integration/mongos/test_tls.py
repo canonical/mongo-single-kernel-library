@@ -5,13 +5,13 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     TIMEOUT,
     check_status_detail,
     wait_for_mongodb_units_blocked,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
     assert_mongos_tls_disabled,
     assert_mongos_tls_enabled,
     build_cluster,
@@ -22,12 +22,12 @@ from ..helpers.mongos import (
     rotate_and_verify_certs,
     toggle_tls_mongos,
 )
-from ..helpers.tls import (
+from tests.integration.helpers.tls import (
     DIFFERENT_CERTIFICATES_APP_NAME,
     TLS_CERTIFICATES_APP_NAME,
     TLS_RELATION_NAME,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

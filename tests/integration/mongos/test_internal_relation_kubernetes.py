@@ -5,7 +5,7 @@
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers.common import (
+from tests.integration.helpers.common import (
     MONGOS_APP_NAME,
     MONGOS_PORT,
     execute_on_mongod,
@@ -15,7 +15,7 @@ from ..helpers.common import (
     get_relation_username_password,
     is_relation_joined,
 )
-from ..helpers.mongos import (
+from tests.integration.helpers.mongos import (
     CLIENT_RELATION,
     MONGOS_CLIENT_APPLICATION,
     MONGOS_RELATION,
@@ -28,7 +28,7 @@ from ..helpers.mongos import (
     get_mongos_user_password,
     is_mongos_running,
 )
-from ..helpers.types import Substrate
+from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail

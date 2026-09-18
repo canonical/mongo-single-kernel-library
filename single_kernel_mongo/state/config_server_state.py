@@ -24,6 +24,9 @@ class AppShardingComponentKeys(str, Enum):
     KEY_FILE = "key-file"
     INT_CA_SECRET = "int-ca-secret"  # nosec: B105
     BACKUP_CA_SECRET = "backup-ca-secret"  # nosec: B105
+    CONFIG_SERVER_REPLICA_SET = "cfgsvr-replset"
+    SHARD_REPLICA_SET = "shard-replset"
+    AUTH_UPDATED = "auth-updated"
     SHARD_INTEGRATED = "shard-integrated"
 
     # We don't use those except to check if we've received credentials
@@ -113,6 +116,20 @@ class AppShardingComponentState(AbstractRelationState[Data]):
         )
 
     @property
+    def auth_updated(self) -> bool:
+        """Has the shard updated its host?."""
+        if not self.relation:
+            return False
+        return json.loads(
+            self.relation_data.get(AppShardingComponentKeys.AUTH_UPDATED.value, "false")
+        )
+
+    @auth_updated.setter
+    def auth_updated(self, value: bool):
+        """Sets the auth-updated field."""
+        self.update({AppShardingComponentKeys.AUTH_UPDATED.value: json.dumps(value)})
+
+    @property
     def shard_integrated(self) -> bool:
         """Returns the shard integrated flag."""
         if not self.relation:
@@ -125,6 +142,32 @@ class AppShardingComponentState(AbstractRelationState[Data]):
     def shard_integrated(self, value: bool) -> None:
         """Sets the shard integrated flag."""
         self.update({AppShardingComponentKeys.SHARD_INTEGRATED.value: json.dumps(value)})
+
+    @property
+    def config_server_replset(self) -> str | None:
+        """The name of the replica set."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(
+            AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value, None
+        )
+
+    @config_server_replset.setter
+    def config_server_replset(self, value: str):
+        """Sets the cfgsvr-replset field."""
+        self.update({AppShardingComponentKeys.CONFIG_SERVER_REPLICA_SET.value: value})
+
+    @property
+    def shard_replset(self) -> str | None:
+        """The name of the replica set."""
+        if not self.relation:
+            return None
+        return self.relation_data.get(AppShardingComponentKeys.SHARD_REPLICA_SET.value, None)
+
+    @shard_replset.setter
+    def shard_replset(self, value: str):
+        """Sets the shard-replset field."""
+        self.update({AppShardingComponentKeys.SHARD_REPLICA_SET.value: value})
 
 
 class UnitShardingComponentState(AbstractRelationState[Data]):
