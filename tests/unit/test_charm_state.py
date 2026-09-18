@@ -187,7 +187,7 @@ def test_shard_local_auth_restrictions_include_config_server_hosts(
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
+def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
@@ -207,7 +207,7 @@ def test_config_server_local_auth_restrictions_exclude_shard_hosts_on_microk8s(
 
 
 @pytest.mark.skip_if_substrate("lxd")
-def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_microk8s(
+def test_shard_local_auth_restrictions_exclude_config_server_hosts_on_k8s(
     harness: Harness[MongoTestCharm], mongodb_name: str
 ):
     harness.set_leader(True)
