@@ -118,7 +118,7 @@ def mock_rollingops_manager(mocker):
 
 @pytest.fixture
 def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harness:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm as TestCharm
     else:
         from tests.charms.mongodb_k8s_test_charm.src.charm import (
@@ -130,7 +130,7 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
     metadata = str(yaml.safe_load((mongod_base_path / "metadata.yaml").read_text()))
 
     harness = Harness(TestCharm, meta=metadata, actions=actions, config=config)
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         mongo_resource = {
             "registrypath": "mongo:4.4",
         }
@@ -145,7 +145,7 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
 
     harness.begin()
 
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         harness.charm.operator.observability_manager = None
         container = harness.model.unit.get_container("mongod")
         harness.set_can_connect(container, True)
@@ -160,14 +160,14 @@ def harness(mock_refresh, substrate: Substrate, mongod_base_path: Path) -> Harne
 
 @pytest.fixture
 def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -> Harness:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         from tests.charms.mongos_test_charm.src.charm import MongosTestCharm as TestCharm
     else:
         from tests.charms.mongos_k8s_test_charm.src.charm import (
             MongosKubernetesTestCharm as TestCharm,
         )
 
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         config = str(yaml.safe_load((mongos_base_path / "config.yaml").read_text()))
     else:
         config = None
@@ -185,7 +185,7 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
     harness.add_network("10.0.0.10")
 
     harness.begin()
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         container = harness.model.unit.get_container("mongos")
         harness.set_can_connect(container, True)
 
@@ -194,14 +194,14 @@ def mongos_harness(mock_refresh, substrate: Substrate, mongos_base_path: Path) -
 
 @pytest.fixture
 def mongodb_name(substrate: Substrate):
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         return "mongodb"
     return "mongodb-k8s"
 
 
 @pytest.fixture
 def mongos_name(substrate: Substrate):
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         return "mongos"
     return "mongos-k8s"
 
@@ -223,7 +223,7 @@ def get_charm_internal_revision(mocker, substrate: Substrate):
         "single_kernel_mongo.core.version_checker.VersionChecker.get_cluster_mismatched_revision_status",
         return_value=None,
     )
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.get_partition", return_value=0)
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.set_partition", return_value=0)
         mocker.patch("single_kernel_mongo.managers.k8s.K8sManager.get_pod", return_value=0)
@@ -258,7 +258,7 @@ def setup_secrets(harness: Harness) -> None:
 
 @pytest.fixture
 def short_mock_fs_interactions(mocker, substrate: Substrate) -> None:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         mocker.patch(
             "charmlibs.snap.Snap.present",
             new_callable=mocker.PropertyMock,
@@ -302,21 +302,21 @@ def mock_fs_interactions(mocker, short_mock_fs_interactions) -> None:
 
 @pytest.fixture
 def mongodb_hostname(substrate: Substrate) -> str:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         return "10.0.0.1"
     return f"mongodb-k8s-0.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
 
 
 @pytest.fixture
 def second_hostname(substrate: Substrate) -> str:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         return "10.0.0.2"
     return f"mongodb-k8s-1.mongodb-k8s-endpoints.{MODEL_NAME}.svc.{CLUSTER_NAME}"
 
 
 @pytest.fixture
 def mongodb_ctx(substrate: Substrate):
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         from tests.charms.mongodb_test_charm.src.charm import MongoTestCharm as TestCharm
     else:
         from tests.charms.mongodb_k8s_test_charm.src.charm import (
@@ -328,14 +328,14 @@ def mongodb_ctx(substrate: Substrate):
 
 @pytest.fixture
 def mongodb_container(substrate: Substrate) -> set[ops.testing.Container]:
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         return set()
     return {ops.testing.Container(name="mongod", can_connect=True)}
 
 
 @pytest.fixture
 def mongos_ctx(substrate: Substrate):
-    if substrate == Substrate.lxd:
+    if substrate == "lxd":
         from tests.charms.mongos_test_charm.src.charm import MongosTestCharm as TestCharm
     else:
         from tests.charms.mongos_k8s_test_charm.src.charm import (
@@ -362,7 +362,7 @@ def mock_getfqdn(name=""):
 
 @pytest.fixture(autouse=True)
 def patched_addrinfo(mocker, substrate: Substrate):
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         with mocker.patch("socket.getaddrinfo", side_effect=mock_addrinfo) as addrinfo:
             yield addrinfo
     else:
@@ -371,7 +371,7 @@ def patched_addrinfo(mocker, substrate: Substrate):
 
 @pytest.fixture(autouse=True)
 def patched_getfqdn(mocker, substrate: Substrate):
-    if substrate == Substrate.k8s:
+    if substrate == "microk8s":
         with mocker.patch(
             "socket.getfqdn",
             side_effect=mock_getfqdn,
