@@ -72,7 +72,7 @@ def test_initialise_user(harness: Harness[MongoTestCharm], mocker, user):
         "single_kernel_mongo.utils.mongo_connection.MongoConnection.create_user",
     )
 
-    getattr(harness.charm.operator.mongo_manager, "initialise_user")(user)
+    getattr(harness.charm.operator.mongo_manager, "_initialise_user")(user)
     config = getattr(
         harness.charm.operator.state, f"{user.username.replace('charmed-', '')}_config"
     )
@@ -131,7 +131,7 @@ def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mo
 
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):
     harness.set_leader(True)
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mock_create_user = mocker.patch(
             "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command"
         )
@@ -140,7 +140,7 @@ def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, subs
             "single_kernel_mongo.core.k8s_workload.KubernetesWorkload.run_bin_command"
         )
 
-    getattr(harness.charm.operator.mongo_manager, "initialise_charmed_operator_user")()
+    getattr(harness.charm.operator.mongo_manager, "_initialise_charmed_operator_user")()
     config = getattr(harness.charm.operator.state, "operator_config")
     cmd = [
         "--quiet",

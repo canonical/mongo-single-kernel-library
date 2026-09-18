@@ -398,14 +398,18 @@ class MongoDBOperator(OperatorProtocol, Object):
                     state,
                 )
                 return
-        except ValueError as e:
+        except (ValueError, WorkloadServiceError, WorkloadExecError) as e:
             logger.warning(
                 f"Encryption at rest may be degraded. Error: {e}. This must be fixed first."
             )
             return
 
-        self._configure_workloads()
-        self.start_charm_services()
+        try:
+            self._configure_workloads()
+            self.start_charm_services()
+        except (WorkloadServiceError, WorkloadExecError) as e:
+            logger.warning(f"Error occurred while configuring workloads. Error: {e}.")
+            return
 
         if self.charm.unit.is_leader():
             # Update the version across all relations so that we can notify other units
@@ -1102,7 +1106,6 @@ class MongoDBOperator(OperatorProtocol, Object):
                 f"{self.workload.paths.common_path}",
             ]
         )
-        self.workload.exec(["chmod", "1777", f"{self.workload.paths.tmp_path}"])
 
     @override
     def prepare_storage_for_shutdown(self) -> None:  # noqa: C901
@@ -1236,6 +1239,8 @@ class MongoDBOperator(OperatorProtocol, Object):
                 logger.warning("Still draining shard.")
             except NotReadyError:
                 logger.warning("Not ready.")
+            except WorkloadServiceError:
+                logger.warning("Workload service error.")
 
     def update_single_user_password(self, user: MongoDBUser, new_password: str) -> None:
         """Set password in Mongod and restart the appropriate services."""
