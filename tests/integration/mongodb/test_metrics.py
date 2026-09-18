@@ -108,12 +108,12 @@ async def test_endpoints_network_cut(
 
     hostname = unit_hostname(juju, leader_name)
 
-    cut_network_from_unit(substrate, juju.model, hostname, ip_change=True)
+    cut_network_from_unit(substrate, juju.model, hostname, ip_change=False)
     # sleep for twice the median election time
     time.sleep(MEDIAN_REELECTION_TIME * 2)
 
     # wait until network is reestablished for the unit
-    restore_network_to_unit(substrate, juju.model, hostname, ip_change=True)
+    restore_network_to_unit(substrate, juju.model, hostname, ip_change=False)
     wait_network_restore(
         juju,
         substrate,
