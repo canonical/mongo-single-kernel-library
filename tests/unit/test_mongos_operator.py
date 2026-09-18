@@ -20,7 +20,7 @@ def test_start(
     mock_fs_interactions,
     substrate: Substrate,
 ):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mocked_copy = mocker.patch("single_kernel_mongo.core.vm_workload.VMWorkload.copy_to_unit")
     else:
         mocked_copy = mocker.patch(
@@ -35,7 +35,7 @@ def test_start(
         MongosStatuses.MISSING_CONF_SERVER_REL.value
     )
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mocked_copy.assert_has_calls(
             [
                 mocker.call(
@@ -166,7 +166,7 @@ def test_proxy_information_to_client_and_handler_connectivity(
     manager = mongos_harness.charm.operator.cluster_manager
     manager.share_credentials_to_clients("charmed-operator", "password")
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         mocker.patch(
             "single_kernel_mongo.utils.mongo_connection.MongoConnection.user_exists",
             return_value=False,
@@ -184,7 +184,7 @@ def test_proxy_information_to_client_and_handler_connectivity(
         databag,
     )
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         assert mongos_harness.charm.operator.state.app_peer_data.database == expected_db
         assert (
             mongos_harness.charm.operator.state.app_peer_data.extra_user_roles

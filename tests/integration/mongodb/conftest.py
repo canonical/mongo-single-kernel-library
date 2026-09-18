@@ -22,7 +22,7 @@ def base_app_name(mongod_metadata) -> str:
 
 @pytest.fixture(scope="module")
 def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, Any]:
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         deploy_chaos_mesh(ops_test.model.info.name)
         yield
         destroy_chaos_mesh(ops_test.model.info.name)

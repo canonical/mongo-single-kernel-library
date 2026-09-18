@@ -87,7 +87,7 @@ async def test_endpoints_network_cut(ops_test: OpsTest, substrate: Substrate, ch
     unit_ip = await get_address_of_unit(
         ops_test, substrate, get_unit_id(unit.name), unit.name.split("/")[0]
     )
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         hostname = await unit_hostname(ops_test, unit.name)
     else:
         hostname = unit.name

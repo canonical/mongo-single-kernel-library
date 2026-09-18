@@ -14,7 +14,6 @@ from tests.integration.helpers.common import (
     TIMEOUT,
     check_app_status,
     stop_continous_writes,
-    wait_for_mongodb_units_blocked,
 )
 from tests.integration.helpers.sharding import (
     CLUSTER_COMPONENTS,
@@ -25,6 +24,7 @@ from tests.integration.helpers.sharding import (
     SHARD_TWO_APP_NAME,
     SHARD_TWO_COLL_NAME,
     SHARD_TWO_DB_NAME,
+    SMALL_K8S_STORAGE,
     count_shard_writes,
     deploy_cluster_components,
     integrate_sharding_components,
@@ -54,6 +54,7 @@ async def test_build_and_deploy(
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
         channel="8/edge",
+        storage=SMALL_K8S_STORAGE if substrate == Substrate.k8s else None,
     )
     await ops_test.model.wait_for_idle(
         apps=CLUSTER_COMPONENTS,
@@ -90,11 +91,28 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     revision = "test/0.0.0+dirty"
+    shard_revision_messages = {
+        app_name: (
+            f"Charm revision ({ops_test.model.applications[app_name].charm_url.rsplit('-', 1)[-1]}) "
+            f"is not up-to date with config-server ({revision}-locally built)."
+        )
+        for app_name in (SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME)
+    }
 
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME),
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
+    await asyncio.gather(
+        check_app_status(
+            ops_test,
+            SHARD_ONE_APP_NAME,
+            status="blocked",
+            message=shard_revision_messages[SHARD_ONE_APP_NAME],
+        ),
+        check_app_status(
+            ops_test,
+            SHARD_TWO_APP_NAME,
+            status="blocked",
+            message=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
         check_app_status(
             ops_test,
             CONFIG_SERVER_APP_NAME,
@@ -112,8 +130,13 @@ async def test_rollback_on_shard_and_config_server(
     )
 
     # Wait for statuses to settle down
-    asyncio.gather(
-        wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME),
+    await asyncio.gather(
+        check_app_status(
+            ops_test,
+            SHARD_TWO_APP_NAME,
+            status="blocked",
+            message=shard_revision_messages[SHARD_TWO_APP_NAME],
+        ),
         ops_test.model.wait_for_idle(apps=[SHARD_ONE_APP_NAME], timeout=1000, idle_period=20),
         check_app_status(
             ops_test,

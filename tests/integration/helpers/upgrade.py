@@ -6,6 +6,7 @@ import logging
 
 import tomllib
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from tests.integration.helpers.common import (
     CHARMED_BACKUP_USERNAME,
@@ -31,9 +32,19 @@ USERNAME_MAPPING = {
 }
 
 
+@retry(
+    retry=retry_if_exception_type(AssertionError),
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(10),
+    reraise=True,
+)
 async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
-    """Get the workload version of the deployed router charm."""
-    return_code, output, _ = await ops_test.juju(
+    """Get the workload version of the deployed router charm.
+
+    Retries 5 times since `juju ssh` can fail transiently (e.g. the exec proxy path isn't
+    ready yet on k8s).
+    """
+    return_code, output, stderr = await ops_test.juju(
         "ssh",
         unit_name,
         "sudo",
@@ -41,7 +52,7 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
         f"/var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/refresh_versions.toml",
     )
 
-    assert return_code == 0
+    assert return_code == 0, f"failed to read refresh_versions.toml on {unit_name}: {stderr}"
     data = tomllib.loads(output)
     return data["workload"]
 
@@ -49,7 +60,7 @@ async def get_workload_version(ops_test: OpsTest, unit_name: str) -> str:
 async def refresh_charm(
     ops_test: OpsTest, substrate: Substrate, app_name: str, mongo_charm: str, mongod_resource: dict
 ):
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[app_name].refresh(path=mongo_charm)
     else:
         await ops_test.model.applications[app_name].refresh(
@@ -105,15 +116,15 @@ async def assert_successful_run_upgrade_sequence(
 
     if "resume-refresh" in get_juju_status(ops_test.model.name, app_name):
         logger.info(f"Calling resume-refresh for {app_name}")
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             unit = refresh_order[1]
         else:
             unit = leader_unit
 
         action = await unit.run_action("resume-refresh")
         await action.wait()
-        if (substrate == "lxd") or (
-            substrate == "microk8s" and leader_id != get_unit_id(refresh_order[1].name)
+        if (substrate == Substrate.lxd) or (
+            substrate == Substrate.k8s and leader_id != get_unit_id(refresh_order[1].name)
         ):
             assert action.status == "completed", "resume-refresh failed, expected to succeed."
 

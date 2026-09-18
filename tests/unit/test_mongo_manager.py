@@ -131,7 +131,7 @@ def test_update_cluster_ip_source_allowlist(harness: Harness[MongoTestCharm], mo
 
 def test_initialise_operator_user(harness: Harness[MongoTestCharm], mocker, substrate: Substrate):
     harness.set_leader(True)
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         mock_create_user = mocker.patch(
             "single_kernel_mongo.core.vm_workload.VMWorkload.run_bin_command"
         )

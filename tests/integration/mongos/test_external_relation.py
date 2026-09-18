@@ -60,7 +60,7 @@ async def test_build_and_deploy(
         substrate,
         app_name=MONGOS_APP_NAME,
         mongod_resource=mongos_resource,
-        num_units=0 if substrate == "lxd" else 1,
+        num_units=0 if substrate == Substrate.lxd else 1,
     )
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR_APP_NAME, SHARD_ONE_APP_NAME, CONFIG_SERVER_APP_NAME],
@@ -68,7 +68,7 @@ async def test_build_and_deploy(
         raise_on_blocked=False,
     )
 
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         await ops_test.model.applications[MONGOS_APP_NAME].set_config(
             {"expose-external": "nodeport"}
         )
@@ -89,7 +89,7 @@ async def test_mongos_starts_with_config_server(ops_test: OpsTest, substrate: Su
 
     await ops_test.model.integrate(DATA_INTEGRATOR_APP_NAME, MONGOS_APP_NAME)
     await wait_for_mongodb_units_blocked(
-        ops_test, substrate, MONGOS_APP_NAME, timeout=300, subordinate=(substrate == "lxd")
+        ops_test, substrate, MONGOS_APP_NAME, timeout=300, subordinate=(substrate == Substrate.lxd)
     )
     # prepare sharded cluster
     await ops_test.model.wait_for_idle(
@@ -146,7 +146,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
     first_mongos_host = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
 
     # in order to scale mongos, we need to scale the host
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].add_unit(count=1)
     else:
         await ops_test.model.applications[MONGOS_APP_NAME].scale(scale_change=1)
@@ -159,7 +159,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         secret_uri = await generate_mongos_uri(
             ops_test, substrate, auth=True, app_name=DATA_INTEGRATOR_APP_NAME, external=True
         )
-        if substrate == "lxd":
+        if substrate == Substrate.lxd:
             mongos_ip = mongos_unit.public_address
         else:
             mongos_ip = get_k8s_public_ip()
@@ -175,7 +175,7 @@ async def test_mongos_can_scale(ops_test: OpsTest, substrate: Substrate) -> None
         )
         assert mongos_running, f"Mongos is not currently running on unit {mongos_unit}."
 
-    if substrate == "lxd":
+    if substrate == Substrate.lxd:
         # destroy the first unit so the hosts are different from when the application was deployed
         first_mongos_host_public_address = first_mongos_host.public_address
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].destroy_unit(

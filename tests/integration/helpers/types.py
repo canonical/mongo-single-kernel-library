@@ -1,6 +1,11 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from typing import Literal, TypeAlias
+from enum import StrEnum
 
-Substrate: TypeAlias = Literal["lxd", "microk8s"]
+
+class Substrate(StrEnum):
+    """The substrate a charm/test is running against."""
+
+    lxd = "lxd"
+    k8s = "k8s"
