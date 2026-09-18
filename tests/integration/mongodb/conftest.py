@@ -4,6 +4,7 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
+import jubilant
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -26,6 +27,17 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
         deploy_chaos_mesh(ops_test.model.info.name)
         yield
         destroy_chaos_mesh(ops_test.model.info.name)
+    else:
+        yield
+
+
+@pytest.fixture(scope="module")
+def jubilant_chaos_mesh(juju: jubilant.Juju, substrate: Substrate) -> Generator[None, Any, Any]:
+    assert juju.model
+    if substrate == "microk8s":
+        deploy_chaos_mesh(juju.model)
+        yield
+        destroy_chaos_mesh(juju.model)
     else:
         yield
 
