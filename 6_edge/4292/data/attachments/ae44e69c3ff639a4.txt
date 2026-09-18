@@ -1,0 +1,1122 @@
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:67 Wait for refresh to fail
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:79 Re-refresh the charm
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:90 Running resume-refresh on the leader unit
+[32mINFO    [0m integration.mongodb.upgrades.test_rollback:test_rollback.py:95 Wait for the charm to be rolled back
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  mongodb-k8s/1 [executing] maintenance: stopping charm software
+  mongodb-k8s/2 [idle] active: MongoDB 6.0.28 running;  Charm revision 1+7204770-dirty.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  mongodb-k8s/1 [idle] maintenance: 
+  mongodb-k8s/2 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  mongodb-k8s/1 [executing] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+  mongodb-k8s/2 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] active: MongoDB 6.0.24 running (restart pending);  Charm revision 1+rev113-1-g0c6ea4e4a-dirty.
+  mongodb-k8s/1 [executing] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+  mongodb-k8s/2 [executing] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: stopping charm software
+  mongodb-k8s/1 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+  mongodb-k8s/2 [executing] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mongodb-k8s/0 [idle] maintenance: stopping charm software
+  mongodb-k8s/1 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+  mongodb-k8s/2 [idle] blocked: Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  01:55:07Z
+
+App          Version  Status       Scale  Charm        Channel  Rev  Address         Exposed  Message
+mongodb-k8s  6.0.28   maintenance      3  mongodb-k8s             1  10.152.183.145  no       Refreshing...
+
+Unit            Workload  Agent  Address      Ports  Message
+mongodb-k8s/0*  error     idle   10.1.179.85         hook failed: "stop"
+mongodb-k8s/1   blocked   idle   10.1.179.84         Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+mongodb-k8s/2   blocked   idle   10.1.179.83         Unhealthy after refresh. Rollback to previous revision with `juju refresh`.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-mongodb-k8s-2: 01:43:45 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/apis/apps/v1/namespaces/testing/statefulsets/mongodb-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 341, in get_statuses
+    if not self._upgrade:
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 309, in _upgrade
+    return self.upgrade_backend(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/kubernetes_upgrades.py", line 46, in __init__
+    self.k8s_manager.get_partition()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 93, in get_partition
+    return self._get_partition(self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 279, in _get_partition
+    partition = self.client.get(res=StatefulSet, name=self.app_name)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:43:45 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:43:51 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:43:52 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:44:03 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:44:03 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:44:24 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:44:24 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:05 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:06 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:15 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:16 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:17 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:18 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:19 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:19 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:20 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:20 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:21 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:22 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:23 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:23 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:24 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:24 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:25 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:25 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:26 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:27 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:28 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:29 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:29 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:30 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:31 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:32 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:33 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:34 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:35 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:36 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:37 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:38 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:39 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:40 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:41 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:45:42 ERROR unit.mongodb-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 235, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/mongodb-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/src/charm.py", line 25, in <module>
+    main(MongoDBK8sCharm)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 472, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 310, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/abstract_charm.py", line 73, in __init__
+    self.operator = self.operator_type(self)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongodb_operator.py", line 176, in __init__
+    self.mongo_manager = MongoManager(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/mongo.py", line 86, in __init__
+    self.k8s.get_pod()
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 77, in get_pod
+    return self._get_pod(pod_name, self.get_ttl_hash())
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/k8s.py", line 241, in _get_pod
+    return self.client.get(
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 230, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 311, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 251, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-mongodb-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 237, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Unauthorized
+unit-mongodb-k8s-2: 01:45:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 1
+unit-mongodb-k8s-2: 01:47:52 ERROR unit.mongodb-k8s/2.juju-log Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:48:15 ERROR unit.mongodb-k8s/2.juju-log Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:48:38 ERROR unit.mongodb-k8s/2.juju-log Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:49:58 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:50:20 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:50:42 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:51:05 ERROR unit.mongodb-k8s/2.juju-log upgrade-version-a:2: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:51:27 ERROR unit.mongodb-k8s/2.juju-log upgrade-version-a:2: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:52:13 ERROR unit.mongodb-k8s/2.juju-log Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-1: 01:53:17 ERROR unit.mongodb-k8s/1.juju-log Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:54:04 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:54:26 ERROR unit.mongodb-k8s/2.juju-log upgrade-version-a:2: Cluster is not healthy after refreshing unit., writes not propagated throughout cluster. Deferring post refresh check.
+unit-mongodb-k8s-2: 01:54:30 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99d4fa78c12eeaea1f42, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006000710000080289>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0007537389999470179>]>
+unit-mongodb-k8s-2: 01:54:32 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99d7fa78c12eeaea1f44, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0023378670000511192>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0008441319998837571>]>
+unit-mongodb-k8s-2: 01:54:34 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99d9fa78c12eeaea1f46, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006732200001806632>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0007304240000394202>]>
+unit-mongodb-k8s-2: 01:54:36 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99dbfa78c12eeaea1f48, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006197669999892241>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006861740000658756>]>
+unit-mongodb-k8s-2: 01:54:38 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99ddfa78c12eeaea1f4a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0014638249999734398>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0013652520001414814>]>
+unit-mongodb-k8s-2: 01:54:41 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99e0fa78c12eeaea1f4c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006580540000413748>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0007035240000732301>]>
+unit-mongodb-k8s-2: 01:54:43 ERROR unit.mongodb-k8s/2.juju-log status-peers:1: Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99e2fa78c12eeaea1f4e, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006740859998899396>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0007005559998560784>]>
+unit-mongodb-k8s-1: 01:54:44 ERROR unit.mongodb-k8s/1.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99e3f769e3cdf7e68197, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0003914609999355889>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.000645265000002837>]>
+unit-mongodb-k8s-1: 01:54:47 ERROR unit.mongodb-k8s/1.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6aac99e6f769e3cdf7e68199, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('mongodb-k8s-0.mongodb-k8s-endpoints', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('mongodb-k8s-0.mongodb-k8s-endpoints:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('mongodb-k8s-1.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0007472679999409593>, <ServerDescription ('mongodb-k8s-2.mongodb-k8s-endpoints', 27017) server_type: RSGhost, rtt: 0.0006528690000777715>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
