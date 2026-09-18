@@ -1312,7 +1312,7 @@ def test_mongodb_relation_joined_all_replicas_not_ready(
     harness.update_relation_data(rel.id, "mongodb/1", PEER_ADDR[substrate])
 
     statuses = harness.charm.operator.state.statuses.get(
-        scope=Scope.UNIT, component=harness.charm.operator.name
+        scope=Scope.UNIT, component=harness.charm.operator.mongo_manager.name
     )
 
     assert any(status == MongodStatuses.WAITING_RECONFIG.value for status in statuses)
