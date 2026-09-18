@@ -13,12 +13,6 @@ from bson.json_util import dumps as bson_dumps
 from jubilant._juju import ConstraintValue
 from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
-from tenacity import (
-    retry,
-    retry_if_result,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from tests.integration.helpers.common import (
     CHARMED_OPERATOR_USERNAME,
@@ -283,11 +277,6 @@ def mongos_uri(
     return _uri(username, password, ip_addresses, replica_set=None, mongos=True)
 
 
-@retry(
-    retry=retry_if_result(lambda x: x == 0),
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-)
 def count_primaries(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> int:
     """Counts the number of primaries in a replica set.
 
@@ -461,7 +450,10 @@ def deploy_application(
     )
 
 
-def relate_application(juju: jubilant.Juju, mongodb_application_name: str, client_app_name: str):
+def relate_application(
+    juju: jubilant.Juju, mongodb_application_name: str, client_app_name: str
+) -> None:
+    """Relate an application with mongodb on the `database` endpoint."""
     if is_relation_joined(
         juju.status(),
         app_one=mongodb_application_name,
@@ -563,6 +555,8 @@ def check_if_test_documents_stored(
 
 
 class DelayTuple(NamedTuple):
+    """Tuple Mapping a replica uri to its delay."""
+
     uri: str
     delay: float
 

@@ -150,6 +150,13 @@ def are_agents_idle(
 
 
 def _check_apps_idle_period(status: jubilant.Status, *apps: str, idle_period: int) -> bool:
+    """Checks that units of all given apps have been idle for long enough.
+
+    Args:
+        status: represents the jubilant model's current status
+        apps: A list of applications whose statuses to test against
+        idle_period: Seconds to wait for the agents of each application unit to be idle.
+    """
     return all(
         parse(unit.juju_status.since, ignoretz=True) + timedelta(seconds=idle_period)
         < datetime.now()

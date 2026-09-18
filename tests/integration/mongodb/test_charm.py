@@ -110,6 +110,7 @@ def test_build_and_deploy(
 def test_consistency_between_workload_and_metadata(
     juju: jubilant.Juju, substrate: Substrate, mongod_base_path: str
 ):
+    """Checks that the version from workload service and the metadata in the charm match."""
     app_name = existing_app(juju)
     assert app_name
 
@@ -212,6 +213,7 @@ def test_pbm_agent_log_file_exists(juju: jubilant.Juju, substrate: Substrate) ->
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_substrate("microk8s")
 def test_check_max_tasks(juju: jubilant.Juju, substrate: Substrate):
+    """Check that we update the TasksMax in the service to infinity on VM."""
     app_name = existing_app(juju)
     assert app_name
     for unit_name in juju.status().get_units(app_name):
