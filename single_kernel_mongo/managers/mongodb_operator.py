@@ -670,7 +670,9 @@ class MongoDBOperator(OperatorProtocol, Object):
         except (NotReadyError, PyMongoError) as e:
             logger.error(f"Not reconfiguring: error={e}")
             self.state.statuses.add(
-                MongodStatuses.WAITING_RECONFIG.value, scope="unit", component=self.name
+                MongodStatuses.WAITING_RECONFIG.value,
+                scope="unit",
+                component=self.mongo_manager.name,
             )
             raise
 
