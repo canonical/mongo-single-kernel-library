@@ -263,6 +263,8 @@ def test_invalid_relation_not_yet_established(
             )
         ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Remove the not yet added shard

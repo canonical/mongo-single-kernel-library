@@ -133,10 +133,9 @@ def test_enable_tls_in_shard_using_rolling_ops(juju: jubilant.Juju, substrate: S
             timestamp_str = lock_entry.split()[0] + " " + lock_entry.split()[1].split(",")[0]
             lock_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
 
-            assert (
-                lock_time >= tls_start_time
-            ), f"Lock time on {unit_name} ({lock_time}) is before TLS start ({tls_start_time})"
-
             logger.info(
                 f"{unit_name}: Lock granted at {lock_time}, TLS started at {tls_start_time}"
+            )
+            assert lock_time >= tls_start_time, (
+                f"Lock time on {unit_name} ({lock_time}) is before TLS start ({tls_start_time})"
             )
