@@ -251,18 +251,18 @@ def test_rotate_tls_key(juju: jubilant.Juju, substrate: Substrate) -> None:
         )
         check_certs_correctly_distributed(juju, substrate, app_name, unit_name)
 
-        assert (
-            new_external_cert_time > original_tls_times[unit_name]["external_cert"]
-        ), f"external cert for {unit_name} was not updated."
-        assert (
-            new_internal_cert_time > original_tls_times[unit_name]["internal_cert"]
-        ), f"internal cert for {unit_name} was not updated."
+        assert new_external_cert_time > original_tls_times[unit_name]["external_cert"], (
+            f"external cert for {unit_name} was not updated."
+        )
+        assert new_internal_cert_time > original_tls_times[unit_name]["internal_cert"], (
+            f"internal cert for {unit_name} was not updated."
+        )
 
         # Once the certificate requests are processed and updated the mongod.service should be
         # restarted
-        assert (
-            new_mongod_service_time > original_tls_times[unit_name]["mongod_service"]
-        ), f"mongod service for {unit_name} was not restarted."
+        assert new_mongod_service_time > original_tls_times[unit_name]["mongod_service"], (
+            f"mongod service for {unit_name} was not restarted."
+        )
 
     # Verify that TLS is functioning on all units.
     for unit_name, unit_info in juju.status().get_units(app_name).items():

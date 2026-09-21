@@ -408,30 +408,30 @@ def rotate_and_verify_certs(juju: jubilant.Juju, substrate: Substrate, app_name:
             )
 
         check_certs_correctly_distributed(juju, substrate, app_name=app_name, unit_name=unit_name)
-        assert (
-            new_external_cert != original_tls_info[unit_name]["external_cert_contents"]
-        ), f"external cert for {unit_name} not rotated."
+        assert new_external_cert != original_tls_info[unit_name]["external_cert_contents"], (
+            f"external cert for {unit_name} not rotated."
+        )
 
-        assert (
-            new_internal_cert != original_tls_info[unit_name]["internal_cert_contents"]
-        ), f"internal cert for {unit_name} not rotated."
-        assert (
-            new_external_cert_time > original_tls_info[unit_name]["external_cert"]
-        ), f"external cert for {unit_name} was not updated."
-        assert (
-            new_internal_cert_time > original_tls_info[unit_name]["internal_cert"]
-        ), f"internal cert for {unit_name} was not updated."
+        assert new_internal_cert != original_tls_info[unit_name]["internal_cert_contents"], (
+            f"internal cert for {unit_name} not rotated."
+        )
+        assert new_external_cert_time > original_tls_info[unit_name]["external_cert"], (
+            f"external cert for {unit_name} was not updated."
+        )
+        assert new_internal_cert_time > original_tls_info[unit_name]["internal_cert"], (
+            f"internal cert for {unit_name} was not updated."
+        )
 
         # Once the certificate requests are processed and updated the .service file should be
         # restarted
-        assert (
-            new_mongod_service_time > original_tls_info[unit_name]["mongod_service"]
-        ), f"mongod service for {unit_name} was not restarted."
+        assert new_mongod_service_time > original_tls_info[unit_name]["mongod_service"], (
+            f"mongod service for {unit_name} was not restarted."
+        )
 
         if app_name == CONFIG_SERVER_APP_NAME:
-            assert (
-                new_mongos_service_time > original_tls_info[unit_name]["mongos_service"]
-            ), f"mongos service for {unit_name} was not restarted."
+            assert new_mongos_service_time > original_tls_info[unit_name]["mongos_service"], (
+                f"mongos service for {unit_name} was not restarted."
+            )
 
     # Verify that TLS is functioning on all units.
     check_cluster_tls_enabled(juju, substrate)
