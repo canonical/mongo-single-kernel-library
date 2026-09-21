@@ -1,0 +1,143 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  config-server/0 [idle] active: 
+  config-server/1 [idle] active: 
+  config-server/2 [idle] active: Primary.
+  shard-one/0 [idle] active: Primary.
+  shard-one/1 [idle] active: 
+  shard-one/2 [idle] active: 
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [executing] active: 
+  shard-two/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  shard-two/0 [idle] active: Primary.
+  shard-two/1 [idle] active: 
+  shard-two/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.28   unsupported  02:25:41Z
+
+App               Version  Status   Scale  Charm             Channel  Rev  Exposed  Message
+config-server     6.0.28   active       3  mongodb                      0  no       
+continuous-write           waiting      1  continuous-write             0  no       
+shard-one         6.0.28   active       3  mongodb                      1  no       
+shard-two         6.0.28   active       3  mongodb                      2  no       
+
+Unit                 Workload  Agent  Machine  Public address  Ports            Message
+config-server/0      active    idle   0        10.183.203.198  27017-27018/tcp  Primary.
+config-server/1      active    idle   1        10.183.203.131  27017-27018/tcp  
+config-server/2*     active    idle   2        10.183.203.114  27017-27018/tcp  
+continuous-write/0*  waiting   idle   9        10.183.203.73                    
+shard-one/0*         active    idle   3        10.183.203.197  27017/tcp        Primary.
+shard-one/1          active    idle   4        10.183.203.12   27017/tcp        
+shard-one/2          active    idle   5        10.183.203.193  27017/tcp        
+shard-two/0          active    idle   6        10.183.203.119  27017/tcp        Primary.
+shard-two/1*         active    idle   7        10.183.203.20   27017/tcp        
+shard-two/2          active    idle   8        10.183.203.251  27017/tcp        
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.183.203.198  juju-3eba8a-0  ubuntu@22.04  github-runner  Running
+1        started  10.183.203.131  juju-3eba8a-1  ubuntu@22.04  github-runner  Running
+2        started  10.183.203.114  juju-3eba8a-2  ubuntu@22.04  github-runner  Running
+3        started  10.183.203.197  juju-3eba8a-3  ubuntu@22.04  github-runner  Running
+4        started  10.183.203.12   juju-3eba8a-4  ubuntu@22.04  github-runner  Running
+5        started  10.183.203.193  juju-3eba8a-5  ubuntu@22.04  github-runner  Running
+6        started  10.183.203.119  juju-3eba8a-6  ubuntu@22.04  github-runner  Running
+7        started  10.183.203.20   juju-3eba8a-7  ubuntu@22.04  github-runner  Running
+8        started  10.183.203.251  juju-3eba8a-8  ubuntu@22.04  github-runner  Running
+9        started  10.183.203.73   juju-3eba8a-9  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:08:55 ERROR unit.shard-one/0.juju-log status-peers:4: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab091b6912e4a02a467c2ef, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.12', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.183.203.12:27017: [Errno 104] Connection reset by peer (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.183.203.193', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.183.203.193:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.183.203.197', 27017) server_type: RSSecondary, rtt: 0.0014618919999520585>]>
+unit-shard-one-0: 02:08:59 ERROR unit.shard-one/0.juju-log status-peers:4: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab091ba912e4a02a467c2f0, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.12', 27017) server_type: RSSecondary, rtt: 0.0007592179999846849>, <ServerDescription ('10.183.203.193', 27017) server_type: RSSecondary, rtt: 0.0030483909999929892>, <ServerDescription ('10.183.203.197', 27017) server_type: RSSecondary, rtt: 0.0016745609996178246>]>
+unit-shard-one-0: 02:11:23 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab0924a5c0f4fbd8fc03970, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.12', 27017) server_type: RSSecondary, rtt: 0.0022335990001920436>, <ServerDescription ('10.183.203.193', 27017) server_type: RSSecondary, rtt: 0.0010852479999812203>, <ServerDescription ('10.183.203.197', 27017) server_type: RSSecondary, rtt: 0.000786810000136029>]>
+unit-shard-one-0: 02:11:28 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab0924e5c0f4fbd8fc03971, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.12', 27017) server_type: RSSecondary, rtt: 0.0011553720000847534>, <ServerDescription ('10.183.203.193', 27017) server_type: RSSecondary, rtt: 0.0006321580003714189>, <ServerDescription ('10.183.203.197', 27017) server_type: RSSecondary, rtt: 0.0017204089999722783>]>
+unit-config-server-2: 02:20:24 ERROR unit.config-server/2.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab09466cc489ef9da819eaa, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.102', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('10.183.203.20', 27017) server_type: RSSecondary, rtt: 0.0006813109998802247>, <ServerDescription ('10.183.203.251', 27017) server_type: RSSecondary, rtt: 0.0017805500001486507>]>
+unit-config-server-2: 02:20:27 ERROR unit.config-server/2.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab09469cc489ef9da819eaf, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.102', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('10.183.203.20', 27017) server_type: RSSecondary, rtt: 0.000636534000022948>, <ServerDescription ('10.183.203.251', 27017) server_type: RSSecondary, rtt: 0.0008192379996216914>]>
+unit-config-server-2: 02:20:29 ERROR unit.config-server/2.juju-log Cannot proceed with refresh. Failed to check cluster health, error: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab0946ccc489ef9da819eb4, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.102', 27017) server_type: Unknown, rtt: None>, <ServerDescription ('10.183.203.20', 27017) server_type: RSSecondary, rtt: 0.0009093139997276012>, <ServerDescription ('10.183.203.251', 27017) server_type: RSSecondary, rtt: 0.0006574560002263752>]>
+unit-config-server-2: 02:20:52 ERROR unit.config-server/2.juju-log Cluster cannot read/write to replicas
+unit-shard-one-0: 02:21:16 ERROR unit.shard-one/0.juju-log Cluster cannot read/write to replicas
+machine-6: 02:21:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:24 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:29 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:35 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:41 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:49 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:21:58 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:22:08 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:22:21 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:22:36 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:22:56 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:23:17 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:23:43 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+machine-6: 02:24:13 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [8a6cf5] "machine-6" cannot open api: unable to connect to API: dial tcp 10.183.203.104:17070: connect: network is unreachable
+unit-shard-two-1: 02:24:22 ERROR unit.shard-two/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/src/charm.py", line 24, in <module>
+    main(MongoTestCharm)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/events/upgrades.py", line 83, in _on_pre_upgrade_check_action
+    self.manager.run_pre_refresh_checks()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/upgrade.py", line 144, in run_pre_refresh_checks
+    self._upgrade.pre_upgrade_check()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 252, in pre_upgrade_check
+    self.dependent.upgrade_manager.move_primary_to_last_upgrade_unit()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/helpers.py", line 113, in wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/core/abstract_upgrades.py", line 479, in move_primary_to_last_upgrade_unit
+    mongod.move_primary(new_primary_ip=unit_host)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 641, in move_primary
+    self.set_replicaset_election_priority(priority=1)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 208, in set_replicaset_election_priority
+    rs_config = self.client.admin.command("replSetGetConfig")
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 953, in command
+    return self._client._retryable_read(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3027, in _read
+    self._server = self._get_server()
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2975, in _get_server
+    return self._client._select_server(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1851, in _select_server
+    server = topology.select_server(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 428, in select_server
+    server = self._select_server(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 402, in _select_server
+    servers = self.select_servers(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 298, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/var/lib/juju/agents/unit-shard-two-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 359, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab094a091d65a4ccf8bfa75, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.183.203.102', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.183.203.102:27017: [Errno 113] No route to host (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>, <ServerDescription ('10.183.203.20', 27017) server_type: RSSecondary, rtt: 0.00048076777595667863>, <ServerDescription ('10.183.203.251', 27017) server_type: RSSecondary, rtt: 0.0005267856565421861>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
