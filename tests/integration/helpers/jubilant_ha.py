@@ -157,7 +157,7 @@ def _k8s_wait_network_chaos_injected(namespace: str) -> None:
         with attempt:
             output = subprocess.check_output(  # nosec: B603
                 shlex.split(
-                    f"sudo k8s kubectl -n {namespace} get networkchaos network-loss-primary -o json"
+                    f"microk8s.kubectl -n {namespace} get networkchaos network-loss-primary -o json"
                 ),
                 env=os.environ,
                 stderr=subprocess.STDOUT,
@@ -215,7 +215,7 @@ def restore_network_to_unit(
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(  # nosec: B603
             shlex.split(
-                f"sudo k8s kubectl -n {model_name} delete networkchaos network-loss-primary"
+                f"microk8s.kubectl -n {model_name} delete networkchaos network-loss-primary"
             ),
             env=env,
         )

@@ -121,7 +121,7 @@ async def test_endpoints_network_cut(
         app_name,
         hostname,
         unit_ip,
-        ip_change=True,
+        ip_change=False,
         unit_count=len(UNIT_IDS),
     )
     verify_endpoints(substrate, leader_name, leader_unit_info)
