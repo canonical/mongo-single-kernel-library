@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# Copyright 2026 Canonical Ltd.
-# See LICENSE file for licensing details.
-
 from logging import getLogger
 
 import jubilant
@@ -13,7 +9,7 @@ from tests.integration.helpers.jubilant_common import (
     get_ip_from_unit,
     get_ips_for_app,
     get_password,
-    mongos_uri,
+    unit_uri,
     verify_cluster_ip_source_allowlist,
 )
 from tests.integration.helpers.types import Substrate
@@ -48,7 +44,7 @@ def verify_sharding_cluster_ip_source_allowlists(
     For VM, the config server and shards verify that all other cluster components are in
     the allowlist.
     """
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         for app_name in shard_apps | {config_server_app}:
             verify_cluster_ip_source_allowlist(juju, substrate, app_name)
         return
@@ -89,8 +85,8 @@ def build_mongos_client(juju: jubilant.Juju, substrate: Substrate, app_name: str
 
     password = get_password(juju=juju, app_name=app_name, username=CHARMED_OPERATOR_USERNAME)
 
-    _mongos_uri = mongos_uri(CHARMED_OPERATOR_USERNAME, password, ip_addresses=[host])
-    return MongoClient(_mongos_uri, directConnection=True)
+    mongos_uri = unit_uri(CHARMED_OPERATOR_USERNAME, password, ip_address=host, mongos=True)
+    return MongoClient(mongos_uri, directConnection=True)
 
 
 def write_data_to_mongodb(client: MongoClient, db_name: str, coll_name: str, content: dict) -> None:

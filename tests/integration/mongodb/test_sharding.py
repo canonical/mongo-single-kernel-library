@@ -16,9 +16,12 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
+    find_leader,
+    get_ip_from_unit,
     get_password,
     remove_number_units,
     set_password,
+    unit_uri,
 )
 from tests.integration.helpers.jubilant_sharding import (
     build_mongos_client,
