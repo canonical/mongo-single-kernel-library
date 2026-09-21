@@ -61,13 +61,16 @@ def stop_continuous_writes(
     client_app_name: str,
     db_name: str = DEFAULT_DATABASE_NAME,
     coll_name: str = DEFAULT_COLLECTION_NAME,
-):
+) -> int:
     """Helper function to run the `stop-continuous-writes` action on the continuous write app."""
-    juju.run(
+    result = juju.run(
         f"{client_app_name}/0",
         "stop-continuous-writes",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
+    logger.warning(f"Expected writes: {result.results['writes']}")
+    return int(result.results["writes"])
 
 
 def stop_continuous_reads(
@@ -81,6 +84,7 @@ def stop_continuous_reads(
         f"{client_app_name}/0",
         "stop-continuous-reads",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
     logger.warning(f"Failed reads: {result.results['failed-reads']}")
     return int(result.results["reads"]), result.results["failed-reads"]
@@ -97,6 +101,7 @@ def clear_continuous_writes(
         f"{client_app_name}/0",
         "clear-continuous-writes",
         {"db-name": db_name, "collection-name": coll_name},
+        wait=120,
     )
 
 

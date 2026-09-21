@@ -17,7 +17,7 @@ def does_status_match(
     model_status: jubilant.Status,
     expected_unit_statuses: dict[str, list[StatusObject]] | None = None,
     expected_app_statuses: dict[str, list[StatusObject]] | None = None,
-    num_units: dict[str, int] | None = None,
+    num_units: dict[str, int | None] | None = None,
 ) -> bool:
     """Check that current app and/or unit status matches expectation for given apps.
 
@@ -100,7 +100,7 @@ def are_apps_active_and_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that all given apps are active, their agents idle (optional idle interval too).
 
@@ -127,7 +127,7 @@ def are_agents_idle(
     status: jubilant.Status,
     *apps: str,
     idle_period: int = 0,
-    unit_count: int | dict[str, int] | None = None,
+    unit_count: int | dict[str, int | None] | None = None,
 ) -> bool:
     """Check that agents of all given apps are idle (optional idle interval too).
 
