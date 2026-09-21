@@ -1,0 +1,230 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller     Cloud/Region         Version  SLA          Timestamp
+testing  concierge-lxd  localhost/localhost  3.6.28   unsupported  02:25:38Z
+
+App            Version  Status  Scale  Charm          Channel  Rev  Exposed  Message
+config-server  7.0.34   active      2  mongodb                   0  no       
+s3-integrator           active      1  s3-integrator  1/edge   628  no       
+shard-one      7.0.34   active      2  mongodb                   1  no       
+shard-two      7.0.34   active      1  mongodb                   2  no       
+
+Unit              Workload  Agent  Machine  Public address  Ports            Message
+config-server/0*  active    idle   0        10.117.136.196  27017-27018/tcp  Primary.
+config-server/1   waiting   idle   1        10.117.136.168  27017/tcp        Internal mongos is not running...
+s3-integrator/0*  active    idle   5        10.117.136.87                    
+shard-one/0       active    idle   2        10.117.136.4    27017/tcp        Primary.
+shard-one/1*      active    idle   3        10.117.136.126  27017/tcp        
+shard-two/0*      active    idle   4        10.117.136.232  27017/tcp        Primary.
+
+Machine  State    Address         Inst id        Base          AZ             Message
+0        started  10.117.136.196  juju-c166bb-0  ubuntu@24.04  github-runner  Running
+1        started  10.117.136.168  juju-c166bb-1  ubuntu@24.04  github-runner  Running
+2        started  10.117.136.4    juju-c166bb-2  ubuntu@24.04  github-runner  Running
+3        started  10.117.136.126  juju-c166bb-3  ubuntu@24.04  github-runner  Running
+4        started  10.117.136.232  juju-c166bb-4  ubuntu@24.04  github-runner  Running
+5        started  10.117.136.87   juju-c166bb-5  ubuntu@22.04  github-runner  Running
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+machine-1: 01:44:04 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-1: 01:44:04 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:13 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-3: 01:44:13 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:22 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-2: 01:44:22 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:41 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-4: 01:44:41 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-config-server-1: 01:45:41 ERROR unit.config-server/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:45:41 ERROR unit.config-server/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:45:52 ERROR unit.config-server/1.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-0: 01:46:16 ERROR unit.config-server/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="169"'] failed!
+Stdout:
+2026-09-21T01:44:31Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:44:32Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:44:33Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (169) from channel "8-transition/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers)
+
+Latest logs:
+Sep 21 01:44:34 juju-c166bb-0 snapd[1495]: daemon.go:648: restarting daemon after update
+Sep 21 01:44:34 juju-c166bb-0 snapd[1495]: seclog.go:189: security logger disabled
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: snapd.service: Deactivated successfully.
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: Starting snapd.service - Snap Daemon...
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: seclog.go:174: security logger enabled
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: overlord.go:313: Acquiring state lock file
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: overlord.go:318: Acquired state lock file
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: daemon.go:371: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: backend.go:145: reloading profiles for snap-confine
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: standby.go:95: will consider standby after: 5s
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: Started snapd.service - Snap Daemon.
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: snapmgr.go:1675: performing periodic snap downloads cache cleanup
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: devicemgr.go:1343: skipping boot ok check since it already ran for boot-id "f14b08f5-3319-4ee6-a3c3-1c1b2e03e762"
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Sep 21 01:44:38 juju-c166bb-0 snapd[2520]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:46:16 juju-c166bb-0 snapd[2520]: taskrunner.go:304: Change 4 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+.
+unit-shard-one-0: 01:46:32 ERROR unit.shard-one/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="169"'] failed!
+Stdout:
+2026-09-21T01:44:48Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:44:49Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:44:50Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (169) from channel "8-transition/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers)
+
+Latest logs:
+Sep 21 01:44:51 juju-c166bb-2 snapd[1493]: daemon.go:648: restarting daemon after update
+Sep 21 01:44:51 juju-c166bb-2 snapd[1493]: seclog.go:189: security logger disabled
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: snapd.service: Deactivated successfully.
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: seclog.go:174: security logger enabled
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: overlord.go:313: Acquiring state lock file
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: overlord.go:318: Acquired state lock file
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: daemon.go:371: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backend.go:145: reloading profiles for snap-confine
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: standby.go:95: will consider standby after: 5s
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: Started snapd.service - Snap Daemon.
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: snapmgr.go:1675: performing periodic snap downloads cache cleanup
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: devicemgr.go:1343: skipping boot ok check since it already ran for boot-id "9175c901-4651-4d37-9908-fb54b4d129d7"
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Sep 21 01:44:54 juju-c166bb-2 snapd[2474]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:46:32 juju-c166bb-2 snapd[2474]: taskrunner.go:304: Change 4 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+.
+unit-shard-two-0: 01:46:59 ERROR unit.shard-two/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="169"'] failed!
+Stdout:
+2026-09-21T01:45:06Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:45:07Z INFO Waiting for automatic snapd restart...
+2026-09-21T01:45:08Z INFO Waiting for automatic snapd restart...
+
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (169) from channel "8-transition/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers)
+
+Latest logs:
+Sep 21 01:45:09 juju-c166bb-4 snapd[1495]: daemon.go:648: restarting daemon after update
+Sep 21 01:45:09 juju-c166bb-4 snapd[1495]: seclog.go:189: security logger disabled
+Sep 21 01:45:09 juju-c166bb-4 systemd[1]: snapd.service: Deactivated successfully.
+Sep 21 01:45:09 juju-c166bb-4 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Sep 21 01:45:09 juju-c166bb-4 systemd[1]: Starting snapd.service - Snap Daemon...
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: seclog.go:174: security logger enabled
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: overlord.go:313: Acquiring state lock file
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: overlord.go:318: Acquired state lock file
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: daemon.go:371: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: backend.go:145: reloading profiles for snap-confine
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: standby.go:95: will consider standby after: 5s
+Sep 21 01:45:09 juju-c166bb-4 systemd[1]: Started snapd.service - Snap Daemon.
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: snapmgr.go:1675: performing periodic snap downloads cache cleanup
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: devicemgr.go:1343: skipping boot ok check since it already ran for boot-id "84d4bf2b-8675-48d7-a4ef-5ca26a60125d"
+Sep 21 01:45:09 juju-c166bb-4 snapd[2516]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Sep 21 01:45:21 juju-c166bb-4 snapd[2516]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:46:59 juju-c166bb-4 snapd[2516]: taskrunner.go:304: Change 4 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+.
+unit-shard-two-0: 01:47:42 ERROR unit.shard-two/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-two-0: 01:47:42 ERROR unit.shard-two/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:47:54 ERROR unit.config-server/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="169"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (169) from channel "8-transition/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers)
+
+Latest logs:
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: snapd.service: Deactivated successfully.
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: Starting snapd.service - Snap Daemon...
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: seclog.go:174: security logger enabled
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: overlord.go:313: Acquiring state lock file
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: overlord.go:318: Acquired state lock file
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: daemon.go:371: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: backend.go:145: reloading profiles for snap-confine
+Sep 21 01:44:34 juju-c166bb-0 snapd[2520]: standby.go:95: will consider standby after: 5s
+Sep 21 01:44:34 juju-c166bb-0 systemd[1]: Started snapd.service - Snap Daemon.
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: snapmgr.go:1675: performing periodic snap downloads cache cleanup
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: devicemgr.go:1343: skipping boot ok check since it already ran for boot-id "f14b08f5-3319-4ee6-a3c3-1c1b2e03e762"
+Sep 21 01:44:35 juju-c166bb-0 snapd[2520]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Sep 21 01:44:38 juju-c166bb-0 snapd[2520]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:46:16 juju-c166bb-0 snapd[2520]: taskrunner.go:304: Change 4 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+Sep 21 01:46:17 juju-c166bb-0 snapd[2520]: api_snaps.go:522: Installing snap "charmed-mongodb" revision 169
+Sep 21 01:47:54 juju-c166bb-0 snapd[2520]: taskrunner.go:304: Change 6 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+.
+unit-shard-one-0: 01:48:10 ERROR unit.shard-one/0.juju-log Failed to install charmed-mongodb. Reason: Snap: 'charmed-mongodb' -- command ['snap', 'install', 'charmed-mongodb', '--channel="8-transition/edge"', '--revision="169"'] failed!
+Stderr:
+error: cannot perform the following tasks:
+- Download snap "charmed-mongodb" (169) from channel "8-transition/edge" (Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers)
+
+Latest logs:
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: snapd.service: Deactivated successfully.
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: snapd.service: Scheduled restart job, restart counter is at 1.
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: Starting snapd.service - Snap Daemon...
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: seclog.go:174: security logger enabled
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: overlord.go:313: Acquiring state lock file
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: overlord.go:318: Acquired state lock file
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: daemon.go:277: started snapd/2.76.3+ubuntu24.04 (series 16; classic) ubuntu/24.04 (amd64) linux/6.14.0-37-generic.
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: daemon.go:371: adjusting startup timeout by 35s (pessimistic estimate of 30s plus 5s per snap)
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backends.go:70: AppArmor status: apparmor is enabled and all features are available
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backend.go:145: reloading profiles for snap-confine
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: standby.go:95: will consider standby after: 5s
+Sep 21 01:44:51 juju-c166bb-2 systemd[1]: Started snapd.service - Snap Daemon.
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: snapmgr.go:1675: performing periodic snap downloads cache cleanup
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: devicemgr.go:1343: skipping boot ok check since it already ran for boot-id "9175c901-4651-4d37-9908-fb54b4d129d7"
+Sep 21 01:44:51 juju-c166bb-2 snapd[2474]: backend.go:285: reloading profiles of snap-confine provided by the system snap
+Sep 21 01:44:54 juju-c166bb-2 snapd[2474]: cache.go:320: removed 0 entries/    0 from downloads cache
+Sep 21 01:46:32 juju-c166bb-2 snapd[2474]: taskrunner.go:304: Change 4 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+Sep 21 01:46:33 juju-c166bb-2 snapd[2474]: api_snaps.go:522: Installing snap "charmed-mongodb" revision 169
+Sep 21 01:48:10 juju-c166bb-2 snapd[2474]: taskrunner.go:304: Change 6 task (Download snap "charmed-mongodb" (169) from channel "8-transition/edge") failed: Get "https://canonical-bos01.cdn.snapcraftcontent.com/download-origin/canonical-lgw01/wptDAbDdbIRX4qSi5dDVnfVmEmLubOlm_169.snap?interactive=1&token=1789966800_972237aad3d33ee985cbc547641422cd12dc5be0": net/http: timeout awaiting response headers
+.
+unit-config-server-0: 01:48:34 ERROR unit.config-server/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-0: 01:48:34 ERROR unit.config-server/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:48:35 ERROR unit.shard-one/0.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:48:35 ERROR unit.shard-one/0.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-config-server-1: 01:48:36 ERROR unit.config-server/1.juju-log status-peers:3: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-1: 01:48:38 ERROR unit.config-server/1.juju-log database-peers:1: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-1: 01:48:40 ERROR unit.config-server/1.juju-log ldap-peers:0: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-config-server-1: 01:48:42 ERROR unit.config-server/1.juju-log upgrade-version-a:2: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 01:48:48 ERROR unit.shard-one/0.juju-log Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-1: 01:49:43 ERROR unit.shard-one/1.juju-log Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-1: 01:49:43 ERROR unit.shard-one/1.juju-log Error setting values on sysctl: Unable to set params: ['vm.max_map_count', 'vm.overcommit_memory']
+unit-shard-one-0: 01:49:45 ERROR unit.shard-one/0.juju-log ldap-peers:7: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 01:49:47 ERROR unit.shard-one/0.juju-log upgrade-version-a:5: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 01:49:49 ERROR unit.shard-one/0.juju-log status-peers:6: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 01:49:51 ERROR unit.shard-one/0.juju-log database-peers:4: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-0: 01:49:52 ERROR unit.shard-one/0.juju-log ldap-peers:7: Deferring because of Exception Waiting for leader unit to generate keyfile contents
+unit-shard-one-1: 01:51:25 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08d9c6e5babee8c943181, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0005774160000555639>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.000506699999959892>]>
+unit-shard-one-1: 01:51:29 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08da06e5babee8c943182, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006035760000031587>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08d978c41c26888d5dd3a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12951}")>]>
+unit-shard-one-1: 01:51:33 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08da46e5babee8c943183, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0008559150001019589>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08d978c41c26888d5dd3a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 8803}")>]>
+unit-shard-one-1: 01:51:37 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08da86e5babee8c943184, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0007068409998964853>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08d978c41c26888d5dd3a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 4637}")>]>
+unit-shard-one-1: 01:51:42 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dac6e5babee8c943185, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0005405609999797889>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08d978c41c26888d5dd3a'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 486}")>]>
+unit-shard-one-1: 01:51:46 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08db16e5babee8c943186, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0018136019999701603>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.0006081520000407181>]>
+unit-shard-one-1: 01:51:50 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08db56e5babee8c943187, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.000850125999932061>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.000900791999924877>]>
+unit-shard-one-1: 01:51:54 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08db96e5babee8c943188, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006390190000047369>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08dae1ac5d741b339af13'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12032}")>]>
+unit-shard-one-1: 01:51:58 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dbd6e5babee8c943189, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0005421839999826261>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08dae1ac5d741b339af13'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 7900}")>]>
+machine-5: 01:51:59 ERROR juju.worker.dependency "lxd-container-provisioner" manifold worker returned unexpected error: container types not yet available
+machine-5: 01:51:59 ERROR juju.worker.dependency "kvm-container-provisioner" manifold worker returned unexpected error: container types not yet available
+unit-shard-one-1: 01:52:02 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dc16e5babee8c94318a, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006011020000187273>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08dae1ac5d741b339af13'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 3766}")>]>
+unit-shard-one-1: 01:52:07 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dc56e5babee8c94318b, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006731209999770726>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('10.117.136.4:27017: [Errno 104] Connection reset by peer (configured timeouts: socketTimeoutMS: 2000.0ms, connectTimeoutMS: 2000.0ms)')>]>
+unit-shard-one-1: 01:52:11 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dca6e5babee8c94318c, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006847580000339804>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.0006796699999540579>]>
+unit-shard-one-1: 01:52:15 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dce6e5babee8c94318d, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0007091950000130964>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.0005350530000214349>]>
+unit-shard-one-1: 01:52:44 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08deb105308288ad4e23f, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006476119999661023>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08dc6819f8b710053c7ee'), 'counter': 6}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 7058, '$clusterTime': {'clusterTime': Timestamp(1789955560, 1), 'signature': {'hash': b'$\\xb4\\x0e\\x0es#pW\\xbdt\\xea\\xd7e\\xab%\\x1c\\nT\\xc9\\xca', 'keyId': 7687799616535789591}}, 'operationTime': Timestamp(1789955542, 2)}")>]>
+unit-shard-one-1: 01:52:48 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08def105308288ad4e240, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006402209999123443>, <ServerDescription ('10.117.136.4', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab08dc6819f8b710053c7ee'), 'counter': 6}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 2915, '$clusterTime': {'clusterTime': Timestamp(1789955560, 1), 'signature': {'hash': b'$\\xb4\\x0e\\x0es#pW\\xbdt\\xea\\xd7e\\xab%\\x1c\\nT\\xc9\\xca', 'keyId': 7687799616535789591}}, 'operationTime': Timestamp(1789955542, 2)}")>]>
+unit-shard-one-1: 01:52:52 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08df3105308288ad4e241, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0005807320000030813>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.0007655790000171692>]>
+unit-shard-one-1: 01:52:56 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08df7105308288ad4e242, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0005160849999583661>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.00048609999998916464>]>
+unit-shard-one-1: 01:53:00 ERROR unit.shard-one/1.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab08dfb105308288ad4e243, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('10.117.136.126', 27017) server_type: RSSecondary, rtt: 0.0006189289999838365>, <ServerDescription ('10.117.136.4', 27017) server_type: RSSecondary, rtt: 0.0005646869999509363>]>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
