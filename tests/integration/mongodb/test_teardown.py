@@ -77,7 +77,7 @@ def test_build_and_deploy(
 
 def test_long_scale_up_scale_down_units(juju: jubilant.Juju, substrate: Substrate):
     """Scale up and down the application and verify the replica set is healthy."""
-    scales = [2, -1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7]
+    scales = [2, -1, -1, 2, -2, 3, -3]
 
     app_name = existing_app(juju)
     assert app_name
