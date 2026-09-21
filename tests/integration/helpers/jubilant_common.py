@@ -11,6 +11,7 @@ from typing import NamedTuple
 
 import httpx
 import jubilant
+import yaml
 from bson.json_util import dumps as bson_dumps
 from jubilant._juju import ConstraintValue
 from jubilant.statustypes import UnitStatus
@@ -23,6 +24,7 @@ from tests.integration.helpers.common import (
     SecretNotFoundError,
     external_cert_path,
     find_json,
+    mongodb_config_path,
     mongosh,
 )
 from tests.integration.helpers.constants import (
@@ -219,6 +221,14 @@ def get_ip_from_unit(substrate: Substrate, unit_info: UnitStatus) -> str:
     return unit_info.public_address if substrate == "lxd" else unit_info.address
 
 
+def get_ips_for_app(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> set[str]:
+    """Get the IP addresses of an application's units based on the substrate type."""
+    return {
+        get_ip_from_unit(substrate, unit_info)
+        for unit_info in juju.status().get_units(app_name).values()
+    }
+
+
 def unit_hostname(juju: jubilant.Juju, unit_name: str) -> str:
     """Get hostname for a unit.
 
@@ -258,6 +268,20 @@ def unit_has_file(
 ) -> bool:
     files = run_command_on_server(juju, substrate, unit_name, f"ls {dir_path}", container=container)
     return filename in files
+
+
+def read_remote_file(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    file_path: str,
+    container: str = "mongod",
+) -> str:
+    """Read a file on a remote unit and return its stdout."""
+    command = f"cat {file_path}"
+    return run_command_on_server(
+        juju=juju, substrate=substrate, unit_name=unit_name, command=command, container=container
+    )
 
 
 def _uri(
@@ -658,3 +682,32 @@ def verify_metrics_endpoints(substrate: Substrate, unit_name: str, unit_info: Un
     mongodb_metrics = mongo_resp.text
     assert mongodb_metrics.count("mongo") > 1
     assert mongodb_metrics.count(f'rs_nm="{app_name}"') > 1
+
+
+def verify_cluster_ip_source_allowlist(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    app_name: str,
+    additional_addresses: set[str] | None = None,
+    excluded_addresses: set[str] | None = None,
+) -> None:
+    """Verify each mongod allows every current replica-set member address."""
+    replica_set_addresses = get_ips_for_app(juju, substrate, app_name)
+    expected_addresses = replica_set_addresses | (additional_addresses or set())
+    config_path = mongodb_config_path(substrate)
+
+    for unit_name in juju.status().get_units(app_name):
+        stdout = read_remote_file(juju, substrate, unit_name, config_path)
+        configuration = yaml.safe_load(stdout)
+        allowlist = set(configuration["security"]["clusterIpSourceAllowlist"])
+        for address in expected_addresses:
+            assert address in allowlist, (
+                f"IP address {address} is missing from {unit_name}'s "
+                f"clusterIpSourceAllowlist: {sorted(allowlist)}"
+            )
+
+        unexpected_addresses = (excluded_addresses or set()) & allowlist
+        assert not unexpected_addresses, (
+            f"Removed IP addresses {sorted(unexpected_addresses)} are still present in "
+            f"{unit_name}'s clusterIpSourceAllowlist: {sorted(allowlist)}"
+        )

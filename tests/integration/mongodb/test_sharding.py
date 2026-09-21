@@ -4,24 +4,33 @@
 
 import logging
 
+import jubilant
 import pytest
 from pymongo import MongoClient
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
+from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
+from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_PASSWORD,
     CHARMED_OPERATOR_USERNAME,
     DEPLOYMENT_TIMEOUT,
     TIMEOUT,
+)
+from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    find_unit,
-    generate_mongodb_client,
-    get_address_of_unit,
+    find_leader,
+    get_ip_from_unit,
     get_password,
-    get_unit_id,
-    remove_units,
+    remove_number_units,
     set_password,
-    wait_for_mongodb_units_blocked,
+    unit_uri,
+)
+from tests.integration.helpers.jubilant_sharding import (
+    build_mongos_client,
+    has_correct_shards,
+    shard_has_databases,
+    verify_data_mongodb,
+    verify_sharding_cluster_ip_source_allowlists,
+    write_data_to_mongodb,
 )
 from tests.integration.helpers.sharding import (
     CLUSTER_APPS,
@@ -31,11 +40,11 @@ from tests.integration.helpers.sharding import (
     SHARD_REL_NAME,
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
-    has_correct_shards,
-    shard_has_databases,
-    verify_data_mongodb,
-    verify_sharding_cluster_ip_source_allowlists,
-    write_data_to_mongodb,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -48,116 +57,125 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest, mongodb_charm: str, substrate: Substrate, mongod_resource
+def test_build_and_deploy(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
 ) -> None:
     """Build and deploy a sharded cluster."""
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
-        app_name=CONFIG_SERVER_APP_NAME,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
         mongod_resource=mongod_resource,
+        app_name=CONFIG_SERVER_APP_NAME,
         num_units=3,
         config={"role": "config-server"},
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_ONE_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_TWO_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
     )
-    await deploy_charm(
-        ops_test,
-        mongodb_charm,
-        substrate,
+    deploy_charm(
+        juju=juju,
+        charm=mongodb_charm,
+        substrate=substrate,
+        mongod_resource=mongod_resource,
         app_name=SHARD_THREE_APP_NAME,
-        mongod_resource=mongod_resource,
         num_units=3,
         config={"role": "shard"},
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[
-            CONFIG_SERVER_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
-            SHARD_THREE_APP_NAME,
-        ],
-        idle_period=20,
-        raise_on_blocked=False,
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                CONFIG_SERVER_APP_NAME,
+                SHARD_ONE_APP_NAME,
+                SHARD_TWO_APP_NAME,
+                SHARD_THREE_APP_NAME,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
+                    SHARD_ONE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
+                    SHARD_TWO_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
+                    SHARD_THREE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
+                },
+                expected_app_statuses={
+                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
+                },
+            )
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
-
-    # verify that Charmed MongoDB is blocked and reports incorrect credentials
-    await wait_for_mongodb_units_blocked(ops_test, substrate, CONFIG_SERVER_APP_NAME, timeout=300)
-    await wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_ONE_APP_NAME, timeout=300)
-    await wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_TWO_APP_NAME, timeout=300)
-    await wait_for_mongodb_units_blocked(ops_test, substrate, SHARD_THREE_APP_NAME, timeout=300)
 
 
 @pytest.mark.abort_on_fail
-async def test_cluster_active(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_cluster_active(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests the integration of cluster components works without error."""
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_ONE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
             CONFIG_SERVER_APP_NAME,
             SHARD_ONE_APP_NAME,
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
-        ],
-        idle_period=15,
-        status="active",
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[host]
-    )
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
     assert has_correct_shards(
-        MongoClient(mongos_uri, directConnection=True),
+        mongos_client,
         expected_shards=[SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME],
     ), "Config server did not process config properly"
 
 
 @pytest.mark.abort_on_fail
-async def test_cluster_ip_source_allowlists(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_cluster_ip_source_allowlists(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Verify cluster allowlists contain the replica-set IPs expected for the substrate."""
-    await verify_sharding_cluster_ip_source_allowlists(
-        ops_test,
+    verify_sharding_cluster_ip_source_allowlists(
+        juju,
         substrate,
         config_server_app=CONFIG_SERVER_APP_NAME,
         shard_apps={SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME},
@@ -166,32 +184,42 @@ async def test_cluster_ip_source_allowlists(ops_test: OpsTest, substrate: Substr
 
 
 @pytest.mark.abort_on_fail
-async def test_set_operator_password(ops_test: OpsTest):
+async def test_set_operator_password(juju: jubilant.Juju):
     """Tests that the cluster can safely set the charemd_operator password."""
     for cluster_app_name in CLUSTER_APPS:
-        operator_password = await get_password(
-            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
+        operator_password = get_password(
+            juju=juju, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
             operator_password != CHARMED_OPERATOR_PASSWORD
         ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
-    await set_password(
-        ops_test,
+    set_password(
+        juju,
         username=CHARMED_OPERATOR_USERNAME,
         password=CHARMED_OPERATOR_PASSWORD,
         app_name=CONFIG_SERVER_APP_NAME,
     )
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_APPS,
-        status="active",
-        idle_period=15,
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            SHARD_THREE_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     for cluster_app_name in CLUSTER_APPS:
-        operator_password = await get_password(
-            ops_test, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
+        operator_password = get_password(
+            juju, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
         assert (
             operator_password == CHARMED_OPERATOR_PASSWORD
@@ -199,19 +227,18 @@ async def test_set_operator_password(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-async def test_sharding_write(ops_test: OpsTest, substrate) -> None:
+def test_sharding_write(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests writing data to mongos gets propagated to shards."""
-    await ops_test.model.wait_for_idle(apps=CLUSTER_APPS, idle_period=30)
+    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
+    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
 
     # write data to mongos on both shards.
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[host]
+    password = get_password(
+        juju=juju, app_name=CONFIG_SERVER_APP_NAME, username=CHARMED_OPERATOR_USERNAME
     )
+
+    mongos_uri = unit_uri(CHARMED_OPERATOR_USERNAME, password, ip_address=host, mongos=True)
     mongos_client = MongoClient(mongos_uri, directConnection=True)
 
     # write data to shard two
@@ -254,7 +281,7 @@ async def test_sharding_write(ops_test: OpsTest, substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Test shard removal.
 
     This test also verifies that:
@@ -263,41 +290,35 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
     - Config server supports removing multiple shards.
     """
     # turn off balancer.
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
-
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[host]
-    )
-    mongos_client = MongoClient(mongos_uri, directConnection=True)
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
     mongos_client.admin.command("balancerStop")
 
     balancer_state = mongos_client.admin.command("balancerStatus")
     assert balancer_state["mode"] == "off", "balancer was not successfully turned off"
 
     # remove two shards at the same time
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
-        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    juju.remove_relation(
+        app1=f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+        app2=f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
     )
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
-        f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
-        f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+    juju.remove_relation(
+        app1=f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
+        app2=f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
             CONFIG_SERVER_APP_NAME,
             SHARD_ONE_APP_NAME,
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
-        ],
-        idle_period=15,
-        status="active",
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=REMOVAL_TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
     # verify that config server turned back on the balancer
@@ -317,8 +338,8 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
     ), "Not all databases on final shard"
 
     if substrate == "lxd":
-        await verify_sharding_cluster_ip_source_allowlists(
-            ops_test,
+        verify_sharding_cluster_ip_source_allowlists(
+            juju,
             substrate,
             config_server_app=CONFIG_SERVER_APP_NAME,
             shard_apps={SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME, SHARD_THREE_APP_NAME},
@@ -327,52 +348,52 @@ async def test_shard_removal(ops_test: OpsTest, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substrate):
+async def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate):
     """Tests safe removal of a shard that is not primary."""
     # add back a shard so we can safely remove a shard.
 
     logging.info("Adding %s to config server", SHARD_TWO_APP_NAME)
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
-
-    await ops_test.model.wait_for_idle(
-        apps=[
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
             CONFIG_SERVER_APP_NAME,
             SHARD_ONE_APP_NAME,
             SHARD_TWO_APP_NAME,
             SHARD_THREE_APP_NAME,
-        ],
-        idle_period=15,
-        status="active",
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
     logging.info("Removing %s from config server", SHARD_TWO_APP_NAME)
-    await ops_test.model.applications[CONFIG_SERVER_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME, SHARD_TWO_APP_NAME],
-        idle_period=15,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=REMOVAL_TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
-
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[host]
-    )
-    mongos_client = MongoClient(mongos_uri, directConnection=True)
+    # build a mongos config-server client
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
     assert has_correct_shards(
@@ -388,55 +409,61 @@ async def test_removal_of_non_primary_shard(ops_test: OpsTest, substrate: Substr
 
 
 @pytest.mark.abort_on_fail
-async def test_unconventual_shard_removal(ops_test: OpsTest, substrate: Substrate):
+def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
     """Tests that removing a shard application safely drains data.
 
     It is preferred that users remove-relations instead of removing shard applications. But we do
     support removing shard applications in a safe way.
     """
     # add back a shard so we can safely remove a shard.
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{SHARD_TWO_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[SHARD_TWO_APP_NAME],
-        idle_period=15,
-        status="active",
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
-    unit = ops_test.model.applications[SHARD_TWO_APP_NAME].units[0]
-    await remove_units(ops_test, substrate, SHARD_TWO_APP_NAME, [unit])
-    await ops_test.model.wait_for_idle(
-        apps=[SHARD_TWO_APP_NAME],
-        idle_period=15,
-        status="active",
+    remove_number_units(juju, substrate, SHARD_TWO_APP_NAME, 1)
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            SHARD_TWO_APP_NAME,
+            idle_period=30,
+            unit_count=2,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    juju.remove_application(SHARD_TWO_APP_NAME)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=REMOVAL_TIMEOUT,
-        raise_on_error=False,
+        delay=5,
+        successes=3,
     )
 
-    await ops_test.model.remove_application(SHARD_TWO_APP_NAME, block_until_done=True)
-
-    await ops_test.model.wait_for_idle(
-        apps=[CONFIG_SERVER_APP_NAME, SHARD_ONE_APP_NAME],
-        idle_period=15,
-        status="active",
-        timeout=REMOVAL_TIMEOUT,
-        raise_on_error=False,
-    )
-
-    leader_unit = await find_unit(ops_test, leader=True, app_name=CONFIG_SERVER_APP_NAME)
-    host = await get_address_of_unit(
-        ops_test, substrate, get_unit_id(leader_unit.name), CONFIG_SERVER_APP_NAME
-    )
-
-    mongos_uri = await generate_mongodb_client(
-        ops_test, substrate, app_name=CONFIG_SERVER_APP_NAME, mongos=True, hosts=[host]
-    )
-    mongos_client = MongoClient(mongos_uri, directConnection=True)
+    # build a mongos config-server client
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
     assert has_correct_shards(
