@@ -35,8 +35,14 @@ def scale_and_verify(juju: jubilant.Juju, substrate: Substrate, app_name: str, c
 
     current_units = len(juju.status().get_units(app_name))
 
-    with fast_forward(juju, update_interval="1m"):
-        ensure_app_number_units(juju, substrate, app_name, current_units + count, wait=True)
+    with fast_forward(juju, update_interval="2m"):
+        ensure_app_number_units(juju, substrate, app_name, current_units + count, wait=False)
+        juju.wait(
+            lambda status: are_apps_active_and_agents_idle(
+                status, app_name, idle_period=10, unit_count=current_units + count
+            ),
+            timeout=DEPLOYMENT_TIMEOUT,
+        )
 
     assert count_primaries(juju, substrate, app_name) == 1, "Replica set has no primary."
 
