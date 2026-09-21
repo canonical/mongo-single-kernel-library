@@ -53,11 +53,7 @@ class KubernetesWorkload(WorkloadBase):
         Raises:
             WorkloadServiceError: If the underlying Pebble change fails.
         """
-        try:
-            self.restart()
-        except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
-            raise WorkloadServiceError(e.err) from e
+        self.restart()
 
     @override
     def stop(self) -> None:
@@ -77,6 +73,9 @@ class KubernetesWorkload(WorkloadBase):
         except ChangeError as e:
             logger.exception(f"Change Error: {e}")
             raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception(f"Timeout Error: {e}")
+            raise WorkloadServiceError(*e.args) from e
         except ConnectionError as e:
             logger.exception(f"Connection Error: {e}")
             raise WorkloadServiceError(*e.args) from e
