@@ -17,6 +17,7 @@ from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
 
 from tests.integration.helpers.common import (
+    DEPLOYMENT_TIMEOUT,
     CommandResult,
     ProcessError,
     SecretNotFoundError,
@@ -175,7 +176,7 @@ def ensure_app_number_units(
             lambda status: are_apps_active_and_agents_idle(
                 status, app_name, idle_period=10, unit_count=required_units
             ),
-            timeout=TIMEOUT,
+            timeout=DEPLOYMENT_TIMEOUT,
         )
 
 
