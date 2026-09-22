@@ -352,7 +352,7 @@ class KubernetesWorkload(WorkloadBase):
             raise WorkloadExecError(
                 masked_cmd,
                 e.code,
-                "%s: %s" % (e.status, e.message),
+                f"{e.status}: {e.message}",
             ) from e
         except ConnectionError as e:
             logger.debug("cmd failed - cmd=%s, Pebble client can't connect to socket.", masked_cmd)
@@ -388,7 +388,7 @@ class KubernetesWorkload(WorkloadBase):
         """
         bin_args = bin_args or []
         environment = environment or {}
-        command = ["%s/%s" % (self.paths.binaries_path, self.bin_cmd), bin_keyword, *bin_args]
+        command = [f"{self.paths.binaries_path}/{self.bin_cmd}", bin_keyword, *bin_args]
         return self.exec(command=command, env=environment or None, input=input)
 
     @override
