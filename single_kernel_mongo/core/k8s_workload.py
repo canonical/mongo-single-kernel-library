@@ -53,11 +53,7 @@ class KubernetesWorkload(WorkloadBase):
         Raises:
             WorkloadServiceError: If the underlying Pebble change fails.
         """
-        try:
-            self.restart()
-        except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
-            raise WorkloadServiceError(e.err) from e
+        self.restart()
 
     @override
     def stop(self) -> None:
@@ -75,10 +71,13 @@ class KubernetesWorkload(WorkloadBase):
                 return
             self.container.stop(self.service)
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
+        except TimeoutError as e:
+            logger.exception("Timeout Error: %s", e)
+            raise WorkloadServiceError(*e.args) from e
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -96,13 +95,13 @@ class KubernetesWorkload(WorkloadBase):
             self.container.add_layer(self.layer_name, self.layer, combine=True)
             self.container.restart(self.service)
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -120,13 +119,13 @@ class KubernetesWorkload(WorkloadBase):
         try:
             self.container.make_dir(path, make_parents=make_parents)
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @property
@@ -152,10 +151,10 @@ class KubernetesWorkload(WorkloadBase):
         try:
             return self.container.exists(path)
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -178,10 +177,10 @@ class KubernetesWorkload(WorkloadBase):
             with self.container.pull(path) as f:
                 return f.read().split("\n")
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -209,13 +208,13 @@ class KubernetesWorkload(WorkloadBase):
                 group=self.users.group,
             )
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -231,13 +230,13 @@ class KubernetesWorkload(WorkloadBase):
         try:
             self.container.remove_path(path)
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -255,13 +254,13 @@ class KubernetesWorkload(WorkloadBase):
             license_file = self.container.pull(path=src)
             destination.write_text(license_file.read())
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except ChangeError as e:
-            logger.exception(f"Change Error: {e}")
+            logger.exception("Change Error: %s", e)
             raise WorkloadServiceError(e.err) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
@@ -281,10 +280,10 @@ class KubernetesWorkload(WorkloadBase):
                 .get("environment", {})
             )
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         return env
 
@@ -339,7 +338,9 @@ class KubernetesWorkload(WorkloadBase):
             output, _ = process.wait_output()
             return output
         except ExecError as e:
-            logger.error(f"cmd failed - cmd={masked_cmd}, stdout={e.stdout}, stderr={e.stderr}")
+            logger.error(
+                "cmd failed - cmd=%s, stdout=%s, stderr=%s", masked_cmd, e.stdout, e.stderr
+            )
             raise WorkloadExecError(
                 masked_cmd,
                 e.exit_code,
@@ -347,19 +348,19 @@ class KubernetesWorkload(WorkloadBase):
                 e.stderr,
             ) from e
         except APIError as e:
-            logger.error(f"cmd failed - cmd={masked_cmd}, {e.status}: {e.message}")
+            logger.error("cmd failed - cmd=%s, %s: %s", masked_cmd, e.status, e.message)
             raise WorkloadExecError(
                 masked_cmd,
                 e.code,
                 f"{e.status}: {e.message}",
             ) from e
         except ConnectionError as e:
-            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client can't connect to socket.")
+            logger.debug("cmd failed - cmd=%s, Pebble client can't connect to socket.", masked_cmd)
             raise WorkloadExecError(
                 masked_cmd, -1, "Pebble client can't connect to the socket."
             ) from e
         except TimeoutError as e:
-            logger.debug(f"cmd failed - cmd={masked_cmd}, Pebble client polling timeout.")
+            logger.debug("cmd failed - cmd=%s, Pebble client polling timeout.", masked_cmd)
             raise WorkloadExecError(masked_cmd, -1, "Pebble client polling timeout.") from e
 
     @override
@@ -409,10 +410,10 @@ class KubernetesWorkload(WorkloadBase):
 
             return self.container.get_service(self.service).is_running()
         except ConnectionError as e:
-            logger.exception(f"Connection Error: {e}")
+            logger.exception("Connection Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
         except TimeoutError as e:
-            logger.exception(f"Timeout Error: {e}")
+            logger.exception("Timeout Error: %s", e)
             raise WorkloadServiceError(*e.args) from e
 
     @override
