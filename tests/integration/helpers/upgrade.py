@@ -84,6 +84,8 @@ async def assert_successful_run_upgrade_sequence(
         await ops_test.model.wait_for_idle(apps=[app_name], timeout=1000, idle_period=30)
 
 
-async def refresh_with_juju(ops_test: OpsTest, app_name: str, channel: str) -> None:
-    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:mongodb"
+async def refresh_with_juju(
+    ops_test: OpsTest, app_name: str, channel: str, charm_name: str
+) -> None:
+    refresh_cmd = f"refresh {app_name} --model {ops_test.model.info.name} --channel {channel} --switch ch:{charm_name}"
     await ops_test.juju(*refresh_cmd.split())

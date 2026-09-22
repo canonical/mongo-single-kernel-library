@@ -78,7 +78,7 @@ async def test_rollback(
             ), "Not indicating charm incompatible"
 
     logger.info("Re-refresh the charm")
-    await refresh_with_juju(ops_test, app_name, "8-transition/edge", charm_name=base_app_name)
+    await refresh_with_juju(ops_test, app_name, "8-transition/edge", base_app_name)
     # sleep to ensure that active status from before re-refresh does not affect below check
 
     time.sleep(15)
