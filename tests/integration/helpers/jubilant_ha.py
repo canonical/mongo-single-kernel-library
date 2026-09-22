@@ -178,7 +178,6 @@ def cut_network_from_unit(
     """Cut network from a unit.
 
     Args:
-        juju: Juju client
         substrate: The substrate the test is running on
         model_name: The juju model name (only applicable for k8s)
         machine_name: lxc container hostname or k8s pod name
@@ -656,7 +655,6 @@ def wait_network_restore(
     Args:
         juju: Juju client
         substrate: The substrate the test is running on (VM or k8s)
-        model_name: The name of the model
         app_name: The name of the application
         hostname: The name of the instance
         old_ip: old registered IP address
