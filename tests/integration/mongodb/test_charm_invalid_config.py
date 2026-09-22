@@ -62,7 +62,7 @@ def test_build_and_deploy(
         successes=3,
     )
 
-    does_status_match(
+    assert does_status_match(
         juju.status(),
         expected_unit_statuses=None,
         expected_app_statuses={app_name: [MongoDBStatuses.INVALID_ROLE.value]},
