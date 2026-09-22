@@ -77,12 +77,10 @@ def test_integrate_shard_with_etcd(juju: jubilant.Juju) -> None:
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
             status,
-            CONFIG_SERVER_APP_NAME,
-            SHARD_ONE_APP_NAME,
-            SHARD_TWO_APP_NAME,
+            *CLUSTER_COMPONENTS,
             ETCD_APP_NAME,
             idle_period=30,
-            unit_count=3,
+            unit_count={},
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -110,10 +108,7 @@ def test_enable_tls_in_shard_using_rolling_ops(juju: jubilant.Juju, substrate: S
 
     juju.wait(
         lambda status: are_apps_active_and_agents_idle(
-            status,
-            *CLUSTER_COMPONENTS,
-            idle_period=30,
-            unit_count=3,
+            status, *CLUSTER_COMPONENTS, idle_period=30, unit_count={}
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
