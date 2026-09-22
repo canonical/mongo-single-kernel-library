@@ -20,7 +20,7 @@ from tests.integration.helpers.jubilant_common import (
     get_ip_from_unit,
     set_password,
     unit_hostname,
-    verify_endpoints,
+    verify_metrics_endpoints,
 )
 from tests.integration.helpers.jubilant_ha import (
     cut_network_from_unit,
@@ -66,16 +66,18 @@ def test_build_and_deploy(
     )
 
 
-async def test_endpoints(juju: jubilant.Juju, substrate: Substrate):
+@pytest.mark.abort_on_fail
+def test_endpoints(juju: jubilant.Juju, substrate: Substrate):
     """Sanity check that endpoints are running."""
     app_name = existing_app(juju)
     assert app_name
 
     for unit_name, unit_info in juju.status().get_units(app_name).items():
-        verify_endpoints(substrate, unit_name, unit_info)
+        verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-async def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate):
+@pytest.mark.abort_on_fail
+def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate):
     """Verify that endpoints still function correctly after the stats user password changes."""
     app_name = existing_app(juju)
     assert app_name
@@ -92,10 +94,11 @@ async def test_endpoints_new_password(juju: jubilant.Juju, substrate: Substrate)
     )
 
     for unit_name, unit_info in juju.status().get_units(app_name).items():
-        verify_endpoints(substrate, unit_name, unit_info)
+        verify_metrics_endpoints(substrate, unit_name, unit_info)
 
 
-async def test_endpoints_network_cut(
+@pytest.mark.abort_on_fail
+def test_endpoints_network_cut(
     juju: jubilant.Juju, substrate: Substrate, jubilant_chaos_mesh: None
 ):
     """Verify that endpoint still function correctly after a network cut."""
@@ -117,11 +120,10 @@ async def test_endpoints_network_cut(
     wait_network_restore(
         juju,
         substrate,
-        juju.model,
         app_name,
         hostname,
         unit_ip,
         ip_change=False,
         unit_count=len(UNIT_IDS),
     )
-    verify_endpoints(substrate, leader_name, leader_unit_info)
+    verify_metrics_endpoints(substrate, leader_name, leader_unit_info)

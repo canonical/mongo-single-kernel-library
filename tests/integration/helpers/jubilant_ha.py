@@ -22,6 +22,7 @@ from kubernetes import client, config, stream
 from kubernetes.client.exceptions import ApiException
 from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 
+from tests.integration.helpers.jubilant_common import run_command_on_server
 from tests.integration.helpers.status_helpers import are_apps_active_and_agents_idle
 from tests.integration.helpers.types import Substrate
 
@@ -221,7 +222,7 @@ def restore_network_to_unit(
         )
 
 
-def deploy_chaos_mesh(namespace: str) -> None:
+def k8s_deploy_chaos_mesh(namespace: str) -> None:
     """Deploy chaos mesh to the provided namespace.
 
     Chaos mesh can them be used by the tests to simulate a variety of failures.
@@ -238,7 +239,7 @@ def deploy_chaos_mesh(namespace: str) -> None:
     )
 
 
-def destroy_chaos_mesh(namespace: str) -> None:
+def k8s_destroy_chaos_mesh(namespace: str) -> None:
     """Destroy chaos mesh on a provided namespace.
 
     Cleans up the test K8S from test related dependencies.
@@ -391,21 +392,6 @@ def is_unit_reachable(
             return is_unit_reachable_lxd(from_host, to_host, number_of_retries=number_of_retries)
 
 
-def hostname_from_unit(juju: jubilant.Juju, unit_name: str) -> str:
-    """Get the machine hostname from a specific unit.
-
-    Args:
-        juju: An instance of Jubilant's Juju class on which to run Juju commands
-        unit_name: The name of the unit to get the machine
-
-    Returns:
-        The hostname of the machine.
-    """
-    task_result = juju.exec(command="hostname", unit=unit_name)
-
-    return task_result.stdout.strip()
-
-
 def get_sans_from_certificate(certificate_path: str) -> dict[str, set[str]]:
     """Get the SANs for a unit's cert."""
     sans_ip: set[str] = set()
@@ -448,6 +434,7 @@ def lxd_get_controller_hostname(juju: jubilant.Juju) -> str:
 
 
 def send_process_control_signal(
+    juju: jubilant.Juju,
     substrate: Substrate,
     unit_name: str,
     model_full_name: str,
@@ -458,45 +445,17 @@ def send_process_control_signal(
     """Send control signal to a database process running on a Juju unit.
 
     Args:
+        juju: the juju jubilant object.
+        substrate: the substrate the test is running on
         unit_name: the Juju unit running the process
         model_full_name: the Juju model for the unit
         signal: the signal to issue, e.g `SIGKILL`
         db_process: the path to the database process binary
-        substrate: the substrate the test is running on
+        container: the container to execute the commands on.
     """
-    if substrate == "microk8s":
-        # For k8s, we exec into the pod and send the signal to the process
-        command = f"JUJU_MODEL={model_full_name} juju ssh --container {container} {unit_name} pkill --signal {signal} {db_process}"
-    else:
-        command = f"JUJU_MODEL={model_full_name} juju ssh {unit_name} -- sudo -i 'pkill --signal {signal} {db_process}'"
-
-    try:
-        subprocess.check_output(  # nosec: B603
-            shlex.split(command),
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-            timeout=SSH_COMMAND_TIMEOUT,
-        )
-    except subprocess.TimeoutExpired as e:
-        # only the local `juju ssh` was killed -- the remote pkill may have run already
-        logger.error(
-            (
-                "`juju ssh` did not return within %ss while sending %s to %s on unit %s; "
-                "the signal may or may not have been delivered"
-            ),
-            SSH_COMMAND_TIMEOUT,
-            signal,
-            db_process,
-            unit_name,
-        )
-        logger.error("Error details: %s", e)
-        raise
-    except subprocess.CalledProcessError as e:
-        logger.error(
-            "failed to send signal %s to process %s on unit %s", signal, db_process, unit_name
-        )
-        logger.error("Error details: %s", e)
-        raise
+    run_command_on_server(
+        juju, substrate, unit_name, f"pkill --signal {signal} {db_process}", container
+    )
     logger.info(f"Signal {signal} sent to database process on unit {unit_name}.")
     time.sleep(3)  # give some time for the signal to take effect before the test continues
 
@@ -505,7 +464,7 @@ def lxd_patch_restart_delay(juju: jubilant.Juju, unit_name: str, delay: int | No
     """Update the restart delay in the snap's systemd service file."""
     delay = delay or VM_RESTART_DELAY_DEFAULT
     juju.exec(
-        command=f"sed -i 's/^RestartSec=.*/RestartSec={delay}s/' /etc/systemd/system/{MONGOD_SERVICE_DEFAULT_PATH}",
+        command=f"sed -i 's/^RestartSec=.*/RestartSec={delay}s/' {MONGOD_SERVICE_DEFAULT_PATH}",
         unit=unit_name,
     )
 
@@ -551,10 +510,11 @@ def pebble_patch_restart_delay(
     """Modify the pebble restart delay of the underlying process.
 
     Args:
-        juju: An instance of Jubilant's Juju class on which to run Juju commands
-        unit_name: The name of unit to extend the pebble restart delay for
-        delay: The new restart delay to apply
-        ensure_replan: Whether to check that the replan command succeeded
+        juju: An instance of Jubilant's Juju class on which to run Juju commands.
+        unit_name: The name of unit to extend the pebble restart delay for.
+        delay: The new restart delay to apply.
+        ensure_replan: Whether to check that the replan command succeeded.
+        container: the container to execute the commands on.
     """
     pebble_file_content = (
         EXTEND_PEBBLE_RESTART_DELAY_YAML.format(delay=delay)
@@ -636,7 +596,7 @@ def reboot_unit(juju: jubilant.Juju, unit_name: str, substrate: Substrate) -> No
         delete_pod(unit_name.replace("/", "-"), juju.model)
 
 
-def delete_pod(pod_name: str, namespace="testing") -> None:
+def delete_pod(pod_name: str, namespace: str = "testing") -> None:
     """Delete a pod from the cluster."""
     # Load the kubeconfig file from your local machine (~/.kube/config)
     # Note: If running this script INSIDE a pod, use config.load_incluster_config() instead.
@@ -665,7 +625,7 @@ def delete_pod(pod_name: str, namespace="testing") -> None:
             logger.error("Exception when calling CoreV1Api->delete_namespaced_pod: %s", e)
 
 
-def instance_ip(model: str, instance: str) -> str:
+def instance_ip(juju: jubilant.Juju, instance: str) -> str:
     """Translate juju instance name to IP.
 
     Args:
@@ -675,12 +635,9 @@ def instance_ip(model: str, instance: str) -> str:
     Returns:
         The (str) IP address of the instance
     """
-    output = subprocess.check_output(shlex.split(f"juju machines --model {model}"))  # nosec: B603
-
-    for line in output.decode("utf8").splitlines():
-        if instance in line:
-            return line.split()[2]
-
+    for machine in juju.status().machines.values():
+        if machine.hostname == instance:
+            return machine.ip_addresses[0]
     return ""
 
 
@@ -688,7 +645,6 @@ def instance_ip(model: str, instance: str) -> str:
 def wait_network_restore(
     juju: jubilant.Juju,
     substrate: Substrate,
-    model_name: str,
     app_name: str,
     hostname: str,
     old_ip: str,
@@ -708,7 +664,7 @@ def wait_network_restore(
         unit_count: The expected number of units for the application (optional)
     """
     if substrate == "lxd" and ip_change:
-        if instance_ip(model_name, hostname) == old_ip:
+        if instance_ip(juju, hostname) == old_ip:
             raise Exception("Network not restored, IP address has not changed yet.")
     else:
         # Wait for the network to be restored

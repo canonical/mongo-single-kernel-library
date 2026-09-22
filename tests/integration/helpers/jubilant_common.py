@@ -176,7 +176,7 @@ def get_app_name_from_unit(unit_name: str) -> str:
     return unit_name.split("/")[0]
 
 
-def get_unit_app(unit_name: str) -> tuple[int, str]:
+def split_unit_id_and_app_name(unit_name: str) -> tuple[int, str]:
     """Returns the unit id and app name from the unit name."""
     return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
 
@@ -631,7 +631,7 @@ def secondary_mongo_uris_with_sync_delay(
     return secondaries
 
 
-def verify_endpoints(substrate: Substrate, unit_name: str, unit_info: UnitStatus) -> None:
+def verify_metrics_endpoints(substrate: Substrate, unit_name: str, unit_info: UnitStatus) -> None:
     """Verifies mongodb endpoint is functional on a given unit."""
     app_name = get_app_name_from_unit(unit_name)
     unit_address = get_ip_from_unit(substrate, unit_info)

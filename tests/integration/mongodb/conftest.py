@@ -10,6 +10,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers.common import get_app_name
 from tests.integration.helpers.ha import deploy_chaos_mesh, destroy_chaos_mesh, update_restart_delay
+from tests.integration.helpers.jubilant_ha import k8s_deploy_chaos_mesh, k8s_destroy_chaos_mesh
 from tests.integration.helpers.types import Substrate
 
 ORIGINAL_RESTART_DELAY = 5
@@ -35,9 +36,9 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
 def jubilant_chaos_mesh(juju: jubilant.Juju, substrate: Substrate) -> Generator[None, Any, Any]:
     assert juju.model
     if substrate == "microk8s":
-        deploy_chaos_mesh(juju.model)
+        k8s_deploy_chaos_mesh(juju.model)
         yield
-        destroy_chaos_mesh(juju.model)
+        k8s_destroy_chaos_mesh(juju.model)
     else:
         yield
 
