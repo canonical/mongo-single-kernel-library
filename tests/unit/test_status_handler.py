@@ -96,7 +96,7 @@ def test_mongo_get_status_no_error_lxd(
         ),
     ),
 )
-def test_mongo_get_status_no_error_microk8s(
+def test_mongo_get_status_no_error_k8s(
     harness: Harness[MongoTestCharm], mocker, replset_status, expected_status
 ):
     harness.set_leader(True)

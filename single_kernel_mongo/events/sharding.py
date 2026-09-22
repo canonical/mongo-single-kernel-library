@@ -101,6 +101,7 @@ class ConfigServerEventHandler(Object):
             NotDrainedError,
             NotReadyError,
             BalancerNotEnabledError,
+            WorkloadServiceError,
             PyMongoError,
             OperationFailure,
         ) as e:
@@ -206,6 +207,7 @@ class ShardEventHandler(Object):
             PyMongoError,
             RollingOpsNoRelationError,
             WaitingForCertificatesError,
+            WorkloadServiceError,
         ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
         except NonDeferrableFailedHookChecksError as e:
@@ -228,19 +230,31 @@ class ShardEventHandler(Object):
         """SecretChanged event handler, which is used to propagate the updated passwords."""
         try:
             self.manager.handle_secret_changed(event.secret.label or "")
-        except (NotReadyError, FailedToUpdateCredentialsError, DeferrableFailedHookChecksError):
+        except (
+            NotReadyError,
+            FailedToUpdateCredentialsError,
+            DeferrableFailedHookChecksError,
+            WorkloadServiceError,
+        ):
             event.defer()
+            return
         except NonDeferrableFailedHookChecksError as e:
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
+            return
         except WaitingForSecretsError:
             logger.info("Missing secrets, ignoring")
+            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent):
         """On relation broken, we drain the shard before allowing it to disconnect."""
         try:
             self.manager.drain_shard_from_cluster(event.relation)
             self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
-        except (DeferrableFailedHookChecksError, RollingOpsNoRelationError) as e:
+        except (
+            DeferrableFailedHookChecksError,
+            RollingOpsNoRelationError,
+            WorkloadServiceError,
+        ) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
             return
         except RelationBrokenDuringScaleDownError as e:
@@ -253,6 +267,9 @@ class ShardEventHandler(Object):
                 scope="unit",
                 component=self.manager.name,
             )
-            self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            try:
+                self.dependent.remove_ca_cert_from_trust_store(TrustStoreFiles.PBM)
+            except WorkloadServiceError as err:
+                logger.error(f"Failed to remove PBM CA certificate: {str(err)}")
             logger.info(f"Skipping {str(type(event))}: {str(e)}")
             return

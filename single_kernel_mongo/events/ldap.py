@@ -24,6 +24,7 @@ from single_kernel_mongo.exceptions import (
     NonDeferrableFailedHookChecksError,
     UnableToBindError,
     WaitingForLdapDataError,
+    WorkloadServiceError,
 )
 from single_kernel_mongo.lib.charms.certificate_transfer_interface.v0.certificate_transfer import (
     CertificateAvailableEvent,
@@ -162,7 +163,7 @@ class LDAPEventHandler(Object):
         """
         try:
             self.manager.remove_ldap_certificates()
-        except RollingOpsNoRelationError as e:
+        except (RollingOpsNoRelationError, WorkloadServiceError) as e:
             defer_event_with_info_log(logger, event, str(type(event)), str(e))
 
     def _on_restart_if_ready(self, event: RestartIfReadyEvent) -> None:

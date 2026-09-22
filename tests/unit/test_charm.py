@@ -526,9 +526,9 @@ def test_start_mongod_error_initialising_users(
     mocker.patch("single_kernel_mongo.utils.mongo_connection.MongoConnection.init_replset")
     defer = mocker.patch("ops.framework.EventBase.defer")
     init_operator_user = mocker.patch(
-        "single_kernel_mongo.managers.mongo.MongoManager.initialise_charmed_operator_user"
+        "single_kernel_mongo.managers.mongo.MongoManager._initialise_charmed_operator_user"
     )
-    init_user = mocker.patch("single_kernel_mongo.managers.mongo.MongoManager.initialise_user")
+    init_user = mocker.patch("single_kernel_mongo.managers.mongo.MongoManager._initialise_user")
     # presets
     harness.set_leader(True)
 

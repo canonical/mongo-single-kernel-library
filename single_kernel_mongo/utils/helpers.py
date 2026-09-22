@@ -31,10 +31,12 @@ def get_logrotate_pid_command(substrate: Substrates, log_dir: str) -> str:
     return "systemctl show -p MainPID --value snap.charmed-mongodb.mongod.service"
 
 
-def get_logrotate_uri(substrate: Substrates, service_name: str, env_variable: str) -> str:
+def get_logrotate_uri(substrate: Substrates, env_variable_name: str) -> str:
     """How to get the logrotate URI ?"""
     if substrate == Substrates.K8S:
-        return f"$(pebble plan | yq -r .services.{service_name}.environment.{env_variable})"
+        # The logorate URI is set as an env variable in the pebble layer,
+        # we return the name of the env variable.
+        return f'"${{{env_variable_name}}}"'
     return "$(snap get charmed-mongodb logrotate-uri)"
 
 
