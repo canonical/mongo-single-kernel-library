@@ -628,7 +628,7 @@ def instance_ip(juju: jubilant.Juju, instance: str) -> str:
     """Translate juju instance name to IP.
 
     Args:
-        model: The name of the model
+        juju: The juju client
         instance: The name of the instance
 
     Returns:
