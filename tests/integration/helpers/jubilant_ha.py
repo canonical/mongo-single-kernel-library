@@ -622,6 +622,7 @@ def delete_pod(pod_name: str, namespace: str = "testing") -> None:
             logger.warning("Error: Pod '%s' not found in namespace '%s'.", pod_name, namespace)
         else:
             logger.error("Exception when calling CoreV1Api->delete_namespaced_pod: %s", e)
+            raise
 
 
 def instance_ip(juju: jubilant.Juju, instance: str) -> str:
