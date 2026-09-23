@@ -2,45 +2,51 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import (
-    DEPLOYMENT_TIMEOUT,
-    TIMEOUT,
-    deploy_charm,
-    find_unit,
-    get_status_detail,
-    wait_for_mongodb_units_blocked,
-)
-from tests.integration.helpers.sharding import (
+from single_kernel_mongo.config.statuses import ShardStatuses
+from tests.integration.helpers.constants import (
     CLUSTER_COMPONENTS,
     CONFIG_SERVER_APP_NAME,
     CONFIG_SERVER_REL_NAME,
+    DEPLOYMENT_TIMEOUT,
+    DIFFERENT_CERTIFICATES_APP_NAME,
     SHARD_ONE_APP_NAME,
     SHARD_REL_NAME,
     SHARD_THREE_APP_NAME,
     SHARD_TWO_APP_NAME,
+    TIMEOUT,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.jubilant_common import (
+    deploy_charm,
+    find_leader,
+    get_status_detail,
+)
+from tests.integration.helpers.jubilant_sharding import (
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.tls import (
-    DIFFERENT_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_BASE,
-    TLS_CERTIFICATES_CHANNEL,
+from tests.integration.helpers.jubilant_tls import (
     integrate_apps_with_tls,
     remove_tls_integrations,
+)
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
+    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
-async def test_tls_then_build_cluster(
-    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
+def test_tls_then_build_cluster(
+    juju: jubilant.Juju, substrate: Substrate, mongodb_charm: str, mongod_resource: dict[str, str]
 ) -> None:
     """Tests that the cluster can be integrated with TLS."""
     num_units_cluster_config = {
@@ -49,46 +55,64 @@ async def test_tls_then_build_cluster(
         SHARD_TWO_APP_NAME: 1,
     }
 
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate,
         mongodb_charm,
         mongod_resource,
         num_units_cluster_config=num_units_cluster_config,
     )
     # deploy the self-signed-certificates charm
-    await ops_test.model.deploy(
+    juju.deploy(
         TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
         base=TLS_CERTIFICATES_BASE,
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS + [TLS_CERTIFICATES_APP_NAME],
-        idle_period=20,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
 
-    await integrate_apps_with_tls(ops_test, applications=CLUSTER_COMPONENTS)
+    integrate_apps_with_tls(juju, *CLUSTER_COMPONENTS)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
+    )
+
+    integrate_sharding_components(juju)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
-    await integrate_sharding_components(ops_test)
-
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
-        timeout=TIMEOUT,
-        status="active",
-    )
-
-    await check_cluster_tls_enabled(
-        ops_test,
+    check_cluster_tls_enabled(
+        juju,
         substrate,
         components=CLUSTER_COMPONENTS,
         config_server=CONFIG_SERVER_APP_NAME,
@@ -96,100 +120,115 @@ async def test_tls_then_build_cluster(
 
 
 @pytest.mark.abort_on_fail
-async def test_tls_inconsistent_rels(ops_test: OpsTest, substrate: Substrate) -> None:
-    await ops_test.model.deploy(
-        TLS_CERTIFICATES_APP_NAME,
-        application_name=DIFFERENT_CERTIFICATES_APP_NAME,
+def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> None:
+    juju.deploy(
+        charm=TLS_CERTIFICATES_APP_NAME,
+        app=DIFFERENT_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
         base=TLS_CERTIFICATES_BASE,
     )
 
     # CASE 1: Config-server has TLS enabled - but shard does not
-    await remove_tls_integrations(ops_test, applications=[SHARD_ONE_APP_NAME])
+    remove_tls_integrations(juju, SHARD_ONE_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                *CLUSTER_COMPONENTS,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    SHARD_ONE_APP_NAME: [ShardStatuses.MISSING_PEER_TLS_REL.value]
+                },
+            )
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
-    )
-
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_ONE_APP_NAME,
-        status="Shard requires peer TLS to be enabled.",
-        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Re-integrate to bring cluster back to steady state
-    await integrate_apps_with_tls(ops_test, applications=[SHARD_ONE_APP_NAME])
+    integrate_apps_with_tls(juju, SHARD_ONE_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
-        status="active",
+        delay=5,
+        successes=3,
     )
 
     # CASE 2: Config-server does not have TLS enabled - but shard does
-    await remove_tls_integrations(ops_test, applications=[CONFIG_SERVER_APP_NAME])
+    remove_tls_integrations(juju, CONFIG_SERVER_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                *CLUSTER_COMPONENTS,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    SHARD_ONE_APP_NAME: [ShardStatuses.INVALID_PEER_TLS_REL.value]
+                },
+            )
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
-    )
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_ONE_APP_NAME,
-        status="Invalid peer-certificates relation.",
-        timeout=450,
+        delay=5,
+        successes=3,
     )
 
     # CASE 3: Cluster components are using different CA's
-
-    # Re-integrate to bring cluster back to steady state
-    await integrate_apps_with_tls(
-        ops_test,
-        applications=[CONFIG_SERVER_APP_NAME],
+    integrate_apps_with_tls(
+        juju,
+        CONFIG_SERVER_APP_NAME,
         cert_provider_app=DIFFERENT_CERTIFICATES_APP_NAME,
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                *CLUSTER_COMPONENTS,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={SHARD_ONE_APP_NAME: [ShardStatuses.PEER_CA_MISMATCH.value]},
+            )
+        ),
         timeout=TIMEOUT,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
 
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_ONE_APP_NAME,
-        status="Peer CA mismatch.",
-        timeout=450,
-    )
+    leader_name, _ = find_leader(juju, app_name=SHARD_ONE_APP_NAME)
+    statuses = get_status_detail(juju, leader_name)
 
-    leader_unit = await find_unit(ops_test, leader=True, app_name=SHARD_ONE_APP_NAME)
-    statuses = await get_status_detail(leader_unit)
-
-    unit_statuses = json.loads(statuses["unit"])
     assert any(
         unit_status["Message"] == "Shard internal CA and Config-Server internal CA don't match."
-        for unit_status in unit_statuses
+        for unit_status in statuses["unit"]
     ), "Shard internal CA status not well reported."
     assert any(
         unit_status["Message"] == "Shard client CA and Config-Server client CA don't match."
-        for unit_status in unit_statuses
+        for unit_status in statuses["unit"]
     ), "Shard client CA status not well reported."
 
 
-async def test_invalid_relation_not_yet_established(
-    ops_test: OpsTest, substrate: Substrate, mongodb_charm: str, mongod_resource: dict
+def test_invalid_relation_not_yet_established(
+    juju: jubilant.Juju, substrate: Substrate, mongodb_charm: str, mongod_resource: dict[str, str]
 ):
     """Deploy a shard, integrate it but only the config server has TLS.
 
@@ -197,8 +236,8 @@ async def test_invalid_relation_not_yet_established(
     config-server status.
     """
     # Deploy a new shard
-    await deploy_charm(
-        ops_test,
+    deploy_charm(
+        juju,
         mongodb_charm,
         substrate,
         app_name=SHARD_THREE_APP_NAME,
@@ -206,38 +245,69 @@ async def test_invalid_relation_not_yet_established(
         num_units=1,
         config={"role": "shard"},
     )
-    await ops_test.model.wait_for_idle(
-        apps=[SHARD_THREE_APP_NAME],
-        idle_period=20,
+
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            SHARD_THREE_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Integrate the shard with the config-server
-    await ops_test.model.integrate(
+    juju.integrate(
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
         f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
     )
 
     # Shard has not TLS but config server has
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_THREE_APP_NAME,
-        status="Shard requires peer TLS to be enabled.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                SHARD_THREE_APP_NAME,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    SHARD_THREE_APP_NAME: [ShardStatuses.MISSING_PEER_TLS_REL.value]
+                },
+            )
+        ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # Remove the not yet added shard
-    await ops_test.model.applications[SHARD_THREE_APP_NAME].remove_relation(
+    juju.remove_relation(
         f"{SHARD_THREE_APP_NAME}:{SHARD_REL_NAME}",
         f"{CONFIG_SERVER_APP_NAME}:{CONFIG_SERVER_REL_NAME}",
     )
 
     # Wait to go back to normal status.
-    await wait_for_mongodb_units_blocked(
-        ops_test,
-        substrate,
-        SHARD_THREE_APP_NAME,
-        status="Missing relation to config-server.",
+    juju.wait(
+        lambda status: (
+            are_agents_idle(
+                status,
+                SHARD_THREE_APP_NAME,
+                idle_period=30,
+                unit_count=3,
+            )
+            and does_status_match(
+                model_status=status,
+                expected_unit_statuses={
+                    SHARD_THREE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value]
+                },
+            )
+        ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )

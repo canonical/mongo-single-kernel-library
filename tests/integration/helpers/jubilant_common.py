@@ -5,6 +5,7 @@
 import json
 import logging
 import math
+import os
 from contextlib import contextmanager
 from datetime import datetime
 from typing import NamedTuple
@@ -22,7 +23,6 @@ from tests.integration.helpers.common import (
     CommandResult,
     ProcessError,
     SecretNotFoundError,
-    external_cert_path,
     find_json,
     mongodb_config_path,
     mongosh,
@@ -34,6 +34,8 @@ from tests.integration.helpers.constants import (
     INTERNAL_USER_PASSWORD_CONFIG,
     MONGOD_PORT,
     MONGODB_EXPORTER_PORT,
+    MONGODB_ROCK_CONF_DIR,
+    MONGODB_SNAP_CONF_DIR,
     MONGOS_PORT,
     TEST_DOCUMENTS,
     TIMEOUT,
@@ -45,6 +47,24 @@ from tests.integration.helpers.status_helpers import (
 from tests.integration.helpers.types import Substrate
 
 logger = logging.getLogger(__name__)
+
+
+def external_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-ca.crt"
+
+
+def external_pem_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/external-cert.pem"
+    return f"{MONGODB_ROCK_CONF_DIR}/external-cert.pem"
+
+
+def internal_cert_path(substrate: Substrate):
+    if substrate == "lxd":
+        return f"{MONGODB_SNAP_CONF_DIR}/internal-ca.crt"
+    return f"{MONGODB_ROCK_CONF_DIR}/internal-ca.crt"
 
 
 @contextmanager
@@ -202,6 +222,30 @@ def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
     return next((name, unit) for name, unit in units.items() if unit.leader)
 
 
+def get_secret_uri_by_owner(
+    juju: jubilant.Juju, app_or_unit: str | None = None, label: str | None = None
+) -> str:
+    """Retrieve secret ID for an app or unit."""
+    owner = ""
+
+    if app_or_unit:
+        prefix = "unit" if app_or_unit[-1].isdigit() else "application"
+        owner = f"{prefix}-{app_or_unit}"
+        if prefix == "unit":
+            owner = owner.replace("/", "-")
+
+    secrets = juju.secrets(owner=owner)
+
+    if not label:
+        return secrets[0].uri
+
+    for secret in secrets:
+        if secret.label == label:
+            return secret.uri
+
+    raise Exception(f"No secret matching {owner=} and {label=} found.")
+
+
 def get_secret_by_label(juju: jubilant.Juju, label: str) -> dict[str, str]:
     for secret in juju.secrets():
         if label == secret.label:
@@ -209,6 +253,11 @@ def get_secret_by_label(juju: jubilant.Juju, label: str) -> dict[str, str]:
             return revealed_secret.content
 
     raise SecretNotFoundError(f"Secret with label {label} not found")
+
+
+def get_secret_by_uri(juju: jubilant.Juju, uri: str) -> dict[str, str]:
+    revealed_secret = juju.show_secret(uri, reveal=True)
+    return revealed_secret.content
 
 
 def get_password(juju: jubilant.Juju, app_name: str, username: str):
@@ -422,6 +471,7 @@ def execute_on_mongod(
     uri: str,
     command: str,
     tls: bool = False,
+    unit_name: str | None = None,
     stringify: bool = True,
     expecting_output: bool = True,
     container_name: str = "mongod",
@@ -436,7 +486,7 @@ def execute_on_mongod(
     else:
         formatted_string = f'"{uri}" --quiet --eval "{command}" {tls_string}'
 
-    unit_name = f"{app_name}/leader"
+    unit_name = unit_name or f"{app_name}/leader"
     cmd = [mongosh(substrate), formatted_string]
 
     try:
@@ -556,6 +606,58 @@ def relate_application(
     )
 
 
+def get_application_relation_data(
+    juju: jubilant.Juju,
+    app_name: str,
+    relation_name: str,
+    key: str,
+    relation_id: int | None = None,
+    relation_alias: str | None = None,
+) -> str | None:
+    """Get relation data for an application.
+
+    Args:
+        juju: The juju client
+        app_name: The name of the application
+        relation_name: name of the relation to get connection data from
+        key: key of data to be retrieved
+        relation_id: id of the relation to get connection data from
+        relation_alias: alias of the relation (like a connection name)
+            to get connection data from
+    Returns:
+        the that that was requested or None
+            if no data in the relation
+    Raises:
+        ValueError if it's not possible to get application unit data
+            or if there is no data for the particular relation endpoint
+            and/or alias.
+    """
+    leader_name, _ = find_leader(juju, app_name)
+    unit_info = juju.show_unit(leader_name)
+
+    # Filter the data based on the relation name.
+    relation_data = [info for info in unit_info.relation_info if info.endpoint == relation_name]
+
+    if relation_id:
+        # Filter the data based on the relation id.
+        relation_data = [v for v in relation_data if v.relation_id == relation_id]
+
+    if relation_alias:
+        # Filter the data based on the cluster/relation alias.
+        relation_data = [
+            v
+            for v in relation_data
+            if json.loads(v.app_data.get("data", "{}")).get("alias") == relation_alias
+        ]
+
+    if len(relation_data) == 0:
+        raise ValueError(
+            f"no relation data could be grabbed on relation with endpoint {relation_name} and alias {relation_alias}"
+        )
+
+    return relation_data[0].app_data.get(key)
+
+
 def scp_file_preserve_ctime(
     juju: jubilant.Juju, substrate: Substrate, unit_name: str, path: str, container: str = "mongod"
 ) -> str:
@@ -584,6 +686,26 @@ def scp_file_preserve_ctime(
         fd.write(stdout.strip())
 
     return f"{filename}"
+
+
+def get_file_content(
+    juju: jubilant.Juju,
+    substrate: Substrate,
+    unit_name: str,
+    filepath: str,
+    container: str = "mongod",
+) -> str:
+    """Read the content of the cert file stored in the unit."""
+    file_copy_path = scp_file_preserve_ctime(
+        juju, substrate, unit_name, filepath, container=container
+    )
+    with open(file_copy_path) as f:
+        file_content = f.read()
+
+    # cleanup the file
+    os.remove(file_copy_path)
+
+    return file_content
 
 
 def check_if_test_documents_stored(
@@ -711,3 +833,12 @@ def verify_cluster_ip_source_allowlist(
             f"Removed IP addresses {sorted(unexpected_addresses)} are still present in "
             f"{unit_name}'s clusterIpSourceAllowlist: {sorted(allowlist)}"
         )
+
+
+def get_status_detail(juju: jubilant.Juju, unit_name: str) -> dict[str, list[dict[str, str]]]:
+    """Gets the status detail dictionary."""
+    action = juju.run(unit=unit_name, action="status-detail")
+    return {
+        "unit": json.loads(action.results["json-output"]["unit"]),
+        "app": json.loads(action.results["json-output"]["app"]),
+    }

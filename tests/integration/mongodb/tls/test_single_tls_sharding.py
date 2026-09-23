@@ -3,111 +3,152 @@
 # See LICENSE file for licensing details.
 
 
+import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers.common import DEPLOYMENT_TIMEOUT, TIMEOUT
-from tests.integration.helpers.sharding import (
+from tests.integration.helpers.constants import (
+    CLIENT_TLS_RELATION_NAME,
     CLUSTER_COMPONENTS,
+    DEPLOYMENT_TIMEOUT,
+    PEER_TLS_RELATION_NAME,
+    TIMEOUT,
+    TLS_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_BASE,
+    TLS_CERTIFICATES_CHANNEL,
+)
+from tests.integration.helpers.jubilant_sharding import (
     check_cluster_tls_disabled,
     check_cluster_tls_enabled,
     deploy_cluster_components,
     integrate_sharding_components,
 )
-from tests.integration.helpers.tls import (
-    CLIENT_TLS_RELATION_NAME,
-    PEER_TLS_RELATION_NAME,
-    TLS_CERTIFICATES_APP_NAME,
-    TLS_CERTIFICATES_BASE,
-    TLS_CERTIFICATES_CHANNEL,
+from tests.integration.helpers.status_helpers import (
+    are_agents_idle,
+    are_apps_active_and_agents_idle,
 )
 from tests.integration.helpers.types import Substrate
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(
-    ops_test: OpsTest,
-    mongodb_charm: str,
+def test_build_and_deploy(
+    juju: jubilant.Juju,
     substrate: Substrate,
-    mongod_resource,
+    mongodb_charm: str,
+    mongod_resource: dict[str, str],
 ) -> None:
     """Build and deploy one unit of MongoDB."""
     # it is possible for users to provide their own cluster for testing. Hence check if there
     # is a pre-existing cluster.
-    await deploy_cluster_components(
-        ops_test,
+    deploy_cluster_components(
+        juju,
         substrate=substrate,
         mongodb_charm=mongodb_charm,
         mongod_resource=mongod_resource,
     )
     # deploy the self-signed-certificates charm
-    await ops_test.model.deploy(
+    juju.deploy(
         TLS_CERTIFICATES_APP_NAME,
         channel=TLS_CERTIFICATES_CHANNEL,
         base=TLS_CERTIFICATES_BASE,
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS + [TLS_CERTIFICATES_APP_NAME],
-        idle_period=20,
+    juju.wait(
+        lambda status: are_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            TLS_CERTIFICATES_APP_NAME,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=DEPLOYMENT_TIMEOUT,
-        raise_on_blocked=False,
+        delay=5,
+        successes=3,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_built_cluster_with_peer_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_built_cluster_with_peer_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster, when integrated with peer TLS, allows non TLS client relations."""
-    await integrate_sharding_components(ops_test)
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        idle_period=20,
+    integrate_sharding_components(juju)
+
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     for app in CLUSTER_COMPONENTS:
-        await ops_test.model.integrate(TLS_CERTIFICATES_APP_NAME, f"{app}:{PEER_TLS_RELATION_NAME}")
+        juju.integrate(TLS_CERTIFICATES_APP_NAME, f"{app}:{PEER_TLS_RELATION_NAME}")
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # This checks that clients can connect using non-tls connections.
-    await check_cluster_tls_disabled(ops_test, substrate)
+    check_cluster_tls_disabled(juju, substrate)
 
     for app in CLUSTER_COMPONENTS:
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{PEER_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
-        )
+        juju.remove_relation(f"{app}:{PEER_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
 
 @pytest.mark.abort_on_fail
-async def test_built_cluster_with_client_tls(ops_test: OpsTest, substrate: Substrate) -> None:
+def test_built_cluster_with_client_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster, when integrated with client TLS, enforces the TLS relations."""
     for app in CLUSTER_COMPONENTS:
-        await ops_test.model.integrate(
-            TLS_CERTIFICATES_APP_NAME, f"{app}:{CLIENT_TLS_RELATION_NAME}"
-        )
+        juju.integrate(TLS_CERTIFICATES_APP_NAME, f"{app}:{CLIENT_TLS_RELATION_NAME}")
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS, idle_period=20, timeout=TIMEOUT, status="active"
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
+        timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
 
     # This checks that clients can connect using non-tls connections.
-    await check_cluster_tls_enabled(ops_test, substrate)
+    check_cluster_tls_enabled(juju, substrate)
 
     for app in CLUSTER_COMPONENTS:
-        await ops_test.model.applications[app].remove_relation(
-            f"{app}:{CLIENT_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME
-        )
+        juju.remove_relation(f"{app}:{CLIENT_TLS_RELATION_NAME}", TLS_CERTIFICATES_APP_NAME)
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        idle_period=20,
+    juju.wait(
+        lambda status: are_apps_active_and_agents_idle(
+            status,
+            *CLUSTER_COMPONENTS,
+            idle_period=30,
+            unit_count=3,
+        ),
         timeout=TIMEOUT,
+        delay=5,
+        successes=3,
     )
