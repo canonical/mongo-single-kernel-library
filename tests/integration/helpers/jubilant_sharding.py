@@ -101,7 +101,7 @@ def deploy_cluster_components(
                 SHARD_ONE_APP_NAME,
                 SHARD_TWO_APP_NAME,
                 idle_period=30,
-                unit_count=3,
+                unit_count={},
             )
             and does_status_match(
                 model_status=status,
