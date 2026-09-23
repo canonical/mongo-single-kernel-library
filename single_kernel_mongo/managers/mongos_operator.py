@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from typing import TYPE_CHECKING, final
 
 import charm_refresh
@@ -155,7 +154,9 @@ class MongosOperator(OperatorProtocol, Object):
         except (charm_refresh.UnitTearingDown, charm_refresh.PeerRelationNotReady):
             self.refresh = None
         except charm_refresh.KubernetesJujuAppNotTrusted:
-            sys.exit()
+            # As recommended, let the charm crash so that the user can trust
+            # the application and all events will resume afterwards.
+            raise
 
         self.upgrades_status_manager = MongoDBUpgradesStatusManager(
             self, self.state, self.workload, self.refresh
