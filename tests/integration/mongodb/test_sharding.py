@@ -184,8 +184,8 @@ def test_cluster_ip_source_allowlists(juju: jubilant.Juju, substrate: Substrate)
 
 
 @pytest.mark.abort_on_fail
-async def test_set_operator_password(juju: jubilant.Juju):
-    """Tests that the cluster can safely set the charemd_operator password."""
+def test_set_operator_password(juju: jubilant.Juju):
+    """Tests that the cluster can safely set the charmed_operator password."""
     for cluster_app_name in CLUSTER_APPS:
         operator_password = get_password(
             juju=juju, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
