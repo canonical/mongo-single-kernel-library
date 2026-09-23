@@ -192,7 +192,7 @@ def cannot_connect_without_tls(
         model_name = juju.model
         host = f"mongodb-k8s-{unit_id}.mongodb-k8s-endpoints.{model_name}.svc.cluster.local"
 
-    uri = unit_uri(username, password, ip_address=host, mongos=True)
+    uri = unit_uri(username, password, ip_address=host, mongos=mongos)
     output = execute_on_mongod(
         juju,
         substrate,
