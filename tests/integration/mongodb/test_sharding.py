@@ -334,7 +334,7 @@ def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate):
+def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate):
     """Tests safe removal of a shard that is not primary."""
     # add back a shard so we can safely remove a shard.
 
