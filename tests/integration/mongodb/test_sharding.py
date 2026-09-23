@@ -16,12 +16,9 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    find_leader,
-    get_ip_from_unit,
     get_password,
     remove_number_units,
     set_password,
-    unit_uri,
 )
 from tests.integration.helpers.jubilant_sharding import (
     build_mongos_client,
@@ -194,9 +191,9 @@ def test_set_operator_password(juju: jubilant.Juju):
         operator_password = get_password(
             juju=juju, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
-        assert operator_password != CHARMED_OPERATOR_PASSWORD, (
-            f"{cluster_app_name} is incorrectly already set to the new password."
-        )
+        assert (
+            operator_password != CHARMED_OPERATOR_PASSWORD
+        ), f"{cluster_app_name} is incorrectly already set to the new password."
 
     # rotate password and verify that no unit goes into error as a result of password rotation
     set_password(
@@ -225,9 +222,9 @@ def test_set_operator_password(juju: jubilant.Juju):
         operator_password = get_password(
             juju, username=CHARMED_OPERATOR_USERNAME, app_name=cluster_app_name
         )
-        assert operator_password == CHARMED_OPERATOR_PASSWORD, (
-            f"{cluster_app_name} did not rotate to new password."
-        )
+        assert (
+            operator_password == CHARMED_OPERATOR_PASSWORD
+        ), f"{cluster_app_name} did not rotate to new password."
 
 
 @pytest.mark.abort_on_fail
@@ -320,9 +317,9 @@ def test_shard_removal(juju: jubilant.Juju, substrate: Substrate) -> None:
     assert balancer_state["mode"] != "off", "balancer not turned back on from config server"
 
     # verify sharded cluster config
-    assert has_correct_shards(mongos_client, expected_shards=[SHARD_ONE_APP_NAME]), (
-        "Config server did not process config properly"
-    )
+    assert has_correct_shards(
+        mongos_client, expected_shards=[SHARD_ONE_APP_NAME]
+    ), "Config server did not process config properly"
 
     # verify no data lost
     assert shard_has_databases(
@@ -390,9 +387,9 @@ def test_removal_of_non_primary_shard(juju: jubilant.Juju, substrate: Substrate)
     mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
-    assert has_correct_shards(mongos_client, expected_shards=[SHARD_ONE_APP_NAME]), (
-        "Config server did not process config properly"
-    )
+    assert has_correct_shards(
+        mongos_client, expected_shards=[SHARD_ONE_APP_NAME]
+    ), "Config server did not process config properly"
 
     # verify no data lost
     assert shard_has_databases(
@@ -460,9 +457,9 @@ def test_unconventual_shard_removal(juju: jubilant.Juju, substrate: Substrate):
     mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # verify sharded cluster config
-    assert has_correct_shards(mongos_client, expected_shards=[SHARD_ONE_APP_NAME]), (
-        "Config server did not process config properly"
-    )
+    assert has_correct_shards(
+        mongos_client, expected_shards=[SHARD_ONE_APP_NAME]
+    ), "Config server did not process config properly"
 
     # verify no data lost
     assert shard_has_databases(

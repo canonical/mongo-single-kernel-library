@@ -229,14 +229,6 @@ def get_ips_for_app(juju: jubilant.Juju, substrate: Substrate, app_name: str) ->
     }
 
 
-def get_ips_for_app(juju: jubilant.Juju, substrate: Substrate, app_name: str) -> set[str]:
-    """Get the IP addresses of an application's units based on the substrate type."""
-    return {
-        get_ip_from_unit(substrate, unit_info)
-        for unit_info in juju.status().get_units(app_name).values()
-    }
-
-
 def unit_hostname(juju: jubilant.Juju, unit_name: str) -> str:
     """Get hostname for a unit.
 
