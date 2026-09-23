@@ -2,8 +2,8 @@ import getpass
 from pathlib import Path
 from platform import machine
 
+import charmlibs.snap as snap
 import pytest
-from charmlibs.snap import SnapError
 from ops.pebble import Layer
 
 from single_kernel_mongo.config.literals import VmUser
@@ -165,13 +165,13 @@ def test_logrotate_workload_init():
     )
 
 
-def test_snap_install_failure(monkeypatch):
-    def mock_snap_ensure(*args, **kwargs):
-        raise SnapError
-
+def test_snap_install_failure(mocker, monkeypatch):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
-    monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap_ensure)
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.snap.ensure_installed",
+        side_effect=snap.Error("boom"),
+    )
     monkeypatch.setattr(
         workload,
         "load_toml_file",
@@ -182,14 +182,11 @@ def test_snap_install_failure(monkeypatch):
         workload.install()
 
 
-def test_install_success(monkeypatch):
-    def mock_snap(*args, **kwargs):
-        return
-
+def test_install_success(mocker, monkeypatch):
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
 
-    monkeypatch.setattr(workload.mongod_snap, "ensure", mock_snap)
-    monkeypatch.setattr(workload.mongod_snap, "hold", mock_snap)
+    mocker.patch("single_kernel_mongo.core.vm_workload.snap.ensure_installed", return_value=True)
+    mocker.patch("single_kernel_mongo.core.vm_workload.snap.hold", return_value=None)
     monkeypatch.setattr(
         workload,
         "load_toml_file",
@@ -228,50 +225,58 @@ def test_delete_success(tmp_path):
 
 
 @pytest.mark.parametrize("command", [("start"), ("stop"), ("restart")])
-def test_command_success(monkeypatch, command):
-    def mock_snap(*args, **kwargs):
-        return
+def test_command_success(mocker, command):
+    mock_snap = mocker.patch(f"single_kernel_mongo.core.vm_workload.snap.{command}")
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
-    monkeypatch.setattr(workload.mongod_snap, command, mock_snap)
 
     assert getattr(workload, command)() is None
+    mock_snap.assert_called_once()
 
 
 @pytest.mark.parametrize("command", [("start"), ("stop"), ("restart")])
-def test_command_success_failure(monkeypatch, caplog, command):
-    def mock_snap(*args, **kwargs):
-        raise SnapError
+def test_command_success_failure(mocker, caplog, command):
+    mocker.patch(
+        f"single_kernel_mongo.core.vm_workload.snap.{command}",
+        side_effect=snap.ChangeError("boom", kind="change-error", value=None),
+    )
 
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
-    monkeypatch.setattr(workload.mongod_snap, command, mock_snap)
 
     caplog.clear()
     with pytest.raises(WorkloadServiceError):
         getattr(workload, command)()
-    # Check that we logged the SnapError
+    # Check that we logged the ChangeError
     assert any(
-        record.levelname == "ERROR" and record.exc_info[0] == SnapError for record in caplog.records
+        record.levelname == "ERROR" and record.exc_info[0] == snap.ChangeError
+        for record in caplog.records
     )
 
 
 @pytest.mark.parametrize(
-    "value,expected",
+    "output,expected",
     [
-        ({"mongod": {"active": True}}, True),
-        ({"mongod": {"active": False}}, False),
-        ({"mongod": {}}, False),
-        ({}, False),
+        ("active\n", True),
+        ("inactive\n", False),
+        ("failed\n", False),
     ],
 )
-def test_active(mocker, value: dict, expected: bool):
+def test_active(mocker, output: str, expected: bool):
     mocker.patch(
-        "charmlibs.snap.Snap.services",
-        return_value=value,
-        new_callable=mocker.PropertyMock,
+        "single_kernel_mongo.core.vm_workload.VMWorkload.exec",
+        return_value=output,
     )
     workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
     assert workload.active() == expected
+
+
+def test_active_exec_failure(mocker):
+    mocker.patch(
+        "single_kernel_mongo.core.vm_workload.VMWorkload.exec",
+        side_effect=WorkloadExecError("systemctl", 3, "", "inactive"),
+    )
+    workload = VMMongoDBWorkload(role=VM_MONGOD, container=None)
+    assert workload.active() is False
 
 
 def test_exec():
@@ -290,7 +295,8 @@ def test_exec_fail(mocker, caplog):
     assert err.value.return_code == 1
     assert err.value.cmd == "false"
     assert any(
-        record.levelname == "ERROR" and record.msg == "cmd failed - cmd=false, stdout=, stderr="
+        record.levelname == "ERROR"
+        and record.getMessage() == "cmd failed - cmd=false, stdout=, stderr="
         for record in caplog.records
     )
 
