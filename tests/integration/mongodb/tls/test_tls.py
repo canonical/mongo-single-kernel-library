@@ -166,7 +166,7 @@ def test_integrate_client_access_tls(juju: jubilant.Juju):
         successes=3,
     )
     secret_tls = None
-    for relation_data in juju.show_unit(f"{CONTINUOUS_WRITE_APPLICATION}/leader").relation_info:
+    for relation_data in juju.show_unit(f"{CONTINUOUS_WRITE_APPLICATION}/0").relation_info:
         if relation_data.endpoint == "mongodb" and relation_data.related_endpoint == "database":
             secret_tls = relation_data.app_data.get("secret-tls")
 
