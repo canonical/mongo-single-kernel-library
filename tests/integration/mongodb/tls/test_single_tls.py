@@ -101,7 +101,7 @@ def test_enable_tls_peer_only(juju: jubilant.Juju, substrate: Substrate) -> None
             substrate=substrate,
             unit_name=unit_name,
             unit_info=unit_info,
-            enabled=True,
+            enabled=False,
             app_name=app_name,
         ), f"TLS not enabled for unit {unit_name}."
 
@@ -148,7 +148,7 @@ def test_enable_tls_client_only(juju: jubilant.Juju, substrate: Substrate) -> No
             substrate=substrate,
             unit_name=unit_name,
             unit_info=unit_info,
-            enabled=False,
+            enabled=True,
             app_name=app_name,
         ), f"TLS not enabled for unit {unit_name}."
         assert cannot_connect_without_tls(
