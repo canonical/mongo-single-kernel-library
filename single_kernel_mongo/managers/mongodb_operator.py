@@ -355,6 +355,7 @@ class MongoDBOperator(OperatorProtocol, Object):
 
         # Update the roles and information on mongos and shards
         self.config_server_manager.update_mongos_hosts()
+        self.shard_manager.reconcile_shard_state()
 
         # Configure the workload. This requires a valid role!
         # In the _run_startup_checks method, we ensure that we have a valid role before

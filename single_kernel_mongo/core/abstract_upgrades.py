@@ -429,6 +429,7 @@ class GenericMongoDBUpgradeManager(
             return
         if (
             not during_upgrade
+            and self._upgrade.unit_state != UnitState.HEALTHY
             and self.state.db_initialised
             and self.dependent.mongo_manager.mongod_ready()
         ):

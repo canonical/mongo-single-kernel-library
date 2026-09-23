@@ -86,13 +86,14 @@ async def test_upgrade(
             mongod_resource=mongod_resource,
         )
 
-    await ops_test.model.wait_for_idle(
-        apps=CLUSTER_COMPONENTS,
-        status="active",
-        timeout=1000,
-        idle_period=30,
-        raise_on_error=False,
-    )
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await ops_test.model.wait_for_idle(
+            apps=CLUSTER_COMPONENTS,
+            status="active",
+            timeout=1000,
+            idle_period=30,
+            raise_on_error=False,
+        )
 
     shard_one_expected_writes = await stop_continous_writes(
         ops_test,

@@ -763,6 +763,10 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
 
     def update_mongos_hosts(self):
         """Updates the hosts for mongos on the relation data."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
         if (hosts := self.state.shard_state.mongos_hosts) != self.state.app_peer_data.mongos_hosts:
             self.state.app_peer_data.mongos_hosts = hosts
 
@@ -1035,3 +1039,16 @@ class ShardManager(Object, AbstractManagerStatus[CharmState]):
             return []
 
         return charm_statuses or [ShardStatuses.ACTIVE_IDLE.value]
+
+    def reconcile_shard_state(self):
+        """Reconcile a shard state."""
+        if not self.charm.unit.is_leader():
+            return
+        if not self.state.is_role(MongoDBRoles.SHARD):
+            return
+        if not self.state.shard_relation:
+            return
+
+        self.state.shard_state.shard_replset = self.state.app_peer_data.replica_set
+        self.state.shard_state.auth_updated = True
+        self.state.app_peer_data.mongos_hosts = self.state.shard_state.mongos_hosts
