@@ -487,14 +487,14 @@ def execute_on_mongod(
         formatted_string = f'"{uri}" --quiet --eval "{command}" {tls_string}'
 
     unit_name = unit_name or f"{app_name}/leader"
-    cmd = [mongosh(substrate), formatted_string]
+    cmd = f"{mongosh(substrate)} {formatted_string}"
 
     try:
-        stdout = juju.ssh(unit_name, *cmd, container=container_name)
+        stdout = run_command_on_server(juju, substrate, unit_name, cmd, container_name)
         ret_code = 0
         stderr = ""
     except jubilant.CLIError as e:
-        logger.error("Failed to execute command '%s': %s, %s", command, e.stderr, e.stdout)
+        logger.error("Failed to execute command '%s': %s, %s", cmd, e.stderr, e.stdout)
         stdout = e.stdout
         stderr = e.stderr
         ret_code = e.returncode
