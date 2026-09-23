@@ -633,7 +633,6 @@ def get_application_relation_data(
             and/or alias.
     """
     leader_name, _ = find_leader(juju, app_name)
-    breakpoint
     unit_info = juju.show_unit(leader_name)
 
     # Filter the data based on the relation name.
