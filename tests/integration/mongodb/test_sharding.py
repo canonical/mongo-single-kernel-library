@@ -6,7 +6,6 @@ import logging
 
 import jubilant
 import pytest
-from pymongo import MongoClient
 
 from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from tests.integration.helpers.constants import (
@@ -17,12 +16,9 @@ from tests.integration.helpers.constants import (
 )
 from tests.integration.helpers.jubilant_common import (
     deploy_charm,
-    find_leader,
-    get_ip_from_unit,
     get_password,
     remove_number_units,
     set_password,
-    unit_uri,
 )
 from tests.integration.helpers.jubilant_sharding import (
     build_mongos_client,
@@ -229,17 +225,7 @@ def test_set_operator_password(juju: jubilant.Juju):
 @pytest.mark.abort_on_fail
 def test_sharding_write(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests writing data to mongos gets propagated to shards."""
-    _, leader_status = find_leader(juju, app_name=CONFIG_SERVER_APP_NAME)
-
-    host = get_ip_from_unit(substrate=substrate, unit_info=leader_status)
-
-    # write data to mongos on both shards.
-    password = get_password(
-        juju=juju, app_name=CONFIG_SERVER_APP_NAME, username=CHARMED_OPERATOR_USERNAME
-    )
-
-    mongos_uri = unit_uri(CHARMED_OPERATOR_USERNAME, password, ip_address=host, mongos=True)
-    mongos_client = MongoClient(mongos_uri, directConnection=True)
+    mongos_client = build_mongos_client(juju, substrate, CONFIG_SERVER_APP_NAME)
 
     # write data to shard two
     write_data_to_mongodb(
