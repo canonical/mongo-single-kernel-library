@@ -17,7 +17,14 @@ deploy_chaos_mesh() {
     fi
 
     echo "installing chaos-mesh"
+    # --wait blocks until the controller-manager Deployment and the chaos-daemon
+    # DaemonSet report Ready, so the admission webhook (mnetworkchaos.kb.io) is
+    # serving and the daemon can program rules before any test applies a
+    # NetworkChaos. Without it the test races chaos-mesh startup: the webhook
+    # refuses connections and the loss rule is enforced late (packets leak).
     sudo k8s helm install chaos-mesh chaos-mesh/chaos-mesh --namespace="${chaos_mesh_ns}" --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock --set dashboard.create=false --version "${chaos_mesh_version}" --set clusterScoped=false --set controllerManager.targetNamespace="${chaos_mesh_ns}" --wait --timeout 5m0s
+    # Brief extra settle for the webhook's serving cert/endpoints to propagate
+    # after the pod is Ready; the apply itself is also retried (see tests/integration/helpers/jubilant_ha.py).
     sleep 10
 }
 
