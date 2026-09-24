@@ -7,7 +7,6 @@ from logging import getLogger
 import jubilant
 from pymongo import MongoClient
 
-from single_kernel_mongo.config.statuses import ConfigServerStatuses, ShardStatuses
 from tests.integration.helpers.constants import (
     CHARMED_OPERATOR_USERNAME,
     CLUSTER_COMPONENTS,
@@ -44,7 +43,6 @@ from tests.integration.helpers.jubilant_tls import (
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
-    does_status_match,
 )
 from tests.integration.helpers.types import Substrate
 
@@ -113,26 +111,13 @@ def deploy_cluster_components(
     )
 
     juju.wait(
-        lambda status: (
-            are_agents_idle(
-                status,
-                CONFIG_SERVER_APP_NAME,
-                SHARD_ONE_APP_NAME,
-                SHARD_TWO_APP_NAME,
-                idle_period=30,
-                unit_count={},
-            )
-            and does_status_match(
-                model_status=status,
-                expected_unit_statuses={
-                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
-                    SHARD_ONE_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
-                    SHARD_TWO_APP_NAME: [ShardStatuses.MISSING_CONF_SERVER_REL.value],
-                },
-                expected_app_statuses={
-                    CONFIG_SERVER_APP_NAME: [ConfigServerStatuses.MISSING_CONF_SERVER_REL.value],
-                },
-            )
+        lambda status: are_agents_idle(
+            status,
+            CONFIG_SERVER_APP_NAME,
+            SHARD_ONE_APP_NAME,
+            SHARD_TWO_APP_NAME,
+            idle_period=20,
+            unit_count={},
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,

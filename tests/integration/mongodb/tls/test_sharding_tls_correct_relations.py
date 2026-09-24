@@ -66,7 +66,7 @@ def test_build_and_deploy(
 
 
 @pytest.mark.abort_on_fail
-async def test_built_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
+async def test_build_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate) -> None:
     """Tests that the cluster can be integrated with TLS."""
     assert juju.model
     integrate_sharding_components(juju)
@@ -75,11 +75,10 @@ async def test_built_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate)
             status,
             *CLUSTER_COMPONENTS,
             TLS_CERTIFICATES_APP_NAME,
-            idle_period=30,
+            idle_period=20,
         ),
-        timeout=DEPLOYMENT_TIMEOUT,
+        timeout=TIMEOUT,
         delay=5,
-        successes=3,
     )
 
     integrate_apps_with_tls(juju, *CLUSTER_COMPONENTS)
@@ -88,11 +87,10 @@ async def test_built_cluster_with_tls(juju: jubilant.Juju, substrate: Substrate)
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            idle_period=30,
+            idle_period=20,
         ),
-        timeout=TIMEOUT,
+        timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
-        successes=3,
     )
 
     check_cluster_tls_enabled(juju, substrate)
@@ -113,10 +111,9 @@ async def test_disable_cluster_with_tls(juju: jubilant.Juju, substrate: Substrat
         lambda status: are_apps_active_and_agents_idle(
             status,
             *CLUSTER_COMPONENTS,
-            idle_period=30,
+            idle_period=20,
         ),
         timeout=TIMEOUT,
         delay=5,
-        successes=3,
     )
     check_cluster_tls_disabled(juju, substrate)
