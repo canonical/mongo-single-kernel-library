@@ -35,7 +35,7 @@ def chaos_mesh(ops_test: OpsTest, substrate: Substrate) -> Generator[None, Any, 
 @pytest.fixture(scope="module")
 def jubilant_chaos_mesh(juju: jubilant.Juju, substrate: Substrate) -> Generator[None, Any, Any]:
     assert juju.model
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         k8s_deploy_chaos_mesh(juju.model)
         yield
         k8s_destroy_chaos_mesh(juju.model)
