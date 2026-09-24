@@ -216,8 +216,8 @@ def none_has_status(
         for value in data.values():
             try:
                 status_list = json.loads(value)
-                if all(
-                    _status["status"] != expected_status and _status["message"] != message
+                if any(
+                    _status["status"] == expected_status and _status["message"] == message
                     for _status in status_list
                 ):
                     return False
