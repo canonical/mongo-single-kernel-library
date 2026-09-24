@@ -75,7 +75,6 @@ def test_tls_then_build_cluster(
             *CLUSTER_COMPONENTS,
             TLS_CERTIFICATES_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -90,7 +89,6 @@ def test_tls_then_build_cluster(
             *CLUSTER_COMPONENTS,
             TLS_CERTIFICATES_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -104,7 +102,6 @@ def test_tls_then_build_cluster(
             status,
             *CLUSTER_COMPONENTS,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
         delay=5,
@@ -137,7 +134,6 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
                 status,
                 *CLUSTER_COMPONENTS,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -159,7 +155,6 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
             status,
             *CLUSTER_COMPONENTS,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=TIMEOUT,
         delay=5,
@@ -175,7 +170,6 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
                 status,
                 *CLUSTER_COMPONENTS,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -202,7 +196,6 @@ def test_tls_inconsistent_rels(juju: jubilant.Juju, substrate: Substrate) -> Non
                 status,
                 *CLUSTER_COMPONENTS,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -251,7 +244,6 @@ def test_invalid_relation_not_yet_established(
             status,
             SHARD_THREE_APP_NAME,
             idle_period=30,
-            unit_count=3,
         ),
         timeout=DEPLOYMENT_TIMEOUT,
         delay=5,
@@ -271,7 +263,6 @@ def test_invalid_relation_not_yet_established(
                 status,
                 SHARD_THREE_APP_NAME,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
@@ -298,7 +289,6 @@ def test_invalid_relation_not_yet_established(
                 status,
                 SHARD_THREE_APP_NAME,
                 idle_period=30,
-                unit_count=3,
             )
             and does_status_match(
                 model_status=status,
