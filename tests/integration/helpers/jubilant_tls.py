@@ -135,7 +135,7 @@ def check_tls(
                     app_name=app_name,
                     uri=uri,
                     command=status_command,
-                    tls=enabled,
+                    tls=True,
                     container_name=container,
                 )
 
