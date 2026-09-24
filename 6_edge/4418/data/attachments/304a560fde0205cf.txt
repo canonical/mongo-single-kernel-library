@@ -1,0 +1,113 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  02:03:09Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+config-server             6.0.28   active      2  mongodb-k8s                                0  10.152.183.55   no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.148  no       
+shard-one                 6.0.28   active      3  mongodb-k8s                                1  10.152.183.180  no       
+shard-two                 6.0.28   active      1  mongodb-k8s                                2  10.152.183.96   no       
+
+Unit                         Workload     Agent      Address     Ports  Message
+config-server/0              maintenance  executing  10.1.53.13         Enabling TLS...
+config-server/1*             error        idle       10.1.53.14         hook failed: "update-status"
+self-signed-certificates/0*  active       idle       10.1.53.28         
+shard-one/0*                 maintenance  executing  10.1.53.20         Enabling TLS...
+shard-one/1                  maintenance  executing  10.1.53.24         Enabling TLS...
+shard-one/2                  maintenance  executing  10.1.53.23         Enabling TLS...
+shard-two/0*                 active       executing  10.1.53.27         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-shard-one-0: 02:01:23 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab4847293a740b1f12c5457, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0014448980000452138>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001538538000090739>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0009794699999474688>]>
+unit-shard-one-0: 02:01:28 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab4847693a740b1f12c5458, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.001086549999968156>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab484703720dbc1c2593d72'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 13271}")>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: Unknown, rtt: None, error=NotPrimaryError("The server is in quiesce mode and will shut down, full error: {'topologyVersion': {'processId': ObjectId('6ab484704bfb98c1ddcc0eb2'), 'counter': 4}, 'ok': 0.0, 'errmsg': 'The server is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 12641}")>]>
+unit-shard-one-0: 02:01:32 ERROR unit.shard-one/0.juju-log sharding:12: Unable to get primary: No replica set members match selector "Primary()", Timeout: 1.0s, Topology Description: <TopologyDescription id: 6ab4847b93a740b1f12c5459, topology_type: ReplicaSetNoPrimary, servers: [<ServerDescription ('shard-one-0.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0005019630000333564>, <ServerDescription ('shard-one-1.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0007917979999092495>, <ServerDescription ('shard-one-2.shard-one-endpoints', 27017) server_type: RSSecondary, rtt: 0.0016191079999998692>]>
+unit-shard-one-1: 02:02:47 ERROR unit.shard-one/1.juju-log certificates:15: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-config-server-0: 02:02:47 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-1: 02:02:47 ERROR unit.shard-one/1.juju-log certificates:15: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-0: 02:02:47 ERROR unit.config-server/0.juju-log certificates:14: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 02:02:48 ERROR unit.config-server/1.juju-log certificates:14: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-two-0: 02:02:48 ERROR unit.shard-two/0.juju-log certificates:16: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:02:48 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-two-0: 02:02:48 ERROR unit.shard-two/0.juju-log certificates:16: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:02:48 ERROR unit.shard-one/2.juju-log certificates:15: Non-existing secret unit:int-cert-secret was attempted to be removed.
+unit-shard-one-0: 02:02:48 ERROR unit.shard-one/0.juju-log certificates:15: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 02:02:48 ERROR unit.config-server/1.juju-log certificates:14: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-shard-one-2: 02:02:48 ERROR unit.shard-one/2.juju-log certificates:15: Non-existing secret unit:ext-cert-secret was attempted to be removed.
+unit-config-server-1: 02:03:08 ERROR unit.config-server/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-config-server-1/charm/src/charm.py", line 24, in <module>
+    main(MongoKubernetesTestCharm)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/main.py", line 39, in main
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 474, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 458, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 402, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 437, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 923, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1029, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 312, in _on_update_status
+    self._recompute_statuses()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 271, in _recompute_statuses
+    self._recompute_statuses_for_scope("unit", manager)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/data_platform_helpers/advanced_statuses/handler.py", line 262, in _recompute_statuses_for_scope
+    statuses = manager.get_statuses(scope, recompute=True)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/managers/sharding.py", line 307, in get_statuses
+    cluster_shards = mongo.get_shard_members()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/single_kernel_mongo/utils/mongo_connection.py", line 397, in get_shard_members
+    shard_list = self.client.admin.command("listShards")
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 953, in command
+    return self._client._retryable_read(
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2076, in _retryable_read
+    return self._retry_internal(
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2038, in _retry_internal
+    ).run()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 2811, in run
+    res = self._read() if self._is_read else self._write()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 3029, in _read
+    with self._client._conn_from_server(self._read_pref, self._server, self._session) as (
+  File "/usr/lib/python3.10/contextlib.py", line 135, in __enter__
+    return next(self.gen)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1885, in _conn_from_server
+    with self._checkout(server, session) as conn:
+  File "/usr/lib/python3.10/contextlib.py", line 135, in __enter__
+    return next(self.gen)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1795, in _checkout
+    with server.checkout(handler=err_handler) as conn:
+  File "/usr/lib/python3.10/contextlib.py", line 135, in __enter__
+    return next(self.gen)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 1125, in checkout
+    conn = self._get_conn(checkout_started_time, handler=handler)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 1287, in _get_conn
+    conn = self.connect(handler=handler)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 1071, in connect
+    conn.hello()
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 247, in hello
+    return self._hello(None, None)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 290, in _hello
+    doc = self.command("admin", cmd, publish_events=False, exhaust_allowed=awaitable)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/helpers.py", line 53, in inner
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/pool.py", line 403, in command
+    return command(
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/synchronous/network.py", line 212, in command
+    helpers_shared._check_command_response(
+  File "/var/lib/juju/agents/unit-config-server-1/charm/venv/lib/python3.10/site-packages/pymongo/helpers_shared.py", line 267, in _check_command_response
+    raise NotPrimaryError(errmsg, response)
+pymongo.errors.NotPrimaryError: Mongos is in quiesce mode and will shut down, full error: {'ok': 0.0, 'errmsg': 'Mongos is in quiesce mode and will shut down', 'code': 91, 'codeName': 'ShutdownInProgress', 'remainingQuiesceTimeMillis': 14946, '$clusterTime': {'clusterTime': Timestamp(1790215385, 2), 'signature': {'hash': b'\x82\x889\x9e.\x1b\xc0\x90\xe9\xa2\xadY\x975\x81\x1b\x19\xe3\xbc\x85', 'keyId': 7688915345960075274}}, 'operationTime': Timestamp(1790215385, 2), 'topologyVersion': {'processId': ObjectId('6ab483d1dff9c85d8b1e9d11'), 'counter': 1}}
+unit-config-server-1: 02:03:09 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
