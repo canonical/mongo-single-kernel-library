@@ -8,6 +8,7 @@ import math
 from datetime import datetime
 from typing import NamedTuple
 
+import httpx
 import jubilant
 from bson.json_util import dumps as bson_dumps
 from jubilant._juju import ConstraintValue
@@ -15,12 +16,6 @@ from jubilant.statustypes import UnitStatus
 from pymongo import MongoClient
 
 from tests.integration.helpers.common import (
-    CHARMED_OPERATOR_USERNAME,
-    DEFAULT_DATABASE_NAME,
-    INTERNAL_USER_PASSWORD_CONFIG,
-    MONGOD_PORT,
-    MONGOS_PORT,
-    TEST_DOCUMENTS,
     CommandResult,
     ProcessError,
     SecretNotFoundError,
@@ -28,7 +23,17 @@ from tests.integration.helpers.common import (
     find_json,
     mongosh,
 )
-from tests.integration.helpers.constants import BASE, TIMEOUT
+from tests.integration.helpers.constants import (
+    BASE,
+    CHARMED_OPERATOR_USERNAME,
+    DEFAULT_DATABASE_NAME,
+    INTERNAL_USER_PASSWORD_CONFIG,
+    MONGOD_PORT,
+    MONGODB_EXPORTER_PORT,
+    MONGOS_PORT,
+    TEST_DOCUMENTS,
+    TIMEOUT,
+)
 from tests.integration.helpers.status_helpers import (
     are_agents_idle,
     are_apps_active_and_agents_idle,
@@ -161,6 +166,21 @@ def ensure_app_number_units(
     )
 
 
+def get_unit_id(unit_name: str) -> int:
+    """Unit id from unit name."""
+    return int(unit_name.split("/")[1])
+
+
+def get_app_name_from_unit(unit_name: str) -> str:
+    """Gets the app name from a unit name."""
+    return unit_name.split("/")[0]
+
+
+def split_unit_id_and_app_name(unit_name: str) -> tuple[int, str]:
+    """Returns the unit id and app name from the unit name."""
+    return (get_unit_id(unit_name), get_app_name_from_unit(unit_name))
+
+
 def find_leader(juju: jubilant.Juju, app_name: str) -> tuple[str, UnitStatus]:
     units = juju.status().get_units(app_name)
     return next((name, unit) for name, unit in units.items() if unit.leader)
@@ -183,6 +203,20 @@ def get_password(juju: jubilant.Juju, app_name: str, username: str):
 def get_ip_from_unit(substrate: Substrate, unit_info: UnitStatus) -> str:
     """Get the IP address of a unit based on the substrate type."""
     return unit_info.public_address if substrate == "lxd" else unit_info.address
+
+
+def unit_hostname(juju: jubilant.Juju, unit_name: str) -> str:
+    """Get hostname for a unit.
+
+    Args:
+        juju: The jubilant object
+        unit_name: The name of the unit to be tested
+
+    Returns:
+        The machine/container hostname
+    """
+    raw_hostname = juju.ssh(unit_name, "hostname")
+    return raw_hostname.strip()
 
 
 def run_command_on_server(
@@ -595,3 +629,18 @@ def secondary_mongo_uris_with_sync_delay(
     secondaries.sort(key=lambda o: o.delay)
 
     return secondaries
+
+
+def verify_metrics_endpoints(substrate: Substrate, unit_name: str, unit_info: UnitStatus) -> None:
+    """Verifies mongodb endpoint is functional on a given unit."""
+    app_name = get_app_name_from_unit(unit_name)
+    unit_address = get_ip_from_unit(substrate, unit_info)
+    mongodb_exporter_url = f"http://{unit_address}:{MONGODB_EXPORTER_PORT}/metrics"
+    mongo_resp = httpx.get(mongodb_exporter_url)
+
+    assert mongo_resp.status_code == 200
+
+    # if configured correctly there should be more than one mongodb metric present
+    mongodb_metrics = mongo_resp.text
+    assert mongodb_metrics.count("mongo") > 1
+    assert mongodb_metrics.count(f'rs_nm="{app_name}"') > 1
