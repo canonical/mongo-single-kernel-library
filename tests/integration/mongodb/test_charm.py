@@ -740,12 +740,12 @@ async def test_replication_data_consistency(juju: jubilant.Juju, substrate: Subs
 
     # grab juju hosts
     match substrate:
-        case "lxd":
+        case Substrate.lxd:
             hosts = [
                 get_ip_from_unit(substrate, unit_info)
                 for unit_info in juju.status().get_units(app_name).values()
             ]
-        case "microk8s":
+        case Substrate.k8s:
             hosts = [
                 f"mongodb-k8s-{get_unit_id(unit_name)}.mongodb-k8s-endpoints"
                 for unit_name in juju.status().get_units(app_name)

@@ -85,7 +85,7 @@ def deploy_charm(
 ):
     if revision is not None:
         channel = "8/beta"
-    if substrate == "microk8s":
+    if substrate == Substrate.k8s:
         base = base or BASE
         juju.deploy(
             charm,
@@ -125,9 +125,9 @@ def remove_number_units(
         substrate: The substrate type ("k8s" or "vm")
     """
     match substrate:
-        case "microk8s":
+        case Substrate.k8s:
             juju.remove_unit(app_name, num_units=num_units)
-        case "lxd":
+        case Substrate.lxd:
             # get units names
             unit_names = list(juju.status().get_units(app_name))
             # remove units by name until num_units have been removed
@@ -182,7 +182,7 @@ def get_password(juju: jubilant.Juju, app_name: str, username: str):
 
 def get_ip_from_unit(substrate: Substrate, unit_info: UnitStatus) -> str:
     """Get the IP address of a unit based on the substrate type."""
-    return unit_info.public_address if substrate == "lxd" else unit_info.address
+    return unit_info.public_address if substrate == Substrate.lxd else unit_info.address
 
 
 def run_command_on_server(
@@ -193,8 +193,8 @@ def run_command_on_server(
     container: str = "mongod",
 ) -> str:
     """Executes a command on the workload machine."""
-    effective_container = container if substrate == "microk8s" else None
-    if substrate == "lxd":
+    effective_container = container if substrate == Substrate.k8s else None
+    if substrate == Substrate.lxd:
         command = f"sudo {command}"
 
     return juju.ssh(unit_name, command, container=effective_container)
