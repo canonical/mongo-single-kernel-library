@@ -120,7 +120,13 @@ def check_tls(
         model_name = juju.model
         host = f"{app_name}-{unit_id}.{app_name}-endpoints.{model_name}.svc.cluster.local"
 
-    uri = unit_uri(username, password, ip_address=host, mongos=mongos)
+    uri = unit_uri(
+        username,
+        password,
+        ip_address=host,
+        mongos=mongos,
+        replica_set=app_name if not mongos else None,
+    )
 
     try:
         for attempt in Retrying(
@@ -192,7 +198,13 @@ def cannot_connect_without_tls(
         model_name = juju.model
         host = f"{app_name}-{unit_id}.{app_name}-endpoints.{model_name}.svc.cluster.local"
 
-    uri = unit_uri(username, password, ip_address=host, mongos=mongos)
+    uri = unit_uri(
+        username,
+        password,
+        ip_address=host,
+        mongos=mongos,
+        replica_set=app_name if not mongos else None,
+    )
     output = execute_on_mongod(
         juju,
         substrate,
